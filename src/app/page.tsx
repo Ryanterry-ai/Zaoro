@@ -10,13 +10,12 @@ import { BlogSection } from '@/components/sections/BlogSection';
 import { SaleBanner } from '@/components/sections/SaleBanner';
 import { TrustFeatures } from '@/components/sections/TrustFeatures';
 import { RealStyle } from '@/components/sections/RealStyle';
-import { getBlogs, getCollections, getProducts, getSettings } from '@/lib/data-server';
+import { getCollections, getProducts, getSettings } from '@/lib/data-server';
 
 export default async function HomePage() {
-  const [products, collections, blogs, settings] = await Promise.all([
+  const [products, collections, settings] = await Promise.all([
     getProducts(),
     getCollections(),
-    getBlogs(),
     getSettings(),
   ]);
 
@@ -31,8 +30,8 @@ export default async function HomePage() {
       <BestSellers products={products} />
       <SeasonalEdit />
       <RealStyle />
-      <BlogSection blogs={blogs} />
-      <SaleBanner />
+      <BlogSection products={products} />
+      <SaleBanner products={products} />
       <TrustFeatures settings={settings} />
     </>
   );
