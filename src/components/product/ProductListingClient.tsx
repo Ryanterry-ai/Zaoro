@@ -27,7 +27,7 @@ export function ProductListingClient({ title, subtitle, products }: Props) {
   const [priceRange, setPriceRange] = useState<[number, number]>([minPrice, maxPrice]);
 
   const availableFilters = useMemo(
-    () => FILTER_OPTIONS.filter((opt) => products.some((p) => p.category === opt.key || p.tags.includes(opt.key))),
+    () => FILTER_OPTIONS.filter((opt) => products.some((p) => p.category === opt.key)),
     [products]
   );
 
@@ -35,7 +35,7 @@ export function ProductListingClient({ title, subtitle, products }: Props) {
     return products.filter((p) => {
       const byCategory =
         selected.length === 0 ||
-        selected.some((f) => p.category === f || p.tags.includes(f));
+        selected.some((f) => p.category === f);
       const byPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
       return byCategory && byPrice;
     });
@@ -111,4 +111,3 @@ export function ProductListingClient({ title, subtitle, products }: Props) {
     </div>
   );
 }
-

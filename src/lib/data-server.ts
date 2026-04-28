@@ -2,6 +2,18 @@ import 'server-only';
 import type { Blog, Collection, NavigationData, Product, SiteSettings } from '@/types';
 import { readContent, writeContent } from '@/lib/cms-store';
 
+const COLLECTION_CATEGORY_MAP: Record<string, string[]> = {
+  jewellery: ['earrings', 'bracelets', 'necklaces'],
+  earrings: ['earrings'],
+  bracelets: ['bracelets'],
+  necklaces: ['necklaces'],
+  't-shirts': ['t-shirts'],
+  suits: ['suits'],
+  shorts: ['shorts'],
+  leggings: ['leggings'],
+  sets: ['sets'],
+};
+
 export async function getAllProducts(): Promise<Product[]> {
   return readContent('products');
 }
@@ -45,9 +57,30 @@ export async function getCollectionProducts(handle: string): Promise<Product[]> 
   if (!collection) return [];
 
   const products = await getProducts();
-  return collection.products
-    .map((id) => products.find((p) => p.id === id))
-    .filter(Boolean) as Product[];
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const byHandle = new Map(products.map((p) => [p.handle, p]));
+
+  const referencedProducts = collection.products
+    .map((ref) => byId.get(ref) ?? byHandle.get(ref))
+    .filter((p): p is Product => Boolean(p));
+
+  let resolved = referencedProducts;
+
+  if (handle === 'new-arrivals') {
+    resolved = products.filter((p) => p.tags.includes('new-arrivals'));
+  } else if (handle === 'best-sellers') {
+    resolved = products.filter((p) => p.tags.includes('bestseller'));
+  } else if (handle === 'sale') {
+    resolved = products.filter((p) => p.tags.includes('sale'));
+  } else if (COLLECTION_CATEGORY_MAP[handle]) {
+    const allowedCategories = new Set(COLLECTION_CATEGORY_MAP[handle]);
+    const strictByCategory = products.filter((p) => allowedCategories.has(p.category));
+    const strictSet = new Set(strictByCategory.map((p) => p.id));
+    const fromCollection = resolved.filter((p) => strictSet.has(p.id));
+    resolved = fromCollection.length > 0 ? fromCollection : strictByCategory;
+  }
+
+  return Array.from(new Map(resolved.map((p) => [p.id, p])).values());
 }
 
 export async function getNavigation(): Promise<NavigationData> {
