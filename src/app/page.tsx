@@ -28,8 +28,8 @@ export default async function HomePage() {
       <CategoryCarousel collections={collections} products={products} />
       <SaleCountdown />
       <BestSellers products={products} />
-      <SeasonalEdit />
-      <RealStyle />
+      <SeasonalEdit products={products} />
+      <RealStyle products={products} />
       <BlogSection products={products} />
       <SaleBanner products={products} />
       <TrustFeatures settings={settings} />
