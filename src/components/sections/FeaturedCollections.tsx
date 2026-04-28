@@ -9,19 +9,14 @@ interface Props {
   content?: SiteSettings['homeContent'];
 }
 
-const CATEGORY_COLLECTION_ORDER = ['jewellery', 'earrings', 'bracelets', 'necklaces', 'suits', 'sets', 't-shirts', 'shorts'];
+const CLOTHING_COLLECTION_ORDER = ['t-shirts', 'suits', 'shorts', 'sets', 'leggings'];
 
 export function FeaturedCollections({ collections, products, content }: Props) {
   const productCategories = new Set(products.map((product) => product.category));
-  const featured = CATEGORY_COLLECTION_ORDER
+  const featured = CLOTHING_COLLECTION_ORDER
     .map((handle) => collections.find((collection) => collection.handle === handle))
     .filter((collection): collection is Collection => Boolean(collection))
-    .filter((collection) => {
-      if (collection.handle === 'jewellery') {
-        return ['earrings', 'bracelets', 'necklaces'].some((category) => productCategories.has(category));
-      }
-      return productCategories.has(collection.handle);
-    })
+    .filter((collection) => productCategories.has(collection.handle))
     .slice(0, 3);
 
   return (
@@ -29,13 +24,13 @@ export function FeaturedCollections({ collections, products, content }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10">
           <div>
-            <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">{content?.featuredCollectionsTitle || 'Featured Collections'}</h2></Reveal>
+            <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">{content?.featuredCollectionsTitle || 'Clothing Collections'}</h2></Reveal>
             <p className="text-[#6B6B6B] mt-2 text-sm md:text-base">
-              {content?.featuredCollectionsSubtitle || 'Discover a refined selection from the latest client-curated TruArtz collection.'}
+              {content?.featuredCollectionsSubtitle || 'Browse live clothing categories generated from your current product catalog.'}
             </p>
           </div>
-          <Link href={content?.featuredCollectionsCtaUrl || '/products/jewellery'} className="btn-outline mt-4 md:mt-0 inline-block">
-            {content?.featuredCollectionsCtaLabel || 'Shop Jewellery'}
+          <Link href={content?.featuredCollectionsCtaUrl || '/products/t-shirts'} className="btn-outline mt-4 md:mt-0 inline-block">
+            {content?.featuredCollectionsCtaLabel || 'Shop Clothing'}
           </Link>
         </div>
 
@@ -68,4 +63,3 @@ export function FeaturedCollections({ collections, products, content }: Props) {
     </section>
   );
 }
-

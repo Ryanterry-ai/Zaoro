@@ -8,13 +8,14 @@ interface Props {
   content?: SiteSettings['homeContent'];
 }
 
-const CATEGORY_PRIORITY = ['earrings', 'bracelets', 'necklaces', 't-shirts', 'suits', 'shorts', 'sets'];
+const JEWELLERY_PRIORITY = ['earrings', 'bracelets', 'necklaces'];
 
 export function TrendingNow({ products, content }: Props) {
-  const byCategory = CATEGORY_PRIORITY
-    .map((category) => products.find((p) => p.category === category))
+  const jewellery = products.filter((p) => JEWELLERY_PRIORITY.includes(p.category));
+  const byCategory = JEWELLERY_PRIORITY
+    .map((category) => jewellery.find((p) => p.category === category))
     .filter((p): p is Product => Boolean(p));
-  const unique = Array.from(new Map([...byCategory, ...products].map((p) => [p.id, p])).values());
+  const unique = Array.from(new Map([...byCategory, ...jewellery].map((p) => [p.id, p])).values());
   const trending = unique.slice(0, 4);
 
   return (
