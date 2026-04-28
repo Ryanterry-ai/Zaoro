@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Instagram, Facebook, Twitter } from 'lucide-react';
 import { getSettings, getNavigation } from '@/lib/data';
 
 export function Footer() {
@@ -93,14 +92,14 @@ export function Footer() {
               © Copyright 2026 {settings.siteName}. All Rights Reserved.
             </p>
             <div className="flex items-center gap-4">
-              <a href={settings.socialLinks.instagram} className="text-[#6B6B6B] hover:text-white transition-colors">
-                <Instagram className="w-4 h-4" />
+              <a href={settings.socialLinks.instagram} className="h-7 w-7 rounded-full border border-[#333] text-[#6B6B6B] hover:text-white hover:border-[#555] transition-colors flex items-center justify-center text-[10px] font-medium">
+                IG
               </a>
-              <a href={settings.socialLinks.facebook} className="text-[#6B6B6B] hover:text-white transition-colors">
-                <Facebook className="w-4 h-4" />
+              <a href={settings.socialLinks.facebook} className="h-7 w-7 rounded-full border border-[#333] text-[#6B6B6B] hover:text-white hover:border-[#555] transition-colors flex items-center justify-center text-[10px] font-medium">
+                FB
               </a>
-              <a href={settings.socialLinks.twitter} className="text-[#6B6B6B] hover:text-white transition-colors">
-                <Twitter className="w-4 h-4" />
+              <a href={settings.socialLinks.twitter} className="h-7 w-7 rounded-full border border-[#333] text-[#6B6B6B] hover:text-white hover:border-[#555] transition-colors flex items-center justify-center text-[10px] font-medium">
+                TW
               </a>
             </div>
           </div>

@@ -142,8 +142,8 @@ export default function AdminProductsPage() {
                   <div key={f.key}>
                     <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
                     {f.type === 'textarea'
-                      ? <textarea rows={4} value={(editing as Record<string,unknown>)[f.key] as string || ''} onChange={e => setEditing({...editing, [f.key]: e.target.value})} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A] resize-none" />
-                      : <input type="text" value={(editing as Record<string,unknown>)[f.key] as string || ''} onChange={e => setEditing({...editing, [f.key]: e.target.value})} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]" />
+                      ? <textarea rows={4} value={(editing as unknown as Record<string,unknown>)[f.key] as string || ''} onChange={e => setEditing({...editing, [f.key]: e.target.value})} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A] resize-none" />
+                      : <input type="text" value={(editing as unknown as Record<string,unknown>)[f.key] as string || ''} onChange={e => setEditing({...editing, [f.key]: e.target.value})} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]" />
                     }
                   </div>
                 ))}
@@ -221,7 +221,7 @@ export default function AdminProductsPage() {
                 {[{label:'Price (₹)',key:'price'},{label:'Compare Price (₹)',key:'comparePrice'}].map(f => (
                   <div key={f.key}>
                     <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
-                    <input type="number" value={((editing as Record<string,unknown>)[f.key] as number || 0)/100}
+                    <input type="number" value={((editing as unknown as Record<string,unknown>)[f.key] as number || 0)/100}
                       onChange={e => setEditing({...editing, [f.key]: Math.round(parseFloat(e.target.value)*100)})}
                       className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]" />
                   </div>

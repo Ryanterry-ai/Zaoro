@@ -48,6 +48,14 @@ export default function AdminSettingsPage() {
       return copy;
     });
   };
+  const getByPath = (path: string): unknown => {
+    return path.split('.').reduce<unknown>((acc, key) => {
+      if (acc && typeof acc === 'object') {
+        return (acc as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, settings);
+  };
 
   const ann = (settings.announcementBar || {}) as Record<string,unknown>;
   const social = (settings.socialLinks || {}) as Record<string,string>;
@@ -91,7 +99,7 @@ export default function AdminSettingsPage() {
             {[{label:'Text',path:'announcementBar.text'},{label:'Link Text',path:'announcementBar.linkText'},{label:'Link URL',path:'announcementBar.linkUrl'},{label:'BG Color',path:'announcementBar.bgColor'},{label:'Text Color',path:'announcementBar.textColor'}].map(f=>(
               <div key={f.path}>
                 <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
-                <input type="text" value={f.path.split('.').reduce((o,k)=>(o as Record<string,unknown>)[k],settings) as string||''} onChange={e=>update(f.path,e.target.value)} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
+                <input type="text" value={(getByPath(f.path) as string)||''} onChange={e=>update(f.path,e.target.value)} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
               </div>
             ))}
           </>}
@@ -109,7 +117,7 @@ export default function AdminSettingsPage() {
             {[{label:'SEO Title',path:'seo.title'},{label:'SEO Description',path:'seo.description'}].map(f=>(
               <div key={f.path}>
                 <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
-                <input type="text" value={f.path.split('.').reduce((o,k)=>(o as Record<string,unknown>)[k],settings) as string||''} onChange={e=>update(f.path,e.target.value)} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
+                <input type="text" value={(getByPath(f.path) as string)||''} onChange={e=>update(f.path,e.target.value)} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
               </div>
             ))}
             <div>
