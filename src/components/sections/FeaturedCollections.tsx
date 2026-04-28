@@ -1,11 +1,9 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import Image from 'next/image';
-import { getCollections } from '@/lib/data-server';
+import { getCollections } from '@/lib/data';
 
-export async function FeaturedCollections() {
-  const collections = (await getCollections()).filter((c) =>
-    ['women', 'men', 'new-arrivals'].includes(c.handle)
-  );
+export function FeaturedCollections() {
+  const collections = getCollections().filter(c => ['women', 'new-arrivals', 'best-sellers'].includes(c.handle));
 
   return (
     <section className="bg-[#F8F6F3] py-16 lg:py-20">
@@ -14,7 +12,7 @@ export async function FeaturedCollections() {
           <div>
             <h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">Featured Collections</h2>
             <p className="text-[#6B6B6B] mt-2 text-sm md:text-base">
-              Discover a refined selection of men's and women's fashion from the world's leading brands.
+              Discover a refined selection from the latest client-curated Zaoro collection.
             </p>
           </div>
           <Link href="/products/new-arrivals" className="btn-outline mt-4 md:mt-0 inline-block">
@@ -39,7 +37,7 @@ export async function FeaturedCollections() {
                 <p className="text-xs text-[#6B6B6B] mb-1">{collection.description}</p>
                 <h3 className="font-serif text-xl font-light text-[#0A0A0A]">{collection.name}</h3>
                 <span className="text-sm font-medium tracking-wide underline underline-offset-4 mt-1 inline-block hover:text-[#6B6B6B] transition-colors">
-                  Shop Now →
+                  Shop Now {'->'}
                 </span>
               </div>
             </Link>
@@ -49,3 +47,4 @@ export async function FeaturedCollections() {
     </section>
   );
 }
+

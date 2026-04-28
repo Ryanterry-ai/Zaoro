@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -15,7 +15,7 @@ interface Product {
 
 const emptyProduct: Omit<Product,'id'> = {
   handle: '', name: '', price: 0, comparePrice: 0, images: [''],
-  category: 'men', badge: '', stock: 0, variants: [
+  category: 'women', badge: '', stock: 0, variants: [
     { id: 'v-s', title: 'S', options: { size: 'S' }, price: 0, comparePrice: 0, stock: 0, sku: '' },
     { id: 'v-m', title: 'M', options: { size: 'M' }, price: 0, comparePrice: 0, stock: 0, sku: '' },
     { id: 'v-l', title: 'L', options: { size: 'L' }, price: 0, comparePrice: 0, stock: 0, sku: '' },
@@ -69,7 +69,7 @@ export default function AdminProductsPage() {
     p.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatPrice = (paise: number) => `₹${(paise/100).toLocaleString('en-IN')}`;
+  const formatPrice = (paise: number) => `â‚¹${(paise/100).toLocaleString('en-IN')}`;
 
   const startNew = () => {
     setEditing({ id: `prod_${Date.now()}`, ...emptyProduct });
@@ -174,8 +174,8 @@ export default function AdminProductsPage() {
                     <thead>
                       <tr className="text-xs text-[#6B6B6B] border-b">
                         <th className="text-left pb-2 pr-3">Size</th>
-                        <th className="text-left pb-2 pr-3">Price (₹)</th>
-                        <th className="text-left pb-2 pr-3">Compare (₹)</th>
+                        <th className="text-left pb-2 pr-3">Price (â‚¹)</th>
+                        <th className="text-left pb-2 pr-3">Compare (â‚¹)</th>
                         <th className="text-left pb-2 pr-3">Stock</th>
                         <th className="text-left pb-2">SKU</th>
                       </tr>
@@ -218,7 +218,7 @@ export default function AdminProductsPage() {
             <div className="space-y-5">
               <div className="bg-white p-6 rounded shadow-sm space-y-4">
                 <h3 className="font-semibold text-sm border-b pb-2">Pricing</h3>
-                {[{label:'Price (₹)',key:'price'},{label:'Compare Price (₹)',key:'comparePrice'}].map(f => (
+                {[{label:'Price (â‚¹)',key:'price'},{label:'Compare Price (â‚¹)',key:'comparePrice'}].map(f => (
                   <div key={f.key}>
                     <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
                     <input type="number" value={((editing as unknown as Record<string,unknown>)[f.key] as number || 0)/100}
@@ -233,7 +233,6 @@ export default function AdminProductsPage() {
                 <div>
                   <label className="block text-xs font-medium text-[#6B6B6B] mb-1">Category</label>
                   <select value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]">
-                    <option value="men">Men</option>
                     <option value="women">Women</option>
                     <option value="unisex">Unisex</option>
                   </select>
@@ -349,3 +348,4 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+

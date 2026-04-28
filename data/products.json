@@ -1,254 +1,4131 @@
 [
   {
     "id": "1",
-    "handle": "classic-blue-denim-jeans",
-    "name": "Shirt with Gun Print",
-    "description": "The Classic Blue Denim Jeans embody effortless style and enduring durability. Crafted from high-quality cotton denim with a touch of stretch, they provide a structured yet comfortable fit that adapts to everyday movement.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-001",
+    "name": "Zaoro Signature Look 001",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/PuJISqVxNQeLj8hdU0eVqRd2hY.png",
-      "https://framerusercontent.com/images/un0oPrJ4LTzTvUDPCf6e8V9VFY.png",
-      "https://framerusercontent.com/images/T2r9sZw0HUeucss0dtQqlyd6H8.png",
-      "https://framerusercontent.com/images/StmONY3o0DadBm20GrpcxiJreN0.png"
+      "/images/products/client/client-001.jpg"
     ],
-    "category": "men",
-    "tags": ["men", "trending", "bestseller"],
-    "badge": null,
-    "stock": 50,
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 9,
     "variants": [
-      { "id": "v1-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "GUN-S" },
-      { "id": "v1-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "GUN-M" },
-      { "id": "v1-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "GUN-L" },
-      { "id": "v1-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "GUN-XL" }
+      {
+        "id": "v1-s",
+        "comparePrice": 291900,
+        "stock": 5,
+        "sku": "ZSR-1-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v1-m",
+        "comparePrice": 291900,
+        "stock": 7,
+        "sku": "ZSR-1-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v1-l",
+        "comparePrice": 291900,
+        "stock": 8,
+        "sku": "ZSR-1-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v1-xl",
+        "comparePrice": 291900,
+        "stock": 4,
+        "sku": "ZSR-1-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
     ],
-    "details": { "material": "98% Cotton, 2% Elastane Blend", "care": "Do not bleach. Tumble dry low or hang dry." },
-    "reviews": 224,
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 85,
     "visible": true
   },
   {
     "id": "2",
-    "handle": "cotton-tailored-set",
-    "name": "Cotton Tailored Set",
-    "description": "A refined cotton tailored set that combines structure with comfort, perfect for both professional and casual settings.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-002",
+    "name": "Zaoro Signature Look 002",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/e0N6XC63RzgwQULQ6zcoGHeDGys.png",
-      "https://framerusercontent.com/images/8wjT7dJ5aQ2kJxwDnOTmCKcHHk.png",
-      "https://framerusercontent.com/images/4bWSd0lFp2zoQNcaAEEAWef7s.png",
-      "https://framerusercontent.com/images/hiPop4WrGTpINdN7mthsjMBBk.png"
+      "/images/products/client/client-002.jpg"
     ],
     "category": "women",
-    "tags": ["women", "trending", "bestseller"],
-    "badge": null,
-    "stock": 40,
-    "variants": [
-      { "id": "v2-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "CTS-S" },
-      { "id": "v2-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "CTS-M" },
-      { "id": "v2-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "CTS-L" },
-      { "id": "v2-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "CTS-XL" }
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
     ],
-    "details": { "material": "100% Cotton", "care": "Machine wash cold. Hang dry." },
-    "reviews": 189,
+    "badge": "New",
+    "stock": 10,
+    "variants": [
+      {
+        "id": "v2-s",
+        "comparePrice": 293900,
+        "stock": 6,
+        "sku": "ZSR-2-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v2-m",
+        "comparePrice": 293900,
+        "stock": 8,
+        "sku": "ZSR-2-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v2-l",
+        "comparePrice": 293900,
+        "stock": 9,
+        "sku": "ZSR-2-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v2-xl",
+        "comparePrice": 293900,
+        "stock": 5,
+        "sku": "ZSR-2-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 88,
     "visible": true
   },
   {
     "id": "3",
-    "handle": "mens-beige-coat-pant",
-    "name": "Men's Beige Coat Pant",
-    "description": "A sophisticated beige coat pant set that exudes classic elegance and modern refinement for the discerning gentleman.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-003",
+    "name": "Zaoro Signature Look 003",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/owvNYpDfAEpRrFywrEazwZU1Wk.png",
-      "https://framerusercontent.com/images/m3QpA1XYoixLIsX0ubqMfUdk2E.png",
-      "https://framerusercontent.com/images/RL7EwOfrngFOj0FPiyLZ5tLg.png",
-      "https://framerusercontent.com/images/sOq3zY9i76W5D6COIVPkO3WbpA.png"
+      "/images/products/client/client-003.jpg"
     ],
-    "category": "men",
-    "tags": ["men", "trending", "bestseller"],
-    "badge": null,
-    "stock": 30,
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "bestseller",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 11,
     "variants": [
-      { "id": "v3-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCP-S" },
-      { "id": "v3-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 12, "sku": "BCP-M" },
-      { "id": "v3-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCP-L" },
-      { "id": "v3-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "BCP-XL" }
+      {
+        "id": "v3-s",
+        "comparePrice": 295900,
+        "stock": 7,
+        "sku": "ZSR-3-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v3-m",
+        "comparePrice": 295900,
+        "stock": 9,
+        "sku": "ZSR-3-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v3-l",
+        "comparePrice": 295900,
+        "stock": 10,
+        "sku": "ZSR-3-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v3-xl",
+        "comparePrice": 295900,
+        "stock": 6,
+        "sku": "ZSR-3-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
     ],
-    "details": { "material": "65% Polyester, 35% Viscose", "care": "Dry clean only." },
-    "reviews": 156,
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 91,
     "visible": true
   },
   {
     "id": "4",
-    "handle": "men-s-t-shirt",
-    "name": "Men's T-Shirt",
-    "description": "A premium quality men's t-shirt crafted for everyday comfort with a clean, modern silhouette.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-004",
+    "name": "Zaoro Signature Look 004",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/i3El5MuqanfZX00LIFvqFixn1Ng.png",
-      "https://framerusercontent.com/images/a72HwNOlo7N0ozLQj4FUDLvot6o.png",
-      "https://framerusercontent.com/images/5pKUa86cu8AvAQOF5OTKhzmGsoU.png",
-      "https://framerusercontent.com/images/QxR3SErSN99wcrTcUwUXG5eL84.png"
+      "/images/products/client/client-004.jpg"
     ],
-    "category": "men",
-    "tags": ["men", "trending", "new-arrivals"],
-    "badge": "20% Off",
-    "stock": 80,
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals",
+      "sale"
+    ],
+    "badge": "New",
+    "stock": 12,
     "variants": [
-      { "id": "v4-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 25, "sku": "TSH-S" },
-      { "id": "v4-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 30, "sku": "TSH-M" },
-      { "id": "v4-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "TSH-L" },
-      { "id": "v4-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "TSH-XL" }
+      {
+        "id": "v4-s",
+        "comparePrice": 297900,
+        "stock": 8,
+        "sku": "ZSR-4-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v4-m",
+        "comparePrice": 297900,
+        "stock": 10,
+        "sku": "ZSR-4-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v4-l",
+        "comparePrice": 297900,
+        "stock": 11,
+        "sku": "ZSR-4-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v4-xl",
+        "comparePrice": 297900,
+        "stock": 7,
+        "sku": "ZSR-4-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
     ],
-    "details": { "material": "100% Organic Cotton", "care": "Machine wash cold." },
-    "reviews": 312,
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 94,
     "visible": true
   },
   {
     "id": "5",
-    "handle": "oversized-puffer-jacket",
-    "name": "Women Baggy fit",
-    "description": "A luxurious oversized puffer jacket that combines warmth with contemporary street style aesthetics.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-005",
+    "name": "Zaoro Signature Look 005",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/mRbu6lXFYdwYgUhECkRhvigfmnI.png",
-      "https://framerusercontent.com/images/RZ5IHqxJLMR1gB2DYjT6AqnUw.png",
-      "https://framerusercontent.com/images/fzPjjKOjuoUPMqDhy9Z47FOUWI.png",
-      "https://framerusercontent.com/images/yvSQeNLLS2PEApOo192t36U2aYM.png"
+      "/images/products/client/client-005.jpg"
     ],
     "category": "women",
-    "tags": ["women", "new-arrivals", "bestseller"],
-    "badge": "New",
-    "stock": 35,
-    "variants": [
-      { "id": "v5-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "PUF-S" },
-      { "id": "v5-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "PUF-M" },
-      { "id": "v5-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "PUF-L" },
-      { "id": "v5-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "PUF-XL" }
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
     ],
-    "details": { "material": "100% Polyester with Down Fill", "care": "Machine wash cold, tumble dry low." },
+    "badge": "New",
+    "stock": 13,
+    "variants": [
+      {
+        "id": "v5-s",
+        "comparePrice": 299900,
+        "stock": 9,
+        "sku": "ZSR-5-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v5-m",
+        "comparePrice": 299900,
+        "stock": 11,
+        "sku": "ZSR-5-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v5-l",
+        "comparePrice": 299900,
+        "stock": 12,
+        "sku": "ZSR-5-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v5-xl",
+        "comparePrice": 299900,
+        "stock": 8,
+        "sku": "ZSR-5-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
     "reviews": 97,
     "visible": true
   },
   {
     "id": "6",
-    "handle": "relaxed-fit-linen-shirt-girls",
-    "name": "Relaxed Fit Linen Shirt Girls",
-    "description": "A breathable, relaxed-fit linen shirt for women, offering effortless style and all-day comfort.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-006",
+    "name": "Zaoro Signature Look 006",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/0gXUVD5oTvVGR49i6M5q7B5A500.png",
-      "https://framerusercontent.com/images/iF3WzqbfR5cRFbUpvPEj1W4GwDE.png",
-      "https://framerusercontent.com/images/IkhqXLDvP1HNdeFG1dt4ZztzLQ.png",
-      "https://framerusercontent.com/images/PFwRVg8l0PtW2VnfRPXb3T5GvM.png"
+      "/images/products/client/client-006.jpg"
     ],
     "category": "women",
-    "tags": ["women", "sale", "bestseller"],
-    "badge": "20% Off",
-    "stock": 45,
-    "variants": [
-      { "id": "v6-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "LIN-S" },
-      { "id": "v6-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "LIN-M" },
-      { "id": "v6-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "LIN-L" },
-      { "id": "v6-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "LIN-XL" }
+    "tags": [
+      "women",
+      "trending",
+      "bestseller",
+      "new-arrivals"
     ],
-    "details": { "material": "100% Linen", "care": "Hand wash cold or dry clean." },
-    "reviews": 203,
+    "badge": "New",
+    "stock": 14,
+    "variants": [
+      {
+        "id": "v6-s",
+        "comparePrice": 289900,
+        "stock": 10,
+        "sku": "ZSR-6-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v6-m",
+        "comparePrice": 289900,
+        "stock": 12,
+        "sku": "ZSR-6-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v6-l",
+        "comparePrice": 289900,
+        "stock": 13,
+        "sku": "ZSR-6-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v6-xl",
+        "comparePrice": 289900,
+        "stock": 9,
+        "sku": "ZSR-6-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 100,
     "visible": true
   },
   {
     "id": "7",
-    "handle": "relaxed-fit-linen-shirt",
-    "name": "Soft Knit Midi Dress",
-    "description": "A flowing soft knit midi dress that drapes beautifully, perfect for both day and evening occasions.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-007",
+    "name": "Zaoro Signature Look 007",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/59BHnUBK5MK60bxmTYy4MHaHpA.png",
-      "https://framerusercontent.com/images/NB9e0X2AKhS8B3k11YNaz7IsJaU.png",
-      "https://framerusercontent.com/images/gACm4vqo1prLG31phVnNGdiryDU.png",
-      "https://framerusercontent.com/images/drFneVXuE7bO9BFIo6FiizC41w.png"
+      "/images/products/client/client-007.jpg"
     ],
     "category": "women",
-    "tags": ["women", "new-arrivals"],
-    "badge": "New",
-    "stock": 25,
-    "variants": [
-      { "id": "v7-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "KMD-S" },
-      { "id": "v7-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "KMD-M" },
-      { "id": "v7-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "KMD-L" },
-      { "id": "v7-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "KMD-XL" }
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
     ],
-    "details": { "material": "80% Viscose, 20% Nylon", "care": "Gentle machine wash cold." },
-    "reviews": 145,
+    "badge": "New",
+    "stock": 15,
+    "variants": [
+      {
+        "id": "v7-s",
+        "comparePrice": 291900,
+        "stock": 11,
+        "sku": "ZSR-7-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v7-m",
+        "comparePrice": 291900,
+        "stock": 13,
+        "sku": "ZSR-7-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v7-l",
+        "comparePrice": 291900,
+        "stock": 14,
+        "sku": "ZSR-7-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v7-xl",
+        "comparePrice": 291900,
+        "stock": 10,
+        "sku": "ZSR-7-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 103,
     "visible": true
   },
   {
     "id": "8",
-    "handle": "business-casual-outfit",
-    "name": "Business casual outfit",
-    "description": "A smart business casual outfit that effortlessly transitions from office to evening.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-008",
+    "name": "Zaoro Signature Look 008",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/xv8ZXihdbthAxFF98k8x801vOU.png",
-      "https://framerusercontent.com/images/YlqPIkSHkg3NZTN1jiNZ7aS8nQ.png",
-      "https://framerusercontent.com/images/8TL5Fu4yyGEPz17f5VqZ3vQd4.png",
-      "https://framerusercontent.com/images/jvJvbc8LXWo0eqkxLJedzd9hq8.png"
+      "/images/products/client/client-008.jpg"
     ],
-    "category": "men",
-    "tags": ["men", "sale"],
-    "badge": "20% Off",
-    "stock": 30,
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals",
+      "sale"
+    ],
+    "badge": "New",
+    "stock": 16,
     "variants": [
-      { "id": "v8-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCO-S" },
-      { "id": "v8-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 12, "sku": "BCO-M" },
-      { "id": "v8-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCO-L" },
-      { "id": "v8-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "BCO-XL" }
+      {
+        "id": "v8-s",
+        "comparePrice": 293900,
+        "stock": 12,
+        "sku": "ZSR-8-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v8-m",
+        "comparePrice": 293900,
+        "stock": 14,
+        "sku": "ZSR-8-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v8-l",
+        "comparePrice": 293900,
+        "stock": 15,
+        "sku": "ZSR-8-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v8-xl",
+        "comparePrice": 293900,
+        "stock": 11,
+        "sku": "ZSR-8-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
     ],
-    "details": { "material": "60% Cotton, 40% Polyester", "care": "Machine wash warm." },
-    "reviews": 178,
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 106,
     "visible": true
   },
   {
     "id": "9",
-    "handle": "classic-denim-jeans",
-    "name": "Classic Denim Jeans",
-    "description": "Timeless classic denim jeans with a perfect straight fit and durable construction for everyday wear.",
-    "price": 31000,
-    "comparePrice": 35000,
+    "handle": "zaoro-signature-look-009",
+    "name": "Zaoro Signature Look 009",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
     "currency": "INR",
     "images": [
-      "https://framerusercontent.com/images/5Oz2LSqx2pLS96SsCvKPmFHOT0.png",
-      "https://framerusercontent.com/images/GIR7dk1ZIXuDb6aqpmrY1EI0.png",
-      "https://framerusercontent.com/images/KNJK2965qVz9xnjfOUkEPjbiBO0.png",
-      "https://framerusercontent.com/images/BvE3nw5tnPqKYQFZrlVOHQ0K6N0.png"
+      "/images/products/client/client-009.jpg"
     ],
-    "category": "men",
-    "tags": ["men", "bestseller"],
-    "badge": null,
-    "stock": 60,
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "bestseller",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 17,
     "variants": [
-      { "id": "v9-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "CDJ-S" },
-      { "id": "v9-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "CDJ-M" },
-      { "id": "v9-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "CDJ-L" },
-      { "id": "v9-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "CDJ-XL" }
+      {
+        "id": "v9-s",
+        "comparePrice": 295900,
+        "stock": 13,
+        "sku": "ZSR-9-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v9-m",
+        "comparePrice": 295900,
+        "stock": 15,
+        "sku": "ZSR-9-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v9-l",
+        "comparePrice": 295900,
+        "stock": 16,
+        "sku": "ZSR-9-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v9-xl",
+        "comparePrice": 295900,
+        "stock": 12,
+        "sku": "ZSR-9-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
     ],
-    "details": { "material": "99% Cotton, 1% Elastane", "care": "Machine wash cold, inside out." },
-    "reviews": 267,
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 109,
+    "visible": true
+  },
+  {
+    "id": "10",
+    "handle": "zaoro-signature-look-010",
+    "name": "Zaoro Signature Look 010",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-010.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 18,
+    "variants": [
+      {
+        "id": "v10-s",
+        "comparePrice": 297900,
+        "stock": 14,
+        "sku": "ZSR-10-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v10-m",
+        "comparePrice": 297900,
+        "stock": 16,
+        "sku": "ZSR-10-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v10-l",
+        "comparePrice": 297900,
+        "stock": 17,
+        "sku": "ZSR-10-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v10-xl",
+        "comparePrice": 297900,
+        "stock": 13,
+        "sku": "ZSR-10-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 112,
+    "visible": true
+  },
+  {
+    "id": "11",
+    "handle": "zaoro-signature-look-011",
+    "name": "Zaoro Signature Look 011",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-011.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 19,
+    "variants": [
+      {
+        "id": "v11-s",
+        "comparePrice": 299900,
+        "stock": 15,
+        "sku": "ZSR-11-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v11-m",
+        "comparePrice": 299900,
+        "stock": 17,
+        "sku": "ZSR-11-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v11-l",
+        "comparePrice": 299900,
+        "stock": 18,
+        "sku": "ZSR-11-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v11-xl",
+        "comparePrice": 299900,
+        "stock": 14,
+        "sku": "ZSR-11-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 115,
+    "visible": true
+  },
+  {
+    "id": "12",
+    "handle": "zaoro-signature-look-012",
+    "name": "Zaoro Signature Look 012",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-012.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "bestseller",
+      "new-arrivals",
+      "sale"
+    ],
+    "badge": "New",
+    "stock": 20,
+    "variants": [
+      {
+        "id": "v12-s",
+        "comparePrice": 289900,
+        "stock": 16,
+        "sku": "ZSR-12-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v12-m",
+        "comparePrice": 289900,
+        "stock": 18,
+        "sku": "ZSR-12-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v12-l",
+        "comparePrice": 289900,
+        "stock": 19,
+        "sku": "ZSR-12-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v12-xl",
+        "comparePrice": 289900,
+        "stock": 15,
+        "sku": "ZSR-12-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 118,
+    "visible": true
+  },
+  {
+    "id": "13",
+    "handle": "zaoro-signature-look-013",
+    "name": "Zaoro Signature Look 013",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-013.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 21,
+    "variants": [
+      {
+        "id": "v13-s",
+        "comparePrice": 291900,
+        "stock": 17,
+        "sku": "ZSR-13-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v13-m",
+        "comparePrice": 291900,
+        "stock": 19,
+        "sku": "ZSR-13-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v13-l",
+        "comparePrice": 291900,
+        "stock": 20,
+        "sku": "ZSR-13-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v13-xl",
+        "comparePrice": 291900,
+        "stock": 16,
+        "sku": "ZSR-13-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 121,
+    "visible": true
+  },
+  {
+    "id": "14",
+    "handle": "zaoro-signature-look-014",
+    "name": "Zaoro Signature Look 014",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-014.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 22,
+    "variants": [
+      {
+        "id": "v14-s",
+        "comparePrice": 293900,
+        "stock": 18,
+        "sku": "ZSR-14-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v14-m",
+        "comparePrice": 293900,
+        "stock": 20,
+        "sku": "ZSR-14-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v14-l",
+        "comparePrice": 293900,
+        "stock": 21,
+        "sku": "ZSR-14-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v14-xl",
+        "comparePrice": 293900,
+        "stock": 17,
+        "sku": "ZSR-14-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 124,
+    "visible": true
+  },
+  {
+    "id": "15",
+    "handle": "zaoro-signature-look-015",
+    "name": "Zaoro Signature Look 015",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-015.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "bestseller",
+      "new-arrivals"
+    ],
+    "badge": "New",
+    "stock": 23,
+    "variants": [
+      {
+        "id": "v15-s",
+        "comparePrice": 295900,
+        "stock": 19,
+        "sku": "ZSR-15-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v15-m",
+        "comparePrice": 295900,
+        "stock": 21,
+        "sku": "ZSR-15-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v15-l",
+        "comparePrice": 295900,
+        "stock": 22,
+        "sku": "ZSR-15-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v15-xl",
+        "comparePrice": 295900,
+        "stock": 18,
+        "sku": "ZSR-15-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 127,
+    "visible": true
+  },
+  {
+    "id": "16",
+    "handle": "zaoro-signature-look-016",
+    "name": "Zaoro Signature Look 016",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-016.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "new-arrivals",
+      "sale"
+    ],
+    "badge": "New",
+    "stock": 24,
+    "variants": [
+      {
+        "id": "v16-s",
+        "comparePrice": 297900,
+        "stock": 20,
+        "sku": "ZSR-16-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v16-m",
+        "comparePrice": 297900,
+        "stock": 22,
+        "sku": "ZSR-16-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v16-l",
+        "comparePrice": 297900,
+        "stock": 23,
+        "sku": "ZSR-16-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v16-xl",
+        "comparePrice": 297900,
+        "stock": 19,
+        "sku": "ZSR-16-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 130,
+    "visible": true
+  },
+  {
+    "id": "17",
+    "handle": "zaoro-signature-look-017",
+    "name": "Zaoro Signature Look 017",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-017.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending"
+    ],
+    "badge": null,
+    "stock": 25,
+    "variants": [
+      {
+        "id": "v17-s",
+        "comparePrice": 299900,
+        "stock": 21,
+        "sku": "ZSR-17-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v17-m",
+        "comparePrice": 299900,
+        "stock": 23,
+        "sku": "ZSR-17-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v17-l",
+        "comparePrice": 299900,
+        "stock": 24,
+        "sku": "ZSR-17-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v17-xl",
+        "comparePrice": 299900,
+        "stock": 20,
+        "sku": "ZSR-17-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 133,
+    "visible": true
+  },
+  {
+    "id": "18",
+    "handle": "zaoro-signature-look-018",
+    "name": "Zaoro Signature Look 018",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-018.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 26,
+    "variants": [
+      {
+        "id": "v18-s",
+        "comparePrice": 289900,
+        "stock": 22,
+        "sku": "ZSR-18-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v18-m",
+        "comparePrice": 289900,
+        "stock": 24,
+        "sku": "ZSR-18-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v18-l",
+        "comparePrice": 289900,
+        "stock": 25,
+        "sku": "ZSR-18-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v18-xl",
+        "comparePrice": 289900,
+        "stock": 21,
+        "sku": "ZSR-18-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 136,
+    "visible": true
+  },
+  {
+    "id": "19",
+    "handle": "zaoro-signature-look-019",
+    "name": "Zaoro Signature Look 019",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-019.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending"
+    ],
+    "badge": null,
+    "stock": 8,
+    "variants": [
+      {
+        "id": "v19-s",
+        "comparePrice": 291900,
+        "stock": 4,
+        "sku": "ZSR-19-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v19-m",
+        "comparePrice": 291900,
+        "stock": 6,
+        "sku": "ZSR-19-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v19-l",
+        "comparePrice": 291900,
+        "stock": 7,
+        "sku": "ZSR-19-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v19-xl",
+        "comparePrice": 291900,
+        "stock": 3,
+        "sku": "ZSR-19-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 139,
+    "visible": true
+  },
+  {
+    "id": "20",
+    "handle": "zaoro-signature-look-020",
+    "name": "Zaoro Signature Look 020",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-020.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "trending",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 9,
+    "variants": [
+      {
+        "id": "v20-s",
+        "comparePrice": 293900,
+        "stock": 5,
+        "sku": "ZSR-20-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v20-m",
+        "comparePrice": 293900,
+        "stock": 7,
+        "sku": "ZSR-20-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v20-l",
+        "comparePrice": 293900,
+        "stock": 8,
+        "sku": "ZSR-20-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v20-xl",
+        "comparePrice": 293900,
+        "stock": 4,
+        "sku": "ZSR-20-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 142,
+    "visible": true
+  },
+  {
+    "id": "21",
+    "handle": "zaoro-signature-look-021",
+    "name": "Zaoro Signature Look 021",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-021.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 10,
+    "variants": [
+      {
+        "id": "v21-s",
+        "comparePrice": 295900,
+        "stock": 6,
+        "sku": "ZSR-21-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v21-m",
+        "comparePrice": 295900,
+        "stock": 8,
+        "sku": "ZSR-21-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v21-l",
+        "comparePrice": 295900,
+        "stock": 9,
+        "sku": "ZSR-21-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v21-xl",
+        "comparePrice": 295900,
+        "stock": 5,
+        "sku": "ZSR-21-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 145,
+    "visible": true
+  },
+  {
+    "id": "22",
+    "handle": "zaoro-signature-look-022",
+    "name": "Zaoro Signature Look 022",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-022.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 11,
+    "variants": [
+      {
+        "id": "v22-s",
+        "comparePrice": 297900,
+        "stock": 7,
+        "sku": "ZSR-22-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v22-m",
+        "comparePrice": 297900,
+        "stock": 9,
+        "sku": "ZSR-22-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v22-l",
+        "comparePrice": 297900,
+        "stock": 10,
+        "sku": "ZSR-22-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v22-xl",
+        "comparePrice": 297900,
+        "stock": 6,
+        "sku": "ZSR-22-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 148,
+    "visible": true
+  },
+  {
+    "id": "23",
+    "handle": "zaoro-signature-look-023",
+    "name": "Zaoro Signature Look 023",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-023.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 12,
+    "variants": [
+      {
+        "id": "v23-s",
+        "comparePrice": 299900,
+        "stock": 8,
+        "sku": "ZSR-23-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v23-m",
+        "comparePrice": 299900,
+        "stock": 10,
+        "sku": "ZSR-23-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v23-l",
+        "comparePrice": 299900,
+        "stock": 11,
+        "sku": "ZSR-23-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v23-xl",
+        "comparePrice": 299900,
+        "stock": 7,
+        "sku": "ZSR-23-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 151,
+    "visible": true
+  },
+  {
+    "id": "24",
+    "handle": "zaoro-signature-look-024",
+    "name": "Zaoro Signature Look 024",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-024.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 13,
+    "variants": [
+      {
+        "id": "v24-s",
+        "comparePrice": 289900,
+        "stock": 9,
+        "sku": "ZSR-24-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v24-m",
+        "comparePrice": 289900,
+        "stock": 11,
+        "sku": "ZSR-24-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v24-l",
+        "comparePrice": 289900,
+        "stock": 12,
+        "sku": "ZSR-24-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v24-xl",
+        "comparePrice": 289900,
+        "stock": 8,
+        "sku": "ZSR-24-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 154,
+    "visible": true
+  },
+  {
+    "id": "25",
+    "handle": "zaoro-signature-look-025",
+    "name": "Zaoro Signature Look 025",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-025.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 14,
+    "variants": [
+      {
+        "id": "v25-s",
+        "comparePrice": 291900,
+        "stock": 10,
+        "sku": "ZSR-25-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v25-m",
+        "comparePrice": 291900,
+        "stock": 12,
+        "sku": "ZSR-25-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v25-l",
+        "comparePrice": 291900,
+        "stock": 13,
+        "sku": "ZSR-25-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v25-xl",
+        "comparePrice": 291900,
+        "stock": 9,
+        "sku": "ZSR-25-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 157,
+    "visible": true
+  },
+  {
+    "id": "26",
+    "handle": "zaoro-signature-look-026",
+    "name": "Zaoro Signature Look 026",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-026.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 15,
+    "variants": [
+      {
+        "id": "v26-s",
+        "comparePrice": 293900,
+        "stock": 11,
+        "sku": "ZSR-26-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v26-m",
+        "comparePrice": 293900,
+        "stock": 13,
+        "sku": "ZSR-26-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v26-l",
+        "comparePrice": 293900,
+        "stock": 14,
+        "sku": "ZSR-26-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v26-xl",
+        "comparePrice": 293900,
+        "stock": 10,
+        "sku": "ZSR-26-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 160,
+    "visible": true
+  },
+  {
+    "id": "27",
+    "handle": "zaoro-signature-look-027",
+    "name": "Zaoro Signature Look 027",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-027.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 16,
+    "variants": [
+      {
+        "id": "v27-s",
+        "comparePrice": 295900,
+        "stock": 12,
+        "sku": "ZSR-27-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v27-m",
+        "comparePrice": 295900,
+        "stock": 14,
+        "sku": "ZSR-27-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v27-l",
+        "comparePrice": 295900,
+        "stock": 15,
+        "sku": "ZSR-27-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v27-xl",
+        "comparePrice": 295900,
+        "stock": 11,
+        "sku": "ZSR-27-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 163,
+    "visible": true
+  },
+  {
+    "id": "28",
+    "handle": "zaoro-signature-look-028",
+    "name": "Zaoro Signature Look 028",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-028.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 17,
+    "variants": [
+      {
+        "id": "v28-s",
+        "comparePrice": 297900,
+        "stock": 13,
+        "sku": "ZSR-28-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v28-m",
+        "comparePrice": 297900,
+        "stock": 15,
+        "sku": "ZSR-28-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v28-l",
+        "comparePrice": 297900,
+        "stock": 16,
+        "sku": "ZSR-28-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v28-xl",
+        "comparePrice": 297900,
+        "stock": 12,
+        "sku": "ZSR-28-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 166,
+    "visible": true
+  },
+  {
+    "id": "29",
+    "handle": "zaoro-signature-look-029",
+    "name": "Zaoro Signature Look 029",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-029.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 18,
+    "variants": [
+      {
+        "id": "v29-s",
+        "comparePrice": 299900,
+        "stock": 14,
+        "sku": "ZSR-29-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v29-m",
+        "comparePrice": 299900,
+        "stock": 16,
+        "sku": "ZSR-29-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v29-l",
+        "comparePrice": 299900,
+        "stock": 17,
+        "sku": "ZSR-29-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v29-xl",
+        "comparePrice": 299900,
+        "stock": 13,
+        "sku": "ZSR-29-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 169,
+    "visible": true
+  },
+  {
+    "id": "30",
+    "handle": "zaoro-signature-look-030",
+    "name": "Zaoro Signature Look 030",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-030.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 19,
+    "variants": [
+      {
+        "id": "v30-s",
+        "comparePrice": 289900,
+        "stock": 15,
+        "sku": "ZSR-30-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v30-m",
+        "comparePrice": 289900,
+        "stock": 17,
+        "sku": "ZSR-30-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v30-l",
+        "comparePrice": 289900,
+        "stock": 18,
+        "sku": "ZSR-30-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v30-xl",
+        "comparePrice": 289900,
+        "stock": 14,
+        "sku": "ZSR-30-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 172,
+    "visible": true
+  },
+  {
+    "id": "31",
+    "handle": "zaoro-signature-look-031",
+    "name": "Zaoro Signature Look 031",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-031.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 20,
+    "variants": [
+      {
+        "id": "v31-s",
+        "comparePrice": 291900,
+        "stock": 16,
+        "sku": "ZSR-31-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v31-m",
+        "comparePrice": 291900,
+        "stock": 18,
+        "sku": "ZSR-31-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v31-l",
+        "comparePrice": 291900,
+        "stock": 19,
+        "sku": "ZSR-31-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v31-xl",
+        "comparePrice": 291900,
+        "stock": 15,
+        "sku": "ZSR-31-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 175,
+    "visible": true
+  },
+  {
+    "id": "32",
+    "handle": "zaoro-signature-look-032",
+    "name": "Zaoro Signature Look 032",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-032.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 21,
+    "variants": [
+      {
+        "id": "v32-s",
+        "comparePrice": 293900,
+        "stock": 17,
+        "sku": "ZSR-32-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v32-m",
+        "comparePrice": 293900,
+        "stock": 19,
+        "sku": "ZSR-32-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v32-l",
+        "comparePrice": 293900,
+        "stock": 20,
+        "sku": "ZSR-32-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v32-xl",
+        "comparePrice": 293900,
+        "stock": 16,
+        "sku": "ZSR-32-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 178,
+    "visible": true
+  },
+  {
+    "id": "33",
+    "handle": "zaoro-signature-look-033",
+    "name": "Zaoro Signature Look 033",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-033.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 22,
+    "variants": [
+      {
+        "id": "v33-s",
+        "comparePrice": 295900,
+        "stock": 18,
+        "sku": "ZSR-33-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v33-m",
+        "comparePrice": 295900,
+        "stock": 20,
+        "sku": "ZSR-33-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v33-l",
+        "comparePrice": 295900,
+        "stock": 21,
+        "sku": "ZSR-33-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v33-xl",
+        "comparePrice": 295900,
+        "stock": 17,
+        "sku": "ZSR-33-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 181,
+    "visible": true
+  },
+  {
+    "id": "34",
+    "handle": "zaoro-signature-look-034",
+    "name": "Zaoro Signature Look 034",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-034.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 23,
+    "variants": [
+      {
+        "id": "v34-s",
+        "comparePrice": 297900,
+        "stock": 19,
+        "sku": "ZSR-34-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v34-m",
+        "comparePrice": 297900,
+        "stock": 21,
+        "sku": "ZSR-34-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v34-l",
+        "comparePrice": 297900,
+        "stock": 22,
+        "sku": "ZSR-34-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v34-xl",
+        "comparePrice": 297900,
+        "stock": 18,
+        "sku": "ZSR-34-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 184,
+    "visible": true
+  },
+  {
+    "id": "35",
+    "handle": "zaoro-signature-look-035",
+    "name": "Zaoro Signature Look 035",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-035.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 24,
+    "variants": [
+      {
+        "id": "v35-s",
+        "comparePrice": 299900,
+        "stock": 20,
+        "sku": "ZSR-35-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v35-m",
+        "comparePrice": 299900,
+        "stock": 22,
+        "sku": "ZSR-35-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v35-l",
+        "comparePrice": 299900,
+        "stock": 23,
+        "sku": "ZSR-35-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v35-xl",
+        "comparePrice": 299900,
+        "stock": 19,
+        "sku": "ZSR-35-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 187,
+    "visible": true
+  },
+  {
+    "id": "36",
+    "handle": "zaoro-signature-look-036",
+    "name": "Zaoro Signature Look 036",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-036.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 25,
+    "variants": [
+      {
+        "id": "v36-s",
+        "comparePrice": 289900,
+        "stock": 21,
+        "sku": "ZSR-36-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v36-m",
+        "comparePrice": 289900,
+        "stock": 23,
+        "sku": "ZSR-36-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v36-l",
+        "comparePrice": 289900,
+        "stock": 24,
+        "sku": "ZSR-36-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v36-xl",
+        "comparePrice": 289900,
+        "stock": 20,
+        "sku": "ZSR-36-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 190,
+    "visible": true
+  },
+  {
+    "id": "37",
+    "handle": "zaoro-signature-look-037",
+    "name": "Zaoro Signature Look 037",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-037.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 26,
+    "variants": [
+      {
+        "id": "v37-s",
+        "comparePrice": 291900,
+        "stock": 22,
+        "sku": "ZSR-37-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v37-m",
+        "comparePrice": 291900,
+        "stock": 24,
+        "sku": "ZSR-37-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v37-l",
+        "comparePrice": 291900,
+        "stock": 25,
+        "sku": "ZSR-37-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v37-xl",
+        "comparePrice": 291900,
+        "stock": 21,
+        "sku": "ZSR-37-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 193,
+    "visible": true
+  },
+  {
+    "id": "38",
+    "handle": "zaoro-signature-look-038",
+    "name": "Zaoro Signature Look 038",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-038.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 8,
+    "variants": [
+      {
+        "id": "v38-s",
+        "comparePrice": 293900,
+        "stock": 4,
+        "sku": "ZSR-38-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v38-m",
+        "comparePrice": 293900,
+        "stock": 6,
+        "sku": "ZSR-38-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v38-l",
+        "comparePrice": 293900,
+        "stock": 7,
+        "sku": "ZSR-38-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v38-xl",
+        "comparePrice": 293900,
+        "stock": 3,
+        "sku": "ZSR-38-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 196,
+    "visible": true
+  },
+  {
+    "id": "39",
+    "handle": "zaoro-signature-look-039",
+    "name": "Zaoro Signature Look 039",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-039.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 9,
+    "variants": [
+      {
+        "id": "v39-s",
+        "comparePrice": 295900,
+        "stock": 5,
+        "sku": "ZSR-39-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v39-m",
+        "comparePrice": 295900,
+        "stock": 7,
+        "sku": "ZSR-39-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v39-l",
+        "comparePrice": 295900,
+        "stock": 8,
+        "sku": "ZSR-39-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v39-xl",
+        "comparePrice": 295900,
+        "stock": 4,
+        "sku": "ZSR-39-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 199,
+    "visible": true
+  },
+  {
+    "id": "40",
+    "handle": "zaoro-signature-look-040",
+    "name": "Zaoro Signature Look 040",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-040.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 10,
+    "variants": [
+      {
+        "id": "v40-s",
+        "comparePrice": 297900,
+        "stock": 6,
+        "sku": "ZSR-40-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v40-m",
+        "comparePrice": 297900,
+        "stock": 8,
+        "sku": "ZSR-40-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v40-l",
+        "comparePrice": 297900,
+        "stock": 9,
+        "sku": "ZSR-40-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v40-xl",
+        "comparePrice": 297900,
+        "stock": 5,
+        "sku": "ZSR-40-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 202,
+    "visible": true
+  },
+  {
+    "id": "41",
+    "handle": "zaoro-signature-look-041",
+    "name": "Zaoro Signature Look 041",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-041.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 11,
+    "variants": [
+      {
+        "id": "v41-s",
+        "comparePrice": 299900,
+        "stock": 7,
+        "sku": "ZSR-41-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v41-m",
+        "comparePrice": 299900,
+        "stock": 9,
+        "sku": "ZSR-41-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v41-l",
+        "comparePrice": 299900,
+        "stock": 10,
+        "sku": "ZSR-41-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v41-xl",
+        "comparePrice": 299900,
+        "stock": 6,
+        "sku": "ZSR-41-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 205,
+    "visible": true
+  },
+  {
+    "id": "42",
+    "handle": "zaoro-signature-look-042",
+    "name": "Zaoro Signature Look 042",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-042.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 12,
+    "variants": [
+      {
+        "id": "v42-s",
+        "comparePrice": 289900,
+        "stock": 8,
+        "sku": "ZSR-42-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v42-m",
+        "comparePrice": 289900,
+        "stock": 10,
+        "sku": "ZSR-42-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v42-l",
+        "comparePrice": 289900,
+        "stock": 11,
+        "sku": "ZSR-42-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v42-xl",
+        "comparePrice": 289900,
+        "stock": 7,
+        "sku": "ZSR-42-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 208,
+    "visible": true
+  },
+  {
+    "id": "43",
+    "handle": "zaoro-signature-look-043",
+    "name": "Zaoro Signature Look 043",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-043.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 13,
+    "variants": [
+      {
+        "id": "v43-s",
+        "comparePrice": 291900,
+        "stock": 9,
+        "sku": "ZSR-43-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v43-m",
+        "comparePrice": 291900,
+        "stock": 11,
+        "sku": "ZSR-43-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v43-l",
+        "comparePrice": 291900,
+        "stock": 12,
+        "sku": "ZSR-43-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v43-xl",
+        "comparePrice": 291900,
+        "stock": 8,
+        "sku": "ZSR-43-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 211,
+    "visible": true
+  },
+  {
+    "id": "44",
+    "handle": "zaoro-signature-look-044",
+    "name": "Zaoro Signature Look 044",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-044.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 14,
+    "variants": [
+      {
+        "id": "v44-s",
+        "comparePrice": 293900,
+        "stock": 10,
+        "sku": "ZSR-44-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v44-m",
+        "comparePrice": 293900,
+        "stock": 12,
+        "sku": "ZSR-44-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v44-l",
+        "comparePrice": 293900,
+        "stock": 13,
+        "sku": "ZSR-44-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v44-xl",
+        "comparePrice": 293900,
+        "stock": 9,
+        "sku": "ZSR-44-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 214,
+    "visible": true
+  },
+  {
+    "id": "45",
+    "handle": "zaoro-signature-look-045",
+    "name": "Zaoro Signature Look 045",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-045.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 15,
+    "variants": [
+      {
+        "id": "v45-s",
+        "comparePrice": 295900,
+        "stock": 11,
+        "sku": "ZSR-45-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v45-m",
+        "comparePrice": 295900,
+        "stock": 13,
+        "sku": "ZSR-45-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v45-l",
+        "comparePrice": 295900,
+        "stock": 14,
+        "sku": "ZSR-45-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v45-xl",
+        "comparePrice": 295900,
+        "stock": 10,
+        "sku": "ZSR-45-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 217,
+    "visible": true
+  },
+  {
+    "id": "46",
+    "handle": "zaoro-signature-look-046",
+    "name": "Zaoro Signature Look 046",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-046.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 16,
+    "variants": [
+      {
+        "id": "v46-s",
+        "comparePrice": 297900,
+        "stock": 12,
+        "sku": "ZSR-46-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v46-m",
+        "comparePrice": 297900,
+        "stock": 14,
+        "sku": "ZSR-46-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v46-l",
+        "comparePrice": 297900,
+        "stock": 15,
+        "sku": "ZSR-46-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v46-xl",
+        "comparePrice": 297900,
+        "stock": 11,
+        "sku": "ZSR-46-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 220,
+    "visible": true
+  },
+  {
+    "id": "47",
+    "handle": "zaoro-signature-look-047",
+    "name": "Zaoro Signature Look 047",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-047.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 17,
+    "variants": [
+      {
+        "id": "v47-s",
+        "comparePrice": 299900,
+        "stock": 13,
+        "sku": "ZSR-47-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v47-m",
+        "comparePrice": 299900,
+        "stock": 15,
+        "sku": "ZSR-47-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v47-l",
+        "comparePrice": 299900,
+        "stock": 16,
+        "sku": "ZSR-47-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v47-xl",
+        "comparePrice": 299900,
+        "stock": 12,
+        "sku": "ZSR-47-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 223,
+    "visible": true
+  },
+  {
+    "id": "48",
+    "handle": "zaoro-signature-look-048",
+    "name": "Zaoro Signature Look 048",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-048.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 18,
+    "variants": [
+      {
+        "id": "v48-s",
+        "comparePrice": 289900,
+        "stock": 14,
+        "sku": "ZSR-48-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v48-m",
+        "comparePrice": 289900,
+        "stock": 16,
+        "sku": "ZSR-48-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v48-l",
+        "comparePrice": 289900,
+        "stock": 17,
+        "sku": "ZSR-48-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v48-xl",
+        "comparePrice": 289900,
+        "stock": 13,
+        "sku": "ZSR-48-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 226,
+    "visible": true
+  },
+  {
+    "id": "49",
+    "handle": "zaoro-signature-look-049",
+    "name": "Zaoro Signature Look 049",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-049.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 19,
+    "variants": [
+      {
+        "id": "v49-s",
+        "comparePrice": 291900,
+        "stock": 15,
+        "sku": "ZSR-49-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v49-m",
+        "comparePrice": 291900,
+        "stock": 17,
+        "sku": "ZSR-49-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v49-l",
+        "comparePrice": 291900,
+        "stock": 18,
+        "sku": "ZSR-49-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v49-xl",
+        "comparePrice": 291900,
+        "stock": 14,
+        "sku": "ZSR-49-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 229,
+    "visible": true
+  },
+  {
+    "id": "50",
+    "handle": "zaoro-signature-look-050",
+    "name": "Zaoro Signature Look 050",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-050.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 20,
+    "variants": [
+      {
+        "id": "v50-s",
+        "comparePrice": 293900,
+        "stock": 16,
+        "sku": "ZSR-50-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v50-m",
+        "comparePrice": 293900,
+        "stock": 18,
+        "sku": "ZSR-50-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v50-l",
+        "comparePrice": 293900,
+        "stock": 19,
+        "sku": "ZSR-50-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v50-xl",
+        "comparePrice": 293900,
+        "stock": 15,
+        "sku": "ZSR-50-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 232,
+    "visible": true
+  },
+  {
+    "id": "51",
+    "handle": "zaoro-signature-look-051",
+    "name": "Zaoro Signature Look 051",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-051.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 21,
+    "variants": [
+      {
+        "id": "v51-s",
+        "comparePrice": 295900,
+        "stock": 17,
+        "sku": "ZSR-51-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v51-m",
+        "comparePrice": 295900,
+        "stock": 19,
+        "sku": "ZSR-51-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v51-l",
+        "comparePrice": 295900,
+        "stock": 20,
+        "sku": "ZSR-51-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v51-xl",
+        "comparePrice": 295900,
+        "stock": 16,
+        "sku": "ZSR-51-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 235,
+    "visible": true
+  },
+  {
+    "id": "52",
+    "handle": "zaoro-signature-look-052",
+    "name": "Zaoro Signature Look 052",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-052.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 22,
+    "variants": [
+      {
+        "id": "v52-s",
+        "comparePrice": 297900,
+        "stock": 18,
+        "sku": "ZSR-52-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v52-m",
+        "comparePrice": 297900,
+        "stock": 20,
+        "sku": "ZSR-52-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v52-l",
+        "comparePrice": 297900,
+        "stock": 21,
+        "sku": "ZSR-52-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v52-xl",
+        "comparePrice": 297900,
+        "stock": 17,
+        "sku": "ZSR-52-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 238,
+    "visible": true
+  },
+  {
+    "id": "53",
+    "handle": "zaoro-signature-look-053",
+    "name": "Zaoro Signature Look 053",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 259900,
+    "comparePrice": 299900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-053.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 23,
+    "variants": [
+      {
+        "id": "v53-s",
+        "comparePrice": 299900,
+        "stock": 19,
+        "sku": "ZSR-53-S",
+        "price": 259900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v53-m",
+        "comparePrice": 299900,
+        "stock": 21,
+        "sku": "ZSR-53-M",
+        "price": 259900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v53-l",
+        "comparePrice": 299900,
+        "stock": 22,
+        "sku": "ZSR-53-L",
+        "price": 259900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v53-xl",
+        "comparePrice": 299900,
+        "stock": 18,
+        "sku": "ZSR-53-XL",
+        "price": 259900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 241,
+    "visible": true
+  },
+  {
+    "id": "54",
+    "handle": "zaoro-signature-look-054",
+    "name": "Zaoro Signature Look 054",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 249900,
+    "comparePrice": 289900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-054.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 24,
+    "variants": [
+      {
+        "id": "v54-s",
+        "comparePrice": 289900,
+        "stock": 20,
+        "sku": "ZSR-54-S",
+        "price": 249900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v54-m",
+        "comparePrice": 289900,
+        "stock": 22,
+        "sku": "ZSR-54-M",
+        "price": 249900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v54-l",
+        "comparePrice": 289900,
+        "stock": 23,
+        "sku": "ZSR-54-L",
+        "price": 249900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v54-xl",
+        "comparePrice": 289900,
+        "stock": 19,
+        "sku": "ZSR-54-XL",
+        "price": 249900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 244,
+    "visible": true
+  },
+  {
+    "id": "55",
+    "handle": "zaoro-signature-look-055",
+    "name": "Zaoro Signature Look 055",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 251900,
+    "comparePrice": 291900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-055.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 25,
+    "variants": [
+      {
+        "id": "v55-s",
+        "comparePrice": 291900,
+        "stock": 21,
+        "sku": "ZSR-55-S",
+        "price": 251900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v55-m",
+        "comparePrice": 291900,
+        "stock": 23,
+        "sku": "ZSR-55-M",
+        "price": 251900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v55-l",
+        "comparePrice": 291900,
+        "stock": 24,
+        "sku": "ZSR-55-L",
+        "price": 251900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v55-xl",
+        "comparePrice": 291900,
+        "stock": 20,
+        "sku": "ZSR-55-XL",
+        "price": 251900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 247,
+    "visible": true
+  },
+  {
+    "id": "56",
+    "handle": "zaoro-signature-look-056",
+    "name": "Zaoro Signature Look 056",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 253900,
+    "comparePrice": 293900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-056.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "sale"
+    ],
+    "badge": "20% Off",
+    "stock": 26,
+    "variants": [
+      {
+        "id": "v56-s",
+        "comparePrice": 293900,
+        "stock": 22,
+        "sku": "ZSR-56-S",
+        "price": 253900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v56-m",
+        "comparePrice": 293900,
+        "stock": 24,
+        "sku": "ZSR-56-M",
+        "price": 253900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v56-l",
+        "comparePrice": 293900,
+        "stock": 25,
+        "sku": "ZSR-56-L",
+        "price": 253900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v56-xl",
+        "comparePrice": 293900,
+        "stock": 21,
+        "sku": "ZSR-56-XL",
+        "price": 253900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 250,
+    "visible": true
+  },
+  {
+    "id": "57",
+    "handle": "zaoro-signature-look-057",
+    "name": "Zaoro Signature Look 057",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 255900,
+    "comparePrice": 295900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-057.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women",
+      "bestseller"
+    ],
+    "badge": null,
+    "stock": 8,
+    "variants": [
+      {
+        "id": "v57-s",
+        "comparePrice": 295900,
+        "stock": 4,
+        "sku": "ZSR-57-S",
+        "price": 255900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v57-m",
+        "comparePrice": 295900,
+        "stock": 6,
+        "sku": "ZSR-57-M",
+        "price": 255900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v57-l",
+        "comparePrice": 295900,
+        "stock": 7,
+        "sku": "ZSR-57-L",
+        "price": 255900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v57-xl",
+        "comparePrice": 295900,
+        "stock": 3,
+        "sku": "ZSR-57-XL",
+        "price": 255900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 253,
+    "visible": true
+  },
+  {
+    "id": "58",
+    "handle": "zaoro-signature-look-058",
+    "name": "Zaoro Signature Look 058",
+    "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
+    "price": 257900,
+    "comparePrice": 297900,
+    "currency": "INR",
+    "images": [
+      "/images/products/client/client-058.jpg"
+    ],
+    "category": "women",
+    "tags": [
+      "women"
+    ],
+    "badge": null,
+    "stock": 9,
+    "variants": [
+      {
+        "id": "v58-s",
+        "comparePrice": 297900,
+        "stock": 5,
+        "sku": "ZSR-58-S",
+        "price": 257900,
+        "options": {
+          "size": "S"
+        },
+        "title": "S"
+      },
+      {
+        "id": "v58-m",
+        "comparePrice": 297900,
+        "stock": 7,
+        "sku": "ZSR-58-M",
+        "price": 257900,
+        "options": {
+          "size": "M"
+        },
+        "title": "M"
+      },
+      {
+        "id": "v58-l",
+        "comparePrice": 297900,
+        "stock": 8,
+        "sku": "ZSR-58-L",
+        "price": 257900,
+        "options": {
+          "size": "L"
+        },
+        "title": "L"
+      },
+      {
+        "id": "v58-xl",
+        "comparePrice": 297900,
+        "stock": 4,
+        "sku": "ZSR-58-XL",
+        "price": 257900,
+        "options": {
+          "size": "XL"
+        },
+        "title": "XL"
+      }
+    ],
+    "details": {
+      "material": "Premium blended fabric",
+      "care": "Gentle machine wash cold, dry in shade."
+    },
+    "reviews": 256,
     "visible": true
   }
 ]

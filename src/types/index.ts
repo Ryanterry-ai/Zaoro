@@ -57,17 +57,12 @@ export interface NavItem {
   children?: NavItem[];
 }
 
-export interface NavigationLink {
-  label: string;
-  url: string;
-}
-
 export interface NavigationData {
   main: NavItem[];
   footer: {
-    quickLinks: NavigationLink[];
-    collections: NavigationLink[];
-    legal: NavigationLink[];
+    quickLinks: Array<{ label: string; url: string }>;
+    collections: Array<{ label: string; url: string }>;
+    legal: Array<{ label: string; url: string }>;
   };
 }
 

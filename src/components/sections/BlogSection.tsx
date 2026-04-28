@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getBlogs } from '@/lib/data-server';
+import { getBlogs } from '@/lib/data';
 
-export async function BlogSection() {
-  const blogs = (await getBlogs()).slice(0, 3);
+export function BlogSection() {
+  const blogs = getBlogs().slice(0, 3);
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
       <div className="flex items-end justify-between mb-10">

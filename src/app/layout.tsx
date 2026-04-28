@@ -4,12 +4,10 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/layout/CartDrawer';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
-import { getNavigation, getSettings } from '@/lib/data-server';
-
-export const dynamic = 'force-dynamic';
+import { getSettings } from '@/lib/data';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
+  const settings = getSettings();
   return {
     title: settings.seo.title,
     description: settings.seo.description,
@@ -17,16 +15,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [settings, navigation] = await Promise.all([getSettings(), getNavigation()]);
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const settings = getSettings();
   return (
     <html lang="en">
       <body>
         <AnnouncementBar settings={settings.announcementBar} />
-        <Header navigation={navigation} />
+        <Header />
         <CartDrawer />
         <main>{children}</main>
-        <Footer settings={settings} navigation={navigation} />
+        <Footer />
       </body>
     </html>
   );

@@ -1,10 +1,9 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import { getBlogByHandle } from '@/lib/data-server';
+import { getBlogByHandle } from '@/lib/data';
 interface Props { params: { handle: string } }
-
-export default async function BlogDetailPage({ params }: Props) {
-  const blog = await getBlogByHandle(params.handle);
+export default function BlogDetailPage({ params }: Props) {
+  const blog = getBlogByHandle(params.handle);
   if (!blog) notFound();
   return (
     <article className="max-w-3xl mx-auto px-4 py-16">

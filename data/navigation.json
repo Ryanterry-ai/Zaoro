@@ -1,40 +1,111 @@
 {
   "main": [
-    { "id": "home", "label": "Home", "url": "/" },
-    { "id": "shop", "label": "Shop", "url": "/products" },
     {
-      "id": "collections", "label": "Collections", "url": "#",
+      "id": "home",
+      "label": "Home",
+      "url": "/"
+    },
+    {
+      "id": "shop",
+      "label": "Shop",
+      "url": "/products"
+    },
+    {
+      "id": "collections",
+      "label": "Collections",
+      "url": "#",
       "children": [
-        { "id": "women", "label": "Women", "url": "/products/women" },
-        { "id": "men", "label": "Men", "url": "/products/men" },
-        { "id": "new-arrivals", "label": "New Arrivals", "url": "/products/new-arrivals" },
-        { "id": "best-sellers", "label": "Best Sellers", "url": "/products/best-sellers" },
-        { "id": "sale", "label": "Sale", "url": "/products/sale" }
+        {
+          "id": "women",
+          "label": "Women",
+          "url": "/products/women"
+        },
+        {
+          "id": "new-arrivals",
+          "label": "New Arrivals",
+          "url": "/products/new-arrivals"
+        },
+        {
+          "id": "best-sellers",
+          "label": "Best Sellers",
+          "url": "/products/best-sellers"
+        },
+        {
+          "id": "sale",
+          "label": "Sale",
+          "url": "/products/sale"
+        }
       ]
     },
-    { "id": "about", "label": "About", "url": "/about" },
-    { "id": "contact", "label": "Contact", "url": "/contact-us" }
+    {
+      "id": "about",
+      "label": "About",
+      "url": "/about"
+    },
+    {
+      "id": "contact",
+      "label": "Contact",
+      "url": "/contact-us"
+    }
   ],
   "footer": {
     "quickLinks": [
-      { "label": "Home", "url": "/" },
-      { "label": "Shop", "url": "/products" },
-      { "label": "About", "url": "/about" },
-      { "label": "Blog", "url": "/blogs" },
-      { "label": "FAQ", "url": "/faq" }
+      {
+        "label": "Home",
+        "url": "/"
+      },
+      {
+        "label": "Shop",
+        "url": "/products"
+      },
+      {
+        "label": "About",
+        "url": "/about"
+      },
+      {
+        "label": "Blog",
+        "url": "/blogs"
+      },
+      {
+        "label": "FAQ",
+        "url": "/faq"
+      }
     ],
     "collections": [
-      { "label": "Women", "url": "/products/women" },
-      { "label": "Men", "url": "/products/men" },
-      { "label": "New Arrivals", "url": "/products/new-arrivals" },
-      { "label": "Best Sellers", "url": "/products/best-sellers" },
-      { "label": "Sale", "url": "/products/sale" }
+      {
+        "label": "Women",
+        "url": "/products/women"
+      },
+      {
+        "label": "New Arrivals",
+        "url": "/products/new-arrivals"
+      },
+      {
+        "label": "Best Sellers",
+        "url": "/products/best-sellers"
+      },
+      {
+        "label": "Sale",
+        "url": "/products/sale"
+      }
     ],
     "legal": [
-      { "label": "Privacy policy", "url": "/general/privacy-policy" },
-      { "label": "Refund Policy", "url": "/general/refund-policy" },
-      { "label": "Shipping Policy", "url": "/general/shipping-policy" },
-      { "label": "Contact", "url": "/contact-us" }
+      {
+        "label": "Privacy policy",
+        "url": "/general/privacy-policy"
+      },
+      {
+        "label": "Refund Policy",
+        "url": "/general/refund-policy"
+      },
+      {
+        "label": "Shipping Policy",
+        "url": "/general/shipping-policy"
+      },
+      {
+        "label": "Contact",
+        "url": "/contact-us"
+      }
     ]
   }
 }

@@ -8,11 +8,8 @@ import { SeasonalEdit } from '@/components/sections/SeasonalEdit';
 import { BlogSection } from '@/components/sections/BlogSection';
 import { SaleBanner } from '@/components/sections/SaleBanner';
 import { TrustFeatures } from '@/components/sections/TrustFeatures';
-import { getProducts } from '@/lib/data-server';
 
-export default async function HomePage() {
-  const products = await getProducts();
-
+export default function HomePage() {
   return (
     <>
       <HeroSlider />
@@ -20,7 +17,7 @@ export default async function HomePage() {
       <TrendingNow />
       <FeaturedCollections />
       <SaleCountdown />
-      <BestSellers products={products} />
+      <BestSellers />
       <SeasonalEdit />
       <BlogSection />
       <SaleBanner />

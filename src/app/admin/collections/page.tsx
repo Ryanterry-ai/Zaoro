@@ -66,7 +66,7 @@ export default function AdminCollectionsPage() {
           {[{label:'Name',key:'name'},{label:'Handle',key:'handle'},{label:'Description',key:'description'},{label:'Image URL',key:'image'}].map(f=>(
             <div key={f.key}>
               <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
-              <input type="text" value={(editing as unknown as Record<string,unknown>)[f.key] as string||''} onChange={e=>setEditing({...editing,[f.key]:e.target.value})} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
+              <input type="text" value={(editing[f.key as keyof Collection] as string) || ''} onChange={e=>setEditing({...editing,[f.key]:e.target.value})} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
             </div>
           ))}
           {editing.image && (

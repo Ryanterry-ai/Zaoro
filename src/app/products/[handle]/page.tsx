@@ -1,36 +1,31 @@
 import { notFound } from 'next/navigation';
-import {
-  getCollectionProducts,
-  getCollectionByHandle,
-  getProductByHandle,
-  getRelatedProducts,
-} from '@/lib/data-server';
+import { getCollectionProducts, getCollectionByHandle, getProductByHandle, getRelatedProducts } from '@/lib/data';
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductDetailClient } from '@/components/product/ProductDetailClient';
 
 interface Props { params: { handle: string } }
 
-const COLLECTION_HANDLES = ['women', 'men', 'new-arrivals', 'best-sellers', 'sale'];
+const COLLECTION_HANDLES = ['women', 'new-arrivals', 'best-sellers', 'sale'];
 
 export async function generateMetadata({ params }: Props) {
   const { handle } = params;
   if (COLLECTION_HANDLES.includes(handle)) {
-    const collection = await getCollectionByHandle(handle);
+    const collection = getCollectionByHandle(handle);
     return { title: `${collection?.name} - Zaro` };
   }
-  const product = await getProductByHandle(handle);
+  const product = getProductByHandle(handle);
   if (!product) return { title: 'Not Found - Zaro' };
   return { title: `${product.name} - Zaro`, description: product.description };
 }
 
-export default async function ProductsOrCollectionPage({ params }: Props) {
+export default function ProductsOrCollectionPage({ params }: Props) {
   const { handle } = params;
 
   // Is it a collection?
   if (COLLECTION_HANDLES.includes(handle)) {
-    const collection = await getCollectionByHandle(handle);
+    const collection = getCollectionByHandle(handle);
     if (!collection) notFound();
-    const products = await getCollectionProducts(handle);
+    const products = getCollectionProducts(handle);
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-10">
@@ -45,9 +40,9 @@ export default async function ProductsOrCollectionPage({ params }: Props) {
   }
 
   // Otherwise it's a product
-  const product = await getProductByHandle(handle);
+  const product = getProductByHandle(handle);
   if (!product) notFound();
-  const related = await getRelatedProducts(product);
+  const related = getRelatedProducts(product);
 
   return (
     <div>
