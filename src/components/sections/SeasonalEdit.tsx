@@ -20,13 +20,15 @@ export function SeasonalEdit({ products }: Props) {
     <section className="bg-[#F8F6F3] py-16 lg:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <Reveal className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {picks.map((product, i) => (
-              <div key={i} className="relative aspect-[3/4] overflow-hidden bg-[#EDE9E3]">
-                <Image src={product.images[0]} alt={product.name} fill className="object-cover hover:scale-105 transition-transform duration-700" sizes="(max-width: 1024px) 30vw, 15vw" />
-              </div>
+              <Reveal key={product.id} delayMs={i * 90}>
+                <div className="relative aspect-[3/4] overflow-hidden bg-[#EDE9E3] image-tilt-hover">
+                  <Image src={product.images[0]} alt={product.name} fill className="object-cover hover:scale-105 transition-transform duration-700" sizes="(max-width: 1024px) 30vw, 15vw" />
+                </div>
+              </Reveal>
             ))}
-          </Reveal>
+          </div>
           <div>
             <Reveal><p className="text-xs tracking-widest uppercase text-[#6B6B6B] mb-3">Modern Details</p></Reveal>
             <Reveal delayMs={70}><h2 className="font-serif text-4xl md:text-5xl font-light text-[#0A0A0A] mb-6 leading-tight">

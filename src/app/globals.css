@@ -42,6 +42,12 @@ body { font-family: 'Inter', sans-serif; color: #0A0A0A; background: #FFFFFF; }
   to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
+@keyframes softFloat {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+
 @keyframes progressFill {
   from { width: 0; }
   to { width: 100%; }
@@ -154,6 +160,17 @@ body { font-family: 'Inter', sans-serif; color: #0A0A0A; background: #FFFFFF; }
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
 }
 
+.image-float {
+  animation: softFloat 7s ease-in-out infinite;
+}
+
+.image-tilt-hover {
+  transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.image-tilt-hover:hover {
+  transform: translateY(-6px) rotate(-0.6deg) scale(1.015);
+}
+
 .nav-dropdown-panel {
   opacity: 0;
   visibility: hidden;
@@ -251,15 +268,10 @@ body { font-family: 'Inter', sans-serif; color: #0A0A0A; background: #FFFFFF; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .motion-reveal,
-  .cart-overlay,
-  .cart-drawer,
+  .animate-marquee,
+  .text-loop-row > span,
   .hero-progress-fill,
-  .hero-image-layer,
-  .hero-copy-line,
-  .hero-control,
-  .nav-dropdown-panel,
-  .nav-dropdown-item,
+  .image-float,
   .offer-popup-backdrop,
   .offer-popup-panel {
     transition: none !important;

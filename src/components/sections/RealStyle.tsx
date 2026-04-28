@@ -28,7 +28,7 @@ export function RealStyle({ products }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <Reveal>
-            <div className="relative aspect-[4/5] overflow-hidden bg-[#F8F6F3]">
+            <div className="relative aspect-[4/5] overflow-hidden bg-[#F8F6F3] image-float">
               <Image
                 src={lead.images[0]}
                 alt={lead.name}
@@ -49,7 +49,7 @@ export function RealStyle({ products }: Props) {
               </p>
             </Reveal>
             <Reveal delayMs={120}>
-              <Link href="/products/jewellery" className="btn-outline inline-block mb-6">Explore Collections</Link>
+              <Link href="/products/jewellery" className="btn-outline inline-block mb-6 image-tilt-hover">Explore Collections</Link>
             </Reveal>
             {picks.length > 0 && (
               <Reveal delayMs={150}>
