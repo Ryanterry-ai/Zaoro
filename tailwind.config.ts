@@ -8,7 +8,7 @@ const config: Config = {
         serif: ['Playfair Display', 'Georgia', 'serif'],
       },
       colors: {
-        zaro: {
+        truartz: {
           black: '#0A0A0A',
           white: '#FFFFFF',
           cream: '#F8F6F3',

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -36,7 +36,7 @@ function NavSidebar() {
   return (
     <aside className="w-56 min-h-screen bg-[#0A0A0A] text-white flex flex-col flex-shrink-0">
       <div className="p-6 border-b border-[#222]">
-        <h1 className="font-serif text-xl font-semibold">ZARO</h1>
+        <h1 className="font-serif text-xl font-semibold">TruArtz</h1>
         <p className="text-xs text-[#6B6B6B] mt-0.5">Admin Panel</p>
       </div>
       <nav className="flex-1 py-4">
@@ -69,7 +69,7 @@ export default function AdminProductsPage() {
     p.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatPrice = (paise: number) => `â‚¹${(paise/100).toLocaleString('en-IN')}`;
+  const formatPrice = (paise: number) => `₹${(paise/100).toLocaleString('en-IN')}`;
 
   const startNew = () => {
     setEditing({ id: `prod_${Date.now()}`, ...emptyProduct });
@@ -174,8 +174,8 @@ export default function AdminProductsPage() {
                     <thead>
                       <tr className="text-xs text-[#6B6B6B] border-b">
                         <th className="text-left pb-2 pr-3">Size</th>
-                        <th className="text-left pb-2 pr-3">Price (â‚¹)</th>
-                        <th className="text-left pb-2 pr-3">Compare (â‚¹)</th>
+                        <th className="text-left pb-2 pr-3">Price (₹)</th>
+                        <th className="text-left pb-2 pr-3">Compare (₹)</th>
                         <th className="text-left pb-2 pr-3">Stock</th>
                         <th className="text-left pb-2">SKU</th>
                       </tr>
@@ -218,7 +218,7 @@ export default function AdminProductsPage() {
             <div className="space-y-5">
               <div className="bg-white p-6 rounded shadow-sm space-y-4">
                 <h3 className="font-semibold text-sm border-b pb-2">Pricing</h3>
-                {[{label:'Price (â‚¹)',key:'price'},{label:'Compare Price (â‚¹)',key:'comparePrice'}].map(f => (
+                {[{label:'Price (₹)',key:'price'},{label:'Compare Price (₹)',key:'comparePrice'}].map(f => (
                   <div key={f.key}>
                     <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
                     <input type="number" value={((editing as unknown as Record<string,unknown>)[f.key] as number || 0)/100}

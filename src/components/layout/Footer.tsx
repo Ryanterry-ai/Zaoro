@@ -26,7 +26,7 @@ export function Footer({ settings, nav }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
             <div className="lg:col-span-2">
               <Link href="/" className="font-serif text-2xl font-semibold tracking-wider text-white block mb-4">
-                ZARO
+                TruArtz
               </Link>
               <p className="text-[#6B6B6B] text-sm leading-relaxed max-w-xs">{settings.description}</p>
               <div className="mt-6 flex gap-0">

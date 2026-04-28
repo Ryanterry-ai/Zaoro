@@ -1,4 +1,4 @@
-﻿import { notFound } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getCollectionProducts, getCollectionByHandle, getProductByHandle, getRelatedProducts } from '@/lib/data-server';
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductDetailClient } from '@/components/product/ProductDetailClient';
@@ -10,11 +10,11 @@ export async function generateMetadata({ params }: Props) {
   const { handle } = params;
   const collection = await getCollectionByHandle(handle);
   if (collection) {
-    return { title: `${collection.name} - Zaro` };
+    return { title: `${collection.name} - TruArtz` };
   }
   const product = await getProductByHandle(handle);
-  if (!product) return { title: 'Not Found - Zaro' };
-  return { title: `${product.name} - Zaro`, description: product.description };
+  if (!product) return { title: 'Not Found - TruArtz' };
+  return { title: `${product.name} - TruArtz`, description: product.description };
 }
 
 export default async function ProductsOrCollectionPage({ params }: Props) {

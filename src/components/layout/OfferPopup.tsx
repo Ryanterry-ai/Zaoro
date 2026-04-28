@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
-const STORAGE_KEY = 'zaro_offer_popup_dismissed';
+const STORAGE_KEY = 'truartz_offer_popup_dismissed';
 
 export function OfferPopup() {
   const [open, setOpen] = useState(false);

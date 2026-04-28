@@ -18,7 +18,7 @@ function AdminNav({ onLogout }: { onLogout: () => void }) {
   return (
     <aside className="w-56 min-h-screen bg-[#0A0A0A] text-white flex flex-col">
       <div className="p-6 border-b border-[#222]">
-        <h1 className="font-serif text-xl font-semibold">ZARO</h1>
+        <h1 className="font-serif text-xl font-semibold">TruArtz</h1>
         <p className="text-xs text-[#6B6B6B] mt-0.5">Admin Panel</p>
       </div>
       <nav className="flex-1 py-4">
@@ -71,7 +71,7 @@ export default function DashboardPage() {
       <main className="flex-1 p-8">
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-[#0A0A0A]">Dashboard</h2>
-          <p className="text-[#6B6B6B] text-sm mt-1">Welcome back to your Zaro store admin</p>
+          <p className="text-[#6B6B6B] text-sm mt-1">Welcome back to your TruArtz store admin</p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map(s => (

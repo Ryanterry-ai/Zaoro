@@ -10,7 +10,7 @@ function NavSidebar() {
   const navItems = [{href:'/admin/dashboard',label:'Dashboard'},{href:'/admin/products',label:'Products'},{href:'/admin/collections',label:'Collections'},{href:'/admin/navigation',label:'Navigation'},{href:'/admin/pages',label:'Pages'},{href:'/admin/media',label:'Media'},{href:'/admin/settings',label:'Settings'}];
   return (
     <aside className="w-56 min-h-screen bg-[#0A0A0A] text-white flex flex-col flex-shrink-0">
-      <div className="p-6 border-b border-[#222]"><h1 className="font-serif text-xl font-semibold">ZARO</h1><p className="text-xs text-[#6B6B6B] mt-0.5">Admin Panel</p></div>
+      <div className="p-6 border-b border-[#222]"><h1 className="font-serif text-xl font-semibold">TruArtz</h1><p className="text-xs text-[#6B6B6B] mt-0.5">Admin Panel</p></div>
       <nav className="flex-1 py-4">{navItems.map(i=><Link key={i.href} href={i.href} className="flex items-center gap-3 px-6 py-3 text-sm text-[#D4D4D4] hover:text-white hover:bg-[#1A1A1A] transition-colors">{i.label}</Link>)}</nav>
       <div className="p-4 border-t border-[#222]">
         <a href="/" target="_blank" className="block px-2 py-2 text-sm text-[#6B6B6B] hover:text-white">View Site</a>

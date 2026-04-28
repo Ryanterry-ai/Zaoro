@@ -26,7 +26,7 @@ export function Header({ nav }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-[74px]">
           <Link href="/" className="font-serif text-2xl font-semibold tracking-wider text-[#0A0A0A]">
-            ZARO
+            TruArtz
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8">

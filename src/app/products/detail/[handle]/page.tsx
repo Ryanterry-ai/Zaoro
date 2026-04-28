@@ -1,4 +1,4 @@
-﻿import { notFound } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getProductByHandle, getRelatedProducts } from '@/lib/data-server';
 import { ProductDetailClient } from '@/components/product/ProductDetailClient';
 import { ProductCard } from '@/components/product/ProductCard';
@@ -8,7 +8,7 @@ interface Props { params: { handle: string } }
 export async function generateMetadata({ params }: Props) {
   const product = await getProductByHandle(params.handle);
   if (!product) return { title: 'Not Found' };
-  return { title: `${product.name} - Zaro`, description: product.description };
+  return { title: `${product.name} - TruArtz`, description: product.description };
 }
 
 export default async function ProductDetailPage({ params }: Props) {

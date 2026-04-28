@@ -35,7 +35,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center px-4">
       <div className="bg-white w-full max-w-sm p-8 shadow-sm">
         <div className="text-center mb-8">
-          <h1 className="font-serif text-3xl font-light text-[#0A0A0A]">ZARO</h1>
+          <h1 className="font-serif text-3xl font-light text-[#0A0A0A]">TruArtz</h1>
           <p className="text-xs text-[#6B6B6B] mt-1 tracking-widest uppercase">Admin Panel</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
@@ -61,7 +61,7 @@ export default function AdminLogin() {
           </button>
         </form>
         <div className="mt-6 p-3 bg-[#F8F6F3] rounded text-xs text-[#6B6B6B] text-center">
-          Default: admin@zaro.com / zaro_admin_2026
+          Default: admin@truartz.com / truartz_admin_2026
         </div>
       </div>
     </div>

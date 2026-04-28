@@ -31,7 +31,7 @@ export function FeaturedCollections({ collections, products, content }: Props) {
           <div>
             <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">{content?.featuredCollectionsTitle || 'Featured Collections'}</h2></Reveal>
             <p className="text-[#6B6B6B] mt-2 text-sm md:text-base">
-              {content?.featuredCollectionsSubtitle || 'Discover a refined selection from the latest client-curated Zaoro collection.'}
+              {content?.featuredCollectionsSubtitle || 'Discover a refined selection from the latest client-curated TruArtz collection.'}
             </p>
           </div>
           <Link href={content?.featuredCollectionsCtaUrl || '/products/jewellery'} className="btn-outline mt-4 md:mt-0 inline-block">

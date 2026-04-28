@@ -1,6 +1,6 @@
-# Zaro Fashion Store
+# TruArtz Fashion Store
 
-A full Next.js 14 e-commerce store cloned from zaro.framer.website.
+A full Next.js 14 e-commerce store cloned from truartz.framer.website.
 
 ## Stack
 - Next.js 14 App Router
@@ -25,8 +25,8 @@ Open [http://localhost:3000](http://localhost:3000)
 Visit [http://localhost:3000/admin/login](http://localhost:3000/admin/login)
 
 Default credentials (change in .env.local):
-- Email: admin@zaro.com  
-- Password: zaro_admin_2026
+- Email: admin@truartz.com  
+- Password: truartz_admin_2026
 
 ## Deploying to Vercel
 
