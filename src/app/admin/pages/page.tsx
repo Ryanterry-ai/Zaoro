@@ -50,9 +50,6 @@ export default function AdminPagesPage() {
             </div>
           ))}
         </div>
-        <div className="mt-6 p-4 bg-[#FFF9F0] border border-[#F0D4A0] rounded text-sm text-[#8B6914]">
-          <strong>Tip:</strong> To edit homepage sections (hero text, images, slide content), edit the section files in <code className="bg-[#F0D4A0]/50 px-1 rounded">src/components/sections/</code>. Policy pages can be edited in <code className="bg-[#F0D4A0]/50 px-1 rounded">src/app/general/</code>.
-        </div>
       </main>
     </div>
   );

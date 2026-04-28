@@ -35,6 +35,24 @@
   },
   "footerTagline": "your favorite styles at unmissable prices!",
   "footerBg": "/images/sections/footer-bg.jpg",
+  "homeContent": {
+    "trendingTitle": "Trending Now",
+    "trendingViewAllLabel": "View All",
+    "trendingViewAllUrl": "/products",
+    "featuredCollectionsTitle": "Featured Collections",
+    "featuredCollectionsSubtitle": "Discover a refined selection based on your live product categories.",
+    "featuredCollectionsCtaLabel": "Shop Jewellery",
+    "featuredCollectionsCtaUrl": "/products/jewellery",
+    "fashionInsiderTitle": "Fashion Insider",
+    "fashionInsiderViewAllLabel": "View All",
+    "fashionInsiderViewAllUrl": "/products",
+    "saleBannerBadgeText": "Member Offer",
+    "saleBannerHeading": "Sign Up to get upto 60% off",
+    "saleBannerBody": "Create your account and unlock exclusive offers on curated jewellery and category favorites.",
+    "saleBannerPromoText": "Limited-time member savings on best sellers.",
+    "saleBannerCtaLabel": "Sign Up Now",
+    "saleBannerCtaUrl": "/contact-us"
+  },
   "trustBadges": [
     {
       "icon": "RotateCcw",

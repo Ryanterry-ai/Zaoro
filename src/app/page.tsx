@@ -23,15 +23,15 @@ export default async function HomePage() {
     <>
       <HeroSlider />
       <TrustBanner />
-      <TrendingNow products={products} />
-      <FeaturedCollections collections={collections} />
+      <TrendingNow products={products} content={settings.homeContent} />
+      <FeaturedCollections collections={collections} products={products} content={settings.homeContent} />
       <CategoryCarousel collections={collections} products={products} />
       <SaleCountdown />
       <BestSellers products={products} />
       <SeasonalEdit products={products} />
       <RealStyle products={products} />
-      <BlogSection products={products} />
-      <SaleBanner products={products} />
+      <BlogSection products={products} content={settings.homeContent} />
+      <SaleBanner products={products} content={settings.homeContent} />
       <TrustFeatures settings={settings} />
     </>
   );

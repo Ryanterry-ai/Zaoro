@@ -34,7 +34,7 @@ export default function AdminSettingsPage() {
     setSaving(true);
     try {
       const res = await fetch('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
-      if (res.ok) { setMsg('Settings saved! Commit data/settings.json to persist.'); setTimeout(()=>setMsg(''),5000); }
+      if (res.ok) { setMsg('Settings saved successfully.'); setTimeout(()=>setMsg(''),5000); }
     } finally { setSaving(false); }
   };
 
@@ -43,7 +43,12 @@ export default function AdminSettingsPage() {
     setSettings(prev => {
       const copy = JSON.parse(JSON.stringify(prev));
       let cur: Record<string,unknown> = copy;
-      for (let i=0;i<keys.length-1;i++) { cur = cur[keys[i]] as Record<string,unknown>; }
+      for (let i=0;i<keys.length-1;i++) {
+        if (!cur[keys[i]] || typeof cur[keys[i]] !== 'object') {
+          cur[keys[i]] = {};
+        }
+        cur = cur[keys[i]] as Record<string,unknown>;
+      }
       cur[keys[keys.length-1]] = value;
       return copy;
     });
@@ -53,7 +58,7 @@ export default function AdminSettingsPage() {
   const social = (settings.socialLinks || {}) as Record<string,string>;
   const seo = (settings.seo || {}) as Record<string,unknown>;
 
-  const tabs = ['general','announcement','social','seo'];
+  const tabs = ['general','announcement','social','seo','homepage'];
 
   return (
     <div className="flex min-h-screen bg-[#F8F6F3]">
@@ -116,6 +121,35 @@ export default function AdminSettingsPage() {
               <label className="block text-xs font-medium text-[#6B6B6B] mb-1">Keywords (comma-separated)</label>
               <input type="text" value={(seo.keywords as string[]||[]).join(', ')} onChange={e=>update('seo.keywords',e.target.value.split(',').map(k=>k.trim()).filter(Boolean))} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
             </div>
+          </>}
+
+          {tab==='homepage' && <>
+            {[
+              {label:'Trending Title',path:'homeContent.trendingTitle'},
+              {label:'Trending CTA Label',path:'homeContent.trendingViewAllLabel'},
+              {label:'Trending CTA URL',path:'homeContent.trendingViewAllUrl'},
+              {label:'Featured Collections Title',path:'homeContent.featuredCollectionsTitle'},
+              {label:'Featured Collections Subtitle',path:'homeContent.featuredCollectionsSubtitle'},
+              {label:'Featured Collections CTA Label',path:'homeContent.featuredCollectionsCtaLabel'},
+              {label:'Featured Collections CTA URL',path:'homeContent.featuredCollectionsCtaUrl'},
+              {label:'Fashion Insider Title',path:'homeContent.fashionInsiderTitle'},
+              {label:'Fashion Insider CTA Label',path:'homeContent.fashionInsiderViewAllLabel'},
+              {label:'Fashion Insider CTA URL',path:'homeContent.fashionInsiderViewAllUrl'},
+              {label:'Offer Badge Text',path:'homeContent.saleBannerBadgeText'},
+              {label:'Offer Heading',path:'homeContent.saleBannerHeading'},
+              {label:'Offer Body Text',path:'homeContent.saleBannerBody'},
+              {label:'Offer Promo Line',path:'homeContent.saleBannerPromoText'},
+              {label:'Offer CTA Label',path:'homeContent.saleBannerCtaLabel'},
+              {label:'Offer CTA URL',path:'homeContent.saleBannerCtaUrl'},
+            ].map(f=>(
+              <div key={f.path}>
+                <label className="block text-xs font-medium text-[#6B6B6B] mb-1">{f.label}</label>
+                <input type="text" value={f.path.split('.').reduce((o,k)=>(o as Record<string,unknown>)?.[k],settings) as string||''} onChange={e=>update(f.path,e.target.value)} className="w-full border border-[#D4D4D4] px-3 py-2 text-sm outline-none focus:border-[#0A0A0A]"/>
+              </div>
+            ))}
+            <p className="text-xs text-[#6B6B6B]">
+              Edit homepage section headings, CTA labels/links, and offer block copy from here.
+            </p>
           </>}
 
           <button onClick={handleSave} disabled={saving} className="btn-primary w-full">{saving?'Saving...':'Save Settings'}</button>

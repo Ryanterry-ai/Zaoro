@@ -89,6 +89,24 @@ export interface SiteSettings {
   seo: { title: string; description: string; keywords: string[] };
   footerTagline: string;
   footerBg: string;
+  homeContent?: {
+    trendingTitle: string;
+    trendingViewAllLabel: string;
+    trendingViewAllUrl: string;
+    featuredCollectionsTitle: string;
+    featuredCollectionsSubtitle: string;
+    featuredCollectionsCtaLabel: string;
+    featuredCollectionsCtaUrl: string;
+    fashionInsiderTitle: string;
+    fashionInsiderViewAllLabel: string;
+    fashionInsiderViewAllUrl: string;
+    saleBannerBadgeText: string;
+    saleBannerHeading: string;
+    saleBannerBody: string;
+    saleBannerPromoText: string;
+    saleBannerCtaLabel: string;
+    saleBannerCtaUrl: string;
+  };
   trustBadges: Array<{ icon: string; title: string; description: string }>;
 }
 

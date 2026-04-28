@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Reveal } from '@/components/ui/Reveal';
-import { formatPrice } from '@/lib/format';
-import type { Product } from '@/types';
+import type { Product, SiteSettings } from '@/types';
 
 interface Props {
   products: Product[];
+  content?: SiteSettings['homeContent'];
 }
 
 const categoryLabel = (value: string) =>
@@ -14,9 +14,10 @@ const categoryLabel = (value: string) =>
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join(' ');
 
-export function SaleBanner({ products }: Props) {
+export function SaleBanner({ products, content }: Props) {
   const visible = products.filter((product) => product.visible && product.images.length > 0);
   const saleLead =
+    visible.find((product) => product.tags.includes('bestseller')) ??
     visible.find((product) => (product.comparePrice ?? 0) > product.price) ??
     visible.find((product) => product.tags.includes('sale')) ??
     visible[0];
@@ -27,35 +28,24 @@ export function SaleBanner({ products }: Props) {
     visible.find((product) => product.id !== saleLead.id && product.category !== saleLead.category) ??
     visible.find((product) => product.id !== saleLead.id);
 
-  const discountPct = saleLead.comparePrice
-    ? Math.max(0, Math.round(((saleLead.comparePrice - saleLead.price) / saleLead.comparePrice) * 100))
-    : 20;
-
   return (
     <section className="bg-[#F8F6F3] py-16 lg:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <Reveal><p className="text-xs tracking-widest uppercase text-[#C8A882] mb-3">Season sale</p></Reveal>
+            <Reveal><p className="text-xs tracking-widest uppercase text-[#C8A882] mb-3">{content?.saleBannerBadgeText || 'Member Offer'}</p></Reveal>
             <Reveal delayMs={70}><h2 className="font-serif text-5xl md:text-6xl font-light text-[#0A0A0A] mb-6 leading-tight">
-              Save <span className="italic">today</span>
+              {content?.saleBannerHeading || 'Sign Up to get upto 60% off'}
             </h2></Reveal>
             <Reveal delayMs={110}><p className="text-[#6B6B6B] mb-4">
-              Handpicked {categoryLabel(saleLead.category)} styles from your latest catalog with limited-time offers.
+              {content?.saleBannerBody || 'Create your account and unlock exclusive offers on curated jewellery and category favorites.'}
             </p></Reveal>
-            <Reveal delayMs={140}><div className="mb-8">
-              <span className="text-6xl font-serif font-light text-[#0A0A0A]">{discountPct}%</span>
-              <span className="text-lg text-[#6B6B6B] ml-2">off</span>
-            </div></Reveal>
-            <Reveal delayMs={170}><Link href={`/products/${saleLead.category}`} className="btn-primary inline-block">
-              Shop {categoryLabel(saleLead.category)}
+            <Reveal delayMs={170}><Link href={content?.saleBannerCtaUrl || '/contact-us'} className="btn-primary inline-block">
+              {content?.saleBannerCtaLabel || 'Sign Up Now'}
             </Link></Reveal>
             <Reveal delayMs={190}>
               <p className="text-sm text-[#6B6B6B] mt-5">
-                {saleLead.name}: <span className="text-[#0A0A0A] font-medium">{formatPrice(saleLead.price)}</span>
-                {saleLead.comparePrice && saleLead.comparePrice > saleLead.price ? (
-                  <span className="line-through ml-2">{formatPrice(saleLead.comparePrice)}</span>
-                ) : null}
+                {content?.saleBannerPromoText || 'Limited-time member savings on best sellers.'}
               </p>
             </Reveal>
           </div>

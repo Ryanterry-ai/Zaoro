@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Reveal } from '@/components/ui/Reveal';
-import type { Product } from '@/types';
+import type { Product, SiteSettings } from '@/types';
 
 interface Props {
   products: Product[];
+  content?: SiteSettings['homeContent'];
 }
 
 const CATEGORY_PRIORITY = [
@@ -24,7 +25,7 @@ const categoryLabel = (value: string) =>
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join(' ');
 
-export function BlogSection({ products }: Props) {
+export function BlogSection({ products, content }: Props) {
   const visible = products.filter((product) => product.visible && product.images.length > 0);
 
   const curatedByCategory = CATEGORY_PRIORITY
@@ -41,9 +42,9 @@ export function BlogSection({ products }: Props) {
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
       <div className="flex items-end justify-between mb-10">
-        <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">Fashion Insider</h2></Reveal>
-        <Link href="/products" className="text-sm font-medium tracking-wide underline underline-offset-4 text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">
-          View All
+        <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">{content?.fashionInsiderTitle || 'Fashion Insider'}</h2></Reveal>
+        <Link href={content?.fashionInsiderViewAllUrl || '/products'} className="text-sm font-medium tracking-wide underline underline-offset-4 text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">
+          {content?.fashionInsiderViewAllLabel || 'View All'}
         </Link>
       </div>
       <div className="grid md:grid-cols-3 gap-8">

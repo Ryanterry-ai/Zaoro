@@ -1,27 +1,41 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Reveal } from '@/components/ui/Reveal';
-import type { Collection } from '@/types';
+import type { Collection, Product, SiteSettings } from '@/types';
 
 interface Props {
   collections: Collection[];
+  products: Product[];
+  content?: SiteSettings['homeContent'];
 }
 
-export function FeaturedCollections({ collections }: Props) {
-  const featured = collections.filter((c) => ['jewellery', 'suits', 'sets'].includes(c.handle));
+const CATEGORY_COLLECTION_ORDER = ['jewellery', 'earrings', 'bracelets', 'necklaces', 'suits', 'sets', 't-shirts', 'shorts'];
+
+export function FeaturedCollections({ collections, products, content }: Props) {
+  const productCategories = new Set(products.map((product) => product.category));
+  const featured = CATEGORY_COLLECTION_ORDER
+    .map((handle) => collections.find((collection) => collection.handle === handle))
+    .filter((collection): collection is Collection => Boolean(collection))
+    .filter((collection) => {
+      if (collection.handle === 'jewellery') {
+        return ['earrings', 'bracelets', 'necklaces'].some((category) => productCategories.has(category));
+      }
+      return productCategories.has(collection.handle);
+    })
+    .slice(0, 3);
 
   return (
     <section className="bg-[#F8F6F3] py-16 lg:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10">
           <div>
-            <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">Featured Collections</h2></Reveal>
+            <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">{content?.featuredCollectionsTitle || 'Featured Collections'}</h2></Reveal>
             <p className="text-[#6B6B6B] mt-2 text-sm md:text-base">
-              Discover a refined selection from the latest client-curated Zaoro collection.
+              {content?.featuredCollectionsSubtitle || 'Discover a refined selection from the latest client-curated Zaoro collection.'}
             </p>
           </div>
-          <Link href="/products/jewellery" className="btn-outline mt-4 md:mt-0 inline-block">
-            Shop Jewellery
+          <Link href={content?.featuredCollectionsCtaUrl || '/products/jewellery'} className="btn-outline mt-4 md:mt-0 inline-block">
+            {content?.featuredCollectionsCtaLabel || 'Shop Jewellery'}
           </Link>
         </div>
 
@@ -54,3 +68,4 @@ export function FeaturedCollections({ collections }: Props) {
     </section>
   );
 }
+
