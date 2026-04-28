@@ -6,6 +6,8 @@ import { CartDrawer } from '@/components/layout/CartDrawer';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
 import { getNavigation, getSettings } from '@/lib/data-server';
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
   return {
