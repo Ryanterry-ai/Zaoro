@@ -1,13 +1,16 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/layout/CartDrawer';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
-import { getSettings } from '@/lib/data';
+import { OfferPopup } from '@/components/layout/OfferPopup';
+import { getNavigation, getSettings } from '@/lib/data-server';
+
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = getSettings();
+  const settings = await getSettings();
   return {
     title: settings.seo.title,
     description: settings.seo.description,
@@ -15,16 +18,18 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const settings = getSettings();
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const [settings, nav] = await Promise.all([getSettings(), getNavigation()]);
+
   return (
     <html lang="en">
       <body>
         <AnnouncementBar settings={settings.announcementBar} />
-        <Header />
+        <Header nav={nav} />
         <CartDrawer />
+        <OfferPopup />
         <main>{children}</main>
-        <Footer />
+        <Footer settings={settings} nav={nav} />
       </body>
     </html>
   );

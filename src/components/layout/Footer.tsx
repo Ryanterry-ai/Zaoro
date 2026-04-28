@@ -1,16 +1,18 @@
-﻿import Link from 'next/link';
-import { getSettings, getNavigation } from '@/lib/data';
+import Link from 'next/link';
+import type { NavigationData, SiteSettings } from '@/types';
 
-export function Footer() {
-  const settings = getSettings();
-  const nav = getNavigation();
+interface Props {
+  settings: SiteSettings;
+  nav: NavigationData;
+}
 
+export function Footer({ settings, nav }: Props) {
   return (
     <footer>
       <div className="bg-[#0A0A0A] text-white py-8 overflow-hidden">
         <div className="flex whitespace-nowrap">
           <div className="animate-marquee flex gap-16 pr-16 items-center">
-            {[0, 1, 2].map(i => (
+            {[0, 1, 2].map((i) => (
               <span key={i} className="text-4xl md:text-5xl font-serif italic font-light">
                 ## {settings.footerTagline}
               </span>
@@ -33,9 +35,7 @@ export function Footer() {
                   placeholder="Subscribe"
                   className="bg-[#1A1A1A] border border-[#333] text-white text-sm px-4 py-3 flex-1 outline-none placeholder:text-[#555] focus:border-[#555]"
                 />
-                <button className="bg-white text-[#0A0A0A] px-5 py-3 text-sm font-medium hover:bg-[#EDE9E3] transition-colors">
-                  {'->'}
-                </button>
+                <button className="bg-white text-[#0A0A0A] px-5 py-3 text-sm font-medium hover:bg-[#EDE9E3] transition-colors">{'->'}</button>
               </div>
             </div>
 
@@ -80,9 +80,7 @@ export function Footer() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-[#222] flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-[#6B6B6B]">
-              (c) Copyright 2026 {settings.siteName}. All Rights Reserved.
-            </p>
+            <p className="text-sm text-[#6B6B6B]">(c) Copyright 2026 {settings.siteName}. All Rights Reserved.</p>
             <div className="flex items-center gap-4">
               <a href={settings.socialLinks.instagram} className="text-[#6B6B6B] hover:text-white transition-colors text-xs tracking-wide">IG</a>
               <a href={settings.socialLinks.facebook} className="text-[#6B6B6B] hover:text-white transition-colors text-xs tracking-wide">FB</a>
@@ -94,3 +92,4 @@ export function Footer() {
     </footer>
   );
 }
+

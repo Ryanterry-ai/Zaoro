@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
-import { getCollections } from '@/lib/data';
-import fs from 'fs';
-import path from 'path';
+﻿import { NextResponse } from 'next/server';
+import { getAllCollections, saveCollections } from '@/lib/data-server';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  return NextResponse.json(getCollections());
+  const collections = await getAllCollections();
+  return NextResponse.json(collections);
 }
 
 export async function PUT(req: Request) {
   try {
     const data = await req.json();
-    const filePath = path.join(process.cwd(), 'data', 'collections.json');
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    await saveCollections(data);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });

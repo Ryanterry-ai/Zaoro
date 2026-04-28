@@ -1,8 +1,8 @@
-'use client';
-import { useState } from 'react';
-import Link from 'next/link';
+﻿'use client';
+import { useMemo, useState } from 'react';
 import { ProductCard } from '@/components/product/ProductCard';
-import { getProducts } from '@/lib/data';
+import { Reveal } from '@/components/ui/Reveal';
+import type { Product } from '@/types';
 
 const tabs = [
   { label: 'All', filter: null },
@@ -11,20 +11,22 @@ const tabs = [
   { label: 'Sale', filter: 'sale' },
 ];
 
-export function BestSellers() {
+interface Props {
+  products: Product[];
+}
+
+export function BestSellers({ products }: Props) {
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const allProducts = getProducts().filter(p => p.tags.includes('bestseller'));
-  
-  const filtered = activeTab
-    ? allProducts.filter(p => p.tags.includes(activeTab))
-    : allProducts;
+  const allProducts = useMemo(() => products.filter((p) => p.tags.includes('bestseller')), [products]);
+
+  const filtered = activeTab ? allProducts.filter((p) => p.tags.includes(activeTab)) : allProducts;
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-10">
-        <h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">Best Sellers</h2>
+        <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">Best Sellers</h2></Reveal>
         <div className="flex gap-1">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <button
               key={tab.label}
               onClick={() => setActiveTab(tab.filter)}
@@ -40,8 +42,8 @@ export function BestSellers() {
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-        {filtered.slice(0, 5).map(product => (
-          <ProductCard key={product.id} product={product} />
+        {filtered.slice(0, 5).map((product, i) => (
+          <Reveal key={product.id} delayMs={i * 60}><ProductCard product={product} /></Reveal>
         ))}
       </div>
     </section>

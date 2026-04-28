@@ -1,9 +1,10 @@
-import productsData from '../../data/products.json';
+﻿import productsData from '../../data/products.json';
 import collectionsData from '../../data/collections.json';
 import navigationData from '../../data/navigation.json';
 import settingsData from '../../data/settings.json';
 import blogsData from '../../data/blogs.json';
 import type { Product, Collection, SiteSettings, Blog } from '@/types';
+import { formatPrice as formatMoney } from '@/lib/format';
 
 export function getProducts(): Product[] {
   return productsData.filter((p: Product) => p.visible);
@@ -44,8 +45,8 @@ export function getBlogByHandle(handle: string): Blog | undefined {
   return blogsData.find((b: Blog) => b.handle === handle && b.visible);
 }
 
-export function formatPrice(paise: number, symbol = '₹'): string {
-  return `${symbol}${(paise / 100).toLocaleString('en-IN')}`;
+export function formatPrice(paise: number, symbol = 'Rs. '): string {
+  return formatMoney(paise, symbol);
 }
 
 export function getRelatedProducts(product: Product, limit = 4): Product[] {
@@ -54,3 +55,4 @@ export function getRelatedProducts(product: Product, limit = 4): Product[] {
       (p.category === product.category || p.tags.some(t => product.tags.includes(t))))
     .slice(0, limit) as Product[];
 }
+

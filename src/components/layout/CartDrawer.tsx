@@ -1,17 +1,28 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { X, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/store/cart';
-import { formatPrice } from '@/lib/data';
+import { formatPrice } from '@/lib/format';
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, subtotal, itemCount } = useCart();
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      return;
+    }
+    const timer = setTimeout(() => setMounted(false), 260);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
+  if (!mounted) return null;
 
   return (
-    <>
+    <div className={`cart-shell ${isOpen ? 'is-open' : ''}`}>
       <div className="cart-overlay" onClick={closeCart} />
       <div className="cart-drawer shadow-2xl flex flex-col">
         {/* Header */}
@@ -103,6 +114,6 @@ export function CartDrawer() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

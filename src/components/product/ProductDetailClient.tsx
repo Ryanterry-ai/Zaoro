@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp, RotateCcw, Truck, ShieldCheck } from 'lucide-react';
 import { useCart } from '@/store/cart';
-import { formatPrice } from '@/lib/data';
+import { formatPrice } from '@/lib/format';
 import type { Product, ProductVariant } from '@/types';
 
 interface Props { product: Product }

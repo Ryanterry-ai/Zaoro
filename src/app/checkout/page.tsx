@@ -2,7 +2,7 @@
 import { useCart } from '@/store/cart';
 import Link from 'next/link';
 import Image from 'next/image';
-import { formatPrice } from '@/lib/data';
+import { formatPrice } from '@/lib/format';
 
 export default function CheckoutPage() {
   const { items, subtotal } = useCart();

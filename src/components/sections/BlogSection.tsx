@@ -1,20 +1,26 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getBlogs } from '@/lib/data';
+import { Reveal } from '@/components/ui/Reveal';
+import type { Blog } from '@/types';
 
-export function BlogSection() {
-  const blogs = getBlogs().slice(0, 3);
+interface Props {
+  blogs: Blog[];
+}
+
+export function BlogSection({ blogs }: Props) {
+  const topBlogs = blogs.slice(0, 3);
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
       <div className="flex items-end justify-between mb-10">
-        <h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">Fashion Insider</h2>
+        <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">Fashion Insider</h2></Reveal>
         <Link href="/blogs" className="text-sm font-medium tracking-wide underline underline-offset-4 text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">
           View All
         </Link>
       </div>
       <div className="grid md:grid-cols-3 gap-8">
-        {blogs.map(blog => (
-          <Link key={blog.id} href={`/blogs/${blog.handle}`} className="group">
+        {topBlogs.map((blog, i) => (
+          <Reveal key={blog.id} delayMs={i * 80}>
+          <Link href={`/blogs/${blog.handle}`} className="group">
             <div className="relative aspect-video overflow-hidden bg-[#F8F6F3] mb-4">
               <Image
                 src={blog.image}
@@ -31,6 +37,7 @@ export function BlogSection() {
               {blog.title}
             </h3>
           </Link>
+          </Reveal>
         ))}
       </div>
     </section>
