@@ -1,7 +1,7 @@
 import 'server-only';
 import fs from 'fs/promises';
 import path from 'path';
-import { list, put } from '@vercel/blob';
+import { head, put } from '@vercel/blob';
 import productsDefault from '../../data/products.json';
 import collectionsDefault from '../../data/collections.json';
 import navigationDefault from '../../data/navigation.json';
@@ -62,16 +62,7 @@ async function readFromBlob<K extends ContentKey>(key: K): Promise<ContentMap[K]
 
   try {
     const pathname = BLOB_PATH_BY_KEY[key];
-    const result = await list({ prefix: pathname, limit: 1000 });
-    const blob = result.blobs
-      .filter((b) => b.pathname === pathname)
-      .sort((a, b) => {
-        const aTime = new Date(a.uploadedAt).getTime();
-        const bTime = new Date(b.uploadedAt).getTime();
-        return bTime - aTime;
-      })[0];
-    if (!blob) return null;
-
+    const blob = await head(pathname);
     const response = await fetch(blob.url, { cache: 'no-store' });
     if (!response.ok) return null;
 
