@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ProductCard } from '@/components/product/ProductCard';
-import { getProducts } from '@/lib/data';
+import type { Product } from '@/types';
 
 const tabs = [
   { label: 'All', filter: null },
@@ -11,12 +11,16 @@ const tabs = [
   { label: 'New Arrivals', filter: 'new-arrivals' },
 ];
 
-export function BestSellers() {
+interface BestSellersProps {
+  products: Product[];
+}
+
+export function BestSellers({ products }: BestSellersProps) {
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const allProducts = getProducts().filter(p => p.tags.includes('bestseller'));
+  const allProducts = products.filter((p) => p.tags.includes('bestseller'));
   
   const filtered = activeTab
-    ? getProducts().filter(p => p.tags.includes(activeTab))
+    ? products.filter((p) => p.tags.includes(activeTab))
     : allProducts;
 
   return (

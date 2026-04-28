@@ -1,8 +1,8 @@
 import { ProductCard } from '@/components/product/ProductCard';
-import { getProducts } from '@/lib/data';
+import { getProducts } from '@/lib/data-server';
 
-export default function ShopPage() {
-  const products = getProducts();
+export default async function ShopPage() {
+  const products = await getProducts();
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <h1 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A] mb-8">All Products</h1>

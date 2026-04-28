@@ -1,20 +1,20 @@
 import { notFound } from 'next/navigation';
-import { getProductByHandle, getRelatedProducts, formatPrice } from '@/lib/data';
+import { getProductByHandle, getRelatedProducts } from '@/lib/data-server';
 import { ProductDetailClient } from '@/components/product/ProductDetailClient';
 import { ProductCard } from '@/components/product/ProductCard';
 
 interface Props { params: { handle: string } }
 
 export async function generateMetadata({ params }: Props) {
-  const product = getProductByHandle(params.handle);
+  const product = await getProductByHandle(params.handle);
   if (!product) return { title: 'Not Found' };
   return { title: `${product.name} - Zaro`, description: product.description };
 }
 
-export default function ProductDetailPage({ params }: Props) {
-  const product = getProductByHandle(params.handle);
+export default async function ProductDetailPage({ params }: Props) {
+  const product = await getProductByHandle(params.handle);
   if (!product) notFound();
-  const related = getRelatedProducts(product);
+  const related = await getRelatedProducts(product);
 
   return (
     <div>

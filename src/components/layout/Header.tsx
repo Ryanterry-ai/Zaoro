@@ -3,14 +3,17 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, ShoppingBag, Menu, X, ChevronDown } from 'lucide-react';
 import { useCart } from '@/store/cart';
-import { getNavigation } from '@/lib/data';
+import type { NavigationData } from '@/types';
 
-export function Header() {
+interface HeaderProps {
+  navigation: NavigationData;
+}
+
+export function Header({ navigation }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { openCart, itemCount } = useCart();
-  const nav = getNavigation();
+  const { openCart, items } = useCart();
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -29,13 +32,11 @@ export function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-8">
-            {nav.main.map((item) => (
+            {navigation.main.map((item) => (
               item.children ? (
                 <div key={item.id} className="relative group">
                   <button
                     className="flex items-center gap-1 text-sm font-medium text-[#0A0A0A] hover:text-[#6B6B6B] transition-colors tracking-wide"
-                    onMouseEnter={() => setCollectionsOpen(true)}
-                    onMouseLeave={() => setCollectionsOpen(false)}
                   >
                     {item.label}
                     <ChevronDown className="w-3.5 h-3.5" />
@@ -43,8 +44,6 @@ export function Header() {
                   {/* Dropdown */}
                   <div
                     className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200"
-                    onMouseEnter={() => setCollectionsOpen(true)}
-                    onMouseLeave={() => setCollectionsOpen(false)}
                   >
                     <div className="bg-white border border-[#EDE9E3] shadow-lg min-w-[180px] py-2">
                       {item.children.map((child) => (
@@ -98,7 +97,7 @@ export function Header() {
       {mobileOpen && (
         <div className="lg:hidden border-t border-[#EDE9E3] bg-white">
           <div className="px-4 py-4 space-y-1">
-            {nav.main.map((item) => (
+            {navigation.main.map((item) => (
               <div key={item.id}>
                 <Link
                   href={item.url === '#' ? '#' : item.url}

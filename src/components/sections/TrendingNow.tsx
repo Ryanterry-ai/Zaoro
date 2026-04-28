@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { ProductCard } from '@/components/product/ProductCard';
-import { getProducts } from '@/lib/data';
+import { getProducts } from '@/lib/data-server';
 
-export function TrendingNow() {
-  const trending = getProducts().filter(p => p.tags.includes('trending')).slice(0, 4);
+export async function TrendingNow() {
+  const trending = (await getProducts()).filter((p) => p.tags.includes('trending')).slice(0, 4);
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">

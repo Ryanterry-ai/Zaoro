@@ -5,7 +5,8 @@ import Image from 'next/image';
 import { formatPrice } from '@/lib/data';
 
 export default function CheckoutPage() {
-  const { items, subtotal } = useCart();
+  const { items } = useCart();
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 200000 ? 0 : 9900;
   const total = subtotal + shipping;
 

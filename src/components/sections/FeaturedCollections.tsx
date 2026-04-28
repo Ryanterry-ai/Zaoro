@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getCollections } from '@/lib/data';
+import { getCollections } from '@/lib/data-server';
 
-export function FeaturedCollections() {
-  const collections = getCollections().filter(c => ['women', 'men', 'new-arrivals'].includes(c.handle));
+export async function FeaturedCollections() {
+  const collections = (await getCollections()).filter((c) =>
+    ['women', 'men', 'new-arrivals'].includes(c.handle)
+  );
 
   return (
     <section className="bg-[#F8F6F3] py-16 lg:py-20">

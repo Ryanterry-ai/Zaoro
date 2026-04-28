@@ -6,7 +6,9 @@ import { useCart } from '@/store/cart';
 import { formatPrice } from '@/lib/data';
 
 export function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, subtotal, itemCount } = useCart();
+  const { items, isOpen, closeCart, removeItem, updateQuantity } = useCart();
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   if (!isOpen) return null;
 

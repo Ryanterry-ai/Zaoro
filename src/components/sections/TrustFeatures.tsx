@@ -1,4 +1,4 @@
-import { getSettings } from '@/lib/data';
+import { getSettings } from '@/lib/data-server';
 import { RotateCcw, Truck, Headphones } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -7,8 +7,8 @@ const iconMap: Record<string, React.ReactNode> = {
   Headphones: <Headphones className="w-6 h-6" />,
 };
 
-export function TrustFeatures() {
-  const settings = getSettings();
+export async function TrustFeatures() {
+  const settings = await getSettings();
   return (
     <section className="border-t border-[#EDE9E3] py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

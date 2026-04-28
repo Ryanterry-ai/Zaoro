@@ -57,6 +57,20 @@ export interface NavItem {
   children?: NavItem[];
 }
 
+export interface NavigationLink {
+  label: string;
+  url: string;
+}
+
+export interface NavigationData {
+  main: NavItem[];
+  footer: {
+    quickLinks: NavigationLink[];
+    collections: NavigationLink[];
+    legal: NavigationLink[];
+  };
+}
+
 export interface SiteSettings {
   siteName: string;
   tagline: string;

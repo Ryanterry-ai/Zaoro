@@ -1,9 +1,12 @@
 import Link from 'next/link';
-import { getSettings, getNavigation } from '@/lib/data';
+import type { NavigationData, SiteSettings } from '@/types';
 
-export function Footer() {
-  const settings = getSettings();
-  const nav = getNavigation();
+interface FooterProps {
+  settings: SiteSettings;
+  navigation: NavigationData;
+}
+
+export function Footer({ settings, navigation }: FooterProps) {
 
   return (
     <footer>
@@ -47,7 +50,7 @@ export function Footer() {
             <div>
               <h4 className="text-sm font-semibold tracking-widest uppercase mb-5 text-white">Quick Link</h4>
               <ul className="space-y-3">
-                {nav.footer.quickLinks.map((link, i) => (
+                {navigation.footer.quickLinks.map((link, i) => (
                   <li key={i}>
                     <Link href={link.url} className="text-sm text-[#6B6B6B] hover:text-white transition-colors">
                       {link.label}
@@ -61,7 +64,7 @@ export function Footer() {
             <div>
               <h4 className="text-sm font-semibold tracking-widest uppercase mb-5 text-white">Collections</h4>
               <ul className="space-y-3">
-                {nav.footer.collections.map((link, i) => (
+                {navigation.footer.collections.map((link, i) => (
                   <li key={i}>
                     <Link href={link.url} className="text-sm text-[#6B6B6B] hover:text-white transition-colors">
                       {link.label}
@@ -75,7 +78,7 @@ export function Footer() {
             <div>
               <h4 className="text-sm font-semibold tracking-widest uppercase mb-5 text-white">Legal</h4>
               <ul className="space-y-3">
-                {nav.footer.legal.map((link, i) => (
+                {navigation.footer.legal.map((link, i) => (
                   <li key={i}>
                     <Link href={link.url} className="text-sm text-[#6B6B6B] hover:text-white transition-colors">
                       {link.label}
