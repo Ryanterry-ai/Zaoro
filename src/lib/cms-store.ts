@@ -63,7 +63,13 @@ async function readFromBlob<K extends ContentKey>(key: K): Promise<ContentMap[K]
   try {
     const pathname = BLOB_PATH_BY_KEY[key];
     const result = await list({ prefix: pathname, limit: 1000 });
-    const blob = result.blobs.find((b) => b.pathname === pathname);
+    const blob = result.blobs
+      .filter((b) => b.pathname === pathname)
+      .sort((a, b) => {
+        const aTime = new Date(a.uploadedAt).getTime();
+        const bTime = new Date(b.uploadedAt).getTime();
+        return bTime - aTime;
+      })[0];
     if (!blob) return null;
 
     const response = await fetch(blob.url, { cache: 'no-store' });
