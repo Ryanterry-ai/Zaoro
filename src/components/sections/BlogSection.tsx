@@ -8,16 +8,7 @@ interface Props {
   content?: SiteSettings['homeContent'];
 }
 
-const CATEGORY_PRIORITY = [
-  'earrings',
-  'necklaces',
-  'bracelets',
-  'suits',
-  'sets',
-  't-shirts',
-  'shorts',
-  'leggings',
-];
+const CLOTHING_CATEGORY_PRIORITY = ['suits', 'sets', 't-shirts', 'shorts', 'leggings'];
 
 const categoryLabel = (value: string) =>
   value
@@ -28,13 +19,13 @@ const categoryLabel = (value: string) =>
 export function BlogSection({ products, content }: Props) {
   const visible = products.filter((product) => product.visible && product.images.length > 0);
 
-  const curatedByCategory = CATEGORY_PRIORITY
+  const curatedByCategory = CLOTHING_CATEGORY_PRIORITY
     .map((category) => visible.find((product) => product.category === category))
     .filter((product): product is Product => Boolean(product));
 
   const uniqueProducts = Array.from(
     new Map(
-      [...curatedByCategory, ...visible].map((product) => [product.id, product])
+      [...curatedByCategory, ...visible.filter((product) => CLOTHING_CATEGORY_PRIORITY.includes(product.category))].map((product) => [product.id, product])
     ).values()
   );
 
@@ -42,7 +33,7 @@ export function BlogSection({ products, content }: Props) {
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
       <div className="flex items-end justify-between mb-10">
-        <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">{content?.fashionInsiderTitle || 'Fashion Insider'}</h2></Reveal>
+        <Reveal><h2 className="font-serif text-3xl md:text-4xl font-light text-[#0A0A0A]">{content?.fashionInsiderTitle || 'Clothing'}</h2></Reveal>
         <Link href={content?.fashionInsiderViewAllUrl || '/products'} className="text-sm font-medium tracking-wide underline underline-offset-4 text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">
           {content?.fashionInsiderViewAllLabel || 'View All'}
         </Link>

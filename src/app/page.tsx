@@ -1,5 +1,4 @@
-﻿import { HeroSlider } from '@/components/sections/HeroSlider';
-import { TrustBanner } from '@/components/sections/TrustBanner';
+import { HeroSlider } from '@/components/sections/HeroSlider';
 import { TrendingNow } from '@/components/sections/TrendingNow';
 import { FeaturedCollections } from '@/components/sections/FeaturedCollections';
 import { CategoryCarousel } from '@/components/sections/CategoryCarousel';
@@ -22,7 +21,6 @@ export default async function HomePage() {
   return (
     <>
       <HeroSlider />
-      <TrustBanner />
       <TrendingNow products={products} content={settings.homeContent} />
       <FeaturedCollections collections={collections} products={products} content={settings.homeContent} />
       <CategoryCarousel collections={collections} products={products} />
@@ -36,3 +34,4 @@ export default async function HomePage() {
     </>
   );
 }
+
