@@ -62,8 +62,8 @@ async function readFromBlob<K extends ContentKey>(key: K): Promise<ContentMap[K]
 
   try {
     const pathname = BLOB_PATH_BY_KEY[key];
-    const result = await list({ prefix: pathname, limit: 1 });
-    const blob = result.blobs.find((b) => b.pathname === pathname) ?? result.blobs[0];
+    const result = await list({ prefix: pathname, limit: 1000 });
+    const blob = result.blobs.find((b) => b.pathname === pathname);
     if (!blob) return null;
 
     const response = await fetch(blob.url, { cache: 'no-store' });
