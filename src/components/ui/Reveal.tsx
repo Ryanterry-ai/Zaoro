@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 interface Props {
   children: React.ReactNode;
@@ -30,9 +31,12 @@ export function Reveal({ children, className = '', delayMs = 0 }: Props) {
   }, []);
 
   return (
-    <div ref={ref} className={`motion-reveal ${visible ? 'is-visible' : ''} ${className}`} style={{ transitionDelay: `${delayMs}ms` }}>
+    <div
+      ref={ref}
+      className={`motion-reveal ${visible ? 'is-visible' : ''} ${className}`}
+      style={{ '--reveal-delay': `${delayMs}ms` } as CSSProperties}
+    >
       {children}
     </div>
   );
 }
-

@@ -75,7 +75,7 @@ export function CategoryCarousel({ collections, products }: Props) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      <div key={`${active}-${start}`} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 animate-[fadeInUp_420ms_ease-out]">
         {visible.map((product) => (
           <Link key={product.id} href={`/products/${product.handle}`} className="group">
             <div className="relative aspect-[4/5] bg-[#F8F6F3] overflow-hidden">

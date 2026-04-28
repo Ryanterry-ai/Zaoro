@@ -41,7 +41,7 @@ export function BestSellers({ products }: Props) {
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+      <div key={activeTab ?? 'all'} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 animate-[fadeInUp_420ms_ease-out]">
         {filtered.slice(0, 5).map((product, i) => (
           <Reveal key={product.id} delayMs={i * 60}><ProductCard product={product} /></Reveal>
         ))}

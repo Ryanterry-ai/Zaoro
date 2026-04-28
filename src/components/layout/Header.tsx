@@ -12,6 +12,7 @@ interface Props {
 export function Header({ nav }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [openDesktopMenu, setOpenDesktopMenu] = useState<string | null>(null);
   const { openCart, itemCount } = useCart();
 
   useEffect(() => {
@@ -31,15 +32,24 @@ export function Header({ nav }: Props) {
           <nav className="hidden lg:flex items-center gap-8">
             {nav.main.map((item) =>
               item.children ? (
-                <div key={item.id} className="relative group">
-                  <button className="flex items-center gap-1 text-sm font-medium text-[#0A0A0A] hover:text-[#6B6B6B] transition-colors tracking-wide">
+                <div
+                  key={item.id}
+                  className="relative"
+                  onMouseEnter={() => setOpenDesktopMenu(item.id)}
+                  onMouseLeave={() => setOpenDesktopMenu(null)}
+                >
+                  <button
+                    className="flex items-center gap-1 text-sm font-medium text-[#0A0A0A] hover:text-[#6B6B6B] transition-colors tracking-wide"
+                    onFocus={() => setOpenDesktopMenu(item.id)}
+                    onBlur={() => setOpenDesktopMenu(null)}
+                  >
                     {item.label}
                     <ChevronDown className="w-3.5 h-3.5" />
                   </button>
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <div className="bg-white border border-[#EDE9E3] shadow-lg min-w-[180px] py-2">
-                      {item.children.map((child) => (
-                        <Link key={child.id} href={child.url} className="block px-5 py-2.5 text-sm text-[#0A0A0A] hover:bg-[#F8F6F3] transition-colors">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-2">
+                    <div className={`nav-dropdown-panel bg-white border border-[#EDE9E3] shadow-lg min-w-[220px] py-2 ${openDesktopMenu === item.id ? 'is-open' : ''}`}>
+                      {item.children.map((child, idx) => (
+                        <Link key={child.id} href={child.url} className="nav-dropdown-item block px-5 py-2.5 text-sm text-[#0A0A0A] hover:bg-[#F8F6F3] transition-colors" style={{ transitionDelay: `${idx * 28}ms` }}>
                           {child.label}
                         </Link>
                       ))}
@@ -74,7 +84,7 @@ export function Header({ nav }: Props) {
       </div>
 
       {mobileOpen && (
-        <div className="lg:hidden border-t border-[#EDE9E3] bg-white">
+        <div className="lg:hidden border-t border-[#EDE9E3] bg-white animate-[fadeInUp_280ms_ease-out]">
           <div className="px-4 py-4 space-y-1">
             {nav.main.map((item) => (
               <div key={item.id}>
@@ -102,4 +112,3 @@ export function Header({ nav }: Props) {
     </header>
   );
 }
-
