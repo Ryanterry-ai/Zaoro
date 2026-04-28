@@ -101,11 +101,18 @@ export function ProductListingClient({ title, subtitle, products }: Props) {
 
         <div>
           <p className="text-sm text-[#6B6B6B] mb-4">{filtered.length} products</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            {filtered.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
+          {filtered.length === 0 ? (
+            <div className="border border-[#EDE9E3] bg-[#F8F6F3] px-6 py-14 text-center">
+              <p className="font-serif text-2xl text-[#0A0A0A] mb-2">No products found</p>
+              <p className="text-sm text-[#6B6B6B]">Try a different collection or clear your filters.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              {filtered.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

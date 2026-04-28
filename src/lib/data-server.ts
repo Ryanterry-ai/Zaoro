@@ -2,6 +2,8 @@ import 'server-only';
 import type { Blog, Collection, NavigationData, Product, SiteSettings } from '@/types';
 import { readContent, writeContent } from '@/lib/cms-store';
 
+const HIDDEN_STOREFRONT_CATEGORIES = new Set(['leggings']);
+
 const COLLECTION_CATEGORY_MAP: Record<string, string[]> = {
   jewellery: ['earrings', 'bracelets', 'necklaces'],
   earrings: ['earrings'],
@@ -20,7 +22,7 @@ export async function getAllProducts(): Promise<Product[]> {
 
 export async function getProducts(): Promise<Product[]> {
   const products = await getAllProducts();
-  return products.filter((p) => p.visible);
+  return products.filter((p) => p.visible && !HIDDEN_STOREFRONT_CATEGORIES.has(p.category));
 }
 
 export async function getProductByHandle(handle: string): Promise<Product | undefined> {
