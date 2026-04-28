@@ -1,10 +1,10 @@
 [
   {
-    "id": "women",
-    "handle": "women",
-    "name": "Women's Collection",
-    "description": "Client-curated styles from the latest Zaoro drop",
-    "image": "/images/products/client/client-001.jpg",
+    "id": "jewellery",
+    "handle": "jewellery",
+    "name": "Jewellery",
+    "description": "Elegant earrings, bracelets and necklaces curated for every look.",
+    "image": "/images/products/client/client-003.jpg",
     "products": [
       "1",
       "2",
@@ -23,46 +23,144 @@
       "15",
       "16",
       "17",
-      "18",
+      "18"
+    ],
+    "visible": true
+  },
+  {
+    "id": "earrings",
+    "handle": "earrings",
+    "name": "Earrings",
+    "description": "Statement and everyday earring styles.",
+    "image": "/images/products/client/client-001.jpg",
+    "products": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6"
+    ],
+    "visible": true
+  },
+  {
+    "id": "bracelets",
+    "handle": "bracelets",
+    "name": "Bracelets",
+    "description": "Refined bracelet designs for layered styling.",
+    "image": "/images/products/client/client-007.jpg",
+    "products": [
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12"
+    ],
+    "visible": true
+  },
+  {
+    "id": "necklaces",
+    "handle": "necklaces",
+    "name": "Necklaces",
+    "description": "Necklaces crafted to complete your fit.",
+    "image": "/images/products/client/client-013.jpg",
+    "products": [
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18"
+    ],
+    "visible": true
+  },
+  {
+    "id": "t-shirts",
+    "handle": "t-shirts",
+    "name": "T-shirts",
+    "description": "Easy silhouettes with elevated details.",
+    "image": "/images/products/client/client-019.jpg",
+    "products": [
       "19",
-      "20",
-      "21",
-      "22",
-      "23",
       "24",
-      "25",
-      "26",
-      "27",
-      "28",
       "29",
-      "30",
-      "31",
-      "32",
-      "33",
       "34",
-      "35",
-      "36",
-      "37",
-      "38",
       "39",
-      "40",
-      "41",
-      "42",
-      "43",
       "44",
-      "45",
-      "46",
-      "47",
-      "48",
       "49",
+      "54"
+    ],
+    "visible": true
+  },
+  {
+    "id": "suits",
+    "handle": "suits",
+    "name": "Suits",
+    "description": "Tailored suit looks for modern dressing.",
+    "image": "/images/products/client/client-020.jpg",
+    "products": [
+      "20",
+      "25",
+      "30",
+      "35",
+      "40",
+      "45",
       "50",
+      "55"
+    ],
+    "visible": true
+  },
+  {
+    "id": "shorts",
+    "handle": "shorts",
+    "name": "Shorts",
+    "description": "Versatile shorts for everyday comfort.",
+    "image": "/images/products/client/client-021.jpg",
+    "products": [
+      "21",
+      "26",
+      "31",
+      "36",
+      "41",
+      "46",
       "51",
+      "56"
+    ],
+    "visible": true
+  },
+  {
+    "id": "leggings",
+    "handle": "leggings",
+    "name": "Leggings",
+    "description": "Soft stretch leggings for active style.",
+    "image": "/images/products/client/client-022.jpg",
+    "products": [
+      "22",
+      "27",
+      "32",
+      "37",
+      "42",
+      "47",
       "52",
+      "57"
+    ],
+    "visible": true
+  },
+  {
+    "id": "sets",
+    "handle": "sets",
+    "name": "Sets",
+    "description": "Coordinated sets that style in seconds.",
+    "image": "/images/products/client/client-023.jpg",
+    "products": [
+      "23",
+      "28",
+      "33",
+      "38",
+      "43",
+      "48",
       "53",
-      "54",
-      "55",
-      "56",
-      "57",
       "58"
     ],
     "visible": true
@@ -71,7 +169,7 @@
     "id": "new-arrivals",
     "handle": "new-arrivals",
     "name": "New Arrivals",
-    "description": "Freshly added looks from the latest upload",
+    "description": "Freshly added pieces from the latest upload.",
     "image": "/images/products/client/client-002.jpg",
     "products": [
       "1",
@@ -97,8 +195,8 @@
     "id": "best-sellers",
     "handle": "best-sellers",
     "name": "Best Sellers",
-    "description": "Most loved silhouettes from this collection",
-    "image": "/images/products/client/client-003.jpg",
+    "description": "Most loved styles across jewellery and apparel.",
+    "image": "/images/products/client/client-004.jpg",
     "products": [
       "3",
       "6",
@@ -117,7 +215,8 @@
       "45",
       "48",
       "51",
-      "54"
+      "54",
+      "57"
     ],
     "visible": true
   },
@@ -125,8 +224,8 @@
     "id": "sale",
     "handle": "sale",
     "name": "Sale",
-    "description": "Selected looks at special pricing",
-    "image": "/images/products/client/client-004.jpg",
+    "description": "Selected products at special pricing.",
+    "image": "/images/products/client/client-005.jpg",
     "products": [
       "4",
       "8",

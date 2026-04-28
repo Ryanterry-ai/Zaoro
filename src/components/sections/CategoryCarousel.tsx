@@ -11,14 +11,14 @@ interface Props {
   products: Product[];
 }
 
-const CATEGORY_HANDLES = ['women', 'new-arrivals', 'best-sellers', 'sale'];
+const CATEGORY_HANDLES = ['t-shirts', 'suits', 'shorts', 'leggings', 'sets'];
 
 export function CategoryCarousel({ collections, products }: Props) {
   const categoryCollections = useMemo(
     () => collections.filter((c) => CATEGORY_HANDLES.includes(c.handle)),
     [collections]
   );
-  const [active, setActive] = useState(categoryCollections[0]?.handle ?? 'women');
+  const [active, setActive] = useState(categoryCollections[0]?.handle ?? 't-shirts');
   const [start, setStart] = useState(0);
 
   const activeCollection = categoryCollections.find((c) => c.handle === active);

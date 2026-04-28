@@ -7,8 +7,8 @@
     },
     {
       "id": "shop",
-      "label": "Shop",
-      "url": "/products"
+      "label": "Jewellery",
+      "url": "/products/jewellery"
     },
     {
       "id": "collections",
@@ -16,9 +16,29 @@
       "url": "#",
       "children": [
         {
-          "id": "women",
-          "label": "Women",
-          "url": "/products/women"
+          "id": "t-shirts",
+          "label": "T Shirts",
+          "url": "/products/t-shirts"
+        },
+        {
+          "id": "suits",
+          "label": "Suits",
+          "url": "/products/suits"
+        },
+        {
+          "id": "shorts",
+          "label": "Shorts",
+          "url": "/products/shorts"
+        },
+        {
+          "id": "leggings",
+          "label": "Leggings",
+          "url": "/products/leggings"
+        },
+        {
+          "id": "sets",
+          "label": "Set",
+          "url": "/products/sets"
         },
         {
           "id": "new-arrivals",
@@ -55,8 +75,8 @@
         "url": "/"
       },
       {
-        "label": "Shop",
-        "url": "/products"
+        "label": "Jewellery",
+        "url": "/products/jewellery"
       },
       {
         "label": "About",
@@ -73,8 +93,24 @@
     ],
     "collections": [
       {
-        "label": "Women",
-        "url": "/products/women"
+        "label": "T Shirts",
+        "url": "/products/t-shirts"
+      },
+      {
+        "label": "Suits",
+        "url": "/products/suits"
+      },
+      {
+        "label": "Shorts",
+        "url": "/products/shorts"
+      },
+      {
+        "label": "Leggings",
+        "url": "/products/leggings"
+      },
+      {
+        "label": "Set",
+        "url": "/products/sets"
       },
       {
         "label": "New Arrivals",

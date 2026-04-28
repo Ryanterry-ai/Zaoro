@@ -2,7 +2,7 @@
   {
     "id": "1",
     "handle": "zaoro-signature-look-001",
-    "name": "Zaoro Signature Look 001",
+    "name": "Zaoro Jewellery 001",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 251900,
     "comparePrice": 291900,
@@ -10,11 +10,12 @@
     "images": [
       "/images/products/client/client-001.jpg"
     ],
-    "category": "women",
+    "category": "earrings",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "earrings",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 9,
@@ -74,7 +75,7 @@
   {
     "id": "2",
     "handle": "zaoro-signature-look-002",
-    "name": "Zaoro Signature Look 002",
+    "name": "Zaoro Jewellery 002",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 253900,
     "comparePrice": 293900,
@@ -82,11 +83,12 @@
     "images": [
       "/images/products/client/client-002.jpg"
     ],
-    "category": "women",
+    "category": "earrings",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "earrings",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 10,
@@ -146,7 +148,7 @@
   {
     "id": "3",
     "handle": "zaoro-signature-look-003",
-    "name": "Zaoro Signature Look 003",
+    "name": "Zaoro Jewellery 003",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 255900,
     "comparePrice": 295900,
@@ -154,12 +156,13 @@
     "images": [
       "/images/products/client/client-003.jpg"
     ],
-    "category": "women",
+    "category": "earrings",
     "tags": [
-      "women",
       "trending",
       "bestseller",
-      "new-arrivals"
+      "new-arrivals",
+      "earrings",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 11,
@@ -219,7 +222,7 @@
   {
     "id": "4",
     "handle": "zaoro-signature-look-004",
-    "name": "Zaoro Signature Look 004",
+    "name": "Zaoro Jewellery 004",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 257900,
     "comparePrice": 297900,
@@ -227,12 +230,13 @@
     "images": [
       "/images/products/client/client-004.jpg"
     ],
-    "category": "women",
+    "category": "earrings",
     "tags": [
-      "women",
       "trending",
       "new-arrivals",
-      "sale"
+      "sale",
+      "earrings",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 12,
@@ -292,7 +296,7 @@
   {
     "id": "5",
     "handle": "zaoro-signature-look-005",
-    "name": "Zaoro Signature Look 005",
+    "name": "Zaoro Jewellery 005",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 259900,
     "comparePrice": 299900,
@@ -300,11 +304,12 @@
     "images": [
       "/images/products/client/client-005.jpg"
     ],
-    "category": "women",
+    "category": "earrings",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "earrings",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 13,
@@ -364,7 +369,7 @@
   {
     "id": "6",
     "handle": "zaoro-signature-look-006",
-    "name": "Zaoro Signature Look 006",
+    "name": "Zaoro Jewellery 006",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 249900,
     "comparePrice": 289900,
@@ -372,12 +377,13 @@
     "images": [
       "/images/products/client/client-006.jpg"
     ],
-    "category": "women",
+    "category": "earrings",
     "tags": [
-      "women",
       "trending",
       "bestseller",
-      "new-arrivals"
+      "new-arrivals",
+      "earrings",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 14,
@@ -437,7 +443,7 @@
   {
     "id": "7",
     "handle": "zaoro-signature-look-007",
-    "name": "Zaoro Signature Look 007",
+    "name": "Zaoro Jewellery 007",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 251900,
     "comparePrice": 291900,
@@ -445,11 +451,12 @@
     "images": [
       "/images/products/client/client-007.jpg"
     ],
-    "category": "women",
+    "category": "bracelets",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "bracelets",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 15,
@@ -509,7 +516,7 @@
   {
     "id": "8",
     "handle": "zaoro-signature-look-008",
-    "name": "Zaoro Signature Look 008",
+    "name": "Zaoro Jewellery 008",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 253900,
     "comparePrice": 293900,
@@ -517,12 +524,13 @@
     "images": [
       "/images/products/client/client-008.jpg"
     ],
-    "category": "women",
+    "category": "bracelets",
     "tags": [
-      "women",
       "trending",
       "new-arrivals",
-      "sale"
+      "sale",
+      "bracelets",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 16,
@@ -582,7 +590,7 @@
   {
     "id": "9",
     "handle": "zaoro-signature-look-009",
-    "name": "Zaoro Signature Look 009",
+    "name": "Zaoro Jewellery 009",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 255900,
     "comparePrice": 295900,
@@ -590,12 +598,13 @@
     "images": [
       "/images/products/client/client-009.jpg"
     ],
-    "category": "women",
+    "category": "bracelets",
     "tags": [
-      "women",
       "trending",
       "bestseller",
-      "new-arrivals"
+      "new-arrivals",
+      "bracelets",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 17,
@@ -655,7 +664,7 @@
   {
     "id": "10",
     "handle": "zaoro-signature-look-010",
-    "name": "Zaoro Signature Look 010",
+    "name": "Zaoro Jewellery 010",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 257900,
     "comparePrice": 297900,
@@ -663,11 +672,12 @@
     "images": [
       "/images/products/client/client-010.jpg"
     ],
-    "category": "women",
+    "category": "bracelets",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "bracelets",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 18,
@@ -727,7 +737,7 @@
   {
     "id": "11",
     "handle": "zaoro-signature-look-011",
-    "name": "Zaoro Signature Look 011",
+    "name": "Zaoro Jewellery 011",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 259900,
     "comparePrice": 299900,
@@ -735,11 +745,12 @@
     "images": [
       "/images/products/client/client-011.jpg"
     ],
-    "category": "women",
+    "category": "bracelets",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "bracelets",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 19,
@@ -799,7 +810,7 @@
   {
     "id": "12",
     "handle": "zaoro-signature-look-012",
-    "name": "Zaoro Signature Look 012",
+    "name": "Zaoro Jewellery 012",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 249900,
     "comparePrice": 289900,
@@ -807,13 +818,14 @@
     "images": [
       "/images/products/client/client-012.jpg"
     ],
-    "category": "women",
+    "category": "bracelets",
     "tags": [
-      "women",
       "trending",
       "bestseller",
       "new-arrivals",
-      "sale"
+      "sale",
+      "bracelets",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 20,
@@ -873,7 +885,7 @@
   {
     "id": "13",
     "handle": "zaoro-signature-look-013",
-    "name": "Zaoro Signature Look 013",
+    "name": "Zaoro Jewellery 013",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 251900,
     "comparePrice": 291900,
@@ -881,11 +893,12 @@
     "images": [
       "/images/products/client/client-013.jpg"
     ],
-    "category": "women",
+    "category": "necklaces",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "necklaces",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 21,
@@ -945,7 +958,7 @@
   {
     "id": "14",
     "handle": "zaoro-signature-look-014",
-    "name": "Zaoro Signature Look 014",
+    "name": "Zaoro Jewellery 014",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 253900,
     "comparePrice": 293900,
@@ -953,11 +966,12 @@
     "images": [
       "/images/products/client/client-014.jpg"
     ],
-    "category": "women",
+    "category": "necklaces",
     "tags": [
-      "women",
       "trending",
-      "new-arrivals"
+      "new-arrivals",
+      "necklaces",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 22,
@@ -1017,7 +1031,7 @@
   {
     "id": "15",
     "handle": "zaoro-signature-look-015",
-    "name": "Zaoro Signature Look 015",
+    "name": "Zaoro Jewellery 015",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 255900,
     "comparePrice": 295900,
@@ -1025,12 +1039,13 @@
     "images": [
       "/images/products/client/client-015.jpg"
     ],
-    "category": "women",
+    "category": "necklaces",
     "tags": [
-      "women",
       "trending",
       "bestseller",
-      "new-arrivals"
+      "new-arrivals",
+      "necklaces",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 23,
@@ -1090,7 +1105,7 @@
   {
     "id": "16",
     "handle": "zaoro-signature-look-016",
-    "name": "Zaoro Signature Look 016",
+    "name": "Zaoro Jewellery 016",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 257900,
     "comparePrice": 297900,
@@ -1098,12 +1113,13 @@
     "images": [
       "/images/products/client/client-016.jpg"
     ],
-    "category": "women",
+    "category": "necklaces",
     "tags": [
-      "women",
       "trending",
       "new-arrivals",
-      "sale"
+      "sale",
+      "necklaces",
+      "jewellery"
     ],
     "badge": "New",
     "stock": 24,
@@ -1163,7 +1179,7 @@
   {
     "id": "17",
     "handle": "zaoro-signature-look-017",
-    "name": "Zaoro Signature Look 017",
+    "name": "Zaoro Jewellery 017",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 259900,
     "comparePrice": 299900,
@@ -1171,10 +1187,11 @@
     "images": [
       "/images/products/client/client-017.jpg"
     ],
-    "category": "women",
+    "category": "necklaces",
     "tags": [
-      "women",
-      "trending"
+      "trending",
+      "necklaces",
+      "jewellery"
     ],
     "badge": null,
     "stock": 25,
@@ -1234,7 +1251,7 @@
   {
     "id": "18",
     "handle": "zaoro-signature-look-018",
-    "name": "Zaoro Signature Look 018",
+    "name": "Zaoro Jewellery 018",
     "description": "Premium Zaoro edit with a clean silhouette, soft hand feel, and everyday elegance for modern wardrobes.",
     "price": 249900,
     "comparePrice": 289900,
@@ -1242,11 +1259,12 @@
     "images": [
       "/images/products/client/client-018.jpg"
     ],
-    "category": "women",
+    "category": "necklaces",
     "tags": [
-      "women",
       "trending",
-      "bestseller"
+      "bestseller",
+      "necklaces",
+      "jewellery"
     ],
     "badge": null,
     "stock": 26,
@@ -1314,10 +1332,10 @@
     "images": [
       "/images/products/client/client-019.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women",
-      "trending"
+      "trending",
+      "t-shirts"
     ],
     "badge": null,
     "stock": 8,
@@ -1385,11 +1403,11 @@
     "images": [
       "/images/products/client/client-020.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women",
       "trending",
-      "sale"
+      "sale",
+      "suits"
     ],
     "badge": "20% Off",
     "stock": 9,
@@ -1457,10 +1475,10 @@
     "images": [
       "/images/products/client/client-021.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "shorts"
     ],
     "badge": null,
     "stock": 10,
@@ -1528,9 +1546,9 @@
     "images": [
       "/images/products/client/client-022.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women"
+      "leggings"
     ],
     "badge": null,
     "stock": 11,
@@ -1598,9 +1616,9 @@
     "images": [
       "/images/products/client/client-023.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women"
+      "sets"
     ],
     "badge": null,
     "stock": 12,
@@ -1668,11 +1686,11 @@
     "images": [
       "/images/products/client/client-024.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women",
       "bestseller",
-      "sale"
+      "sale",
+      "t-shirts"
     ],
     "badge": "20% Off",
     "stock": 13,
@@ -1740,9 +1758,9 @@
     "images": [
       "/images/products/client/client-025.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women"
+      "suits"
     ],
     "badge": null,
     "stock": 14,
@@ -1810,9 +1828,9 @@
     "images": [
       "/images/products/client/client-026.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women"
+      "shorts"
     ],
     "badge": null,
     "stock": 15,
@@ -1880,10 +1898,10 @@
     "images": [
       "/images/products/client/client-027.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "leggings"
     ],
     "badge": null,
     "stock": 16,
@@ -1951,10 +1969,10 @@
     "images": [
       "/images/products/client/client-028.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women",
-      "sale"
+      "sale",
+      "sets"
     ],
     "badge": "20% Off",
     "stock": 17,
@@ -2022,9 +2040,9 @@
     "images": [
       "/images/products/client/client-029.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women"
+      "t-shirts"
     ],
     "badge": null,
     "stock": 18,
@@ -2092,10 +2110,10 @@
     "images": [
       "/images/products/client/client-030.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "suits"
     ],
     "badge": null,
     "stock": 19,
@@ -2163,9 +2181,9 @@
     "images": [
       "/images/products/client/client-031.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women"
+      "shorts"
     ],
     "badge": null,
     "stock": 20,
@@ -2233,10 +2251,10 @@
     "images": [
       "/images/products/client/client-032.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women",
-      "sale"
+      "sale",
+      "leggings"
     ],
     "badge": "20% Off",
     "stock": 21,
@@ -2304,10 +2322,10 @@
     "images": [
       "/images/products/client/client-033.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "sets"
     ],
     "badge": null,
     "stock": 22,
@@ -2375,9 +2393,9 @@
     "images": [
       "/images/products/client/client-034.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women"
+      "t-shirts"
     ],
     "badge": null,
     "stock": 23,
@@ -2445,9 +2463,9 @@
     "images": [
       "/images/products/client/client-035.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women"
+      "suits"
     ],
     "badge": null,
     "stock": 24,
@@ -2515,11 +2533,11 @@
     "images": [
       "/images/products/client/client-036.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women",
       "bestseller",
-      "sale"
+      "sale",
+      "shorts"
     ],
     "badge": "20% Off",
     "stock": 25,
@@ -2587,9 +2605,9 @@
     "images": [
       "/images/products/client/client-037.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women"
+      "leggings"
     ],
     "badge": null,
     "stock": 26,
@@ -2657,9 +2675,9 @@
     "images": [
       "/images/products/client/client-038.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women"
+      "sets"
     ],
     "badge": null,
     "stock": 8,
@@ -2727,10 +2745,10 @@
     "images": [
       "/images/products/client/client-039.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "t-shirts"
     ],
     "badge": null,
     "stock": 9,
@@ -2798,10 +2816,10 @@
     "images": [
       "/images/products/client/client-040.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women",
-      "sale"
+      "sale",
+      "suits"
     ],
     "badge": "20% Off",
     "stock": 10,
@@ -2869,9 +2887,9 @@
     "images": [
       "/images/products/client/client-041.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women"
+      "shorts"
     ],
     "badge": null,
     "stock": 11,
@@ -2939,10 +2957,10 @@
     "images": [
       "/images/products/client/client-042.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "leggings"
     ],
     "badge": null,
     "stock": 12,
@@ -3010,9 +3028,9 @@
     "images": [
       "/images/products/client/client-043.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women"
+      "sets"
     ],
     "badge": null,
     "stock": 13,
@@ -3080,10 +3098,10 @@
     "images": [
       "/images/products/client/client-044.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women",
-      "sale"
+      "sale",
+      "t-shirts"
     ],
     "badge": "20% Off",
     "stock": 14,
@@ -3151,10 +3169,10 @@
     "images": [
       "/images/products/client/client-045.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "suits"
     ],
     "badge": null,
     "stock": 15,
@@ -3222,9 +3240,9 @@
     "images": [
       "/images/products/client/client-046.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women"
+      "shorts"
     ],
     "badge": null,
     "stock": 16,
@@ -3292,9 +3310,9 @@
     "images": [
       "/images/products/client/client-047.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women"
+      "leggings"
     ],
     "badge": null,
     "stock": 17,
@@ -3362,11 +3380,11 @@
     "images": [
       "/images/products/client/client-048.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women",
       "bestseller",
-      "sale"
+      "sale",
+      "sets"
     ],
     "badge": "20% Off",
     "stock": 18,
@@ -3434,9 +3452,9 @@
     "images": [
       "/images/products/client/client-049.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women"
+      "t-shirts"
     ],
     "badge": null,
     "stock": 19,
@@ -3504,9 +3522,9 @@
     "images": [
       "/images/products/client/client-050.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women"
+      "suits"
     ],
     "badge": null,
     "stock": 20,
@@ -3574,10 +3592,10 @@
     "images": [
       "/images/products/client/client-051.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "shorts"
     ],
     "badge": null,
     "stock": 21,
@@ -3645,10 +3663,10 @@
     "images": [
       "/images/products/client/client-052.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women",
-      "sale"
+      "sale",
+      "leggings"
     ],
     "badge": "20% Off",
     "stock": 22,
@@ -3716,9 +3734,9 @@
     "images": [
       "/images/products/client/client-053.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women"
+      "sets"
     ],
     "badge": null,
     "stock": 23,
@@ -3786,10 +3804,10 @@
     "images": [
       "/images/products/client/client-054.jpg"
     ],
-    "category": "women",
+    "category": "t-shirts",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "t-shirts"
     ],
     "badge": null,
     "stock": 24,
@@ -3857,9 +3875,9 @@
     "images": [
       "/images/products/client/client-055.jpg"
     ],
-    "category": "women",
+    "category": "suits",
     "tags": [
-      "women"
+      "suits"
     ],
     "badge": null,
     "stock": 25,
@@ -3927,10 +3945,10 @@
     "images": [
       "/images/products/client/client-056.jpg"
     ],
-    "category": "women",
+    "category": "shorts",
     "tags": [
-      "women",
-      "sale"
+      "sale",
+      "shorts"
     ],
     "badge": "20% Off",
     "stock": 26,
@@ -3998,10 +4016,10 @@
     "images": [
       "/images/products/client/client-057.jpg"
     ],
-    "category": "women",
+    "category": "leggings",
     "tags": [
-      "women",
-      "bestseller"
+      "bestseller",
+      "leggings"
     ],
     "badge": null,
     "stock": 8,
@@ -4069,9 +4087,9 @@
     "images": [
       "/images/products/client/client-058.jpg"
     ],
-    "category": "women",
+    "category": "sets",
     "tags": [
-      "women"
+      "sets"
     ],
     "badge": null,
     "stock": 9,

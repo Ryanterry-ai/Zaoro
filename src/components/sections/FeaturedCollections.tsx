@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function FeaturedCollections({ collections }: Props) {
-  const featured = collections.filter((c) => ['women', 'new-arrivals', 'best-sellers'].includes(c.handle));
+  const featured = collections.filter((c) => ['jewellery', 'suits', 'sets'].includes(c.handle));
 
   return (
     <section className="bg-[#F8F6F3] py-16 lg:py-20">
@@ -20,8 +20,8 @@ export function FeaturedCollections({ collections }: Props) {
               Discover a refined selection from the latest client-curated Zaoro collection.
             </p>
           </div>
-          <Link href="/products/new-arrivals" className="btn-outline mt-4 md:mt-0 inline-block">
-            Shop New Arrivals
+          <Link href="/products/jewellery" className="btn-outline mt-4 md:mt-0 inline-block">
+            Shop Jewellery
           </Link>
         </div>
 

@@ -1,32 +1,32 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 const slides = [
   {
-    headline: 'Elevate Your Style',
-    subtext: 'Enhance confidence and sophistication with effortless everyday style.',
-    cta: { label: 'Shop New Arrivals', url: '/products/new-arrivals' },
+    headline: 'Jewellery That Defines You',
+    subtext: 'From earrings to layered necklaces, discover statement pieces for every mood.',
+    cta: { label: 'Shop Jewellery', url: '/products/jewellery' },
     ctaSecondary: { label: 'Explore Collections', url: '/products' },
-    image: 'https://framerusercontent.com/images/D2p9zTlaP7XVUh5hZNXnMgEh4Q.png',
+    image: '/images/products/client/client-003.jpg',
     bg: '#F8F6F3',
   },
   {
-    headline: 'Real Women Style',
-    subtext: 'Discover refined pieces designed to inspire confidence and elevate your style.',
-    cta: { label: 'Shop New Arrivals', url: '/products/new-arrivals' },
-    ctaSecondary: { label: 'Explore Collections', url: '/products' },
-    image: 'https://framerusercontent.com/images/STYW4yhb7jxpxfEibmLXyd7R5g.png',
+    headline: 'Tailored Suits & Sets',
+    subtext: 'Modern silhouettes designed for polish, comfort, and confidence every day.',
+    cta: { label: 'Shop Suits', url: '/products/suits' },
+    ctaSecondary: { label: 'Shop Sets', url: '/products/sets' },
+    image: '/images/products/client/client-020.jpg',
     bg: '#EDE9E3',
   },
   {
-    headline: 'Timeless Modern Style',
-    subtext: 'Embrace timeless modern style with curated pieces that bring elegance.',
+    headline: 'Style Your Everyday Edit',
+    subtext: 'Build complete looks with shorts, leggings, and elevated essentials.',
     cta: { label: 'Shop New Arrivals', url: '/products/new-arrivals' },
-    ctaSecondary: { label: 'Explore Collections', url: '/products' },
-    image: 'https://framerusercontent.com/images/MEMAMZTRXVMdwdbxLGGg8wjgg.png',
-    bg: '#F0EDE8',
+    ctaSecondary: { label: 'View Best Sellers', url: '/products/best-sellers' },
+    image: '/images/products/client/client-045.jpg',
+    bg: '#F2EEE9',
   },
 ];
 
@@ -58,13 +58,13 @@ export function HeroSlider() {
             </div>
           </div>
 
-          <div className="order-1 lg:order-2 relative h-[60vw] max-h-[640px] lg:h-[85vh] lg:max-h-none">
+          <div className="order-1 lg:order-2 relative h-[60vw] max-h-[640px] lg:h-[85vh] lg:max-h-none rounded-sm overflow-hidden">
             <Image
               key={`image-${current}`}
               src={slide.image}
               alt={slide.headline}
               fill
-              className="object-contain object-center lg:object-right animate-[fadeInUp_700ms_ease-out]"
+              className="object-cover object-center animate-[fadeInUp_700ms_ease-out]"
               priority
               sizes="(max-width: 1024px) 100vw, 50vw"
             />
@@ -72,10 +72,10 @@ export function HeroSlider() {
         </div>
       </div>
 
-      <button onClick={() => setCurrent((current - 1 + slides.length) % slides.length)} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors" aria-label="Previous slide">
+      <button onClick={() => setCurrent((current - 1 + slides.length) % slides.length)} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/85 hover:bg-white shadow flex items-center justify-center transition-colors" aria-label="Previous slide">
         {'<'}
       </button>
-      <button onClick={() => setCurrent((current + 1) % slides.length)} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors" aria-label="Next slide">
+      <button onClick={() => setCurrent((current + 1) % slides.length)} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/85 hover:bg-white shadow flex items-center justify-center transition-colors" aria-label="Next slide">
         {'>'}
       </button>
 
@@ -90,4 +90,3 @@ export function HeroSlider() {
     </div>
   );
 }
-
