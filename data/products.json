@@ -1,0 +1,254 @@
+[
+  {
+    "id": "1",
+    "handle": "classic-blue-denim-jeans",
+    "name": "Shirt with Gun Print",
+    "description": "The Classic Blue Denim Jeans embody effortless style and enduring durability. Crafted from high-quality cotton denim with a touch of stretch, they provide a structured yet comfortable fit that adapts to everyday movement.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/PuJISqVxNQeLj8hdU0eVqRd2hY.png",
+      "https://framerusercontent.com/images/un0oPrJ4LTzTvUDPCf6e8V9VFY.png",
+      "https://framerusercontent.com/images/T2r9sZw0HUeucss0dtQqlyd6H8.png",
+      "https://framerusercontent.com/images/StmONY3o0DadBm20GrpcxiJreN0.png"
+    ],
+    "category": "men",
+    "tags": ["men", "trending", "bestseller"],
+    "badge": null,
+    "stock": 50,
+    "variants": [
+      { "id": "v1-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "GUN-S" },
+      { "id": "v1-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "GUN-M" },
+      { "id": "v1-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "GUN-L" },
+      { "id": "v1-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "GUN-XL" }
+    ],
+    "details": { "material": "98% Cotton, 2% Elastane Blend", "care": "Do not bleach. Tumble dry low or hang dry." },
+    "reviews": 224,
+    "visible": true
+  },
+  {
+    "id": "2",
+    "handle": "cotton-tailored-set",
+    "name": "Cotton Tailored Set",
+    "description": "A refined cotton tailored set that combines structure with comfort, perfect for both professional and casual settings.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/e0N6XC63RzgwQULQ6zcoGHeDGys.png",
+      "https://framerusercontent.com/images/8wjT7dJ5aQ2kJxwDnOTmCKcHHk.png",
+      "https://framerusercontent.com/images/4bWSd0lFp2zoQNcaAEEAWef7s.png",
+      "https://framerusercontent.com/images/hiPop4WrGTpINdN7mthsjMBBk.png"
+    ],
+    "category": "women",
+    "tags": ["women", "trending", "bestseller"],
+    "badge": null,
+    "stock": 40,
+    "variants": [
+      { "id": "v2-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "CTS-S" },
+      { "id": "v2-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "CTS-M" },
+      { "id": "v2-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "CTS-L" },
+      { "id": "v2-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "CTS-XL" }
+    ],
+    "details": { "material": "100% Cotton", "care": "Machine wash cold. Hang dry." },
+    "reviews": 189,
+    "visible": true
+  },
+  {
+    "id": "3",
+    "handle": "mens-beige-coat-pant",
+    "name": "Men's Beige Coat Pant",
+    "description": "A sophisticated beige coat pant set that exudes classic elegance and modern refinement for the discerning gentleman.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/owvNYpDfAEpRrFywrEazwZU1Wk.png",
+      "https://framerusercontent.com/images/m3QpA1XYoixLIsX0ubqMfUdk2E.png",
+      "https://framerusercontent.com/images/RL7EwOfrngFOj0FPiyLZ5tLg.png",
+      "https://framerusercontent.com/images/sOq3zY9i76W5D6COIVPkO3WbpA.png"
+    ],
+    "category": "men",
+    "tags": ["men", "trending", "bestseller"],
+    "badge": null,
+    "stock": 30,
+    "variants": [
+      { "id": "v3-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCP-S" },
+      { "id": "v3-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 12, "sku": "BCP-M" },
+      { "id": "v3-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCP-L" },
+      { "id": "v3-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "BCP-XL" }
+    ],
+    "details": { "material": "65% Polyester, 35% Viscose", "care": "Dry clean only." },
+    "reviews": 156,
+    "visible": true
+  },
+  {
+    "id": "4",
+    "handle": "men-s-t-shirt",
+    "name": "Men's T-Shirt",
+    "description": "A premium quality men's t-shirt crafted for everyday comfort with a clean, modern silhouette.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/i3El5MuqanfZX00LIFvqFixn1Ng.png",
+      "https://framerusercontent.com/images/a72HwNOlo7N0ozLQj4FUDLvot6o.png",
+      "https://framerusercontent.com/images/5pKUa86cu8AvAQOF5OTKhzmGsoU.png",
+      "https://framerusercontent.com/images/QxR3SErSN99wcrTcUwUXG5eL84.png"
+    ],
+    "category": "men",
+    "tags": ["men", "trending", "new-arrivals"],
+    "badge": "20% Off",
+    "stock": 80,
+    "variants": [
+      { "id": "v4-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 25, "sku": "TSH-S" },
+      { "id": "v4-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 30, "sku": "TSH-M" },
+      { "id": "v4-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "TSH-L" },
+      { "id": "v4-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "TSH-XL" }
+    ],
+    "details": { "material": "100% Organic Cotton", "care": "Machine wash cold." },
+    "reviews": 312,
+    "visible": true
+  },
+  {
+    "id": "5",
+    "handle": "oversized-puffer-jacket",
+    "name": "Women Baggy fit",
+    "description": "A luxurious oversized puffer jacket that combines warmth with contemporary street style aesthetics.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/mRbu6lXFYdwYgUhECkRhvigfmnI.png",
+      "https://framerusercontent.com/images/RZ5IHqxJLMR1gB2DYjT6AqnUw.png",
+      "https://framerusercontent.com/images/fzPjjKOjuoUPMqDhy9Z47FOUWI.png",
+      "https://framerusercontent.com/images/yvSQeNLLS2PEApOo192t36U2aYM.png"
+    ],
+    "category": "women",
+    "tags": ["women", "new-arrivals", "bestseller"],
+    "badge": "New",
+    "stock": 35,
+    "variants": [
+      { "id": "v5-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "PUF-S" },
+      { "id": "v5-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "PUF-M" },
+      { "id": "v5-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "PUF-L" },
+      { "id": "v5-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "PUF-XL" }
+    ],
+    "details": { "material": "100% Polyester with Down Fill", "care": "Machine wash cold, tumble dry low." },
+    "reviews": 97,
+    "visible": true
+  },
+  {
+    "id": "6",
+    "handle": "relaxed-fit-linen-shirt-girls",
+    "name": "Relaxed Fit Linen Shirt Girls",
+    "description": "A breathable, relaxed-fit linen shirt for women, offering effortless style and all-day comfort.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/0gXUVD5oTvVGR49i6M5q7B5A500.png",
+      "https://framerusercontent.com/images/iF3WzqbfR5cRFbUpvPEj1W4GwDE.png",
+      "https://framerusercontent.com/images/IkhqXLDvP1HNdeFG1dt4ZztzLQ.png",
+      "https://framerusercontent.com/images/PFwRVg8l0PtW2VnfRPXb3T5GvM.png"
+    ],
+    "category": "women",
+    "tags": ["women", "sale", "bestseller"],
+    "badge": "20% Off",
+    "stock": 45,
+    "variants": [
+      { "id": "v6-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "LIN-S" },
+      { "id": "v6-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "LIN-M" },
+      { "id": "v6-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "LIN-L" },
+      { "id": "v6-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "LIN-XL" }
+    ],
+    "details": { "material": "100% Linen", "care": "Hand wash cold or dry clean." },
+    "reviews": 203,
+    "visible": true
+  },
+  {
+    "id": "7",
+    "handle": "relaxed-fit-linen-shirt",
+    "name": "Soft Knit Midi Dress",
+    "description": "A flowing soft knit midi dress that drapes beautifully, perfect for both day and evening occasions.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/59BHnUBK5MK60bxmTYy4MHaHpA.png",
+      "https://framerusercontent.com/images/NB9e0X2AKhS8B3k11YNaz7IsJaU.png",
+      "https://framerusercontent.com/images/gACm4vqo1prLG31phVnNGdiryDU.png",
+      "https://framerusercontent.com/images/drFneVXuE7bO9BFIo6FiizC41w.png"
+    ],
+    "category": "women",
+    "tags": ["women", "new-arrivals"],
+    "badge": "New",
+    "stock": 25,
+    "variants": [
+      { "id": "v7-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "KMD-S" },
+      { "id": "v7-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 10, "sku": "KMD-M" },
+      { "id": "v7-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "KMD-L" },
+      { "id": "v7-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "KMD-XL" }
+    ],
+    "details": { "material": "80% Viscose, 20% Nylon", "care": "Gentle machine wash cold." },
+    "reviews": 145,
+    "visible": true
+  },
+  {
+    "id": "8",
+    "handle": "business-casual-outfit",
+    "name": "Business casual outfit",
+    "description": "A smart business casual outfit that effortlessly transitions from office to evening.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/xv8ZXihdbthAxFF98k8x801vOU.png",
+      "https://framerusercontent.com/images/YlqPIkSHkg3NZTN1jiNZ7aS8nQ.png",
+      "https://framerusercontent.com/images/8TL5Fu4yyGEPz17f5VqZ3vQd4.png",
+      "https://framerusercontent.com/images/jvJvbc8LXWo0eqkxLJedzd9hq8.png"
+    ],
+    "category": "men",
+    "tags": ["men", "sale"],
+    "badge": "20% Off",
+    "stock": 30,
+    "variants": [
+      { "id": "v8-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCO-S" },
+      { "id": "v8-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 12, "sku": "BCO-M" },
+      { "id": "v8-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 8, "sku": "BCO-L" },
+      { "id": "v8-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 2, "sku": "BCO-XL" }
+    ],
+    "details": { "material": "60% Cotton, 40% Polyester", "care": "Machine wash warm." },
+    "reviews": 178,
+    "visible": true
+  },
+  {
+    "id": "9",
+    "handle": "classic-denim-jeans",
+    "name": "Classic Denim Jeans",
+    "description": "Timeless classic denim jeans with a perfect straight fit and durable construction for everyday wear.",
+    "price": 31000,
+    "comparePrice": 35000,
+    "currency": "INR",
+    "images": [
+      "https://framerusercontent.com/images/5Oz2LSqx2pLS96SsCvKPmFHOT0.png",
+      "https://framerusercontent.com/images/GIR7dk1ZIXuDb6aqpmrY1EI0.png",
+      "https://framerusercontent.com/images/KNJK2965qVz9xnjfOUkEPjbiBO0.png",
+      "https://framerusercontent.com/images/BvE3nw5tnPqKYQFZrlVOHQ0K6N0.png"
+    ],
+    "category": "men",
+    "tags": ["men", "bestseller"],
+    "badge": null,
+    "stock": 60,
+    "variants": [
+      { "id": "v9-s", "title": "S", "options": { "size": "S" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "CDJ-S" },
+      { "id": "v9-m", "title": "M", "options": { "size": "M" }, "price": 31000, "comparePrice": 35000, "stock": 20, "sku": "CDJ-M" },
+      { "id": "v9-l", "title": "L", "options": { "size": "L" }, "price": 31000, "comparePrice": 35000, "stock": 15, "sku": "CDJ-L" },
+      { "id": "v9-xl", "title": "XL", "options": { "size": "XL" }, "price": 31000, "comparePrice": 35000, "stock": 5, "sku": "CDJ-XL" }
+    ],
+    "details": { "material": "99% Cotton, 1% Elastane", "care": "Machine wash cold, inside out." },
+    "reviews": 267,
+    "visible": true
+  }
+]

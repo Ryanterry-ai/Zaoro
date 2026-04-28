@@ -1,0 +1,37 @@
+{
+  "siteName": "Zaro",
+  "tagline": "Premium Fashion Store",
+  "description": "Zaro brings together premium men's and women's clothing from globally recognized brands.",
+  "logoUrl": "/images/logos/zaro-logo.svg",
+  "faviconUrl": "/favicon.ico",
+  "currency": "INR",
+  "currencySymbol": "₹",
+  "contactEmail": "hello@zaro.com",
+  "contactPhone": "+91 98765 43210",
+  "address": "Mumbai, India",
+  "announcementBar": {
+    "enabled": true,
+    "text": "Enjoy an extra 30% off selected styles with code FLASH30.",
+    "linkText": "Terms apply",
+    "linkUrl": "/general/privacy-policy",
+    "bgColor": "#0A0A0A",
+    "textColor": "#FFFFFF"
+  },
+  "socialLinks": {
+    "instagram": "https://www.instagram.com/",
+    "facebook": "https://www.facebook.com/",
+    "twitter": "https://x.com/"
+  },
+  "seo": {
+    "title": "Zaro - Fashion eCommerce Store",
+    "description": "Discover premium men's and women's fashion at Zaro. Shop the latest collections with fast shipping and easy returns.",
+    "keywords": ["fashion", "clothing", "men", "women", "premium", "style"]
+  },
+  "footerTagline": "your favorite styles at unmissable prices!",
+  "footerBg": "/images/sections/footer-bg.jpg",
+  "trustBadges": [
+    { "icon": "RotateCcw", "title": "Easy Returns", "description": "Seamless returns and exchanges designed to keep your shopping experience easy." },
+    { "icon": "Truck", "title": "Fast Shipping", "description": "Enjoy hassle-free, swift, and dependable delivery ensuring your items arrive right on time." },
+    { "icon": "Headphones", "title": "24/7 Support", "description": "Always-available friendly, expert support to assist you anytime with orders, sizing, or inquiries." }
+  ]
+}

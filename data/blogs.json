@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "handle": "elevating-casual-with-designer",
+    "title": "Elevating casual with designer",
+    "excerpt": "Discover how to blend casual comfort with designer aesthetics for a look that's effortlessly chic.",
+    "image": "https://framerusercontent.com/images/k53AkwyG2E4YaQTmRDxjPwAeUY.jpg",
+    "publishedAt": "2026-02-27",
+    "content": "Fashion is all about balance. When you mix casual pieces with designer elements, you create a style that feels both accessible and elevated...",
+    "visible": true
+  },
+  {
+    "id": "2",
+    "handle": "confidence-with-intentional-style",
+    "title": "Confidence with intentional style",
+    "excerpt": "How intentional style choices can transform your confidence and presence in any room.",
+    "image": "https://framerusercontent.com/images/R7NYxLoHrYrh1kdzEJCTW3krLsw.jpg",
+    "publishedAt": "2026-02-26",
+    "content": "True confidence comes from knowing who you are and expressing it through what you wear. Intentional style is not about following trends blindly...",
+    "visible": true
+  },
+  {
+    "id": "3",
+    "handle": "seasonal-trends-for-everyday",
+    "title": "Seasonal trends for everyday",
+    "excerpt": "How to incorporate the latest seasonal trends into your everyday wardrobe without losing your personal style.",
+    "image": "https://framerusercontent.com/images/aCJnpYpi29Iak9X8UvWVI3xBx8M.jpg",
+    "publishedAt": "2026-02-22",
+    "content": "Every season brings new trends, but the art of style is knowing which ones to embrace and which to skip...",
+    "visible": true
+  }
+]

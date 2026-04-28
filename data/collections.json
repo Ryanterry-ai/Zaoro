@@ -1,0 +1,47 @@
+[
+  {
+    "id": "women",
+    "handle": "women",
+    "name": "Women's Collection",
+    "description": "Soft textures, modern silhouettes, effortless elegance",
+    "image": "https://framerusercontent.com/images/zUicdvLfPfdOmPfVJcctQTJXM4.jpg",
+    "products": ["2", "5", "6", "7"],
+    "visible": true
+  },
+  {
+    "id": "men",
+    "handle": "men",
+    "name": "Men's Collection",
+    "description": "Clean lines, refined basics, everyday essentials",
+    "image": "https://framerusercontent.com/images/GsJwwgGmmJntyUZ5ucbNJbLQkw.jpg",
+    "products": ["1", "3", "4", "8", "9"],
+    "visible": true
+  },
+  {
+    "id": "new-arrivals",
+    "handle": "new-arrivals",
+    "name": "New Arrivals",
+    "description": "Streamlined, effortless style for the essential modern wardrobe.",
+    "image": "https://framerusercontent.com/images/mTOo4pn4txf7W5wMeQu5yPeyfg.jpg",
+    "products": ["4", "5", "7"],
+    "visible": true
+  },
+  {
+    "id": "best-sellers",
+    "handle": "best-sellers",
+    "name": "Best Sellers",
+    "description": "Our most loved styles, proven by thousands of happy customers.",
+    "image": "https://framerusercontent.com/images/zUicdvLfPfdOmPfVJcctQTJXM4.jpg",
+    "products": ["1", "2", "3", "4", "5"],
+    "visible": true
+  },
+  {
+    "id": "sale",
+    "handle": "sale",
+    "name": "Sale",
+    "description": "Curated wardrobe essentials at remarkable prices.",
+    "image": "https://framerusercontent.com/images/GsJwwgGmmJntyUZ5ucbNJbLQkw.jpg",
+    "products": ["4", "6", "8"],
+    "visible": true
+  }
+]
