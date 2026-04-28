@@ -26,10 +26,14 @@ export function ProductListingClient({ title, subtitle, products }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([minPrice, maxPrice]);
 
-  const availableFilters = useMemo(
-    () => FILTER_OPTIONS.filter((opt) => products.some((p) => p.category === opt.key)),
-    [products]
-  );
+  const filterCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    FILTER_OPTIONS.forEach((opt) => counts.set(opt.key, 0));
+    products.forEach((product) => {
+      counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+    });
+    return counts;
+  }, [products]);
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -59,7 +63,7 @@ export function ProductListingClient({ title, subtitle, products }: Props) {
           <div className="mb-6">
             <h3 className="text-xs font-medium uppercase tracking-wide mb-2 text-[#6B6B6B]">Collections</h3>
             <div className="space-y-2">
-              {availableFilters.map((opt) => (
+              {FILTER_OPTIONS.map((opt) => (
                 <label key={opt.key} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
                     type="checkbox"
@@ -68,6 +72,7 @@ export function ProductListingClient({ title, subtitle, products }: Props) {
                     className="accent-[#0A0A0A]"
                   />
                   <span>{opt.label}</span>
+                  <span className="text-xs text-[#9A9A9A]">({filterCounts.get(opt.key) ?? 0})</span>
                 </label>
               ))}
             </div>
