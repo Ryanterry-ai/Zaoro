@@ -37,7 +37,7 @@ export function FeaturedCollections({ collections, products, content }: Props) {
         <div className="grid md:grid-cols-3 gap-6">
           {featured.map((collection, i) => (
             <Reveal key={collection.id} delayMs={i * 70}>
-              <Link href={`/products/${collection.handle}`} className="group">
+              <Link href={`/products/${collection.handle}`} className="group motion-card block">
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#EDE9E3]">
                   <Image
                     src={collection.image}

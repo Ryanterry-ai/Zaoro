@@ -28,7 +28,7 @@ export function RealStyle({ products }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <Reveal>
-            <div className="relative aspect-[4/5] overflow-hidden bg-[#F8F6F3] image-float">
+            <div className="relative aspect-[4/5] overflow-hidden bg-[#F8F6F3] image-float image-tilt-hover">
               <Image
                 src={lead.images[0]}
                 alt={lead.name}
@@ -55,7 +55,7 @@ export function RealStyle({ products }: Props) {
               <Reveal delayMs={150}>
                 <div className="grid grid-cols-2 gap-3 mb-8">
                   {picks.map((product) => (
-                    <Link key={product.id} href={`/products/${product.handle}`} className="border border-[#EDE9E3] p-3 hover:border-[#0A0A0A] transition-colors">
+                    <Link key={product.id} href={`/products/${product.handle}`} className="motion-card border border-[#EDE9E3] p-3 hover:border-[#0A0A0A] transition-colors block">
                       <p className="text-xs text-[#6B6B6B] mb-1 uppercase tracking-wide">{product.category}</p>
                       <p className="text-sm text-[#0A0A0A] leading-snug">{product.name}</p>
                       <p className="text-sm font-medium mt-1">{formatPrice(product.price)}</p>

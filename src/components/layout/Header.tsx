@@ -22,9 +22,9 @@ export function Header({ nav }: Props) {
   }, []);
 
   return (
-    <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-shadow duration-300 ${scrolled ? 'shadow-sm' : ''}`}>
+    <header className={`header-shell sticky top-0 z-40 bg-white/95 backdrop-blur ${scrolled ? 'is-scrolled' : ''}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-[74px]">
+        <div className={`header-inner flex items-center justify-between ${scrolled ? 'h-14 lg:h-[66px]' : 'h-16 lg:h-[74px]'}`}>
           <Link href="/" className="font-serif text-2xl font-semibold tracking-wider text-[#0A0A0A]">
             TruArtz
           </Link>
@@ -39,7 +39,7 @@ export function Header({ nav }: Props) {
                   onMouseLeave={() => setOpenDesktopMenu(null)}
                 >
                   <button
-                    className="flex items-center gap-1 text-sm font-medium text-[#0A0A0A] hover:text-[#6B6B6B] transition-colors tracking-wide"
+                    className="flex items-center gap-1 text-sm font-medium text-[#0A0A0A] hover:text-[#6B6B6B] transition-all duration-200 tracking-wide hover:-translate-y-0.5"
                     onFocus={() => setOpenDesktopMenu(item.id)}
                     onBlur={() => setOpenDesktopMenu(null)}
                   >
@@ -57,7 +57,7 @@ export function Header({ nav }: Props) {
                   </div>
                 </div>
               ) : (
-                <Link key={item.id} href={item.url} className="text-sm font-medium text-[#0A0A0A] hover:text-[#6B6B6B] transition-colors tracking-wide">
+                <Link key={item.id} href={item.url} className="text-sm font-medium text-[#0A0A0A] hover:text-[#6B6B6B] transition-all duration-200 tracking-wide hover:-translate-y-0.5">
                   {item.label}
                 </Link>
               )

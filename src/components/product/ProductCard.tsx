@@ -24,7 +24,7 @@ export function ProductCard({ product }: Props) {
   };
 
   return (
-    <div className="group relative">
+    <div className="group relative motion-card">
       <Link href={`/products/${product.handle}`}>
         {/* Image */}
         <div className="relative aspect-[4/5] bg-[#F8F6F3] overflow-hidden">
@@ -40,7 +40,7 @@ export function ProductCard({ product }: Props) {
               alt={product.name}
               fill
               className={`object-cover transition-all duration-700 ${
-                i === hoveredImg ? 'opacity-100 scale-100' : 'opacity-0 scale-100'
+                i === hoveredImg ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
               }`}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               priority={i === 0}
@@ -59,7 +59,7 @@ export function ProductCard({ product }: Props) {
             </div>
           )}
           {/* Add to cart overlay */}
-          <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+          <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-400">
             <button
               onClick={handleAddToCart}
               className="w-full bg-[#0A0A0A] text-white py-3 text-xs font-medium tracking-widest uppercase hover:bg-[#333] transition-colors"

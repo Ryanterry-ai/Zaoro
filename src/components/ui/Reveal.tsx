@@ -24,7 +24,7 @@ export function Reveal({ children, className = '', delayMs = 0 }: Props) {
           }
         });
       },
-      { threshold: 0.18 }
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
     );
     observer.observe(node);
     return () => observer.disconnect();

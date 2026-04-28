@@ -41,7 +41,7 @@ export function BlogSection({ products, content }: Props) {
       <div className="grid md:grid-cols-3 gap-8">
         {stylePicks.map((product, i) => (
           <Reveal key={product.id} delayMs={i * 80}>
-          <Link href={`/products/${product.handle}`} className="group">
+          <Link href={`/products/${product.handle}`} className="group motion-card block">
             <div className="relative aspect-video overflow-hidden bg-[#F8F6F3] mb-4">
               <Image
                 src={product.images[0]}
