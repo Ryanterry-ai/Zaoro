@@ -1,0 +1,20 @@
+{
+  "name": "build-same-engine",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Production-grade deterministic AST-first code synthesis and compiler engine",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.24.0",
+    "recast": "^0.23.9",
+    "typescript": "^5.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24"
+  }
+}

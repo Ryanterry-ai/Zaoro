@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+
+:root {
+  --color-black: #0A0A0A;
+  --color-white: #FFFFFF;
+  --color-cream: #F8F6F3;
+  --color-beige: #EDE9E3;
+  --color-gray: #6B6B6B;
+  --color-gray-light: #D4D4D4;
+  --color-accent: #C8A882;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Inter', sans-serif; color: #0A0A0A; background: #FFFFFF; }
+
+.font-serif { font-family: 'Playfair Display', serif; }
+
+/* Announcement bar marquee */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 30s linear infinite; }
+
+/* Hover image zoom */
+.img-zoom { overflow: hidden; }
+.img-zoom img { transition: transform 0.6s ease; }
+.img-zoom:hover img { transform: scale(1.05); }
+
+/* Cart drawer */
+.cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 49; }
+.cart-drawer { position: fixed; right: 0; top: 0; bottom: 0; width: 420px; max-width: 100%; background: white; z-index: 50; overflow-y: auto; }
+
+@media (max-width: 768px) {
+  .cart-drawer { width: 100%; }
+}
+
+/* Product image gallery */
+.product-gallery-thumb { cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
+.product-gallery-thumb.active { border-color: #0A0A0A; }
+
+/* Button styles */
+.btn-primary {
+  @apply bg-[#0A0A0A] text-white px-8 py-3.5 text-sm font-medium tracking-widest uppercase hover:bg-[#333] transition-colors duration-200;
+}
+.btn-outline {
+  @apply border border-[#0A0A0A] text-[#0A0A0A] px-8 py-3.5 text-sm font-medium tracking-widest uppercase hover:bg-[#0A0A0A] hover:text-white transition-colors duration-200;
+}
+.btn-white {
+  @apply bg-white text-[#0A0A0A] px-8 py-3.5 text-sm font-medium tracking-widest uppercase hover:bg-[#f0f0f0] transition-colors duration-200;
+}
