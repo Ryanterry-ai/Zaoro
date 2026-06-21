@@ -18,6 +18,8 @@ import { ASTPatch, CompilationError, WorkspaceConfig, LLMContext, LLMConfig, Gen
 import { LLMGateway } from '../core/llm-gateway.js';
 import { FullStackArchitect } from '../generation/architect.js';
 import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
+import { DBCompiler } from '../core/db-compiler.js';
+import { APICompiler } from '../core/api-compiler.js';
 import { TelemetryLayer } from '../core/telemetry.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -131,6 +133,23 @@ export class DeterministicOrchestratorV4 {
     console.log(`[build.same.generation] Pages: ${blueprint.pages.map(p => p.path).join(', ')}`);
 
     FullStackCompilerPipeline.compile(workspace, blueprint);
+
+    if (blueprint.dataModels && blueprint.dataModels.length > 0) {
+      const pkgPath = path.join(workspace.rootPath, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        pkg.dependencies = {
+          ...pkg.dependencies,
+          prisma: '^5.10.2',
+          '@prisma/client': '^5.10.2',
+        };
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8');
+      }
+
+      DBCompiler.scaffoldPrismaClient(workspace.rootPath, blueprint.dataModels);
+      APICompiler.compileAPIRoutes(workspace.rootPath, blueprint.dataModels);
+      console.log(`[build.same.generation] Compiled Prisma schema + ${blueprint.dataModels.length} API routes`);
+    }
 
     TelemetryLayer.reportBuildStart(workspaceId, prompt);
 

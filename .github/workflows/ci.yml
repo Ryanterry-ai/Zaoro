@@ -38,3 +38,6 @@ jobs:
 
     - name: Verify Telemetry Layer
       run: npx tsx scripts/verify-telemetry.ts
+
+    - name: Verify Full-Stack DB + API Compilation
+      run: npx tsx scripts/verify-fullstack-db.ts
