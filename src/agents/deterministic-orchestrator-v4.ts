@@ -14,7 +14,7 @@ import { ImpactAnalyzer } from '../intelligence/impact-analyzer.js';
 import { PatchRanker } from '../intelligence/patch-ranker.js';
 import { RegressionPredictor } from '../intelligence/regression-predictor.js';
 
-import { ASTPatch, CompilationError, WorkspaceConfig, LLMContext, LLMConfig, GenerationIntent, GenerationResult } from '../types/index.js';
+import { ASTPatch, CompilationError, WorkspaceConfig, LLMContext, LLMConfig, GenerationIntent, GenerationResult, FullStackBlueprint } from '../types/index.js';
 import { LLMGateway } from '../core/llm-gateway.js';
 import { FullStackArchitect } from '../generation/architect.js';
 import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
@@ -95,6 +95,17 @@ export class DeterministicOrchestratorV4 {
     }
   }
 
+  private static ROUTE_FUNC_MAP: Record<string, string> = {
+    '/': 'Home',
+    '/shop': 'Shop',
+    '/booking': 'Book',
+    '/dashboard': 'Dashboard',
+    '/courses': 'Courses',
+    '/blog': 'Blog',
+    '/work': 'Work',
+    '/contact': 'Contact',
+  };
+
   private async handleBuildIntent(
     workspaceId: string,
     intent: GenerationIntent,
@@ -114,21 +125,109 @@ export class DeterministicOrchestratorV4 {
     FullStackCompilerPipeline.compile(workspace, blueprint);
 
     const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
-    const config = await this.runCompilationFlow(
-      workspaceId,
-      intent.prompt || '',
-      async (ctx: LLMContext) => await gateway.generatePatches(ctx),
-      5,
-      true
-    );
 
-    return {
-      success: true,
+    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string }> = [];
+    const PER_PAGE_RETRIES = 3;
+
+    for (const [i, page] of blueprint.pages.entries()) {
+      const funcName = DeterministicOrchestratorV4.ROUTE_FUNC_MAP[page.path]
+        || page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
+      const snapshotBase = i * (PER_PAGE_RETRIES + 1);
+
+      console.log(`[build.same.orchestrator-v4] ─── Page ${i + 1}/${blueprint.pages.length}: ${page.path} (export ${funcName}) ───`);
+
+      const pagePrompt = this.buildPagePrompt(page, funcName, blueprint);
+
+      const targetFilePath = page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`;
+
+      try {
+        await this.runCompilationFlow(
+          workspaceId,
+          pagePrompt,
+          async (ctx: LLMContext) => {
+            const allPatches = await gateway.generatePatches(ctx);
+            return allPatches.filter(p => p.targetFile === targetFilePath);
+          },
+          PER_PAGE_RETRIES,
+          true,
+          snapshotBase
+        );
+        pageResults.push({ path: page.path, succeeded: true });
+        console.log(`[build.same.orchestrator-v4] ✓ Page ${page.path} compiled successfully.`);
+      } catch (err: any) {
+        const errMsg = err.message || 'Unknown error';
+        pageResults.push({ path: page.path, succeeded: false, lastError: errMsg });
+        console.error(`[build.same.orchestrator-v4] ✗ Page ${page.path} failed after ${PER_PAGE_RETRIES} retries: ${errMsg}`);
+      }
+    }
+
+    this.snapshot.clearSnapshots(workspace.rootPath);
+
+    const succeeded = pageResults.filter(r => r.succeeded).length;
+    const failed = pageResults.filter(r => !r.succeeded);
+
+    if (failed.length > 0) {
+      console.warn(`[build.same.orchestrator-v4] Build partial: ${succeeded}/${pageResults.length} pages succeeded. Failed: ${failed.map(f => f.path).join(', ')}`);
+    } else {
+      console.log(`[build.same.orchestrator-v4] Build complete: all ${pageResults.length} pages compiled successfully.`);
+    }
+
+    const result: GenerationResult = {
+      success: failed.length === 0,
       intent,
-      workspaceId: config.workspaceId,
+      workspaceId,
       blueprint,
+      pageResults,
       duration: Date.now() - startTime,
     };
+
+    if (failed.length > 0) {
+      result.error = `${failed.length} page(s) failed: ${failed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;
+    }
+
+    return result;
+  }
+
+  private buildPagePrompt(
+    page: { path: string; title: string; layout: string; blocks: string[] },
+    funcName: string,
+    blueprint: FullStackBlueprint
+  ): string {
+    const otherPages = blueprint.pages
+      .filter(p => p.path !== page.path)
+      .map(p => `  - ${p.path} → export ${DeterministicOrchestratorV4.ROUTE_FUNC_MAP[p.path] || p.path}`)
+      .join('\n');
+
+    return `Generate the content for page "${page.path}" (export function "${funcName}").
+
+Page specification:
+- Route: ${page.path}
+- Title: ${page.title}
+- Layout: ${page.layout}
+- Content blocks: ${page.blocks.join(', ')}
+
+Application context (shared across all pages):
+- App name: ${blueprint.appName}
+- Color scheme: ${blueprint.colorScheme}
+- Data models: ${blueprint.dataModels.map(m => `${m.name}(${m.fields.map(f => f.name).join(', ')})`).join(', ')}
+- API routes: ${blueprint.apiRoutes.map(r => `${r.method} ${r.endpoint}`).join(', ')}
+- State stores: ${blueprint.stateStores.map(s => s.name).join(', ')}
+
+Other pages in this app (for nav links, do NOT generate their content):
+${otherPages}
+
+Rules:
+- Generate ONLY the patch for ${page.path} — do not include patches for other pages
+- The export function must be named exactly "${funcName}"
+- Target file: ${page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`}
+- Use action "update" since the scaffold already created this file with a stub export
+- Do NOT include import statements — the scaffold handles imports
+- Use React.useState for any interactive state
+- Use Tailwind CSS exclusively (no CSS modules, no styled-components)
+- Dark theme: bg-zinc-950 background, bg-zinc-900 surfaces, border-zinc-800 borders
+- Use gradient text: text-transparent bg-clip-text bg-gradient-to-r ${blueprint.colorScheme}-400 to-*
+- Include realistic content, not placeholder text
+- Every interactive element must have onClick handlers that update state`;
   }
 
   private async handleCloneIntent(
@@ -197,7 +296,8 @@ export class DeterministicOrchestratorV4 {
     prompt: string,
     llmClientGateway: (context: LLMContext) => Promise<ASTPatch[]>,
     maxRetries: number = 5,
-    skipDevServer: boolean = false
+    skipDevServer: boolean = false,
+    snapshotBase: number = 0
   ): Promise<WorkspaceConfig> {
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
 
@@ -210,11 +310,12 @@ export class DeterministicOrchestratorV4 {
     this.indexer.clearCache();
 
     while (attempts < maxRetries) {
+      const version = snapshotBase + attempts;
       console.log(`[build.same.orchestrator-v4] Indexing dynamic import trees...`);
       this.buildDependencyGraph(workspace.rootPath);
 
-      console.log(`[build.same.orchestrator-v4] Saving filesystem rollback version: [V${attempts}]`);
-      this.snapshot.takeSnapshot(workspace.rootPath, attempts);
+      console.log(`[build.same.orchestrator-v4] Saving filesystem rollback version: [V${version}]`);
+      this.snapshot.takeSnapshot(workspace.rootPath, version);
 
       const payloadContext: LLMContext = {
         prompt,
@@ -232,7 +333,7 @@ export class DeterministicOrchestratorV4 {
       const safetyReport = this.predictor.predict(rankedPatches);
       if (!safetyReport.isSafe) {
         console.warn(`[build.same.orchestrator-v4] Regression Risk Gate Blocked: ${safetyReport.reason}`);
-        this.snapshot.restore(workspace.rootPath, attempts);
+        this.snapshot.restore(workspace.rootPath, version);
 
         activeErrors = [{
           file: 'regression-engine',
@@ -249,7 +350,7 @@ export class DeterministicOrchestratorV4 {
 
       if (!validationResult.valid) {
         console.warn(`[build.same.orchestrator-v4] AST Validation Rejected: ${validationResult.reason}`);
-        this.snapshot.restore(workspace.rootPath, attempts);
+        this.snapshot.restore(workspace.rootPath, version);
 
         activeErrors = [{
           file: 'validator-engine',
@@ -266,7 +367,7 @@ export class DeterministicOrchestratorV4 {
 
       if (!simulationResult.success) {
         console.warn(`[build.same.orchestrator-v4] Simulation Gate Rejected: ${simulationResult.reason}`);
-        this.snapshot.restore(workspace.rootPath, attempts);
+        this.snapshot.restore(workspace.rootPath, version);
 
         activeErrors = [{
           file: 'simulator-engine',
@@ -293,7 +394,7 @@ export class DeterministicOrchestratorV4 {
       } catch (mutationError: any) {
         console.error(`[build.same.orchestrator-v4] Patcher runtime mutation crash. Invoking snapshot restore...`);
         this.transaction.rollback();
-        this.snapshot.restore(workspace.rootPath, attempts);
+        this.snapshot.restore(workspace.rootPath, version);
 
         activeErrors = [{
           file: 'ast-patcher',
@@ -310,7 +411,6 @@ export class DeterministicOrchestratorV4 {
 
       if (activeErrors.length === 0) {
         console.log(`[build.same.orchestrator-v4] Compile pass cleared with zero diagnostics.`);
-        this.snapshot.clearSnapshots(workspace.rootPath);
         if (!skipDevServer) {
           await this.sandbox.launchDevInstance(workspace);
         }
@@ -319,11 +419,10 @@ export class DeterministicOrchestratorV4 {
 
       console.warn(`[build.same.orchestrator-v4] Build failed. Compiler reported ${activeErrors.length} type/syntax errors.`);
 
-      this.snapshot.restore(workspace.rootPath, attempts);
+      this.snapshot.restore(workspace.rootPath, version);
       attempts++;
     }
 
-    this.snapshot.clearSnapshots(workspace.rootPath);
     throw new Error(`Orchestration loops exhausted without compiling error-free build.`);
   }
 

@@ -35,12 +35,12 @@ export async function POST(
   const provider = (process.env.LLM_PROVIDER as 'openai' | 'anthropic' | 'gemini') || 'openai';
   const apiKey = process.env.LLM_API_KEY || '';
 
-  // Write config as JSON to avoid string-escaping fragility
-  const configPath = path.join(ENGINE_ROOT, ".build-config.json");
+  // Write config as JSON to avoid string-escaping fragility — scoped per workspace-id
+  const configPath = path.join(ENGINE_ROOT, `.build-config-${id}.json`);
   fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), "utf-8");
 
-  // Write prompt as JSON to avoid escaping issues
-  const promptPayloadPath = path.join(ENGINE_ROOT, ".build-prompt.json");
+  // Write prompt as JSON to avoid escaping issues — scoped per workspace-id
+  const promptPayloadPath = path.join(ENGINE_ROOT, `.build-prompt-${id}.json`);
   fs.writeFileSync(promptPayloadPath, JSON.stringify({ id, prompt, type: 'build-website' }), "utf-8");
 
   const buildScript = `
@@ -64,8 +64,8 @@ function log(step, msg) {
   fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
 }
 
-const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.build-config.json'), 'utf-8'));
-const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.build-prompt.json'), 'utf-8'));
+const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${id}.json`)}), 'utf-8'));
+const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-prompt-${id}.json`)}), 'utf-8'));
 
 const orch = new DeterministicOrchestratorV4(WS_BASE);
 
@@ -79,11 +79,11 @@ try {
 }
 `;
 
-  const scriptPath = path.join(ENGINE_ROOT, ".build-temp.mts");
+  const scriptPath = path.join(ENGINE_ROOT, `.build-temp-${id}.mts`);
   fs.writeFileSync(scriptPath, buildScript, "utf-8");
 
   try {
-    execSync(`npx tsx .build-temp.mts`, {
+    execSync(`npx tsx .build-temp-${id}.mts`, {
       cwd: ENGINE_ROOT,
       timeout: 120000,
       stdio: "pipe",
@@ -103,6 +103,10 @@ try {
   try { fs.unlinkSync(scriptPath); } catch {}
   try { fs.unlinkSync(configPath); } catch {}
   try { fs.unlinkSync(promptPayloadPath); } catch {}
+  // Also clean up any legacy unscoped files
+  try { fs.unlinkSync(path.join(ENGINE_ROOT, ".build-config.json")); } catch {}
+  try { fs.unlinkSync(path.join(ENGINE_ROOT, ".build-prompt.json")); } catch {}
+  try { fs.unlinkSync(path.join(ENGINE_ROOT, ".build-temp.mts")); } catch {}
 
   const progressFile = path.join(wsDir, ".progress");
   let finalSteps: any[] = [];

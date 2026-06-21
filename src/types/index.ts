@@ -105,11 +105,18 @@ export interface GenerationIntent {
   strategy?: 'full-clone' | 'structure-clone' | 'style-clone';
 }
 
+export interface PageBuildResult {
+  path: string;
+  succeeded: boolean;
+  lastError?: string;
+}
+
 export interface GenerationResult {
   success: boolean;
   intent: GenerationIntent;
   workspaceId?: string;
   blueprint?: unknown;
+  pageResults?: PageBuildResult[];
   clonePlan?: unknown;
   analysis?: unknown;
   error?: string;

@@ -14,6 +14,24 @@ export class FullStackCompilerPipeline {
     fs.mkdirSync(libPath, { recursive: true });
 
     this.compileFrontendPages(appPath, blueprint);
+
+    if (blueprint.dataModels.length > 0) {
+      this.compilePrismaSchema(workspace.rootPath, blueprint);
+      // DEFERRED: compileDatabaseClient and compileAPIRoutes generate code that imports
+      // @prisma/client, which is not installed in the workspace scaffold. These will be
+      // wired in Phase 2.3 after Prisma is added to the workspace dependency list.
+      // this.compileDatabaseClient(libPath);
+    }
+
+    if (blueprint.stateStores.length > 0) {
+      this.compileStateStores(libPath, blueprint);
+    }
+
+    // DEFERRED: compileAPIRoutes generates route handlers that import from @/lib/db.js
+    // (which requires @prisma/client). Wire in Phase 2.3 alongside compileDatabaseClient.
+    // if (blueprint.apiRoutes.length > 0) {
+    //   this.compileAPIRoutes(appPath, blueprint);
+    // }
   }
 
   private static compilePrismaSchema(rootPath: string, blueprint: FullStackBlueprint): void {
