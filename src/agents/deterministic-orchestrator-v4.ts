@@ -18,6 +18,7 @@ import { ASTPatch, CompilationError, WorkspaceConfig, LLMContext, LLMConfig, Gen
 import { LLMGateway } from '../core/llm-gateway.js';
 import { FullStackArchitect } from '../generation/architect.js';
 import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
+import { TelemetryLayer } from '../core/telemetry.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -58,6 +59,7 @@ export class DeterministicOrchestratorV4 {
     llmConfig?: LLMConfig
   ): Promise<GenerationResult> {
     const startTime = Date.now();
+    TelemetryLayer.init();
 
     try {
       switch (intent.type) {
@@ -86,6 +88,12 @@ export class DeterministicOrchestratorV4 {
           };
       }
     } catch (err: any) {
+      TelemetryLayer.reportError({
+        workspaceId,
+        error: err.message || 'Unknown error',
+        code: 'UNHANDLED_EXCEPTION',
+        phase: 'orchestration',
+      });
       return {
         success: false,
         intent,
@@ -124,6 +132,8 @@ export class DeterministicOrchestratorV4 {
 
     FullStackCompilerPipeline.compile(workspace, blueprint);
 
+    TelemetryLayer.reportBuildStart(workspaceId, prompt);
+
     const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
 
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string }> = [];
@@ -140,6 +150,7 @@ export class DeterministicOrchestratorV4 {
 
       const targetFilePath = page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`;
 
+      const pageStartTime = Date.now();
       try {
         await this.runCompilationFlow(
           workspaceId,
@@ -153,10 +164,19 @@ export class DeterministicOrchestratorV4 {
           snapshotBase
         );
         pageResults.push({ path: page.path, succeeded: true });
+        TelemetryLayer.reportPageComplete(workspaceId, {
+          workspaceId, pagePath: page.path, succeeded: true,
+          attemptCount: PER_PAGE_RETRIES, duration: Date.now() - pageStartTime,
+        });
         console.log(`[build.same.orchestrator-v4] ✓ Page ${page.path} compiled successfully.`);
       } catch (err: any) {
         const errMsg = err.message || 'Unknown error';
         pageResults.push({ path: page.path, succeeded: false, lastError: errMsg });
+        TelemetryLayer.reportPageComplete(workspaceId, {
+          workspaceId, pagePath: page.path, succeeded: false,
+          attemptCount: PER_PAGE_RETRIES, lastError: errMsg,
+          duration: Date.now() - pageStartTime,
+        });
         console.error(`[build.same.orchestrator-v4] ✗ Page ${page.path} failed after ${PER_PAGE_RETRIES} retries: ${errMsg}`);
       }
     }
@@ -184,6 +204,16 @@ export class DeterministicOrchestratorV4 {
     if (failed.length > 0) {
       result.error = `${failed.length} page(s) failed: ${failed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;
     }
+
+    TelemetryLayer.reportBuildComplete({
+      workspaceId,
+      prompt: prompt.slice(0, 200),
+      pagesTotal: pageResults.length,
+      pagesSucceeded: succeeded,
+      pagesFailed: failed.length,
+      duration: result.duration,
+      success: result.success,
+    });
 
     return result;
   }
@@ -335,6 +365,12 @@ Rules:
         console.warn(`[build.same.orchestrator-v4] Regression Risk Gate Blocked: ${safetyReport.reason}`);
         this.snapshot.restore(workspace.rootPath, version);
 
+        TelemetryLayer.reportError({
+          workspaceId, error: safetyReport.reason || 'Regression gate blocked', code: 'AST_REGRESSION_REJECT',
+          phase: 'regression-gate',
+        });
+        TelemetryLayer.reportHealing(workspaceId, attempts, 1);
+
         activeErrors = [{
           file: 'regression-engine',
           line: 0,
@@ -352,6 +388,12 @@ Rules:
         console.warn(`[build.same.orchestrator-v4] AST Validation Rejected: ${validationResult.reason}`);
         this.snapshot.restore(workspace.rootPath, version);
 
+        TelemetryLayer.reportError({
+          workspaceId, error: validationResult.reason || 'Validation failed',
+          code: 'AST_VALIDATION_REJECT', phase: 'validation-gate',
+        });
+        TelemetryLayer.reportHealing(workspaceId, attempts, 1);
+
         activeErrors = [{
           file: 'validator-engine',
           line: 0,
@@ -368,6 +410,12 @@ Rules:
       if (!simulationResult.success) {
         console.warn(`[build.same.orchestrator-v4] Simulation Gate Rejected: ${simulationResult.reason}`);
         this.snapshot.restore(workspace.rootPath, version);
+
+        TelemetryLayer.reportError({
+          workspaceId, error: simulationResult.reason || 'Simulation failed',
+          code: 'AST_SIMULATION_REJECT', phase: 'simulation-gate',
+        });
+        TelemetryLayer.reportHealing(workspaceId, attempts, 1);
 
         activeErrors = [{
           file: 'simulator-engine',
@@ -396,6 +444,12 @@ Rules:
         this.transaction.rollback();
         this.snapshot.restore(workspace.rootPath, version);
 
+        TelemetryLayer.reportError({
+          workspaceId, error: mutationError.message, code: 'AST_MUTATION_CRASH',
+          phase: 'mutation',
+        });
+        TelemetryLayer.reportHealing(workspaceId, attempts, 1);
+
         activeErrors = [{
           file: 'ast-patcher',
           line: 0,
@@ -411,6 +465,7 @@ Rules:
 
       if (activeErrors.length === 0) {
         console.log(`[build.same.orchestrator-v4] Compile pass cleared with zero diagnostics.`);
+        TelemetryLayer.reportHealing(workspaceId, attempts, 0);
         if (!skipDevServer) {
           await this.sandbox.launchDevInstance(workspace);
         }

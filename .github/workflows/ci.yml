@@ -35,3 +35,6 @@ jobs:
 
     - name: Execute Self-Healing Integration Test Harness
       run: npx tsx src/test-harness.ts
+
+    - name: Verify Telemetry Layer
+      run: npx tsx scripts/verify-telemetry.ts
