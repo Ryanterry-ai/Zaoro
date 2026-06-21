@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
 
-const WORKSPACE_BASE = path.resolve("../../../sandbox_workspaces");
+const WORKSPACE_BASE = "C:/Users/viren/OneDrive/Desktop/build-same-engine/sandbox_workspaces";
 
 export async function GET(
   req: Request,

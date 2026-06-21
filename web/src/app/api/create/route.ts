@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
 
-const WORKSPACE_BASE = path.resolve("../../../sandbox_workspaces");
+const ENGINE_ROOT = "C:/Users/viren/OneDrive/Desktop/build-same-engine";
+const PROMPTS_DIR = path.join(ENGINE_ROOT, ".prompts");
+const WORKSPACE_BASE = path.join(ENGINE_ROOT, "sandbox_workspaces");
 
 export async function POST(req: Request) {
   const { prompt } = await req.json();
@@ -12,21 +14,12 @@ export async function POST(req: Request) {
   }
 
   const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const wsDir = path.join(WORKSPACE_BASE, id);
 
-  fs.mkdirSync(wsDir, { recursive: true });
-
-  // Store the prompt for the workspace
+  // Save prompt separately — engine creates workspace + scaffold
+  fs.mkdirSync(PROMPTS_DIR, { recursive: true });
   fs.writeFileSync(
-    path.join(wsDir, ".prompt"),
+    path.join(PROMPTS_DIR, `${id}.json`),
     JSON.stringify({ id, prompt, createdAt: new Date().toISOString() }),
-    "utf-8"
-  );
-
-  // Initialize progress log
-  fs.writeFileSync(
-    path.join(wsDir, ".progress"),
-    JSON.stringify([{ step: "created", message: "Workspace created", ts: Date.now() }]),
     "utf-8"
   );
 

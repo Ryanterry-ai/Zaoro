@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
-import { execSync, spawn } from "child_process";
+import { execSync } from "child_process";
 
-const WORKSPACE_BASE = path.resolve("../../../sandbox_workspaces");
-const ENGINE_ROOT = path.resolve("../../");
+const ENGINE_ROOT = "C:/Users/viren/OneDrive/Desktop/build-same-engine";
+const WORKSPACE_BASE = path.join(ENGINE_ROOT, "sandbox_workspaces");
+const PROMPTS_DIR = path.join(ENGINE_ROOT, ".prompts");
 
 function appendProgress(wsDir: string, step: string, message: string) {
+  fs.mkdirSync(wsDir, { recursive: true });
   const progressFile = path.join(wsDir, ".progress");
   let steps: { step: string; message: string; ts: number }[] = [];
   if (fs.existsSync(progressFile)) {
-    steps = JSON.parse(fs.readFileSync(progressFile, "utf-8"));
+    try { steps = JSON.parse(fs.readFileSync(progressFile, "utf-8")); } catch {}
   }
   steps.push({ step, message, ts: Date.now() });
   fs.writeFileSync(progressFile, JSON.stringify(steps), "utf-8");
@@ -23,129 +25,87 @@ export async function POST(
   const { id } = await params;
   const wsDir = path.join(WORKSPACE_BASE, id);
 
-  if (!fs.existsSync(wsDir)) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
-  }
-
-  const promptFile = path.join(wsDir, ".prompt");
+  const promptFile = path.join(PROMPTS_DIR, `${id}.json`);
   if (!fs.existsSync(promptFile)) {
-    return NextResponse.json({ error: "No prompt found for workspace" }, { status: 400 });
+    return NextResponse.json({ error: "No prompt found" }, { status: 404 });
   }
 
   const { prompt } = JSON.parse(fs.readFileSync(promptFile, "utf-8"));
 
-  appendProgress(wsDir, "building", "Initializing build.same engine...");
+  const escapedPrompt = prompt.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n");
 
-  // Run the engine via tsx in a child process
-  try {
-    const engineScript = `
-      import { DeterministicOrchestratorV4 } from '${ENGINE_ROOT.replace(/\\/g, "/")}/src/agents/deterministic-orchestrator-v4.js';
-      import * as fs from 'fs';
-      import * as path from 'path';
+  const provider = (process.env.LLM_PROVIDER as 'openai' | 'anthropic') || 'openai';
+  const apiKey = process.env.LLM_API_KEY || '';
 
-      const WORKSPACE_BASE = '${WORKSPACE_BASE.replace(/\\/g, "/")}';
-      const wsDir = path.join(WORKSPACE_BASE, '${id}');
+  const buildScript = `
+import { DeterministicOrchestratorV4 } from './src/agents/deterministic-orchestrator-v4.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
-      function appendProgress(step, message) {
-        const progressFile = path.join(wsDir, '.progress');
-        let steps = [];
-        if (fs.existsSync(progressFile)) {
-          steps = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
-        }
-        steps.push({ step, message, ts: Date.now() });
-        fs.writeFileSync(progressFile, JSON.stringify(steps), 'utf-8');
-      }
+const WS_BASE = '${WORKSPACE_BASE.replace(/\\/g, "/")}';
+const wsDir = path.join(WS_BASE, '${id}');
 
-      const orchestrator = new DeterministicOrchestratorV4(WORKSPACE_BASE);
-
-      let runAttempt = 0;
-
-      const llmClient = async (context) => {
-        runAttempt++;
-
-        appendProgress('llm', 'AI generating code (attempt ' + runAttempt + ')...');
-
-        if (runAttempt === 1) {
-          return [{
-            targetFile: 'src/app/page.tsx',
-            targetExport: 'Home',
-            action: 'update',
-            codeBlock: \`export default function Home() {
-  return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ textAlign: 'center', maxWidth: '600px', padding: '2rem' }}>
-        <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '1rem', background: 'linear-gradient(135deg, #6366f1, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          \${'${prompt.replace(/'/g, "\\'")}'}
-        </h1>
-        <p style={{ fontSize: '1.25rem', color: '#999', marginBottom: '2rem' }}>
-          Built by build.same engine v4
-        </p>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          <button style={{ padding: '12px 24px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer' }}>
-            Get Started
-          </button>
-          <button style={{ padding: '12px 24px', background: 'transparent', color: '#fff', border: '1px solid #333', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer' }}>
-            Learn More
-          </button>
-        </div>
-      </div>
-    </main>
-  );
-}\`
-          }];
-        }
-
-        // Attempt 2+: recovery
-        return [{
-          targetFile: 'src/app/page.tsx',
-          targetExport: 'Home',
-          action: 'update',
-          codeBlock: \`export default function Home() {
-  return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ textAlign: 'center', padding: '2rem' }}>
-        <h1 style={{ fontSize: '3rem', fontWeight: 700 }}>Build Complete</h1>
-        <p style={{ color: '#999', marginTop: '1rem' }}>Self-healing loop resolved successfully.</p>
-      </div>
-    </main>
-  );
-}\`
-        }];
-      };
-
-      try {
-        appendProgress('engine', 'Starting orchestration loop...');
-        const config = await orchestrator.runCompilationFlow('${id}', prompt, llmClient, 3, true);
-        appendProgress('done', 'Build completed successfully!');
-        console.log('BUILD_SUCCESS:' + config.rootPath);
-      } catch (err) {
-        appendProgress('error', 'Build failed: ' + err.message);
-        console.log('BUILD_FAILED:' + err.message);
-      }
-    `;
-
-    const scriptPath = path.join(wsDir, ".build-script.mts");
-    fs.writeFileSync(scriptPath, engineScript, "utf-8");
-
-    // Run in background
-    const child = spawn("npx", ["tsx", scriptPath], {
-      cwd: ENGINE_ROOT,
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: true,
-      shell: true,
-    });
-
-    child.unref();
-
-    appendProgress("engine", "Engine process spawned, building in background...");
-
-    return NextResponse.json({
-      id,
-      status: "building",
-      message: "Build started. Poll /api/workspace/{id}/progress for updates.",
-    });
-  } catch (error: any) {
-    appendProgress("error", `Failed to start build: ${error.message}`);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+let progressInitialized = false;
+function log(step, msg) {
+  if (!progressInitialized) {
+    if (!fs.existsSync(wsDir)) return;
+    progressInitialized = true;
   }
+  const f = path.join(wsDir, '.progress');
+  let s = [];
+  try { if (fs.existsSync(f)) s = JSON.parse(fs.readFileSync(f, 'utf-8')); } catch {}
+  s.push({ step, message: msg, ts: Date.now() });
+  fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
+}
+
+const orch = new DeterministicOrchestratorV4(WS_BASE);
+const prompt = '${escapedPrompt}';
+
+const llmConfig = {
+  provider: '${provider}',
+  apiKey: '${apiKey}'
+};
+
+try {
+  log('engine', 'Starting compilation flow...');
+  log('llm', 'Initializing ${provider} gateway...');
+  const result = await orch.processGenerationIntent('${id}', { type: 'build-website', prompt }, llmConfig);
+  log('done', 'Build completed! Your application is ready.');
+} catch (err) {
+  log('error', 'Build failed: ' + (err.message || err));
+}
+`;
+
+  const scriptPath = path.join(ENGINE_ROOT, ".build-temp.mts");
+  fs.writeFileSync(scriptPath, buildScript, "utf-8");
+
+  try {
+    execSync(`npx tsx .build-temp.mts`, {
+      cwd: ENGINE_ROOT,
+      timeout: 120000,
+      stdio: "pipe",
+      env: { ...process.env, NODE_NO_WARNINGS: "1" },
+    });
+  } catch (execError: any) {
+    const progressFile = path.join(wsDir, ".progress");
+    let steps: any[] = [];
+    try { steps = JSON.parse(fs.readFileSync(progressFile, "utf-8")); } catch {}
+    const lastStep = steps[steps.length - 1];
+    if (!lastStep || (lastStep.step !== "done" && lastStep.step !== "error")) {
+      const errMsg = execError.stderr?.toString()?.slice(0, 500) || execError.message || "Unknown error";
+      appendProgress(wsDir, "error", "Build failed: " + errMsg);
+    }
+  }
+
+  try { fs.unlinkSync(scriptPath); } catch {}
+
+  const progressFile = path.join(wsDir, ".progress");
+  let finalSteps: any[] = [];
+  try { finalSteps = JSON.parse(fs.readFileSync(progressFile, "utf-8")); } catch {}
+
+  return NextResponse.json({
+    id,
+    status: finalSteps[finalSteps.length - 1]?.step === "done" ? "complete" : "done",
+    steps: finalSteps,
+  });
 }
