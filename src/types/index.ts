@@ -2,7 +2,7 @@ export type PatchAction = 'insert' | 'update' | 'delete';
 
 export interface ASTPatch {
   targetFile: string;
-  targetExport?: string; 
+  targetExport?: string;
   action: PatchAction;
   codeBlock: string;
 }
@@ -50,6 +50,40 @@ export interface SimulationResult {
   success: boolean;
   reason?: string;
   simulatedFiles?: Map<string, string>;
+}
+
+export interface DataField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'DateTime' | 'relation';
+  isRequired: boolean;
+  isId?: boolean;
+}
+
+export interface DataModel {
+  name: string;
+  fields: DataField[];
+}
+
+export interface APIRouteSpec {
+  endpoint: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  targetModel: string;
+  description: string;
+}
+
+export interface StateStoreSpec {
+  name: string;
+  properties: Array<{ name: string; type: string; initialValue: string }>;
+  actions: Array<{ name: string; params: string; logic: string }>;
+}
+
+export interface FullStackBlueprint {
+  appName: string;
+  colorScheme: 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'sky';
+  dataModels: DataModel[];
+  apiRoutes: APIRouteSpec[];
+  stateStores: StateStoreSpec[];
+  pages: Array<{ path: string; title: string; layout: string; blocks: string[] }>;
 }
 
 export type GenerationIntentType =

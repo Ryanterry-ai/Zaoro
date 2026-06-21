@@ -1,5 +1,6 @@
 import { BusinessClassifier } from './business-classifier.js';
 import { ATOMIC_PRIMITIVES, buildPrimitivesCatalog } from './primitives.js';
+import { FullStackBlueprint, DataModel, APIRouteSpec, StateStoreSpec } from '../types/index.js';
 
 export interface ArchitectDecision {
   businessType: string;
@@ -450,5 +451,139 @@ Surface: bg-zinc-900
 Border: border-zinc-800
 Text: text-zinc-50 (headings), text-zinc-400 (body), text-zinc-500 (muted)
 `;
+  }
+}
+
+export class FullStackArchitect {
+  public static design(prompt: string): FullStackBlueprint {
+    const lowercasePrompt = prompt.toLowerCase();
+
+    let appName = 'DynamicApp';
+    let colorScheme: 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'sky' = 'indigo';
+
+    if (lowercasePrompt.includes('coffee') || lowercasePrompt.includes('tea') || lowercasePrompt.includes('roast')) {
+      appName = 'EquatorRoasters';
+      colorScheme = 'amber';
+    } else if (lowercasePrompt.includes('gym') || lowercasePrompt.includes('fitness') || lowercasePrompt.includes('health') || lowercasePrompt.includes('martial')) {
+      appName = 'ApexAthletics';
+      colorScheme = 'rose';
+    } else if (lowercasePrompt.includes('eco') || lowercasePrompt.includes('green') || lowercasePrompt.includes('organic')) {
+      appName = 'EcoVibe';
+      colorScheme = 'emerald';
+    } else if (lowercasePrompt.includes('telemetry') || lowercasePrompt.includes('platform') || lowercasePrompt.includes('saas')) {
+      appName = 'VortexSaaS';
+      colorScheme = 'sky';
+    }
+
+    const dataModels: DataModel[] = [
+      {
+        name: 'User',
+        fields: [
+          { name: 'id', type: 'string', isRequired: true, isId: true },
+          { name: 'email', type: 'string', isRequired: true },
+          { name: 'name', type: 'string', isRequired: false }
+        ]
+      }
+    ];
+
+    if (lowercasePrompt.includes('shop') || lowercasePrompt.includes('sell') || lowercasePrompt.includes('commerce') || lowercasePrompt.includes('tea')) {
+      dataModels.push({
+        name: 'Product',
+        fields: [
+          { name: 'id', type: 'string', isRequired: true, isId: true },
+          { name: 'name', type: 'string', isRequired: true },
+          { name: 'price', type: 'number', isRequired: true },
+          { name: 'inventory', type: 'number', isRequired: true }
+        ]
+      });
+      dataModels.push({
+        name: 'Order',
+        fields: [
+          { name: 'id', type: 'string', isRequired: true, isId: true },
+          { name: 'userId', type: 'string', isRequired: true },
+          { name: 'totalAmount', type: 'number', isRequired: true },
+          { name: 'createdAt', type: 'DateTime', isRequired: true }
+        ]
+      });
+    }
+
+    if (lowercasePrompt.includes('book') || lowercasePrompt.includes('calendar') || lowercasePrompt.includes('therapy') || lowercasePrompt.includes('session')) {
+      dataModels.push({
+        name: 'Appointment',
+        fields: [
+          { name: 'id', type: 'string', isRequired: true, isId: true },
+          { name: 'clientName', type: 'string', isRequired: true },
+          { name: 'dateTime', type: 'DateTime', isRequired: true },
+          { name: 'status', type: 'string', isRequired: true }
+        ]
+      });
+    }
+
+    const apiRoutes: APIRouteSpec[] = [];
+    for (const model of dataModels) {
+      apiRoutes.push({
+        endpoint: `/api/${model.name.toLowerCase()}s`,
+        method: 'GET',
+        targetModel: model.name,
+        description: `Fetch all active ${model.name} entities`
+      });
+      apiRoutes.push({
+        endpoint: `/api/${model.name.toLowerCase()}s`,
+        method: 'POST',
+        targetModel: model.name,
+        description: `Create new ${model.name} instance`
+      });
+    }
+
+    const stateStores: StateStoreSpec[] = [];
+    if (lowercasePrompt.includes('shop') || lowercasePrompt.includes('sell') || lowercasePrompt.includes('commerce') || lowercasePrompt.includes('tea')) {
+      stateStores.push({
+        name: 'CartStore',
+        properties: [
+          { name: 'items', type: 'any[]', initialValue: '[]' },
+          { name: 'total', type: 'number', initialValue: '0' }
+        ],
+        actions: [
+          { name: 'addItem', params: 'item: any', logic: 'setItems(prev => [...prev, item]); setTotal(t => t + item.price);' },
+          { name: 'clearCart', params: '', logic: 'setItems([]); setTotal(0);' }
+        ]
+      });
+    }
+
+    if (lowercasePrompt.includes('book') || lowercasePrompt.includes('calendar') || lowercasePrompt.includes('therapy') || lowercasePrompt.includes('session')) {
+      stateStores.push({
+        name: 'BookingStore',
+        properties: [
+          { name: 'selectedDate', type: 'string', initialValue: '""' },
+          { name: 'bookings', type: 'any[]', initialValue: '[]' }
+        ],
+        actions: [
+          { name: 'setDate', params: 'date: string', logic: 'setSelectedDate(date);' },
+          { name: 'addBooking', params: 'booking: any', logic: 'setBookings(prev => [...prev, booking]);' }
+        ]
+      });
+    }
+
+    const pages: Array<{ path: string; title: string; layout: string; blocks: string[] }> = [
+      { path: '/', title: 'Home Dashboard', layout: 'default', blocks: ['hero', 'stats'] }
+    ];
+
+    if (lowercasePrompt.includes('shop') || lowercasePrompt.includes('sell') || lowercasePrompt.includes('commerce') || lowercasePrompt.includes('tea')) {
+      pages.push({ path: '/shop', title: 'Product Catalog', layout: 'sidebar', blocks: ['filters', 'catalog-grid'] });
+    }
+    if (lowercasePrompt.includes('book') || lowercasePrompt.includes('calendar') || lowercasePrompt.includes('therapy') || lowercasePrompt.includes('session')) {
+      pages.push({ path: '/booking', title: 'Schedule Session', layout: 'split', blocks: ['calendar-interface', 'form-booking'] });
+    }
+
+    pages.push({ path: '/contact', title: 'Contact Us', layout: 'default', blocks: ['contact-form', 'contact-info'] });
+
+    return {
+      appName,
+      colorScheme,
+      dataModels,
+      apiRoutes,
+      stateStores,
+      pages
+    };
   }
 }

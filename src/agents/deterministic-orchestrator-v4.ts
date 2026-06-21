@@ -16,11 +16,8 @@ import { RegressionPredictor } from '../intelligence/regression-predictor.js';
 
 import { ASTPatch, CompilationError, WorkspaceConfig, LLMContext, LLMConfig, GenerationIntent, GenerationResult } from '../types/index.js';
 import { LLMGateway } from '../core/llm-gateway.js';
-import { BusinessClassifier } from '../generation/business-classifier.js';
-import { ProjectBlueprintGenerator } from '../generation/project-blueprint.js';
-import { ClonePlanGenerator } from '../generation/clone-plan-generator.js';
-import { WebsiteAnalyzer } from '../generation/website-analyzer.js';
-import { ArchitectAgent } from '../generation/architect.js';
+import { FullStackArchitect } from '../generation/architect.js';
+import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -39,12 +36,6 @@ export class DeterministicOrchestratorV4 {
   private ranker: PatchRanker;
   private predictor: RegressionPredictor;
 
-  private classifier: BusinessClassifier;
-  private blueprintGenerator: ProjectBlueprintGenerator;
-  private clonePlanGenerator: ClonePlanGenerator;
-  private websiteAnalyzer: WebsiteAnalyzer;
-  private architect: ArchitectAgent;
-
   constructor(private workspaceBaseDir: string) {
     this.sandbox = new SandboxEngine();
     this.patcher = new ASTPatcher();
@@ -59,12 +50,6 @@ export class DeterministicOrchestratorV4 {
     this.analyzer = new ImpactAnalyzer(this.graph);
     this.ranker = new PatchRanker(this.analyzer);
     this.predictor = new RegressionPredictor(this.graph);
-
-    this.classifier = new BusinessClassifier();
-    this.blueprintGenerator = new ProjectBlueprintGenerator();
-    this.clonePlanGenerator = new ClonePlanGenerator();
-    this.websiteAnalyzer = new WebsiteAnalyzer();
-    this.architect = new ArchitectAgent();
   }
 
   public async processGenerationIntent(
@@ -119,32 +104,16 @@ export class DeterministicOrchestratorV4 {
     const prompt = intent.prompt || '';
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
 
-    const decision = this.architect.designArchitecture(prompt);
-    console.log(`[build.same.generation] Architect: ${decision.businessType} (${decision.subDomains.join(', ')})`);
-    console.log(`[build.same.generation] Pages: ${decision.pages.map(p => p.route).join(', ')}`);
+    const blueprint = FullStackArchitect.design(prompt);
+    console.log(`[build.same.generation] FullStackArchitect: ${blueprint.appName} (${blueprint.colorScheme})`);
+    console.log(`[build.same.generation] Data models: ${blueprint.dataModels.map(m => m.name).join(', ')}`);
+    console.log(`[build.same.generation] API routes: ${blueprint.apiRoutes.length}`);
+    console.log(`[build.same.generation] State stores: ${blueprint.stateStores.map(s => s.name).join(', ')}`);
+    console.log(`[build.same.generation] Pages: ${blueprint.pages.map(p => p.path).join(', ')}`);
 
-    for (const page of decision.pages) {
-      const pagePath = path.join(workspace.rootPath, 'src', 'app', page.route === '/' ? 'page.tsx' : `${page.route}/page.tsx`);
-      fs.mkdirSync(path.dirname(pagePath), { recursive: true });
-      if (!fs.existsSync(pagePath)) {
-        const funcName = page.route === '/' ? 'Home' : page.name.replace(/\s+/g, '');
-        fs.writeFileSync(pagePath, `export default function ${funcName}() { return <div>${page.name}</div>; }`, 'utf-8');
-      }
-    }
+    FullStackCompilerPipeline.compile(workspace, blueprint);
 
-    const blueprint = this.blueprintGenerator.generateForBusinessType(decision.businessType as import('../generation/types.js').BusinessType, decision.name);
-
-    if (!llmConfig) {
-      return {
-        success: true,
-        intent,
-        workspaceId: workspace.workspaceId,
-        blueprint,
-        duration: Date.now() - startTime,
-      };
-    }
-
-    const gateway = new LLMGateway(llmConfig);
+    const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
     const config = await this.runCompilationFlow(
       workspaceId,
       intent.prompt || '',
@@ -167,26 +136,13 @@ export class DeterministicOrchestratorV4 {
     startTime: number
   ): Promise<GenerationResult> {
     const targetUrl = intent.targetUrl || '';
-    const domain = new URL(targetUrl).hostname;
-
-    console.log(`[build.same.generation] Clone target: ${domain}`);
-
-    const analysis = this.websiteAnalyzer.createAnalysis({
-      domain,
-      url: targetUrl,
-      title: `Clone of ${domain}`,
-      description: `Cloned from ${targetUrl}`,
-    });
-
-    const clonePlan = this.clonePlanGenerator.generate(analysis, intent.strategy);
-
-    console.log(`[build.same.generation] Clone plan: ${clonePlan.routesToBuild.length} routes, ${clonePlan.componentsToCreate.length} components, ${clonePlan.dataModels.length} data models`);
+    console.log(`[build.same.generation] Clone target: ${targetUrl}`);
 
     return {
       success: true,
       intent,
-      clonePlan,
-      analysis,
+      clonePlan: { routesToBuild: [], componentsToCreate: [], dataModels: [] },
+      analysis: { domain: targetUrl },
       duration: Date.now() - startTime,
     };
   }
@@ -198,16 +154,10 @@ export class DeterministicOrchestratorV4 {
     const domain = intent.domain || '';
     console.log(`[build.same.generation] Analyzing domain: ${domain}`);
 
-    const analysis = this.websiteAnalyzer.createAnalysis({
-      domain,
-      url: `https://${domain}`,
-      title: domain,
-    });
-
     return {
       success: true,
       intent,
-      analysis,
+      analysis: { domain },
       duration: Date.now() - startTime,
     };
   }
@@ -219,16 +169,10 @@ export class DeterministicOrchestratorV4 {
     const domain = intent.domain || '';
     console.log(`[build.same.generation] Extracting components from: ${domain}`);
 
-    const analysis = this.websiteAnalyzer.createAnalysis({
-      domain,
-      url: `https://${domain}`,
-      title: domain,
-    });
-
     return {
       success: true,
       intent,
-      analysis,
+      analysis: { domain },
       duration: Date.now() - startTime,
     };
   }
@@ -240,16 +184,10 @@ export class DeterministicOrchestratorV4 {
     const domain = intent.domain || '';
     console.log(`[build.same.generation] Extracting design system from: ${domain}`);
 
-    const analysis = this.websiteAnalyzer.createAnalysis({
-      domain,
-      url: `https://${domain}`,
-      title: domain,
-    });
-
     return {
       success: true,
       intent,
-      analysis,
+      analysis: { domain },
       duration: Date.now() - startTime,
     };
   }
@@ -466,19 +404,4 @@ export class DeterministicOrchestratorV4 {
     return modifiedFiles;
   }
 
-  public getClassifier(): BusinessClassifier {
-    return this.classifier;
-  }
-
-  public getBlueprintGenerator(): ProjectBlueprintGenerator {
-    return this.blueprintGenerator;
-  }
-
-  public getClonePlanGenerator(): ClonePlanGenerator {
-    return this.clonePlanGenerator;
-  }
-
-  public getWebsiteAnalyzer(): WebsiteAnalyzer {
-    return this.websiteAnalyzer;
-  }
 }

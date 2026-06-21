@@ -57,7 +57,7 @@ import ReactDOMServer from 'react-dom/server';
 
 async function executeRender() {
   try {
-    const mod = await import('${moduleUrl}');
+    const mod = await import('${moduleUrl.replace(/\\/g, '/')}');
     const Component = mod.default || mod.Home;
     if (!Component) {
       throw new Error("Target component export not found.");

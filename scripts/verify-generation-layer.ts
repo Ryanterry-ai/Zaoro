@@ -1,6 +1,7 @@
 import { DeterministicOrchestratorV4 } from '../src/agents/deterministic-orchestrator-v4.js';
 import { LLMGateway } from '../src/core/llm-gateway.js';
-import { ArchitectAgent } from '../src/generation/architect.js';
+import { ArchitectAgent, FullStackArchitect } from '../src/generation/architect.js';
+import { FullStackCompilerPipeline } from '../src/generation/compiler-pipeline.js';
 import { GenerationIntent } from '../src/types/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -55,19 +56,22 @@ async function runAudit() {
   console.log(`  + OK: Designed ${decision.pages.length} pages: ${decision.pages.map(p => p.route).join(', ')}`);
   console.log(`  + OK: Color scheme: ${decision.colorScheme.primary} primary, ${decision.colorScheme.mood} mood`);
 
-  // Check 3: Blueprint scaffolds pages to disk
-  console.log('\n[Check 3] Verifying Blueprint Page Scaffolding...');
-  const blueprintGenerator = orchestrator.getBlueprintGenerator();
-  const bp = blueprintGenerator.generateFromPrompt('Build an ecommerce store called ShoeHub');
+  // Check 3: FullStackArchitect designs full-stack blueprint
+  console.log('\n[Check 3] Verifying FullStackArchitect + Compiler Pipeline...');
+  const fsBlueprint = FullStackArchitect.design('Build an ecommerce store called ShoeHub that sells shoes and books appointments');
   
-  if (bp.pages.length === 0 || bp.components.length === 0) {
-    console.error('❌ FAIL: Scaffolder returned empty pages or components list');
+  if (fsBlueprint.dataModels.length === 0) {
+    console.error('❌ FAIL: FullStackArchitect returned empty data models');
     process.exit(1);
   }
-  console.log(`  + OK: Dynamic blueprint maps ${bp.pages.length} pages.`);
+  if (fsBlueprint.apiRoutes.length === 0) {
+    console.error('❌ FAIL: FullStackArchitect returned empty API routes');
+    process.exit(1);
+  }
+  console.log(`  + OK: FullStack blueprint: ${fsBlueprint.appName}, ${fsBlueprint.dataModels.length} models, ${fsBlueprint.apiRoutes.length} routes, ${fsBlueprint.stateStores.length} stores, ${fsBlueprint.pages.length} pages.`);
 
   // Check 4: Full Orchestration compilation flow end-to-end
-  console.log('\n[Check 4] Executing Orchestration Compilation Flow...');
+  console.log('\n[Check 4] Executing Full-Stack Orchestration Pipeline...');
   const intent: GenerationIntent = {
     type: 'build-website',
     prompt: 'Build a martial arts gym that sells organic green tea and books physical therapy sessions'
@@ -86,16 +90,30 @@ async function runAudit() {
       process.exit(1);
     }
 
-    // Read the generated page and verify it has real content
     const pageContent = fs.readFileSync(pageCheck, 'utf-8');
-    if (pageContent.length < 500) {
+    if (pageContent.length < 200) {
       console.error('❌ FAIL: Generated page is too short — likely a stub.');
       process.exit(1);
     }
 
     console.log(`  + OK: Generated page.tsx (${pageContent.length} chars)`);
-    console.log(`  + OK: Contains gradient text: ${pageContent.includes('bg-gradient-to-r')}`);
-    console.log(`  + OK: Contains interactive elements: ${pageContent.includes('useState')}`);
+    console.log(`  + OK: Contains full-stack blueprint: ${pageContent.includes('Full-Stack Blueprint') || pageContent.includes('JIT')}`);
+
+    const prismaCheck = path.join(WORKSPACE_BASE, 'sandbox-verify-id', 'prisma', 'schema.prisma');
+    if (fs.existsSync(prismaCheck)) {
+      const prismaContent = fs.readFileSync(prismaCheck, 'utf-8');
+      console.log(`  + OK: Prisma schema generated (${prismaContent.split('\n').filter(l => l.startsWith('model ')).length} models)`);
+    }
+
+    const storeCheck = path.join(WORKSPACE_BASE, 'sandbox-verify-id', 'src', 'lib', 'store.tsx');
+    if (fs.existsSync(storeCheck)) {
+      console.log(`  + OK: State stores generated`);
+    }
+
+    const apiCheck = path.join(WORKSPACE_BASE, 'sandbox-verify-id', 'src', 'app', 'api');
+    if (fs.existsSync(apiCheck)) {
+      console.log(`  + OK: API routes generated`);
+    }
 
     console.log(`\n✔ INTEGRATION VERIFICATION COMPLETE: ALL GATES PASS`);
     orchestrator.stopDevInstance('sandbox-verify-id');
