@@ -32,18 +32,24 @@ export async function POST(
 
   const { prompt } = JSON.parse(fs.readFileSync(promptFile, "utf-8"));
 
-  const escapedPrompt = prompt.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n");
-
-  const provider = (process.env.LLM_PROVIDER as 'openai' | 'anthropic') || 'openai';
+  const provider = (process.env.LLM_PROVIDER as 'openai' | 'anthropic' | 'gemini') || 'openai';
   const apiKey = process.env.LLM_API_KEY || '';
+
+  // Write config as JSON to avoid string-escaping fragility
+  const configPath = path.join(ENGINE_ROOT, ".build-config.json");
+  fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), "utf-8");
+
+  // Write prompt as JSON to avoid escaping issues
+  const promptPayloadPath = path.join(ENGINE_ROOT, ".build-prompt.json");
+  fs.writeFileSync(promptPayloadPath, JSON.stringify({ id, prompt, type: 'build-website' }), "utf-8");
 
   const buildScript = `
 import { DeterministicOrchestratorV4 } from './src/agents/deterministic-orchestrator-v4.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const WS_BASE = '${WORKSPACE_BASE.replace(/\\/g, "/")}';
-const wsDir = path.join(WS_BASE, '${id}');
+const WS_BASE = ${JSON.stringify(path.resolve(WORKSPACE_BASE))};
+const wsDir = path.join(WS_BASE, ${JSON.stringify(id)});
 
 let progressInitialized = false;
 function log(step, msg) {
@@ -58,18 +64,15 @@ function log(step, msg) {
   fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
 }
 
-const orch = new DeterministicOrchestratorV4(WS_BASE);
-const prompt = '${escapedPrompt}';
+const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.build-config.json'), 'utf-8'));
+const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.build-prompt.json'), 'utf-8'));
 
-const llmConfig = {
-  provider: '${provider}',
-  apiKey: '${apiKey}'
-};
+const orch = new DeterministicOrchestratorV4(WS_BASE);
 
 try {
   log('engine', 'Starting compilation flow...');
-  log('llm', 'Initializing ${provider} gateway...');
-  const result = await orch.processGenerationIntent('${id}', { type: 'build-website', prompt }, llmConfig);
+  log('llm', 'Initializing ' + config.provider + ' gateway...');
+  const result = await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
   log('done', 'Build completed! Your application is ready.');
 } catch (err) {
   log('error', 'Build failed: ' + (err.message || err));
@@ -98,6 +101,8 @@ try {
   }
 
   try { fs.unlinkSync(scriptPath); } catch {}
+  try { fs.unlinkSync(configPath); } catch {}
+  try { fs.unlinkSync(promptPayloadPath); } catch {}
 
   const progressFile = path.join(wsDir, ".progress");
   let finalSteps: any[] = [];

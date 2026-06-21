@@ -1,9 +1,12 @@
-import { ASTPatch, LLMContext, LLMConfig } from '../types/index.js';
+import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
-import { buildPrimitivesCatalog } from '../generation/primitives.js';
+
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1000;
+const TRANSIENT_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
 export class LLMGateway {
-  private provider: 'openai' | 'anthropic';
+  private provider: LLMProvider;
   private apiKey: string;
   private model: string;
   private architect: ArchitectAgent;
@@ -11,8 +14,17 @@ export class LLMGateway {
   constructor(config: LLMConfig) {
     this.provider = config.provider;
     this.apiKey = config.apiKey;
-    this.model = config.model || (config.provider === 'anthropic' ? 'claude-3-7-sonnet-20250219' : 'gpt-4o');
+    this.model = config.model || this.defaultModel(config.provider);
     this.architect = new ArchitectAgent();
+  }
+
+  private defaultModel(provider: LLMProvider): string {
+    switch (provider) {
+      case 'anthropic': return 'claude-3-7-sonnet-20250219';
+      case 'gemini': return 'gemini-2.5-pro';
+      case 'openai':
+      default: return 'gpt-4o';
+    }
   }
 
   public async generatePatches(context: LLMContext): Promise<ASTPatch[]> {
@@ -20,24 +32,147 @@ export class LLMGateway {
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
     if (!this.apiKey || this.apiKey.trim() === '') {
-      console.warn('[build.same.gateway] API Key not configured. Using JIT synthesis fallback.');
+      console.warn(`[build.same.gateway] NO_API_KEY: provider=${this.provider}. Falling back to JIT synthesis. Set LLM_API_KEY to use real LLM generation.`);
       return this.synthesizeFallback(decision, context);
     }
 
     const systemPrompt = this.buildSystemPrompt(architecturePrompt);
     const userPrompt = this.buildUserPrompt(context);
 
-    try {
-      if (this.provider === 'anthropic') {
-        return await this.callAnthropic(systemPrompt, userPrompt);
-      } else {
-        return await this.callOpenAI(systemPrompt, userPrompt);
+    for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+      try {
+        console.log(`[build.same.gateway] LLM_CALL: provider=${this.provider} model=${this.model} attempt=${attempt}/${RETRY_ATTEMPTS}`);
+        const patches = await this.callProvider(systemPrompt, userPrompt);
+        console.log(`[build.same.gateway] LLM_OK: received ${patches.length} patches from ${this.provider}`);
+        return patches;
+      } catch (err: any) {
+        const isTransient = this.isTransientError(err);
+        const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
+
+        if (attempt < RETRY_ATTEMPTS && isTransient) {
+          console.warn(`[build.same.gateway] LLM_RETRY: ${err.message} (status=${this.extractStatus(err)}). Retrying in ${delay}ms...`);
+          await this.sleep(delay);
+          continue;
+        }
+
+        console.error(`[build.same.gateway] LLM_FAIL: provider=${this.provider} attempt=${attempt} error="${err.message}". Falling back to JIT synthesis.`);
+        return this.synthesizeFallback(decision, context);
       }
-    } catch (err: any) {
-      console.error('[build.same.gateway] LLM connection failed:', err.message);
-      return this.synthesizeFallback(decision, context);
+    }
+
+    return this.synthesizeFallback(decision, context);
+  }
+
+  private async callProvider(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
+    switch (this.provider) {
+      case 'anthropic': return this.callAnthropic(systemPrompt, userPrompt);
+      case 'gemini': return this.callGemini(systemPrompt, userPrompt);
+      case 'openai':
+      default: return this.callOpenAI(systemPrompt, userPrompt);
     }
   }
+
+  private isTransientError(err: any): boolean {
+    const status = this.extractStatus(err);
+    if (status && TRANSIENT_STATUS_CODES.has(status)) return true;
+    if (err.message?.includes('ETIMEDOUT') || err.message?.includes('ECONNRESET')) return true;
+    return false;
+  }
+
+  private extractStatus(err: any): number | null {
+    const match = err.message?.match(/(?:HTTP Error|status)[\s:=]+(\d{3})/);
+    return match ? parseInt(match[1], 10) : null;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ─── Provider Implementations ──────────────────────────────────
+
+  private async callOpenAI(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI HTTP Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Empty response from OpenAI');
+
+    return this.parseAndValidatePatches(content);
+  }
+
+  private async callAnthropic(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: this.model,
+        max_tokens: 8000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Anthropic HTTP Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+    if (!content) throw new Error('Empty response from Anthropic');
+
+    return this.parseAndValidatePatches(content);
+  }
+
+  private async callGemini(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 8000
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini HTTP Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) throw new Error('Empty response from Gemini');
+
+    return this.parseAndValidatePatches(content);
+  }
+
+  // ─── Prompt Construction ───────────────────────────────────────
 
   private buildSystemPrompt(architecturePrompt: string): string {
     return `You are build.same, an elite AI software architect and frontend engineer.
@@ -106,60 +241,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
     return prompt;
   }
 
-  private async callOpenAI(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI HTTP Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error('Empty response from OpenAI');
-
-    return this.parseAndValidatePatches(content);
-  }
-
-  private async callAnthropic(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Anthropic HTTP Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.content?.[0]?.text;
-    if (!content) throw new Error('Empty response from Anthropic');
-
-    return this.parseAndValidatePatches(content);
-  }
+  // ─── Response Parsing ──────────────────────────────────────────
 
   private parseAndValidatePatches(rawJson: string): ASTPatch[] {
     const data = JSON.parse(rawJson.trim());
@@ -181,10 +263,12 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   // ─── JIT Synthesis Fallback ────────────────────────────────────
   // Generates deterministic but architecturally sound code from the
   // ArchitectAgent decision — no hardcoded templates, just composition.
+  // This is the explicit degraded mode for when no API key is configured.
 
   private synthesizeFallback(decision: ArchitectDecision, context: LLMContext): ASTPatch[] {
-    console.log(`[build.same.gateway] JIT synthesizing for: ${decision.businessType} (${decision.subDomains.join(', ')})`);
-    console.log(`[build.same.gateway] Pages: ${decision.pages.map(p => p.route).join(', ')}`);
+    console.log(`[build.same.gateway] JIT_SYNTHESIS: provider=${this.provider} businessType=${decision.businessType} pages=${decision.pages.length}`);
+    console.log(`[build.same.gateway] JIT_SYNTHESIS: subDomains=[${decision.subDomains.join(', ')}]`);
+    console.log(`[build.same.gateway] JIT_SYNTHESIS: pages=[${decision.pages.map(p => p.route).join(', ')}]`);
 
     const patches: ASTPatch[] = [];
 
