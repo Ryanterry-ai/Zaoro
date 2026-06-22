@@ -7,6 +7,7 @@ import { ASTPatch, LLMConfig } from '../types/index.js';
 const ASSET_EXT = /\.(png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|wav|mov|avi|css)$/i;
 const PAGE_EXT = /\.(html?|php|aspx|jsp|cfm|shtml|pdf|zip|json|xml|txt)$/i;
 const SKIP_PATHS = /^\/(cdn|assets|static|uploads|images|media|fonts|video|api|admin|cart|account|checkout)\b/i;
+const SKIP_CRAWL = /^\/(es\/|search$|blogs\/[^/]+\/tagged\/|.*\.atom$)/i;
 
 interface CrawledPage {
   url: string;
@@ -108,30 +109,93 @@ export class CloneOrchestrator {
         assets: allAssets.filter(a => a.status === 'ok').map(a => ({ url: a.originalUrl, local: a.localPath, category: a.category, size: a.size })),
       });
 
-      // ── Phase 3: Generate per-page components ───────────────────
-      this.phase('Generating components', { pagesTotal: crawled.length, pagesDone: 0, currentPage: '' });
-      const patches: ASTPatch[] = [];
+      // ── Phase 3: Generate page components (template-batched) ────
       const assetMap = new Map<string, string>();
       for (const a of allAssets) { if (a.status === 'ok') assetMap.set(a.originalUrl, a.localPath); }
 
-      for (let i = 0; i < crawled.length; i++) {
-        const page = crawled[i]!;
-        this.phase('Generating components', { pagesTotal: crawled.length, pagesDone: i, currentPage: page.pagePath });
-        try {
-          // Rate limit: wait 3s between LLM calls to avoid 429s
-          if (i > 0) await new Promise(r => setTimeout(r, 3000));
-          const pagePatches = await this.generatePage(page, crawled, assetMap);
-          patches.push(...pagePatches);
-        } catch (err: any) {
-          this.log(`Failed to generate ${page.pagePath}: ${err.message}`);
+      // Filter non-content pages that don't need unique components
+      const SKIP_GEN = /^\/(es\/|search$|blogs\/[^/]+\/tagged\/|.*\.atom$)/i;
+      const generatable = crawled.filter(p => !SKIP_GEN.test(p.pagePath));
+      const skipped = crawled.filter(p => SKIP_GEN.test(p.pagePath));
+      if (skipped.length > 0) this.log(`Skipping ${skipped.length} non-content pages (locale/tag/atom/search)`);
+
+      // Group pages by type for template reuse
+      const groups = this.groupPagesByType(generatable);
+      this.log(`Page groups: ${Object.entries(groups).map(([k, v]) => `${k}(${v.length})`).join(', ')}`);
+
+      const patches: ASTPatch[] = [];
+      const typeComponents = new Map<string, ASTPatch[]>();
+      let totalLlmCalls = 0;
+      const MAX_LLM_CALLS = 15;
+      let llmAvailable = true;
+
+      for (const [type, pages] of Object.entries(groups)) {
+        if (totalLlmCalls >= MAX_LLM_CALLS) {
+          this.log(`Hit LLM call cap (${MAX_LLM_CALLS}), using templates for remaining ${type} pages`);
+          break;
+        }
+        this.phase('Generating components', { pagesTotal: generatable.length, pagesDone: patches.length, currentPage: pages[0]!.pagePath, groupType: type });
+
+        if (llmAvailable) {
+          try {
+            const delay = Math.min(3000 + (totalLlmCalls * 1500), 30000);
+            await new Promise(r => setTimeout(r, delay));
+
+            if (pages.length === 1) {
+              const pagePatches = await this.generatePage(pages[0]!, crawled, assetMap);
+              typeComponents.set(type, pagePatches);
+              patches.push(...pagePatches);
+            } else {
+              const templatePatches = await this.generatePage(pages[0]!, crawled, assetMap);
+              typeComponents.set(type, templatePatches);
+              patches.push(...templatePatches);
+
+              for (let i = 1; i < pages.length; i++) {
+                if (totalLlmCalls >= MAX_LLM_CALLS) break;
+                const adapted = await this.adaptPageFromTemplate(pages[i]!, pages[0]!, templatePatches, crawled, assetMap);
+                patches.push(...adapted);
+              }
+            }
+            totalLlmCalls++;
+            this.log(`Generated ${type} template (${pages.length} pages, ${totalLlmCalls} LLM calls so far)`);
+          } catch (err: any) {
+            if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('RESOURCE_EXHAUSTED')) {
+              this.log(`Gemini quota exhausted — falling back to no-LLM template generation for all remaining pages`);
+              llmAvailable = false;
+            } else {
+              this.log(`LLM failed for ${type}: ${err.message}. Falling back to no-LLM templates.`);
+              llmAvailable = false;
+            }
+          }
+        }
+
+        // No-LLM fallback: generate components from crawled data
+        if (!llmAvailable) {
+          for (const page of pages) {
+            const routePath = page.pagePath === '/' ? '' : page.pagePath.replace(/^\//, '');
+            const targetFile = page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${routePath}/page.tsx`;
+            const filePath = path.join(this.workspaceRoot, targetFile);
+            if (fs.existsSync(filePath)) continue;
+            const code = this.generateTemplatePage(page, crawled, assetMap);
+            patches.push({ action: 'insert', targetFile, codeBlock: code });
+          }
+          this.log(`Generated ${pages.length} ${type} pages from templates (no LLM)`);
         }
       }
+      this.log(`Generated ${patches.length} patches in ${totalLlmCalls} LLM calls`);
 
       // ── Phase 4: Generate layout + global CSS ───────────────────
       this.phase('Generating layout');
-      await new Promise(r => setTimeout(r, 3000));
-      const layoutPatches = await this.generateLayout(crawled, assetMap);
-      patches.push(...layoutPatches);
+      const delay4 = Math.min(3000 + (totalLlmCalls * 1500), 30000);
+      await new Promise(r => setTimeout(r, delay4));
+      try {
+        const layoutPatches = await this.generateLayout(crawled, assetMap);
+        patches.push(...layoutPatches);
+      } catch (err: any) {
+        this.log(`Layout LLM failed, writing fallback layout: ${err.message}`);
+        const fallbackPatches = this.generateFallbackLayout(crawled, assetMap);
+        patches.push(...fallbackPatches);
+      }
 
       // ── Phase 4b: Generate zero-404 infrastructure ──────────────
       this.phase('Generating zero-404 infrastructure');
@@ -185,6 +249,7 @@ export class CloneOrchestrator {
       const normalized = pagePath === '' ? '/' : pagePath.split('?')[0]!.split('#')[0]!;
       if (visited.has(normalized)) continue;
       if (SKIP_PATHS.test(normalized)) continue;
+      if (SKIP_CRAWL.test(normalized)) continue;
       if (ASSET_EXT.test(normalized)) continue;
       visited.add(normalized);
 
@@ -610,11 +675,108 @@ ${page.pagePath === '/' ? 'This is the HOMEPAGE.' : `This is the "${routePath}" 
 
 Generate a complete Next.js App Router page component.`;
 
-    const patches = await this.gateway.generatePatches({ prompt, attempt: 0, changedFiles: [], errors: [] });
-    for (const patch of patches) {
-      patch.targetFile = page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${routePath}/page.tsx`;
+    const code = await this.gateway.generateRawCode(prompt);
+    return [{ action: 'insert', targetFile: page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${routePath}/page.tsx`, codeBlock: code }];
+  }
+
+  // ─── Page grouping by type ────────────────────────────────────────
+
+  private groupPagesByType(pages: CrawledPage[]): Record<string, CrawledPage[]> {
+    const groups: Record<string, CrawledPage[]> = {};
+    for (const page of pages) {
+      let type: string;
+      if (page.pagePath === '/') {
+        type = 'home';
+      } else if (/^\/collections\/[^/]+$/.test(page.pagePath)) {
+        type = 'collection';
+      } else if (/\/products\//.test(page.pagePath)) {
+        type = 'product';
+      } else if (/\/blogs\//.test(page.pagePath)) {
+        type = 'blog';
+      } else if (/\/policies\//.test(page.pagePath)) {
+        type = 'policy';
+      } else if (/\/pages\//.test(page.pagePath)) {
+        type = 'page';
+      } else {
+        type = 'other';
+      }
+      if (!groups[type]) groups[type] = [];
+      groups[type]!.push(page);
     }
-    return patches;
+    return groups;
+  }
+
+  // ─── Template adaptation (no extra LLM call) ──────────────────────
+  // Adapts a template's patches for a different page by replacing page-specific data
+
+  private async adaptPageFromTemplate(
+    targetPage: CrawledPage,
+    templatePage: CrawledPage,
+    templatePatches: ASTPatch[],
+    allPages: CrawledPage[],
+    assetMap: Map<string, string>,
+  ): Promise<ASTPatch[]> {
+    const routePath = targetPage.pagePath === '/' ? '' : targetPage.pagePath.replace(/^\//, '');
+    const targetFile = targetPage.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${routePath}/page.tsx`;
+
+    // Check if the target file already exists (skip if so)
+    const filePath = path.join(this.workspaceRoot, targetFile);
+    if (fs.existsSync(filePath)) return [];
+
+    // Find the main page patch from template
+    const mainPatch = templatePatches.find(p =>
+      p.targetFile.includes('page.tsx') && !p.targetFile.includes('layout')
+    );
+    if (!mainPatch) return [];
+
+    // Adapt the code: replace template page's text/images with target page's data
+    let code = mainPatch.codeBlock;
+
+    // Replace title references
+    code = code.replace(new RegExp(this.escapeRegex(templatePage.title), 'g'), targetPage.title);
+
+    // Replace route references
+    const templateRoute = templatePage.pagePath === '/' ? '' : templatePage.pagePath.replace(/^\//, '');
+    if (templateRoute !== routePath) {
+      code = code.replace(new RegExp(this.escapeRegex(templateRoute), 'g'), routePath);
+    }
+
+    // Replace image references — swap template page images with target page images
+    const templateImages = templatePage.images.slice(0, 10);
+    const targetImages = targetPage.images.slice(0, 10);
+    for (let i = 0; i < Math.min(templateImages.length, targetImages.length); i++) {
+      const tImg = templateImages[i];
+      const tgtImg = targetImages[i];
+      if (!tImg || !tgtImg) continue;
+      const templateLocal = assetMap.get(tImg) || tImg;
+      const targetLocal = assetMap.get(tgtImg) || tgtImg;
+      if (templateLocal !== targetLocal) {
+        code = code.split(templateLocal).join(targetLocal);
+      }
+    }
+
+    // Replace text content — swap template page text with target page text
+    const templateTextSnippet = templatePage.text.slice(0, 200);
+    const targetTextSnippet = targetPage.text.slice(0, 200);
+    if (templateTextSnippet && targetTextSnippet && templateTextSnippet !== targetTextSnippet) {
+      // Only replace if the text is significantly different
+      const templateFirst50 = templateTextSnippet.slice(0, 50);
+      const targetFirst50 = targetTextSnippet.slice(0, 50);
+      if (templateFirst50 !== targetFirst50) {
+        code = code.replace(new RegExp(this.escapeRegex(templateFirst50), 'g'), targetFirst50);
+      }
+    }
+
+    // Replace metadata
+    if (targetPage.meta['og:title']) {
+      code = code.replace(/og:title[^"]*"[^"]*"/, `og:title" content="${targetPage.meta['og:title']}"`);
+    }
+
+    return [{ action: 'insert', targetFile, codeBlock: code }];
+  }
+
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   // ─── Phase 4: Generate layout ────────────────────────────────────
@@ -652,12 +814,196 @@ Generate:
 
 Use exact fonts and colors. Self-contained output.`;
 
-    const patches = await this.gateway.generatePatches({ prompt, attempt: 0, changedFiles: [], errors: [] });
-    for (const patch of patches) {
-      if (patch.targetFile.includes('layout')) patch.targetFile = 'src/app/layout.tsx';
-      if (patch.targetFile.includes('globals') || patch.targetFile.includes('css')) patch.targetFile = 'src/app/globals.css';
+    const rawCode = await this.gateway.generateRawCode(prompt);
+
+    // The LLM returns a single file — we need to split it into layout.tsx and globals.css
+    // Look for CSS content markers
+    const patches: ASTPatch[] = [];
+
+    if (rawCode.includes('@tailwind') || rawCode.includes(':root') || rawCode.includes('.container')) {
+      // Has CSS — split into layout + globals
+      const cssMatch = rawCode.match(/@tailwind[\s\S]*/i) || rawCode.match(/:root[\s\S]*/i);
+      if (cssMatch) {
+        patches.push({ action: 'insert', targetFile: 'src/app/globals.css', codeBlock: cssMatch[0].trim() });
+        // Layout is everything before CSS
+        const layoutCode = rawCode.slice(0, rawCode.indexOf(cssMatch[0])).trim();
+        if (layoutCode) patches.push({ action: 'insert', targetFile: 'src/app/layout.tsx', codeBlock: layoutCode });
+      } else {
+        patches.push({ action: 'insert', targetFile: 'src/app/layout.tsx', codeBlock: rawCode });
+      }
+    } else {
+      patches.push({ action: 'insert', targetFile: 'src/app/layout.tsx', codeBlock: rawCode });
     }
+
     return patches;
+  }
+
+  // ─── No-LLM template page generator ─────────────────────────────
+  // Generates a functional page component from crawled data without any LLM call
+
+  private generateTemplatePage(page: CrawledPage, allPages: CrawledPage[], assetMap: Map<string, string>): string {
+    const localImages = page.images.map(src => assetMap.get(src) || src).filter(src => src.startsWith('/'));
+    const localVideos = page.videos.map(src => assetMap.get(src) || src).filter(src => src.startsWith('/'));
+    const colors = page.designTokens.colors;
+    const bgColor = colors[0] || '#09090b';
+    const textColor = colors.find(c => c.includes('255') || c.includes('fff')) || '#fafafa';
+    const accentColor = colors[1] || '#22c55e';
+
+    const navLinks = allPages
+      .filter(p => p.pagePath !== '/' && !p.pagePath.startsWith('/es/'))
+      .map(p => {
+        const label = p.title.split(/[|–—]/)[0]?.trim() || p.pagePath.split('/').pop() || p.pagePath;
+        return `<Link href="${p.pagePath}" className="hover:text-white transition text-sm">${label}</Link>`;
+      })
+      .slice(0, 15);
+
+    const heroImage = localImages[0] || '';
+    const sectionImages = localImages.slice(1, 9);
+
+    // Build sections from crawled section summaries
+    const sections = page.sectionSummaries
+      .filter(s => s.length > 20)
+      .slice(0, 8)
+      .map((summary, i) => {
+        const text = summary.replace(/^[^:]+:\s*"?/, '').replace(/"?\s*(imgs=\d+\s*vids=\d+)?$/, '').trim();
+        const img = sectionImages[i] || '';
+        const isEven = i % 2 === 0;
+        if (img) {
+          return `
+      <section className="py-16 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'} gap-12 items-center">
+          <div className="flex-1 space-y-4">
+            <p className="text-zinc-300 leading-relaxed">${this.escapeHtml(text.slice(0, 500))}</p>
+          </div>
+          <div className="flex-1">
+            <img src="${img}" alt="" className="w-full rounded-2xl object-cover" />
+          </div>
+        </div>
+      </section>`;
+        }
+        return `
+      <section className="py-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-zinc-300 leading-relaxed max-w-3xl">${this.escapeHtml(text.slice(0, 500))}</p>
+        </div>
+      </section>`;
+      })
+      .join('\n');
+
+    return `'use client';
+
+import Link from 'next/link';
+
+export default function Home() {
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: '${bgColor}', color: '${textColor}' }}>
+      <nav className="fixed top-0 w-full z-50 backdrop-blur-md border-b border-zinc-800" style={{ backgroundColor: '${bgColor}cc' }}>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="font-black text-lg tracking-tight">${this.escapeHtml(page.title.split(/[|–—]/)[0]?.trim() || 'Home')}</Link>
+          <div className="hidden md:flex items-center gap-6 text-zinc-400">
+            ${navLinks.join('\n            ')}
+          </div>
+        </div>
+      </nav>
+
+      <main className="pt-16">
+        <section className="relative py-24 px-6 text-center">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight">${this.escapeHtml(page.title.split(/[|–—]/)[0]?.trim() || page.title)}</h1>
+            ${heroImage ? `<img src="${heroImage}" alt="" className="mx-auto rounded-2xl max-h-96 object-cover" />` : ''}
+          </div>
+        </section>
+
+${sections}
+
+${localVideos.length > 0 ? `
+        <section className="py-16 px-6">
+          <div className="max-w-4xl mx-auto">
+            <video src="${localVideos[0]}" controls className="w-full rounded-2xl" />
+          </div>
+        </section>` : ''}
+      </main>
+
+      <footer className="border-t border-zinc-800 py-8 mt-16">
+        <div className="max-w-7xl mx-auto px-6 text-center text-sm text-zinc-500">
+          &copy; ${new Date().getFullYear()} ${this.escapeHtml(page.title.split(/[|–—]/)[0]?.trim() || 'Site')}. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  );
+}
+`;
+  }
+
+  private escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  // ─── Fallback layout (no LLM) ───────────────────────────────────
+
+  private generateFallbackLayout(pages: CrawledPage[], assetMap: Map<string, string>): ASTPatch[] {
+    const home = pages.find(p => p.pagePath === '/') || pages[0]!;
+    const colors = home.designTokens.colors;
+    const bgColor = colors[0] || '#09090b';
+    const textColor = colors.find(c => c.includes('255') || c.includes('fff')) || '#fafafa';
+    const accentColor = colors[1] || '#22c55e';
+
+    const navLinks = pages
+      .filter(p => p.pagePath !== '/' && !p.pagePath.includes('/es/'))
+      .map(p => {
+        const label = p.title.split(/[|–—]/)[0]?.trim() || p.pagePath.split('/').pop() || p.pagePath;
+        return `<Link href="${p.pagePath}" className="hover:text-white transition">${label}</Link>`;
+      })
+      .slice(0, 20);
+
+    const layout = `import Link from 'next/link';
+import './globals.css';
+
+export const metadata = {
+  title: '${home.title.replace(/'/g, "\\'")}',
+  description: '${(home.meta['description'] || '').replace(/'/g, "\\'")}',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body className="min-h-screen antialiased" style={{ backgroundColor: '${bgColor}', color: '${textColor}' }}>
+        <nav className="fixed top-0 w-full z-50 backdrop-blur-md border-b border-zinc-800 bg-zinc-950/80">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <Link href="/" className="font-black text-lg tracking-tight">${home.title.split(/[|–—]/)[0]?.trim() || 'Home'}</Link>
+            <div className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
+              ${navLinks.join('\n              ')}
+            </div>
+          </div>
+        </nav>
+        <main className="pt-16">{children}</main>
+        <footer className="border-t border-zinc-800 py-8 mt-16">
+          <div className="max-w-7xl mx-auto px-6 text-center text-sm text-zinc-500">
+            &copy; ${new Date().getFullYear()} ${(home.title.split(/[|–—]/)[0]?.trim() || 'Site').replace(/'/g, "\\'")}. All rights reserved.
+          </div>
+        </footer>
+      </body>
+    </html>
+  );
+}
+`;
+
+    const globals = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: ${bgColor};
+  --text: ${textColor};
+  --accent: ${accentColor};
+}
+body { background-color: var(--bg); color: var(--text); }
+`;
+
+    return [
+      { action: 'insert', targetFile: 'src/app/layout.tsx', codeBlock: layout },
+      { action: 'insert', targetFile: 'src/app/globals.css', codeBlock: globals },
+    ];
   }
 
   // ─── Phase 4b: Zero-404 infrastructure ──────────────────────────

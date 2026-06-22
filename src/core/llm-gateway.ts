@@ -257,6 +257,131 @@ Active Attempt Loop: 0`;
     return this.parseAndValidatePatches(content);
   }
 
+  /**
+   * Clone-specific: generate raw TSX code (no AST patch wrapping, no architect pipeline).
+   * Returns the raw code string from the LLM.
+   */
+  public async generateRawCode(prompt: string): Promise<string> {
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new Error('No API key for raw code generation');
+    }
+
+    const systemPrompt = `You are an expert Next.js/React developer. Generate COMPLETE, production-quality React components.
+Output ONLY valid TSX/JSX code. No explanations, no markdown, no code fences — just the raw component code.
+Use Tailwind CSS for styling. Use 'use client' directive if the component has interactivity (useState, onClick, etc.).
+The component must be self-contained with all data inline — no external API calls.`;
+
+    for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+      try {
+        console.log(`[gateway] Raw code call: ${this.provider}/${this.model} (attempt ${attempt})`);
+        const content = await this.callProviderRaw(systemPrompt, prompt);
+        console.log(`[gateway] Received ${content.length} chars of raw code`);
+        return content;
+      } catch (err: any) {
+        const isTransient = this.isTransientError(err);
+        const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
+        if (attempt < RETRY_ATTEMPTS && isTransient) {
+          console.log(`[gateway] Transient error (${err.message}). Retrying in ${delay}ms...`);
+          await this.sleep(delay);
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error('Raw code generation failed after retries');
+  }
+
+  private async callProviderRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+    switch (this.provider) {
+      case 'gemini': return this.callGeminiRaw(systemPrompt, userPrompt);
+      case 'openai': return this.callOpenAIRaw(systemPrompt, userPrompt);
+      case 'anthropic': return this.callAnthropicRaw(systemPrompt, userPrompt);
+      default: throw new Error(`Unsupported provider: ${this.provider}`);
+    }
+  }
+
+  private async callGeminiRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
+        ],
+        generationConfig: {
+          maxOutputTokens: 65536,
+          thinkingConfig: { thinkingBudget: 0 }
+        }
+      })
+    });
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`Gemini HTTP Error: ${response.status} ${errBody}`);
+    }
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) throw new Error('Empty response from Gemini');
+    // Strip markdown code fences if present
+    let cleaned = content.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
+    }
+    return cleaned;
+  }
+
+  private async callOpenAIRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      })
+    });
+    if (!response.ok) throw new Error(`OpenAI HTTP Error: ${response.status}`);
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Empty response from OpenAI');
+    let cleaned = content.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
+    }
+    return cleaned;
+  }
+
+  private async callAnthropicRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: this.model,
+        max_tokens: 8000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+    if (!response.ok) throw new Error(`Anthropic HTTP Error: ${response.status}`);
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+    if (!content) throw new Error('Empty response from Anthropic');
+    let cleaned = content.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
+    }
+    return cleaned;
+  }
+
   // ─── Prompt Construction ───────────────────────────────────────
 
   private buildSystemPrompt(architecturePrompt: string): string {
