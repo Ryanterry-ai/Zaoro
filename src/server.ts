@@ -229,67 +229,72 @@ const server = http.createServer(async (req, res) => {
     const targetFile = path.join(workspacePath, 'src', 'app', 'page.tsx');
     if (!fs.existsSync(targetFile)) return html(res, '<html><body style="background:#09090b;color:#f43f5e;font-family:sans-serif;padding:2rem;"><h3>Preview Not Available</h3><p>Main route src/app/page.tsx was not resolved.</p></body></html>');
 
-    const { pathToFileURL } = await import('url');
-    const moduleUrl = pathToFileURL(targetFile).href;
-    const tempScriptPath = path.join(workspacePath, 'render-temp.mts');
-    const tempHtmlPath = path.join(workspacePath, 'render-temp.html');
-    const renderScript = `
-import React from 'react';
-import ReactDOMServer from 'react-dom/server';
-import * as fs from 'fs';
-async function executeRender() {
-  try {
-    const mod = await import('${moduleUrl.replace(/\\/g, '/')}');
-    const Component = mod.default || mod.Home;
-    if (!Component) throw new Error("Target component export not found.");
-    const html = ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
-    const fullDocument = \`<!DOCTYPE html>
+    try {
+      // Compile TSX with esbuild, then render with Playwright
+      const esbuild = await import('esbuild');
+      const { chromium } = await import('playwright');
+
+      const source = fs.readFileSync(targetFile, 'utf-8');
+
+      // Strip 'use client' and imports, replace export with global
+      let cleanSource = source.replace(/'use client';?\s*/g, '');
+      cleanSource = cleanSource.replace(/^import .+$/gm, '');
+      cleanSource = cleanSource.replace(/export default function (\w+)/, 'function $1');
+      cleanSource = cleanSource.replace(/export default (\w+)/, 'var _default = $1');
+
+      // Use esbuild to compile JSX → JS (transform mode uses React.createElement, not jsx runtime)
+      const compiled = await esbuild.transform(cleanSource, { loader: 'tsx', jsx: 'transform', target: 'es2020' });
+
+      const previewHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="color-scheme" content="dark light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Preview</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
-    body {
-      background: #09090b;
-      color: #f4f4f5;
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
+    body { background: #09090b; color: #f4f4f5; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
   </style>
 </head>
-<body>\${html}</body>
-</html>\`;
-    fs.writeFileSync('${tempHtmlPath.replace(/\\/g, '/')}', fullDocument);
-  } catch (err) {
-    const errMsg = (err.stack || err.message || String(err)).replace(/</g, '&lt;');
-    fs.writeFileSync('${tempHtmlPath.replace(/\\/g, '/')}', '<div style="padding:2rem;color:#f43f5e;font-family:sans-serif;background:#09090b;"><h3>Render Error</h3><pre>' + errMsg + '</pre></div>');
-  }
-}
-executeRender();`;
-    try {
-      fs.writeFileSync(tempScriptPath, renderScript, 'utf-8');
-      const { exec: execAsync } = await import('child_process');
-      await new Promise<void>((resolve, reject) => {
-        const child = execAsync('npx tsx render-temp.mts', { cwd: ENGINE_ROOT, timeout: 20000 });
-        child.on('exit', (code) => code === 0 ? resolve() : reject(new Error(`Render exited with code ${code}`)));
-        child.on('error', reject);
-      });
-      const renderedHtml = fs.readFileSync(tempHtmlPath, 'utf-8');
+<body>
+  <div id="preview-root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
+  <script>
+    ${compiled.code}
+    var _comp = typeof Home !== 'undefined' ? Home : (typeof _default !== 'undefined' ? _default : null);
+    if (_comp) {
+      var root = ReactDOM.createRoot(document.getElementById('preview-root'));
+      root.render(React.createElement(_comp));
+    }
+  <\/script>
+</body>
+</html>`;
+
+      const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await ctx.newPage();
+
+      // Load with 'load' to ensure CDN scripts execute
+      await page.setContent(previewHtml, { waitUntil: 'load', timeout: 30000 });
+      // Wait for React to be available and component to render
+      await page.waitForFunction(() => {
+        const el = document.getElementById('preview-root');
+        return el && el.children.length > 0;
+      }, { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(2000);
+
+      const renderedHtml = await page.content();
+      await ctx.close();
+      await browser.close();
+
       fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
-      try { fs.unlinkSync(tempScriptPath); } catch {}
-      try { fs.unlinkSync(tempHtmlPath); } catch {}
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
       return html(res, renderedHtml);
-    } catch (err: any) {
-      try { fs.unlinkSync(tempScriptPath); } catch {}
-      try { fs.unlinkSync(tempHtmlPath); } catch {}
+    } catch (renderErr: any) {
+      console.error('[preview] render failed:', renderErr.message || renderErr);
       const fallbackSource = fs.readFileSync(targetFile, 'utf-8');
       return html(res, `<html><body style="background:#09090b;color:#a1a1aa;font-family:sans-serif;padding:2rem;"><h3 style="color:#f43f5e;">Static Compiler Error</h3><pre style="background:#18181b;padding:1rem;border-radius:0.5rem;color:#f4f4f5;overflow-x:auto;">${fallbackSource.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></body></html>`);
     }
