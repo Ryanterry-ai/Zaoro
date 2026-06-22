@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
+import { MCPServer } from './mcp/server.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = path.resolve(__dirname, '..');
@@ -12,6 +13,9 @@ config({ path: path.join(ENGINE_ROOT, '.env') });
 const WORKSPACE_BASE = path.join(ENGINE_ROOT, 'sandbox_workspaces');
 const PROMPTS_DIR = path.join(ENGINE_ROOT, '.prompts');
 const PORT = parseInt(process.env.ENGINE_PORT || '3001', 10);
+
+// Initialize MCP server
+const mcpServer = new MCPServer(WORKSPACE_BASE);
 
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -228,6 +232,51 @@ executeRender();`;
       const fallbackSource = fs.readFileSync(targetFile, 'utf-8');
       return html(res, `<html><body style="background:#09090b;color:#a1a1aa;font-family:sans-serif;padding:2rem;"><h3 style="color:#f43f5e;">Static Compiler Error</h3><pre style="background:#18181b;padding:1rem;border-radius:0.5rem;color:#f4f4f5;overflow-x:auto;">${fallbackSource.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></body></html>`);
     }
+  }
+
+  // GET /api/mcp/tools - List available MCP tools
+  if (method === 'GET' && url.pathname === '/api/mcp/tools') {
+    return json(res, { tools: mcpServer.getToolSchemas() });
+  }
+
+  // POST /api/mcp/call - Call an MCP tool
+  if (method === 'POST' && url.pathname === '/api/mcp/call') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.tool || typeof body.tool !== 'string') return json(res, { error: 'tool parameter required' }, 400);
+      const result = await mcpServer.callTool(body.tool, body.input || {});
+      return json(res, result);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // POST /api/mcp/scrape - Quick Playwright scrape
+  if (method === 'POST' && url.pathname === '/api/mcp/scrape') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.url || typeof body.url !== 'string') return json(res, { error: 'url parameter required' }, 400);
+      const result = await mcpServer.callTool('playwright_scrape', { url: body.url, waitFor: body.waitFor || 3000, fullPage: body.fullPage !== false });
+      return json(res, result);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // POST /api/mcp/push - Push workspace to GitHub
+  if (method === 'POST' && url.pathname === '/api/mcp/push') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.workspaceId || !body.owner || !body.repo || !body.message) {
+        return json(res, { error: 'workspaceId, owner, repo, message required' }, 400);
+      }
+      const wsPath = path.join(WORKSPACE_BASE, body.workspaceId);
+      const result = await mcpServer.callTool('github_push', {
+        workspacePath: wsPath,
+        owner: body.owner,
+        repo: body.repo,
+        branch: body.branch || 'main',
+        message: body.message,
+        token: body.token,
+      });
+      return json(res, result);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
   json(res, { error: 'Not found' }, 404);
