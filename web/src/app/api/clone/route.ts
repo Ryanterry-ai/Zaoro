@@ -3,10 +3,16 @@ import { NextResponse } from "next/server";
 const ENGINE_URL = process.env.ENGINE_URL;
 
 export async function POST(req: Request) {
-  const { url, workspaceId } = await req.json();
+  const { url: rawUrl, workspaceId } = await req.json();
 
-  if (!url || typeof url !== "string") {
+  if (!rawUrl || typeof rawUrl !== "string") {
     return NextResponse.json({ error: "URL is required" }, { status: 400 });
+  }
+
+  // Normalize URL — prepend https:// if no protocol
+  let url = rawUrl.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
   }
 
   const id = workspaceId || `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

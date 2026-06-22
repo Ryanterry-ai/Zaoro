@@ -61,12 +61,18 @@ export class CloneOrchestrator {
 
   async clone(targetUrl: string): Promise<CloneResult> {
     const startTime = Date.now();
-    console.log(`[clone] Starting clone of ${targetUrl}`);
+
+    // Normalize URL — prepend https:// if no protocol
+    let url = targetUrl.trim();
+    if (!url.match(/^https?:\/\//i)) {
+      url = `https://${url}`;
+    }
+    console.log(`[clone] Starting clone of ${url}`);
 
     try {
       // Phase 1: Scrape the target site
       console.log(`[clone] Phase 1: Scraping target site...`);
-      const scraped = await this.scrapeTarget(targetUrl);
+      const scraped = await this.scrapeTarget(url);
       console.log(`[clone] Scraped: "${scraped.title}" — ${scraped.layout.elements.length} top-level elements, ${scraped.styles.colors.length} colors, ${scraped.images.length} images`);
 
       // Phase 2: Extract sections from layout
