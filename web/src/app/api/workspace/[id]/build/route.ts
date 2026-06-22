@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 const ENGINE_URL = process.env.ENGINE_URL;
 
+export const maxDuration = 60;
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -16,12 +18,18 @@ export async function POST(
   }
 
   try {
-    const res = await fetch(`${ENGINE_URL}/api/workspace/${id}/build`, {
+    // Fire-and-forget: trigger build on engine, don't wait for completion
+    // Client polls /api/workspace/:id/progress for status
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    fetch(`${ENGINE_URL}/api/workspace/${id}/build`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+      signal: controller.signal,
+    }).catch(() => {}).finally(() => clearTimeout(timeout));
+
+    return NextResponse.json({ id, status: "build_started" });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to connect to engine server" },
