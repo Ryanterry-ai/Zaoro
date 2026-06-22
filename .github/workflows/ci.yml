@@ -41,3 +41,12 @@ jobs:
 
     - name: Verify Full-Stack DB + API Compilation
       run: npx tsx scripts/verify-fullstack-db.ts
+
+    - name: Verify Build Queue
+      run: npx tsx scripts/verify-build-queue.ts
+
+    - name: Verify Business Synthesis
+      run: npx tsx scripts/verify-business-synthesis.ts
+
+    - name: Verify Platform Persistence
+      run: npx tsx scripts/verify-persistence.ts

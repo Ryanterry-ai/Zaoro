@@ -29,12 +29,32 @@ export default function WorkspacePage() {
   const [rightTab, setRightTab] = useState<"preview" | "files" | "code">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
+  const [workspaceType, setWorkspaceType] = useState<"build" | "clone">("build");
   const [followUp, setFollowUp] = useState("");
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const buildTriggered = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadFiles = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/workspace/${id}/files`);
+      const data = await res.json();
+      setFiles(data.files || []);
+    } catch {}
+  }, [id]);
+
+  const loadPreview = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/workspace/${id}/preview`);
+      if (res.ok) {
+        const html = await res.text();
+        setPreviewHtml(html);
+        setPreviewKey((k) => k + 1);
+      }
+    } catch {}
+  }, [id]);
 
   const pollProgress = useCallback(async () => {
     try {
@@ -60,15 +80,7 @@ export default function WorkspacePage() {
         }
       }
     } catch {}
-  }, [id]);
-
-  const loadFiles = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/workspace/${id}/files`);
-      const data = await res.json();
-      setFiles(data.files || []);
-    } catch {}
-  }, [id]);
+  }, [id, loadFiles, loadPreview]);
 
   const loadFile = useCallback(async (filePath: string) => {
     try {
@@ -77,17 +89,6 @@ export default function WorkspacePage() {
       setFileContent(data.content || "");
       setSelectedFile(filePath);
       setRightTab("code");
-    } catch {}
-  }, [id]);
-
-  const loadPreview = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/workspace/${id}/preview`);
-      if (res.ok) {
-        const html = await res.text();
-        setPreviewHtml(html);
-        setPreviewKey((k) => k + 1);
-      }
     } catch {}
   }, [id]);
 
@@ -121,8 +122,32 @@ export default function WorkspacePage() {
   };
 
   useEffect(() => {
-    triggerBuild();
-  }, [triggerBuild]);
+    let cancelled = false;
+
+    async function initWorkspace() {
+      try {
+        const metaRes = await fetch(`/api/workspace/${id}/meta`);
+        const meta = await metaRes.json();
+        if (cancelled) return;
+
+        const type = meta.type === "clone" ? "clone" : "build";
+        setWorkspaceType(type);
+
+        if (type === "clone") {
+          setIsBuilding(true);
+          pollProgress();
+          return;
+        }
+
+        await triggerBuild();
+      } catch {
+        if (!cancelled) await triggerBuild();
+      }
+    }
+
+    initWorkspace();
+    return () => { cancelled = true; };
+  }, [id, pollProgress, triggerBuild]);
 
   useEffect(() => {
     if (!isBuilding) return;
@@ -152,6 +177,7 @@ export default function WorkspacePage() {
   const formatLabel = (step: string) => {
     switch (step) {
       case "llm": return "AI Agent";
+      case "clone": return "Clone";
       case "agent": return "Agent";
       case "done": return "Complete";
       case "error": return "Error";
@@ -179,7 +205,7 @@ export default function WorkspacePage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Building...
+              {workspaceType === "clone" ? "Cloning..." : "Building..."}
             </div>
           )}
           {buildDone && !isBuilding && (
@@ -354,7 +380,9 @@ export default function WorkspacePage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    <p className="text-sm text-zinc-500">Building your app...</p>
+                    <p className="text-sm text-zinc-500">
+                      {workspaceType === "clone" ? "Cloning website..." : "Building your app..."}
+                    </p>
                   </div>
                 </div>
               ) : previewHtml ? (

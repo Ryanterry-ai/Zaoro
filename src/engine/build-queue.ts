@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
+import type { ChildProcess } from 'child_process';
 
 export interface BuildJob {
   id: string;
@@ -139,6 +140,8 @@ try {
 
     const { exec } = await import('child_process');
 
+    let child: ChildProcess;
+
     // Set up timeout
     const timeout = setTimeout(() => {
       if (this.running.has(job.id)) {
@@ -146,7 +149,6 @@ try {
         job.status = 'timeout';
         job.error = `Build timed out after ${this.config.jobTimeoutMs / 1000}s`;
         this.finishJob(job);
-        // Kill the child process
         if (child.pid) {
           try { process.kill(child.pid, 'SIGTERM'); } catch {}
           setTimeout(() => {
@@ -156,7 +158,7 @@ try {
       }
     }, this.config.jobTimeoutMs);
 
-    const child = exec(
+    child = exec(
       `npx tsx .build-temp-${job.id}.mts`,
       { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_NO_WARNINGS: '1' } }
     );
@@ -255,6 +257,44 @@ try {
       queued: this.queue.length,
       running: this.running.size,
       completed: this.completed.size,
+    };
+  }
+
+  getDetailedStatus(): {
+    queued: number;
+    running: number;
+    completed: number;
+    jobs: Array<{
+      id: string;
+      workspaceId: string;
+      status: BuildJob['status'];
+      priority: number;
+      createdAt: number;
+      startedAt: number | undefined;
+      completedAt: number | undefined;
+      retryCount: number;
+      error: string | undefined;
+    }>;
+  } {
+    const summarize = (j: BuildJob) => ({
+      id: j.id,
+      workspaceId: j.workspaceId,
+      status: j.status,
+      priority: j.priority,
+      createdAt: j.createdAt,
+      startedAt: j.startedAt,
+      completedAt: j.completedAt,
+      retryCount: j.retryCount,
+      error: j.error,
+    });
+
+    return {
+      ...this.getStatus(),
+      jobs: [
+        ...this.queue.map(summarize),
+        ...[...this.running.values()].map(summarize),
+        ...[...this.completed.values()].slice(-20).map(summarize),
+      ],
     };
   }
 

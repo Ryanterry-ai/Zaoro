@@ -1,26 +1,44 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = global as unknown as { prisma: PrismaClient | undefined };
 
-function createPrismaClient() {
-  const url = process.env.PLATFORM_DATABASE_URL || process.env.DATABASE_URL;
+function getDatabaseUrl(): string | undefined {
+  return process.env.PLATFORM_DATABASE_URL || process.env.DATABASE_URL;
+}
+
+function createPrismaClient(): PrismaClient {
+  const url = getDatabaseUrl();
   if (!url) {
     throw new Error('PLATFORM_DATABASE_URL or DATABASE_URL must be set for platform persistence');
   }
-  // Prisma 7 reads DATABASE_URL from env; set it if using PLATFORM_DATABASE_URL
-  if (!process.env.DATABASE_URL && url) {
+  if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL = url;
   }
   return new PrismaClient();
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function getPrisma(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export function isPersistenceAvailable(): boolean {
+  return Boolean(getDatabaseUrl());
+}
+
+function requirePrisma(): PrismaClient {
+  if (!isPersistenceAvailable()) {
+    throw new Error('Platform persistence is not configured. Set PLATFORM_DATABASE_URL or DATABASE_URL.');
+  }
+  return getPrisma();
+}
 
 // ─── User ──────────────────────────────────────────────────────────
 
 export async function getOrCreateUser(email: string, name?: string, avatarUrl?: string) {
+  const prisma = requirePrisma();
   return prisma.user.upsert({
     where: { email },
     create: { email, name: name ?? null, avatarUrl: avatarUrl ?? null },
@@ -29,19 +47,20 @@ export async function getOrCreateUser(email: string, name?: string, avatarUrl?: 
 }
 
 export async function getUser(id: string) {
+  const prisma = requirePrisma();
   return prisma.user.findUnique({ where: { id } });
 }
 
 // ─── Project ───────────────────────────────────────────────────────
 
 export async function createProject(userId: string, name: string, prompt: string, description?: string) {
+  const prisma = requirePrisma();
   const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 64);
 
-  // Ensure unique slug
   let finalSlug = slug;
   let counter = 1;
   while (await prisma.project.findUnique({ where: { slug: finalSlug } })) {
@@ -54,14 +73,17 @@ export async function createProject(userId: string, name: string, prompt: string
 }
 
 export async function getProject(id: string) {
+  const prisma = requirePrisma();
   return prisma.project.findUnique({ where: { id } });
 }
 
 export async function getProjectBySlug(slug: string) {
+  const prisma = requirePrisma();
   return prisma.project.findUnique({ where: { slug } });
 }
 
 export async function listProjects(userId: string, limit = 20, offset = 0) {
+  const prisma = requirePrisma();
   return prisma.project.findMany({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
@@ -72,12 +94,14 @@ export async function listProjects(userId: string, limit = 20, offset = 0) {
 }
 
 export async function updateProjectStatus(id: string, status: string) {
+  const prisma = requirePrisma();
   return prisma.project.update({ where: { id }, data: { status } });
 }
 
 // ─── Build ─────────────────────────────────────────────────────────
 
 export async function createBuild(projectId: string, prompt: string, llmProvider?: string) {
+  const prisma = requirePrisma();
   return prisma.build.create({
     data: { projectId, prompt, llmProvider: llmProvider ?? null },
   });
@@ -87,10 +111,12 @@ export async function updateBuild(
   id: string,
   data: { status?: string; error?: string; duration?: number; fileCount?: number; patchCount?: number; completedAt?: Date },
 ) {
+  const prisma = requirePrisma();
   return prisma.build.update({ where: { id }, data });
 }
 
 export async function getBuilds(projectId: string, limit = 10) {
+  const prisma = requirePrisma();
   return prisma.build.findMany({
     where: { projectId },
     orderBy: { createdAt: 'desc' },
@@ -101,6 +127,7 @@ export async function getBuilds(projectId: string, limit = 10) {
 // ─── Workspace ─────────────────────────────────────────────────────
 
 export async function upsertWorkspace(projectId: string, files: Record<string, string>) {
+  const prisma = requirePrisma();
   return prisma.workspace.upsert({
     where: { projectId },
     create: { projectId, files },
@@ -109,10 +136,12 @@ export async function upsertWorkspace(projectId: string, files: Record<string, s
 }
 
 export async function getWorkspace(projectId: string) {
+  const prisma = requirePrisma();
   return prisma.workspace.findUnique({ where: { projectId } });
 }
 
 export async function getWorkspaceFile(projectId: string, filePath: string): Promise<string | null> {
+  const prisma = requirePrisma();
   const ws = await prisma.workspace.findUnique({ where: { projectId } });
   if (!ws) return null;
   const files = ws.files as Record<string, string>;
@@ -120,6 +149,7 @@ export async function getWorkspaceFile(projectId: string, filePath: string): Pro
 }
 
 export async function setWorkspaceFile(projectId: string, filePath: string, content: string) {
+  const prisma = requirePrisma();
   const ws = await prisma.workspace.findUnique({ where: { projectId } });
   if (!ws) throw new Error(`Workspace not found for project ${projectId}`);
   const files = ws.files as Record<string, string>;
@@ -130,12 +160,14 @@ export async function setWorkspaceFile(projectId: string, filePath: string, cont
 // ─── Message ───────────────────────────────────────────────────────
 
 export async function createMessage(projectId: string, role: string, content: string) {
+  const prisma = requirePrisma();
   return prisma.message.create({
     data: { projectId, role, content },
   });
 }
 
 export async function getMessages(projectId: string, limit = 50) {
+  const prisma = requirePrisma();
   return prisma.message.findMany({
     where: { projectId },
     orderBy: { createdAt: 'asc' },
@@ -146,8 +178,9 @@ export async function getMessages(projectId: string, limit = 50) {
 // ─── Health Check ──────────────────────────────────────────────────
 
 export async function checkDatabaseConnection(): Promise<boolean> {
+  if (!isPersistenceAvailable()) return false;
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await getPrisma().$queryRaw`SELECT 1`;
     return true;
   } catch {
     return false;

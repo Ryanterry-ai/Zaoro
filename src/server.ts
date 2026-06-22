@@ -10,7 +10,7 @@ import {
   createBuild, updateBuild, getBuilds,
   upsertWorkspace, getWorkspace, getWorkspaceFile, setWorkspaceFile,
   createMessage, getMessages,
-  checkDatabaseConnection,
+  checkDatabaseConnection, isPersistenceAvailable,
 } from './core/persistence.js';
 import { CloneOrchestrator } from './cloning/clone-orchestrator.js';
 
@@ -89,6 +89,9 @@ const server = http.createServer(async (req, res) => {
         files: 'GET /api/workspace/:id/files',
         file: 'GET /api/workspace/:id/file?path=...',
         preview: 'GET /api/workspace/:id/preview',
+        meta: 'GET /api/workspace/:id/meta',
+        queue_status: 'GET /api/queue/status',
+        clone: 'POST /api/workspace/:id/clone',
         mcp_tools: 'GET /api/mcp/tools',
         mcp_call: 'POST /api/mcp/call',
         mcp_scrape: 'POST /api/mcp/scrape',
@@ -109,7 +112,7 @@ const server = http.createServer(async (req, res) => {
       if (!body.prompt || typeof body.prompt !== 'string') return json(res, { error: 'Prompt is required' }, 400);
       const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       fs.mkdirSync(PROMPTS_DIR, { recursive: true });
-      fs.writeFileSync(path.join(PROMPTS_DIR, `${id}.json`), JSON.stringify({ id, prompt: body.prompt, createdAt: new Date().toISOString() }), 'utf-8');
+      fs.writeFileSync(path.join(PROMPTS_DIR, `${id}.json`), JSON.stringify({ id, type: 'build', prompt: body.prompt, createdAt: new Date().toISOString() }), 'utf-8');
       return json(res, { id, prompt: body.prompt });
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
@@ -120,7 +123,13 @@ const server = http.createServer(async (req, res) => {
     try {
       const promptFile = path.join(PROMPTS_DIR, `${id}.json`);
       if (!fs.existsSync(promptFile)) return json(res, { error: 'No prompt found' }, 404);
-      const { prompt } = JSON.parse(fs.readFileSync(promptFile, 'utf-8'));
+      const payload = JSON.parse(fs.readFileSync(promptFile, 'utf-8'));
+
+      if (payload.type === 'clone') {
+        return json(res, { id, status: 'clone_in_progress' });
+      }
+
+      const prompt = payload.prompt as string;
 
       // Check if build already in progress
       const existing = buildQueue.getJob(id);
@@ -142,7 +151,28 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/queue/status
   if (method === 'GET' && url.pathname === '/api/queue/status') {
+    if (url.searchParams.get('detailed') === 'true') {
+      return json(res, buildQueue.getDetailedStatus());
+    }
     return json(res, buildQueue.getStatus());
+  }
+
+  // GET /api/workspace/:id/meta
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/meta$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const promptFile = path.join(PROMPTS_DIR, `${id}.json`);
+    if (!fs.existsSync(promptFile)) {
+      return json(res, { id, type: 'build', exists: false });
+    }
+    const payload = JSON.parse(fs.readFileSync(promptFile, 'utf-8'));
+    return json(res, {
+      id,
+      type: payload.type || 'build',
+      prompt: payload.prompt || '',
+      url: payload.url || undefined,
+      exists: true,
+      createdAt: payload.createdAt || undefined,
+    });
   }
 
   // GET /api/workspace/:id/progress
@@ -318,6 +348,19 @@ executeRender();`;
 
       const wsDir = path.join(WORKSPACE_BASE, id);
       fs.mkdirSync(wsDir, { recursive: true });
+      fs.mkdirSync(PROMPTS_DIR, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(PROMPTS_DIR, `${id}.json`),
+        JSON.stringify({
+          id,
+          type: 'clone',
+          url: body.url,
+          prompt: `Clone ${body.url}`,
+          createdAt: new Date().toISOString(),
+        }),
+        'utf-8',
+      );
 
       // Reset progress
       const progressFile = path.join(wsDir, '.progress');
@@ -386,6 +429,9 @@ try {
   // GET /api/health/db
   if (method === 'GET' && url.pathname === '/api/health/db') {
     try {
+      if (!isPersistenceAvailable()) {
+        return json(res, { status: 'unconfigured', database: 'not_configured' });
+      }
       const ok = await checkDatabaseConnection();
       return json(res, { status: ok ? 'ok' : 'error', database: ok ? 'connected' : 'disconnected' });
     } catch (e: any) { return json(res, { status: 'error', error: e.message }, 500); }

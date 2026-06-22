@@ -5,3 +5,15 @@ sandbox_workspaces/
 .env
 .env.local
 .DS_Store
+.prompts/
+.build-config-*.json
+.build-prompt-*.json
+.build-temp-*.mts
+.clone-temp-*.mts
+ngrok.exe
+ngrok.zip
+ngrok.log
+ngrok_output.log
+server.log
+server.err.log
+fix-backticks.cjs
