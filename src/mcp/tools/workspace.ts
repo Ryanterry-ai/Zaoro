@@ -1,4 +1,6 @@
 import { MCPTool, MCPToolResult } from '../types.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class WorkspaceTool implements MCPTool {
   name = 'workspace_manage';
@@ -24,9 +26,6 @@ export class WorkspaceTool implements MCPTool {
     const workspaceId = input.workspaceId as string;
 
     try {
-      const fs = await import('fs');
-      const path = await import('path');
-
       const wsPath = path.join(this.workspaceBaseDir, workspaceId);
 
       switch (action) {
@@ -95,8 +94,6 @@ export class WorkspaceTool implements MCPTool {
   }
 
   private scanDir(dir: string, root: string): Array<{ name: string; path: string; isDirectory: boolean; size: number }> {
-    const fs = require('fs');
-    const path = require('path');
     const results: Array<{ name: string; path: string; isDirectory: boolean; size: number }> = [];
 
     const walk = (d: string) => {

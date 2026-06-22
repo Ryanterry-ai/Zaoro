@@ -1,4 +1,6 @@
 import { MCPTool, MCPToolResult, GitHubConfig } from '../types.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class GitHubTool implements MCPTool {
   name = 'github_push';
@@ -38,9 +40,6 @@ export class GitHubTool implements MCPTool {
     }
 
     try {
-      const fs = await import('fs');
-      const path = await import('path');
-
       const files = this.scanWorkspace(workspacePath, workspacePath);
       const results: string[] = [];
 
@@ -108,8 +107,6 @@ export class GitHubTool implements MCPTool {
   }
 
   private scanWorkspace(dir: string, root: string): string[] {
-    const fs = require('fs');
-    const path = require('path');
     const results: string[] = [];
 
     const walk = (d: string) => {
