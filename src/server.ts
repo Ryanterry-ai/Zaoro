@@ -107,11 +107,22 @@ const server = http.createServer(async (req, res) => {
       const wsDir = path.join(WORKSPACE_BASE, id);
       fs.mkdirSync(wsDir, { recursive: true });
 
+      // Check if build already in progress
+      const progressFile = path.join(wsDir, '.progress');
+      let existingSteps: any[] = [];
+      try { existingSteps = JSON.parse(fs.readFileSync(progressFile, 'utf-8')); } catch {}
+      const lastStep = existingSteps[existingSteps.length - 1];
+      if (lastStep && (lastStep.step === 'engine' || lastStep.step === 'llm') && !lastStep.step.startsWith('done') && !lastStep.step.startsWith('error')) {
+        return json(res, { id, status: 'already_building', steps: existingSteps });
+      }
+
+      // Reset progress
+      fs.writeFileSync(progressFile, JSON.stringify([]), 'utf-8');
+
       const configPath = path.join(ENGINE_ROOT, `.build-config-${id}.json`);
       const promptPayloadPath = path.join(ENGINE_ROOT, `.build-prompt-${id}.json`);
       const provider = process.env.LLM_PROVIDER || 'openai';
       const apiKey = process.env.LLM_API_KEY || '';
-      const hasKey = apiKey && apiKey.trim() !== '';
       fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), 'utf-8');
       fs.writeFileSync(promptPayloadPath, JSON.stringify({ id, prompt, type: 'build-website' }), 'utf-8');
 
@@ -147,29 +158,32 @@ try {
       const scriptPath = path.join(ENGINE_ROOT, `.build-temp-${id}.mts`);
       fs.writeFileSync(scriptPath, buildScript, 'utf-8');
 
-      const { execSync } = await import('child_process');
-      try {
-        execSync(`npx tsx .build-temp-${id}.mts`, { cwd: ENGINE_ROOT, timeout: 120000, stdio: 'pipe', env: { ...process.env, NODE_NO_WARNINGS: '1' } });
-      } catch (execError: any) {
-        const progressFile = path.join(wsDir, '.progress');
-        let steps: any[] = [];
-        try { steps = JSON.parse(fs.readFileSync(progressFile, 'utf-8')); } catch {}
-        const lastStep = steps[steps.length - 1];
-        if (!lastStep || (lastStep.step !== 'done' && lastStep.step !== 'error')) {
-          const errMsg = execError.stderr?.toString()?.slice(0, 500) || execError.message || 'Unknown error';
-          steps.push({ step: 'error', message: 'Build failed: ' + errMsg, ts: Date.now() });
-          fs.writeFileSync(progressFile, JSON.stringify(steps), 'utf-8');
-        }
-      }
+      // Fire-and-forget: run build asynchronously, don't block the event loop
+      const { exec } = await import('child_process');
+      const child = exec(`npx tsx .build-temp-${id}.mts`, { cwd: ENGINE_ROOT, timeout: 600000, env: { ...process.env, NODE_NO_WARNINGS: '1' } });
 
-      try { fs.unlinkSync(scriptPath); } catch {}
-      try { fs.unlinkSync(configPath); } catch {}
-      try { fs.unlinkSync(promptPayloadPath); } catch {}
+      child.on('error', (err) => {
+        console.error(`[engine] Build child error for ${id}:`, err.message);
+        try {
+          let steps: any[] = [];
+          try { steps = JSON.parse(fs.readFileSync(progressFile, 'utf-8')); } catch {}
+          const last = steps[steps.length - 1];
+          if (!last || (last.step !== 'done' && last.step !== 'error')) {
+            steps.push({ step: 'error', message: 'Build process error: ' + err.message, ts: Date.now() });
+            fs.writeFileSync(progressFile, JSON.stringify(steps), 'utf-8');
+          }
+        } catch {}
+      });
 
-      const progressFile = path.join(wsDir, '.progress');
-      let finalSteps: any[] = [];
-      try { finalSteps = JSON.parse(fs.readFileSync(progressFile, 'utf-8')); } catch {}
-      return json(res, { id, status: finalSteps[finalSteps.length - 1]?.step === 'done' ? 'complete' : 'done', steps: finalSteps });
+      child.on('exit', (code) => {
+        console.log(`[engine] Build child exited for ${id} with code ${code}`);
+        try { fs.unlinkSync(scriptPath); } catch {}
+        try { fs.unlinkSync(configPath); } catch {}
+        try { fs.unlinkSync(promptPayloadPath); } catch {}
+      });
+
+      // Return immediately — client polls /progress
+      return json(res, { id, status: 'build_started' });
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
@@ -245,8 +259,12 @@ async function executeRender() {
 executeRender();`;
     try {
       fs.writeFileSync(tempScriptPath, renderScript, 'utf-8');
-      const { execSync } = await import('child_process');
-      execSync('npx tsx render-temp.mts', { cwd: ENGINE_ROOT, timeout: 15000 });
+      const { exec: execAsync } = await import('child_process');
+      await new Promise<void>((resolve, reject) => {
+        const child = execAsync('npx tsx render-temp.mts', { cwd: ENGINE_ROOT, timeout: 20000 });
+        child.on('exit', (code) => code === 0 ? resolve() : reject(new Error(`Render exited with code ${code}`)));
+        child.on('error', reject);
+      });
       const renderedHtml = fs.readFileSync(tempHtmlPath, 'utf-8');
       fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
       try { fs.unlinkSync(tempScriptPath); } catch {}

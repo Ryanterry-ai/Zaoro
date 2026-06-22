@@ -70,7 +70,7 @@ export class DeterministicOrchestratorV4 {
           return await this.handleBuildIntent(workspaceId, intent, llmConfig, startTime);
 
         case 'clone-website':
-          return await this.handleCloneIntent(intent, startTime);
+          return await this.handleCloneIntent(workspaceId, intent, llmConfig, startTime);
 
         case 'analyze-domain':
           return await this.handleAnalyzeIntent(intent, startTime);
@@ -314,19 +314,53 @@ Rules:
   }
 
   private async handleCloneIntent(
+    workspaceId: string,
     intent: GenerationIntent,
+    llmConfig: LLMConfig | undefined,
     startTime: number
   ): Promise<GenerationResult> {
     const targetUrl = intent.targetUrl || '';
-    console.log(`[build.same.generation] Clone target: ${targetUrl}`);
+    const prompt = intent.prompt || `Clone ${targetUrl}`;
+    console.log(`[clone] Clone target: ${targetUrl}`);
 
-    return {
-      success: true,
+    const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
+    const blueprint = FullStackArchitect.design(prompt);
+
+    // Scaffold the workspace structure
+    FullStackCompilerPipeline.compile(workspace, blueprint);
+
+    // Import and run clone orchestrator
+    const { CloneOrchestrator } = await import('../cloning/clone-orchestrator.js');
+    const config = llmConfig || { provider: 'openai' as any, apiKey: '' };
+    const cloneOrch = new CloneOrchestrator(workspace.rootPath, config);
+
+    const cloneResult = await cloneOrch.clone(targetUrl);
+
+    this.snapshot.clearSnapshots(workspace.rootPath);
+
+    const result: GenerationResult = {
+      success: cloneResult.success,
       intent,
-      clonePlan: { routesToBuild: [], componentsToCreate: [], dataModels: [] },
-      analysis: { domain: targetUrl },
+      workspaceId,
+      blueprint,
+      clonePlan: {
+        routesToBuild: blueprint.pages.map(p => p.path),
+        componentsToCreate: cloneResult.patches.filter(p => p.targetFile.startsWith('src/components/')).map(p => p.targetFile),
+        dataModels: blueprint.dataModels.map(m => m.name),
+      },
+      analysis: {
+        domain: targetUrl,
+        sectionsFound: cloneResult.sections.length,
+        patchesGenerated: cloneResult.patches.length,
+      },
       duration: Date.now() - startTime,
     };
+
+    if (!cloneResult.success && cloneResult.error) {
+      result.error = cloneResult.error;
+    }
+
+    return result;
   }
 
   private async handleAnalyzeIntent(
