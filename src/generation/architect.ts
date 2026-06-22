@@ -1,6 +1,8 @@
 import { BusinessClassifier } from './business-classifier.js';
 import { ATOMIC_PRIMITIVES, buildPrimitivesCatalog } from './primitives.js';
 import { FullStackBlueprint, DataModel, APIRouteSpec, StateStoreSpec } from '../types/index.js';
+import { BusinessIntelligenceEngine, IntelligenceResult } from '../intelligence/business-intelligence-engine.js';
+import { CapabilityGraph, CapabilityNode } from '../intelligence/capability-graph.js';
 
 export interface ArchitectDecision {
   businessType: string;
@@ -455,127 +457,65 @@ Text: text-zinc-50 (headings), text-zinc-400 (body), text-zinc-500 (muted)
 }
 
 export class FullStackArchitect {
+  private static intelEngine = new BusinessIntelligenceEngine();
+  private static capGraph = new CapabilityGraph();
+
   public static design(prompt: string): FullStackBlueprint {
-    const lowercasePrompt = prompt.toLowerCase();
+    const intelligence = this.intelEngine.analyze(prompt);
+    const topCapabilities = this.intelEngine.getTopCapabilities(intelligence, 0.1);
 
-    let appName = 'DynamicApp';
-    let colorScheme: 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'sky' = 'indigo';
+    console.log(`[build.same.intelligence] Capabilities detected: ${topCapabilities.join(', ')}`);
+    console.log(`[build.same.intelligence] Hybrid models: ${intelligence.hybridModels.join(', ') || 'none'}`);
+    console.log(`[build.same.intelligence] Summary: ${intelligence.promptSummary}`);
 
-    if (lowercasePrompt.includes('coffee') || lowercasePrompt.includes('tea') || lowercasePrompt.includes('roast')) {
-      appName = 'EquatorRoasters';
-      colorScheme = 'amber';
-    } else if (lowercasePrompt.includes('gym') || lowercasePrompt.includes('fitness') || lowercasePrompt.includes('health') || lowercasePrompt.includes('martial')) {
-      appName = 'ApexAthletics';
-      colorScheme = 'rose';
-    } else if (lowercasePrompt.includes('eco') || lowercasePrompt.includes('green') || lowercasePrompt.includes('organic')) {
-      appName = 'EcoVibe';
-      colorScheme = 'emerald';
-    } else if (lowercasePrompt.includes('telemetry') || lowercasePrompt.includes('platform') || lowercasePrompt.includes('saas')) {
-      appName = 'VortexSaaS';
-      colorScheme = 'sky';
-    }
+    const resolvedNodes = this.capGraph.resolve(topCapabilities);
 
-    const dataModels: DataModel[] = [
-      {
-        name: 'User',
-        fields: [
-          { name: 'id', type: 'string', isRequired: true, isId: true },
-          { name: 'email', type: 'string', isRequired: true },
-          { name: 'name', type: 'string', isRequired: false }
-        ]
-      }
-    ];
+    const appName = this.extractName(prompt);
+    const colorScheme = this.inferColorScheme(prompt, topCapabilities);
 
-    if (lowercasePrompt.includes('shop') || lowercasePrompt.includes('sell') || lowercasePrompt.includes('commerce') || lowercasePrompt.includes('tea')) {
-      dataModels.push({
-        name: 'Product',
-        fields: [
-          { name: 'id', type: 'string', isRequired: true, isId: true },
-          { name: 'name', type: 'string', isRequired: true },
-          { name: 'price', type: 'number', isRequired: true },
-          { name: 'inventory', type: 'number', isRequired: true }
-        ]
-      });
-      dataModels.push({
-        name: 'Order',
-        fields: [
-          { name: 'id', type: 'string', isRequired: true, isId: true },
-          { name: 'userId', type: 'string', isRequired: true },
-          { name: 'totalAmount', type: 'number', isRequired: true },
-          { name: 'createdAt', type: 'DateTime', isRequired: true }
-        ]
-      });
-    }
+    const mergedDataModels = this.capGraph.mergeDataModels(resolvedNodes);
+    const dataModels: DataModel[] = mergedDataModels.map(m => ({
+      name: m.name,
+      fields: m.fields.map(f => ({
+        name: f.name,
+        type: f.type as DataModel['fields'][0]['type'],
+        isRequired: f.required,
+        isId: f.isId ?? false,
+      })),
+    }));
 
-    if (lowercasePrompt.includes('book') || lowercasePrompt.includes('calendar') || lowercasePrompt.includes('therapy') || lowercasePrompt.includes('session')) {
-      dataModels.push({
-        name: 'Appointment',
-        fields: [
-          { name: 'id', type: 'string', isRequired: true, isId: true },
-          { name: 'clientName', type: 'string', isRequired: true },
-          { name: 'dateTime', type: 'DateTime', isRequired: true },
-          { name: 'status', type: 'string', isRequired: true }
-        ]
-      });
-    }
+    const mergedAPIEndpoints = this.capGraph.mergeAPIEndpoints(resolvedNodes);
+    const apiRoutes: APIRouteSpec[] = mergedAPIEndpoints.map(ep => ({
+      endpoint: ep.endpoint,
+      method: ep.method,
+      targetModel: ep.endpoint.split('/').pop() || '',
+      description: ep.description,
+    }));
 
-    const apiRoutes: APIRouteSpec[] = [];
-    for (const model of dataModels) {
-      apiRoutes.push({
-        endpoint: `/api/${model.name.toLowerCase()}s`,
-        method: 'GET',
-        targetModel: model.name,
-        description: `Fetch all active ${model.name} entities`
-      });
-      apiRoutes.push({
-        endpoint: `/api/${model.name.toLowerCase()}s`,
-        method: 'POST',
-        targetModel: model.name,
-        description: `Create new ${model.name} instance`
-      });
-    }
+    const mergedStateStores = this.capGraph.mergeStateStores(resolvedNodes);
+    const stateStores: StateStoreSpec[] = mergedStateStores.map(s => ({
+      name: s.name,
+      properties: s.properties.map(p => ({ name: p.name, type: p.type, initialValue: p.initialValue })),
+      actions: s.actions.map(a => ({ name: a.name, params: a.params, logic: a.logic })),
+    }));
 
-    const stateStores: StateStoreSpec[] = [];
-    if (lowercasePrompt.includes('shop') || lowercasePrompt.includes('sell') || lowercasePrompt.includes('commerce') || lowercasePrompt.includes('tea')) {
-      stateStores.push({
-        name: 'CartStore',
-        properties: [
-          { name: 'items', type: 'any[]', initialValue: '[]' },
-          { name: 'total', type: 'number', initialValue: '0' }
-        ],
-        actions: [
-          { name: 'addItem', params: 'item: any', logic: 'setItems(prev => [...prev, item]); setTotal(t => t + item.price);' },
-          { name: 'clearCart', params: '', logic: 'setItems([]); setTotal(0);' }
-        ]
-      });
-    }
-
-    if (lowercasePrompt.includes('book') || lowercasePrompt.includes('calendar') || lowercasePrompt.includes('therapy') || lowercasePrompt.includes('session')) {
-      stateStores.push({
-        name: 'BookingStore',
-        properties: [
-          { name: 'selectedDate', type: 'string', initialValue: '""' },
-          { name: 'bookings', type: 'any[]', initialValue: '[]' }
-        ],
-        actions: [
-          { name: 'setDate', params: 'date: string', logic: 'setSelectedDate(date);' },
-          { name: 'addBooking', params: 'booking: any', logic: 'setBookings(prev => [...prev, booking]);' }
-        ]
-      });
-    }
-
+    const mergedPages = this.capGraph.mergePages(resolvedNodes);
     const pages: Array<{ path: string; title: string; layout: string; blocks: string[] }> = [
-      { path: '/', title: 'Home Dashboard', layout: 'default', blocks: ['hero', 'stats'] }
+      { path: '/', title: appName, layout: 'default', blocks: ['hero', 'stats'] },
     ];
 
-    if (lowercasePrompt.includes('shop') || lowercasePrompt.includes('sell') || lowercasePrompt.includes('commerce') || lowercasePrompt.includes('tea')) {
-      pages.push({ path: '/shop', title: 'Product Catalog', layout: 'sidebar', blocks: ['filters', 'catalog-grid'] });
-    }
-    if (lowercasePrompt.includes('book') || lowercasePrompt.includes('calendar') || lowercasePrompt.includes('therapy') || lowercasePrompt.includes('session')) {
-      pages.push({ path: '/booking', title: 'Schedule Session', layout: 'split', blocks: ['calendar-interface', 'form-booking'] });
+    for (const page of mergedPages) {
+      if (!pages.some(p => p.path === page.route)) {
+        pages.push({
+          path: page.route,
+          title: page.title,
+          layout: 'default',
+          blocks: page.blocks,
+        });
+      }
     }
 
-    pages.push({ path: '/contact', title: 'Contact Us', layout: 'default', blocks: ['contact-form', 'contact-info'] });
+    pages.push({ path: '/contact', title: 'Contact', layout: 'default', blocks: ['contact-form', 'contact-info'] });
 
     return {
       appName,
@@ -583,7 +523,32 @@ export class FullStackArchitect {
       dataModels,
       apiRoutes,
       stateStores,
-      pages
+      pages,
     };
+  }
+
+  private static extractName(prompt: string): string {
+    const patterns = [
+      /called\s+([A-Z][A-Za-z0-9\s&'.-]+)/,
+      /named\s+([A-Z][A-Za-z0-9\s&'.-]+)/,
+      /for\s+([A-Z][A-Za-z0-9\s&'.-]+)/,
+      /(?:build|create|make)\s+(?:a\s+)?(?:\w+\s+){0,3}([A-Z][A-Za-z0-9\s&'.-]+?)(?:\s+(?:with|for|that|called|named)|\s*$)/i,
+    ];
+    for (const pat of patterns) {
+      const m = prompt.match(pat);
+      if (m && m[1]) return m[1].trim();
+    }
+    return 'Your App';
+  }
+
+  private static inferColorScheme(prompt: string, capabilities: string[]): 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'sky' {
+    const lower = prompt.toLowerCase();
+    if (lower.includes('green') || lower.includes('organic') || lower.includes('eco')) return 'emerald';
+    if (lower.includes('gym') || lower.includes('fitness') || lower.includes('martial')) return 'rose';
+    if (lower.includes('tea') || lower.includes('coffee') || lower.includes('roast')) return 'amber';
+    if (lower.includes('luxury') || lower.includes('premium')) return 'violet';
+    if (capabilities.includes('crm') || capabilities.includes('analytics')) return 'sky';
+    if (capabilities.includes('commerce') || capabilities.includes('marketplace')) return 'indigo';
+    return 'indigo';
   }
 }

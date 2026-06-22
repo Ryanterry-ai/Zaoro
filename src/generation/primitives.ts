@@ -1,6 +1,6 @@
 export interface AtomicPrimitive {
   name: string;
-  category: 'layout' | 'ui' | 'input' | 'navigation' | 'data-display' | 'feedback' | 'ecommerce' | 'booking' | 'content' | 'media';
+  category: 'layout' | 'ui' | 'input' | 'navigation' | 'data-display' | 'feedback' | 'ecommerce' | 'booking' | 'content' | 'media' | 'dashboard' | 'crm' | 'kanban' | 'subscription';
   description: string;
   props: string[];
   tailwindVariants: Record<string, string>;
@@ -467,6 +467,134 @@ export const ATOMIC_PRIMITIVES: AtomicPrimitive[] = [
     exampleCode: `<div className="aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-6xl">📦</div>`,
     composeWith: ['Card'],
   },
+
+  // ─── Dashboard ──────────────────────────────────────────────────
+  {
+    name: 'DashboardShell',
+    category: 'dashboard',
+    description: 'Dashboard layout with sidebar and main content area',
+    props: ['sidebarItems', 'activeItem', 'onNavigate', 'header'],
+    tailwindVariants: {
+      default: 'flex min-h-screen bg-zinc-950',
+      collapsed: 'flex min-h-screen bg-zinc-950',
+    },
+    exampleCode: `<div className="flex min-h-screen bg-zinc-950"><aside className="w-64 bg-zinc-900 border-r border-zinc-800 p-4"><nav className="space-y-2">{items.map(i => <button key={i.id} className="w-full text-left px-3 py-2 rounded-lg text-sm font-bold">{i.label}</button>)}</nav></aside><main className="flex-1 p-8">{children}</main></div>`,
+    composeWith: ['Sidebar', 'Card', 'Grid'],
+  },
+  {
+    name: 'AnalyticsCard',
+    category: 'dashboard',
+    description: 'Analytics metric card with trend indicator and sparkline',
+    props: ['label', 'value', 'change', 'changeType', 'icon', 'data'],
+    tailwindVariants: {
+      default: 'bg-zinc-900 border border-zinc-800 rounded-2xl p-6',
+      highlighted: 'bg-zinc-900 border border-zinc-800 rounded-2xl p-6 ring-1 ring-violet-500/20',
+    },
+    exampleCode: `<div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"><div className="flex items-center justify-between mb-4"><span className="text-sm text-zinc-500">Revenue</span><span className="text-emerald-400 text-xs font-bold">+12.5%</span></div><div className="text-3xl font-black">$45,231</div><div className="mt-4 h-12 bg-zinc-800 rounded-lg flex items-end px-2 gap-1"><div className="w-full bg-violet-500/30 rounded-t" style={{height:'60%'}} /><div className="w-full bg-violet-500/50 rounded-t" style={{height:'80%'}} /><div className="w-full bg-violet-500/70 rounded-t" style={{height:'45%'}} /><div className="w-full bg-violet-500 rounded-t" style={{height:'90%'}} /></div></div>`,
+    composeWith: ['Card', 'Grid', 'StatCard'],
+  },
+  {
+    name: 'UserProfile',
+    category: 'dashboard',
+    description: 'User profile card with avatar, name, role, and actions',
+    props: ['user', 'onEdit', 'onDeactivate', 'variant'],
+    tailwindVariants: {
+      default: 'bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center gap-4',
+      compact: 'bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3',
+      detailed: 'bg-zinc-900 border border-zinc-800 rounded-2xl p-6',
+    },
+    exampleCode: `<div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center font-bold">JD</div><div className="flex-1"><div className="font-bold">John Doe</div><div className="text-sm text-zinc-500">Admin</div></div><button className="px-4 py-2 rounded-lg text-sm font-bold bg-zinc-800 hover:bg-zinc-700">Edit</button></div>`,
+    composeWith: ['Avatar', 'Button', 'Badge', 'Card'],
+  },
+
+  // ─── CRM ────────────────────────────────────────────────────────
+  {
+    name: 'CRMBoard',
+    category: 'crm',
+    description: 'CRM pipeline board with columns for deal stages',
+    props: ['stages', 'deals', 'onDealMove', 'onDealClick'],
+    tailwindVariants: {
+      default: 'flex gap-4 overflow-x-auto pb-4',
+    },
+    exampleCode: '<div className="flex gap-4 overflow-x-auto pb-4">{stages.map(stage => <div key={stage.id} className="min-w-[280px] bg-zinc-900 border border-zinc-800 rounded-2xl p-4"><h3 className="font-bold text-sm mb-4 text-zinc-400">{stage.name} ({stage.deals.length})</h3><div className="space-y-3">{stage.deals.map(deal => <div key={deal.id} className="bg-zinc-800 border border-zinc-700 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition"><div className="font-bold">{deal.title}</div><div className="text-sm text-zinc-400 mt-1">${"{deal.value.toLocaleString()}"}</div></div>)}</div></div>)}</div>',
+    composeWith: ['Card', 'Badge', 'Avatar', 'Button'],
+  },
+  {
+    name: 'CRMContactCard',
+    category: 'crm',
+    description: 'Contact card with name, email, phone, company, and status',
+    props: ['contact', 'onView', 'onEdit', 'onDelete'],
+    tailwindVariants: {
+      default: 'bg-zinc-900 border border-zinc-800 rounded-2xl p-6',
+      compact: 'bg-zinc-900 border border-zinc-800 rounded-xl p-4',
+    },
+    exampleCode: `<div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-sm">JD</div><div><div className="font-bold">John Doe</div><div className="text-sm text-zinc-500">Acme Corp</div></div></div><div className="space-y-2 text-sm text-zinc-400"><div>john@example.com</div><div>(555) 123-4567</div></div><div className="mt-4 flex gap-2"><span className="px-2 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400">Active</span></div></div>`,
+    composeWith: ['Avatar', 'Badge', 'Button', 'Card'],
+  },
+
+  // ─── Kanban ─────────────────────────────────────────────────────
+  {
+    name: 'KanbanBoard',
+    category: 'kanban',
+    description: 'Kanban board with draggable cards across columns',
+    props: ['columns', 'items', 'onCardMove', 'onCardClick'],
+    tailwindVariants: {
+      default: 'flex gap-4 overflow-x-auto',
+      compact: 'flex gap-3 overflow-x-auto',
+    },
+    exampleCode: `<div className="flex gap-4 overflow-x-auto">{columns.map(col => <div key={col.id} className="min-w-[300px] bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4"><h3 className="font-bold text-sm mb-4 flex items-center justify-between"><span>{col.title}</span><span className="px-2 py-0.5 rounded-full bg-zinc-800 text-xs">{col.items.length}</span></h3><div className="space-y-3">{col.items.map(item => <div key={item.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition"><div className="font-bold text-sm">{item.title}</div>{item.assignee && <div className="mt-2 flex items-center gap-2"><div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px]">{item.assignee[0]}</div><span className="text-xs text-zinc-500">{item.assignee}</span></div>}</div>)}</div></div>)}</div>`,
+    composeWith: ['Card', 'Avatar', 'Badge', 'Button'],
+  },
+  {
+    name: 'TaskCard',
+    category: 'kanban',
+    description: 'Individual task card with title, assignee, priority badge, and due date',
+    props: ['title', 'assignee', 'priority', 'dueDate', 'status', 'onClick'],
+    tailwindVariants: {
+      default: 'bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition',
+      compact: 'bg-zinc-900 border border-zinc-800 rounded-lg p-3 cursor-pointer hover:border-zinc-600 transition',
+    },
+    exampleCode: '<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition"><div className="flex items-center justify-between mb-2"><span className="font-bold text-sm">{title}</span><span className={`px-2 py-0.5 rounded-full text-xs ${priority === "high" ? "bg-red-500/20 text-red-400" : priority === "medium" ? "bg-amber-500/20 text-amber-400" : "bg-zinc-800 text-zinc-400"}`}>{priority}</span></div>{assignee && <div className="flex items-center gap-2 mt-2"><div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px]">{assignee[0]}</div><span className="text-xs text-zinc-500">{assignee}</span></div>}{dueDate && <div className="text-xs text-zinc-600 mt-2">Due {dueDate}</div>}</div>',
+    composeWith: ['Badge', 'Avatar'],
+  },
+  {
+    name: 'ProgressBar',
+    category: 'dashboard',
+    description: 'Progress indicator showing completion percentage',
+    props: ['value', 'max', 'label', 'color'],
+    tailwindVariants: {
+      default: 'w-full',
+      compact: 'w-full',
+    },
+    exampleCode: '<div className="w-full"><div className="flex items-center justify-between mb-1"><span className="text-sm text-zinc-400">{label}</span><span className="text-sm font-bold">{Math.round((value/max)*100)}%</span></div><div className="h-2 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full transition-all" style={{width: `${(value/max)*100}%`}}></div></div></div>',
+    composeWith: ['Card'],
+  },
+  {
+    name: 'Calendar',
+    category: 'dashboard',
+    description: 'Monthly calendar view with event indicators',
+    props: ['events', 'selectedDate', 'onDateSelect'],
+    tailwindVariants: {
+      default: 'bg-zinc-900 border border-zinc-800 rounded-2xl p-6',
+      compact: 'bg-zinc-900 border border-zinc-800 rounded-xl p-4',
+    },
+    exampleCode: '<div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"><div className="flex items-center justify-between mb-4"><h3 className="font-bold">{month} {year}</h3><div className="flex gap-2"><button className="p-2 rounded-lg hover:bg-zinc-800">←</button><button className="p-2 rounded-lg hover:bg-zinc-800">→</button></div></div><div className="grid grid-cols-7 gap-1 text-center text-xs"><span className="text-zinc-500 py-2">Sun</span><span className="text-zinc-500 py-2">Mon</span><span className="text-zinc-500 py-2">Tue</span><span className="text-zinc-500 py-2">Wed</span><span className="text-zinc-500 py-2">Thu</span><span className="text-zinc-500 py-2">Fri</span><span className="text-zinc-500 py-2">Sat</span>{days.map(d => <button key={d} className={`py-2 rounded-lg ${d === selected ? "bg-emerald-500 text-white" : "hover:bg-zinc-800"}`}>{d}</button>)}</div></div>',
+    composeWith: ['Card', 'Button'],
+  },
+
+  // ─── Subscription ───────────────────────────────────────────────
+  {
+    name: 'SubscriptionSelector',
+    category: 'subscription',
+    description: 'Subscription plan selector with tier comparison',
+    props: ['plans', 'selectedPlan', 'onSelect', 'billingCycle'],
+    tailwindVariants: {
+      default: 'grid grid-cols-1 md:grid-cols-3 gap-6',
+      compact: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4',
+    },
+    exampleCode: '<div className="grid grid-cols-1 md:grid-cols-3 gap-6">{plans.map((plan, i) => <div key={i} className="rounded-2xl p-6 border bg-zinc-900 border-zinc-800"><div className="text-sm font-bold text-zinc-400 mb-2">{plan.name}</div><div className="text-4xl font-black">${plan.price}<span className="text-sm font-normal text-zinc-500">/mo</span></div><ul className="mt-6 space-y-3">{plan.features.map((f, j) => <li key={j} className="flex items-center gap-2 text-sm text-zinc-400"><span className="text-emerald-400">✓</span>{f}</li>)}</ul><button className="w-full mt-6 py-3 rounded-xl font-bold text-sm bg-zinc-800 hover:bg-zinc-700">Select Plan</button></div>)}</div>',
+    composeWith: ['Card', 'Button', 'Badge', 'Grid'],
+  },
 ];
 
 export function getPrimitivesByCategory(category: AtomicPrimitive['category']): AtomicPrimitive[] {
@@ -477,16 +605,58 @@ export function getPrimitiveByName(name: string): AtomicPrimitive | undefined {
   return ATOMIC_PRIMITIVES.find(p => p.name === name);
 }
 
+export function getPrimitivesForCapabilities(capabilities: string[]): AtomicPrimitive[] {
+  const capabilityCategoryMap: Record<string, AtomicPrimitive['category'][]> = {
+    commerce: ['ecommerce'],
+    booking: ['booking'],
+    crm: ['crm'],
+    subscriptions: ['subscription'],
+    inventory: ['data-display'],
+    orders: ['data-display'],
+    'customer-management': ['data-display', 'dashboard'],
+    analytics: ['dashboard'],
+    content: ['content'],
+    payments: ['data-display'],
+    scheduling: ['booking'],
+    'property-management': ['data-display', 'ecommerce'],
+    marketplace: ['ecommerce'],
+    education: ['content', 'data-display'],
+    'case-management': ['crm', 'kanban'],
+    'franchise-management': ['dashboard', 'data-display'],
+    'membership-platform': ['crm', 'content'],
+    'food-beverage': ['ecommerce', 'booking'],
+    'fitness-wellness': ['booking', 'subscription'],
+    'healthcare-clinic': ['booking', 'dashboard'],
+    catalog: ['ecommerce'],
+    'team-collaboration': ['dashboard'],
+    'project-management': ['kanban', 'dashboard'],
+    notifications: ['feedback'],
+    'user-generated-content': ['content'],
+  };
+
+  const baseCategories: AtomicPrimitive['category'][] = ['layout', 'ui', 'input', 'navigation', 'content', 'data-display', 'media', 'feedback'];
+  const matchedCategories = new Set<AtomicPrimitive['category']>(baseCategories);
+
+  for (const cap of capabilities) {
+    const cats = capabilityCategoryMap[cap] || [];
+    for (const c of cats) {
+      matchedCategories.add(c);
+    }
+  }
+
+  return ATOMIC_PRIMITIVES.filter(p => matchedCategories.has(p.category));
+}
+
 export function getPrimitivesForDomain(businessType: string): AtomicPrimitive[] {
   const domainMap: Record<string, AtomicPrimitive['category'][]> = {
     ecommerce: ['layout', 'ui', 'input', 'navigation', 'ecommerce', 'content', 'feedback', 'media'],
-    saas: ['layout', 'ui', 'input', 'navigation', 'content', 'data-display', 'feedback'],
-    restaurant: ['layout', 'ui', 'input', 'navigation', 'content', 'booking', 'media'],
+    saas: ['layout', 'ui', 'input', 'navigation', 'content', 'data-display', 'feedback', 'dashboard'],
+    restaurant: ['layout', 'ui', 'input', 'navigation', 'content', 'booking', 'media', 'ecommerce'],
     portfolio: ['layout', 'ui', 'navigation', 'content', 'media'],
     blog: ['layout', 'ui', 'input', 'navigation', 'content', 'media'],
-    fitness: ['layout', 'ui', 'input', 'navigation', 'content', 'booking', 'data-display'],
+    fitness: ['layout', 'ui', 'input', 'navigation', 'content', 'booking', 'data-display', 'subscription'],
     education: ['layout', 'ui', 'input', 'navigation', 'content', 'data-display'],
-    healthcare: ['layout', 'ui', 'input', 'navigation', 'content', 'booking', 'data-display'],
+    healthcare: ['layout', 'ui', 'input', 'navigation', 'content', 'booking', 'data-display', 'dashboard'],
     marketplace: ['layout', 'ui', 'input', 'navigation', 'ecommerce', 'content', 'feedback'],
     'local-business': ['layout', 'ui', 'input', 'navigation', 'content', 'booking', 'media'],
     agency: ['layout', 'ui', 'input', 'navigation', 'content', 'data-display', 'media'],
@@ -499,6 +669,25 @@ export function getPrimitivesForDomain(businessType: string): AtomicPrimitive[] 
 
 export function buildPrimitivesCatalog(businessType: string): string {
   const relevant = getPrimitivesForDomain(businessType);
+  const lines: string[] = [];
+
+  for (const prim of relevant) {
+    lines.push(`### ${prim.name} (${prim.category})`);
+    lines.push(prim.description);
+    lines.push(`Props: ${prim.props.join(', ')}`);
+    lines.push(`Variants:`);
+    for (const [key, val] of Object.entries(prim.tailwindVariants)) {
+      lines.push(`  ${key}: "${val}"`);
+    }
+    lines.push(`Example: ${prim.exampleCode}`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+export function buildPrimitivesCatalogForCapabilities(capabilities: string[]): string {
+  const relevant = getPrimitivesForCapabilities(capabilities);
   const lines: string[] = [];
 
   for (const prim of relevant) {

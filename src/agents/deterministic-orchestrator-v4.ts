@@ -126,11 +126,7 @@ export class DeterministicOrchestratorV4 {
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
 
     const blueprint = FullStackArchitect.design(prompt);
-    console.log(`[build.same.generation] FullStackArchitect: ${blueprint.appName} (${blueprint.colorScheme})`);
-    console.log(`[build.same.generation] Data models: ${blueprint.dataModels.map(m => m.name).join(', ')}`);
-    console.log(`[build.same.generation] API routes: ${blueprint.apiRoutes.length}`);
-    console.log(`[build.same.generation] State stores: ${blueprint.stateStores.map(s => s.name).join(', ')}`);
-    console.log(`[build.same.generation] Pages: ${blueprint.pages.map(p => p.path).join(', ')}`);
+    console.log(`[orchestrator] Blueprint: ${blueprint.appName}, ${blueprint.pages.length} pages, ${blueprint.dataModels.length} models`);
 
     FullStackCompilerPipeline.compile(workspace, blueprint);
 
@@ -148,7 +144,6 @@ export class DeterministicOrchestratorV4 {
 
       DBCompiler.scaffoldPrismaClient(workspace.rootPath, blueprint.dataModels);
       APICompiler.compileAPIRoutes(workspace.rootPath, blueprint.dataModels);
-      console.log(`[build.same.generation] Compiled Prisma schema + ${blueprint.dataModels.length} API routes`);
     }
 
     TelemetryLayer.reportBuildStart(workspaceId, prompt);
@@ -163,7 +158,7 @@ export class DeterministicOrchestratorV4 {
         || page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
       const snapshotBase = i * (PER_PAGE_RETRIES + 1);
 
-      console.log(`[build.same.orchestrator-v4] ─── Page ${i + 1}/${blueprint.pages.length}: ${page.path} (export ${funcName}) ───`);
+      console.log(`[orchestrator] Compiling page ${i + 1}/${blueprint.pages.length}: ${page.path}`);
 
       const pagePrompt = this.buildPagePrompt(page, funcName, blueprint);
 
@@ -176,7 +171,14 @@ export class DeterministicOrchestratorV4 {
           pagePrompt,
           async (ctx: LLMContext) => {
             const allPatches = await gateway.generatePatches(ctx);
-            return allPatches.filter(p => p.targetFile === targetFilePath);
+            const pagePatch = allPatches.find(p => p.targetFile === targetFilePath);
+            const componentPatches = allPatches.filter(p => {
+              if (!p.targetFile.startsWith('src/components/')) return false;
+              const fullPath = path.join(workspace.rootPath, p.targetFile);
+              return !fs.existsSync(fullPath);
+            });
+            const result = [pagePatch, ...componentPatches].filter(Boolean) as ASTPatch[];
+            return result;
           },
           PER_PAGE_RETRIES,
           true,
@@ -187,7 +189,7 @@ export class DeterministicOrchestratorV4 {
           workspaceId, pagePath: page.path, succeeded: true,
           attemptCount: PER_PAGE_RETRIES, duration: Date.now() - pageStartTime,
         });
-        console.log(`[build.same.orchestrator-v4] ✓ Page ${page.path} compiled successfully.`);
+        console.log(`[orchestrator] Page ${page.path} compiled successfully.`);
       } catch (err: any) {
         const errMsg = err.message || 'Unknown error';
         pageResults.push({ path: page.path, succeeded: false, lastError: errMsg });
@@ -196,7 +198,7 @@ export class DeterministicOrchestratorV4 {
           attemptCount: PER_PAGE_RETRIES, lastError: errMsg,
           duration: Date.now() - pageStartTime,
         });
-        console.error(`[build.same.orchestrator-v4] ✗ Page ${page.path} failed after ${PER_PAGE_RETRIES} retries: ${errMsg}`);
+        console.error(`[orchestrator] Page ${page.path} failed: ${errMsg}`);
       }
     }
 
@@ -206,9 +208,9 @@ export class DeterministicOrchestratorV4 {
     const failed = pageResults.filter(r => !r.succeeded);
 
     if (failed.length > 0) {
-      console.warn(`[build.same.orchestrator-v4] Build partial: ${succeeded}/${pageResults.length} pages succeeded. Failed: ${failed.map(f => f.path).join(', ')}`);
+      console.warn(`[orchestrator] Build partial: ${succeeded}/${pageResults.length} pages succeeded`);
     } else {
-      console.log(`[build.same.orchestrator-v4] Build complete: all ${pageResults.length} pages compiled successfully.`);
+      console.log(`[orchestrator] Build complete: ${pageResults.length} pages compiled.`);
     }
 
     const result: GenerationResult = {
@@ -349,8 +351,6 @@ Rules:
     snapshotBase: number = 0
   ): Promise<WorkspaceConfig> {
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
-
-    console.log(`[build.same.orchestrator-v4] Performing package dependency install...`);
     await this.sandbox.runPackageInstall(workspace);
 
     let activeErrors: CompilationError[] = [];
@@ -360,10 +360,7 @@ Rules:
 
     while (attempts < maxRetries) {
       const version = snapshotBase + attempts;
-      console.log(`[build.same.orchestrator-v4] Indexing dynamic import trees...`);
-      this.buildDependencyGraph(workspace.rootPath);
-
-      console.log(`[build.same.orchestrator-v4] Saving filesystem rollback version: [V${version}]`);
+      try { this.buildDependencyGraph(workspace.rootPath); } catch {}
       this.snapshot.takeSnapshot(workspace.rootPath, version);
 
       const payloadContext: LLMContext = {
@@ -375,13 +372,10 @@ Rules:
 
       const patches = await llmClientGateway(payloadContext);
 
-      console.log(`[build.same.orchestrator-v4] Scoring patches using graph risk matrix...`);
       const rankedPatches = this.ranker.rank(patches);
 
-      console.log(`[build.same.orchestrator-v4] Testing contract signature breaks...`);
       const safetyReport = this.predictor.predict(rankedPatches);
       if (!safetyReport.isSafe) {
-        console.warn(`[build.same.orchestrator-v4] Regression Risk Gate Blocked: ${safetyReport.reason}`);
         this.snapshot.restore(workspace.rootPath, version);
 
         TelemetryLayer.reportError({
@@ -400,11 +394,9 @@ Rules:
         continue;
       }
 
-      console.log(`[build.same.orchestrator-v4] Validating schema patterns and code syntax...`);
       const validationResult = this.validator.validate(workspace.rootPath, rankedPatches);
 
       if (!validationResult.valid) {
-        console.warn(`[build.same.orchestrator-v4] AST Validation Rejected: ${validationResult.reason}`);
         this.snapshot.restore(workspace.rootPath, version);
 
         TelemetryLayer.reportError({
@@ -423,11 +415,9 @@ Rules:
         continue;
       }
 
-      console.log(`[build.same.orchestrator-v4] Simulating AST mutations in memory...`);
       const simulationResult = this.simulator.simulate(workspace.rootPath, validationResult.safeToApply);
 
       if (!simulationResult.success) {
-        console.warn(`[build.same.orchestrator-v4] Simulation Gate Rejected: ${simulationResult.reason}`);
         this.snapshot.restore(workspace.rootPath, version);
 
         TelemetryLayer.reportError({
@@ -446,7 +436,6 @@ Rules:
         continue;
       }
 
-      console.log(`[build.same.orchestrator-v4] Pre-flight gates verified. Mutating VFS...`);
       this.transaction.begin();
       try {
         for (const patch of validationResult.safeToApply) {
@@ -459,7 +448,6 @@ Rules:
         });
 
       } catch (mutationError: any) {
-        console.error(`[build.same.orchestrator-v4] Patcher runtime mutation crash. Invoking snapshot restore...`);
         this.transaction.rollback();
         this.snapshot.restore(workspace.rootPath, version);
 
@@ -479,19 +467,15 @@ Rules:
         continue;
       }
 
-      console.log(`[build.same.orchestrator-v4] Executing compiler checks via TypeScript API...`);
       activeErrors = this.auditor.audit(workspace.rootPath);
 
       if (activeErrors.length === 0) {
-        console.log(`[build.same.orchestrator-v4] Compile pass cleared with zero diagnostics.`);
         TelemetryLayer.reportHealing(workspaceId, attempts, 0);
         if (!skipDevServer) {
           await this.sandbox.launchDevInstance(workspace);
         }
         return workspace;
       }
-
-      console.warn(`[build.same.orchestrator-v4] Build failed. Compiler reported ${activeErrors.length} type/syntax errors.`);
 
       this.snapshot.restore(workspace.rootPath, version);
       attempts++;
@@ -545,8 +529,6 @@ Rules:
             to: resolvedPath,
             type: 'import'
           });
-        } else {
-          console.warn(`[build.same.graph] Unresolved import specifier detected: "${importStr}" in file "${relativePath}"`);
         }
       }
     }

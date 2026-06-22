@@ -21,7 +21,7 @@ export class LLMGateway {
   private defaultModel(provider: LLMProvider): string {
     switch (provider) {
       case 'anthropic': return 'claude-3-7-sonnet-20250219';
-      case 'gemini': return 'gemini-2.5-pro';
+      case 'gemini': return 'gemini-2.5-flash';
       case 'openai':
       default: return 'gpt-4o';
     }
@@ -32,7 +32,7 @@ export class LLMGateway {
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
     if (!this.apiKey || this.apiKey.trim() === '') {
-      console.warn(`[build.same.gateway] NO_API_KEY: provider=${this.provider}. Falling back to JIT synthesis. Set LLM_API_KEY to use real LLM generation.`);
+      console.log(`[gateway] No API key. Falling back to JIT synthesis.`);
       return this.synthesizeFallback(decision, context);
     }
 
@@ -41,21 +41,21 @@ export class LLMGateway {
 
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
-        console.log(`[build.same.gateway] LLM_CALL: provider=${this.provider} model=${this.model} attempt=${attempt}/${RETRY_ATTEMPTS}`);
+        console.log(`[gateway] LLM call: ${this.provider}/${this.model} (attempt ${attempt})`);
         const patches = await this.callProvider(systemPrompt, userPrompt);
-        console.log(`[build.same.gateway] LLM_OK: received ${patches.length} patches from ${this.provider}`);
+        console.log(`[gateway] Received ${patches.length} patches`);
         return patches;
       } catch (err: any) {
         const isTransient = this.isTransientError(err);
         const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
 
         if (attempt < RETRY_ATTEMPTS && isTransient) {
-          console.warn(`[build.same.gateway] LLM_RETRY: ${err.message} (status=${this.extractStatus(err)}). Retrying in ${delay}ms...`);
+          console.log(`[gateway] Transient error (${err.message}). Retrying in ${delay}ms...`);
           await this.sleep(delay);
           continue;
         }
 
-        console.error(`[build.same.gateway] LLM_FAIL: provider=${this.provider} attempt=${attempt} error="${err.message}". Falling back to JIT synthesis.`);
+        console.log(`[gateway] LLM failed: ${err.message}. Falling back to JIT synthesis.`);
         return this.synthesizeFallback(decision, context);
       }
     }
@@ -156,7 +156,8 @@ export class LLMGateway {
         ],
         generationConfig: {
           responseMimeType: 'application/json',
-          maxOutputTokens: 8000
+          maxOutputTokens: 65536,
+          thinkingConfig: { thinkingBudget: 0 }
         }
       })
     });
@@ -244,20 +245,59 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   // ─── Response Parsing ──────────────────────────────────────────
 
   private parseAndValidatePatches(rawJson: string): ASTPatch[] {
-    const data = JSON.parse(rawJson.trim());
-    const patches: ASTPatch[] = Array.isArray(data) ? data : data.patches || [];
+    let cleaned = rawJson.trim();
 
-    return patches.map((p: any) => {
-      const patch: ASTPatch = {
-        targetFile: String(p.targetFile),
-        action: p.action as 'insert' | 'update' | 'delete',
-        codeBlock: String(p.codeBlock)
-      };
-      if (p.targetExport !== undefined) {
-        patch.targetExport = String(p.targetExport);
+    try {
+      const data = JSON.parse(cleaned);
+      const patches: ASTPatch[] = Array.isArray(data) ? data : data.patches || [];
+      return patches.map((p: any) => {
+        const patch: ASTPatch = {
+          targetFile: String(p.targetFile),
+          action: p.action as 'insert' | 'update' | 'delete',
+          codeBlock: String(p.codeBlock)
+        };
+        if (p.targetExport !== undefined) {
+          patch.targetExport = String(p.targetExport);
+        }
+        return patch;
+      });
+    } catch (parseError) {
+      cleaned = cleaned.replace(/[\u0000-\u001f]/g, ' ').replace(/\\[^"\\\/bfnrtu]/g, (match) => match[1] === 'n' ? match : (match[1] || ''));
+      try {
+        const data = JSON.parse(cleaned);
+        const patches: ASTPatch[] = Array.isArray(data) ? data : data.patches || [];
+        return patches.map((p: any) => {
+          const patch: ASTPatch = {
+            targetFile: String(p.targetFile),
+            action: p.action as 'insert' | 'update' | 'delete',
+            codeBlock: String(p.codeBlock)
+          };
+          if (p.targetExport !== undefined) {
+            patch.targetExport = String(p.targetExport);
+          }
+          return patch;
+        });
+      } catch {
+        const jsonMatch = rawJson.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          try {
+            const data = JSON.parse(jsonMatch[0]);
+            return data.map((p: any) => {
+              const patch: ASTPatch = {
+                targetFile: String(p.targetFile),
+                action: p.action as 'insert' | 'update' | 'delete',
+                codeBlock: String(p.codeBlock)
+              };
+              if (p.targetExport !== undefined) {
+                patch.targetExport = String(p.targetExport);
+              }
+              return patch;
+            });
+          } catch {}
+        }
+        throw parseError;
       }
-      return patch;
-    });
+    }
   }
 
   // ─── JIT Synthesis Fallback ────────────────────────────────────
@@ -266,9 +306,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   // This is the explicit degraded mode for when no API key is configured.
 
   private synthesizeFallback(decision: ArchitectDecision, context: LLMContext): ASTPatch[] {
-    console.log(`[build.same.gateway] JIT_SYNTHESIS: provider=${this.provider} businessType=${decision.businessType} pages=${decision.pages.length}`);
-    console.log(`[build.same.gateway] JIT_SYNTHESIS: subDomains=[${decision.subDomains.join(', ')}]`);
-    console.log(`[build.same.gateway] JIT_SYNTHESIS: pages=[${decision.pages.map(p => p.route).join(', ')}]`);
+    console.log(`[gateway] JIT synthesis: ${decision.businessType}, ${decision.pages.length} pages`);
 
     const patches: ASTPatch[] = [];
 

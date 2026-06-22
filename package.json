@@ -9,7 +9,8 @@
     "dev": "npx tsx src/test-harness.ts",
     "build": "tsc",
     "test": "npx tsx src/test-harness.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "server": "npx tsx src/server.ts"
   },
   "dependencies": {
     "@babel/parser": "^7.24.0",
@@ -17,6 +18,8 @@
     "@supabase/supabase-js": "^2.108.2",
     "dotenv": "^17.4.2",
     "posthog-node": "^5.38.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "recast": "^0.23.9",
     "typescript": "^5.4.2"
   },
