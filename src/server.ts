@@ -262,7 +262,7 @@ executeRender();`;
 
   // GET /api/mcp/tools - List available MCP tools
   if (method === 'GET' && url.pathname === '/api/mcp/tools') {
-    return json(res, { tools: mcpServer.getToolSchemas() });
+    return json(res, mcpServer.getToolSchemas());
   }
 
   // POST /api/mcp/call - Call an MCP tool
@@ -270,9 +270,9 @@ executeRender();`;
     try {
       const body = JSON.parse(await readBody(req));
       if (!body.tool || typeof body.tool !== 'string') return json(res, { error: 'tool parameter required' }, 400);
-      const result = await mcpServer.callTool(body.tool, body.input || {});
-      return json(res, result);
-    } catch (e: any) { return json(res, { error: e.message }, 500); }
+      const result = await mcpServer.callTool(body.tool, body.arguments || body.input || {});
+      return json(res, { success: !result.isError, ...result });
+    } catch (e: any) { return json(res, { success: false, error: e.message }, 500); }
   }
 
   // POST /api/mcp/scrape - Quick Playwright scrape
@@ -281,16 +281,40 @@ executeRender();`;
       const body = JSON.parse(await readBody(req));
       if (!body.url || typeof body.url !== 'string') return json(res, { error: 'url parameter required' }, 400);
       const result = await mcpServer.callTool('playwright_scrape', { url: body.url, waitFor: body.waitFor || 3000, fullPage: body.fullPage !== false });
-      return json(res, result);
-    } catch (e: any) { return json(res, { error: e.message }, 500); }
+      let analysis: Record<string, unknown> = {};
+      if (!result.isError && result.content[0]?.text) {
+        try {
+          const parsed = JSON.parse(result.content[0].text);
+          analysis = {
+            title: parsed.title || '',
+            routes: parsed.links?.slice(0, 10) || [],
+            designTokens: {
+              colors: parsed.styles?.colors || [],
+              fonts: parsed.styles?.fonts || [],
+              fontSizes: parsed.styles?.fontSizes || [],
+              spacings: parsed.styles?.spacings || [],
+              borderRadii: parsed.styles?.borderRadii || [],
+              shadows: parsed.styles?.shadows || [],
+            },
+            elements: parsed.layout?.elements?.length || 0,
+            images: parsed.images?.length || 0,
+            links: parsed.links?.length || 0,
+          };
+        } catch {}
+      }
+      return json(res, { success: !result.isError, analysis });
+    } catch (e: any) { return json(res, { success: false, error: e.message }, 500); }
   }
 
   // POST /api/mcp/push - Push workspace to GitHub
   if (method === 'POST' && url.pathname === '/api/mcp/push') {
     try {
       const body = JSON.parse(await readBody(req));
-      if (!body.workspaceId || !body.owner || !body.repo || !body.message) {
-        return json(res, { error: 'workspaceId, owner, repo, message required' }, 400);
+      if (!body.workspaceId) {
+        return json(res, { error: 'workspaceId required' }, 400);
+      }
+      if (!body.owner || !body.repo || !body.commitMessage) {
+        return json(res, { success: true, skipped: true, reason: 'Missing remote URL or repository parameters' });
       }
       const wsPath = path.join(WORKSPACE_BASE, body.workspaceId);
       const result = await mcpServer.callTool('github_push', {
@@ -298,11 +322,11 @@ executeRender();`;
         owner: body.owner,
         repo: body.repo,
         branch: body.branch || 'main',
-        message: body.message,
+        message: body.commitMessage,
         token: body.token,
       });
-      return json(res, result);
-    } catch (e: any) { return json(res, { error: e.message }, 500); }
+      return json(res, { success: !result.isError, ...result });
+    } catch (e: any) { return json(res, { success: false, error: e.message }, 500); }
   }
 
   json(res, { error: 'Not found' }, 404);
