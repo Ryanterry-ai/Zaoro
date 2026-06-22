@@ -10,27 +10,50 @@ const EXAMPLE_PROMPTS = [
   "A project management tool with kanban boards",
 ];
 
+type Mode = "build" | "clone";
+
 export default function Home() {
+  const [mode, setMode] = useState<Mode>("build");
   const [prompt, setPrompt] = useState("");
+  const [cloneUrl, setCloneUrl] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
   const router = useRouter();
 
   const handleBuild = async () => {
-    if (!prompt.trim() || isBuilding) return;
-    setIsBuilding(true);
+    if (isBuilding) return;
 
-    try {
-      const res = await fetch("/api/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
-      });
-      const data = await res.json();
-      if (data.id) {
-        router.push(`/workspace/${data.id}`);
+    if (mode === "clone") {
+      if (!cloneUrl.trim()) return;
+      setIsBuilding(true);
+      try {
+        const res = await fetch("/api/clone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: cloneUrl.trim() }),
+        });
+        const data = await res.json();
+        if (data.id) {
+          router.push(`/workspace/${data.id}`);
+        }
+      } catch {
+        setIsBuilding(false);
       }
-    } catch {
-      setIsBuilding(false);
+    } else {
+      if (!prompt.trim()) return;
+      setIsBuilding(true);
+      try {
+        const res = await fetch("/api/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: prompt.trim() }),
+        });
+        const data = await res.json();
+        if (data.id) {
+          router.push(`/workspace/${data.id}`);
+        }
+      } catch {
+        setIsBuilding(false);
+      }
     }
   };
 
@@ -64,30 +87,86 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Prompt Input */}
+          {/* Mode Tabs */}
+          <div className="flex justify-center">
+            <div className="flex rounded-xl border border-border bg-surface p-1">
+              <button
+                onClick={() => setMode("build")}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  mode === "build"
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
+                  </svg>
+                  Build
+                </span>
+              </button>
+              <button
+                onClick={() => setMode("clone")}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  mode === "clone"
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                  </svg>
+                  Clone
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Input */}
           <div className="relative">
             <div className="rounded-2xl border border-border bg-surface p-1 transition-all focus-within:border-accent focus-within:ring-1 focus-within:ring-accent">
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleBuild();
-                  }
-                }}
-                placeholder="What do you want to build?"
-                rows={3}
-                className="w-full bg-transparent px-4 py-3 text-base resize-none outline-none placeholder:text-muted"
-                disabled={isBuilding}
-              />
+              {mode === "build" ? (
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleBuild();
+                    }
+                  }}
+                  placeholder="What do you want to build?"
+                  rows={3}
+                  className="w-full bg-transparent px-4 py-3 text-base resize-none outline-none placeholder:text-muted"
+                  disabled={isBuilding}
+                />
+              ) : (
+                <input
+                  type="url"
+                  value={cloneUrl}
+                  onChange={(e) => setCloneUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleBuild();
+                    }
+                  }}
+                  placeholder="https://example.com"
+                  className="w-full bg-transparent px-4 py-3 text-base outline-none placeholder:text-muted"
+                  disabled={isBuilding}
+                />
+              )}
               <div className="flex items-center justify-between px-3 pb-2">
                 <span className="text-xs text-muted">
-                  Press Enter to build
+                  {mode === "build" ? "Press Enter to build" : "Enter a URL to clone"}
                 </span>
                 <button
                   onClick={handleBuild}
-                  disabled={!prompt.trim() || isBuilding}
+                  disabled={(mode === "build" ? !prompt.trim() : !cloneUrl.trim()) || isBuilding}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent text-white text-sm font-medium transition-all hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   {isBuilding ? (
@@ -96,11 +175,11 @@ export default function Home() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Building...
+                      {mode === "clone" ? "Cloning..." : "Building..."}
                     </>
                   ) : (
                     <>
-                      Build
+                      {mode === "clone" ? "Clone" : "Build"}
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 12h14M12 5l7 7-7 7" />
                       </svg>
@@ -111,18 +190,20 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Examples */}
-          <div className="flex flex-wrap gap-2 justify-center">
-            {EXAMPLE_PROMPTS.map((example) => (
-              <button
-                key={example}
-                onClick={() => setPrompt(example)}
-                className="px-4 py-2 rounded-full text-sm text-muted border border-border bg-surface hover:bg-surface-hover hover:text-foreground transition-all"
-              >
-                {example}
-              </button>
-            ))}
-          </div>
+          {/* Examples (build mode only) */}
+          {mode === "build" && (
+            <div className="flex flex-wrap gap-2 justify-center">
+              {EXAMPLE_PROMPTS.map((example) => (
+                <button
+                  key={example}
+                  onClick={() => setPrompt(example)}
+                  className="px-4 py-2 rounded-full text-sm text-muted border border-border bg-surface hover:bg-surface-hover hover:text-foreground transition-all"
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Stats */}
           <div className="flex items-center justify-center gap-8 text-sm text-muted pt-4">

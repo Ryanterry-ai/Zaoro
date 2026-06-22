@@ -12,6 +12,7 @@ import {
   createMessage, getMessages,
   checkDatabaseConnection,
 } from './core/persistence.js';
+import { CloneOrchestrator } from './cloning/clone-orchestrator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = path.resolve(__dirname, '..');
@@ -302,6 +303,82 @@ executeRender();`;
       });
       return json(res, { success: !result.isError, ...result });
     } catch (e: any) { return json(res, { success: false, error: e.message }, 500); }
+  }
+
+  // ─── Website Clone Route ─────────────────────────────────────────
+
+  // POST /api/workspace/:id/clone — Clone a website into the workspace
+  if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/clone$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.url || typeof body.url !== 'string') {
+        return json(res, { error: 'url parameter required' }, 400);
+      }
+
+      const wsDir = path.join(WORKSPACE_BASE, id);
+      fs.mkdirSync(wsDir, { recursive: true });
+
+      // Reset progress
+      const progressFile = path.join(wsDir, '.progress');
+      fs.writeFileSync(progressFile, JSON.stringify([]), 'utf-8');
+
+      const provider = process.env.LLM_PROVIDER || 'openai';
+      const apiKey = process.env.LLM_API_KEY || '';
+
+      // Fire-and-forget async clone
+      const { exec } = await import('child_process');
+      const cloneScript = `
+import { CloneOrchestrator } from './src/cloning/clone-orchestrator.js';
+import * as fs from 'fs';
+import * as path from 'path';
+const WS_BASE = ${JSON.stringify(WORKSPACE_BASE)};
+const wsDir = path.join(WS_BASE, ${JSON.stringify(id)});
+function log(step, msg) {
+  const f = path.join(wsDir, '.progress');
+  let s = [];
+  try { if (fs.existsSync(f)) s = JSON.parse(fs.readFileSync(f, 'utf-8')); } catch {}
+  s.push({ step, message: msg, ts: Date.now() });
+  fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
+}
+const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${id}.json`)}), 'utf-8'));
+const cloneOrch = new CloneOrchestrator(wsDir, { provider: config.provider, apiKey: config.apiKey });
+try {
+  log('clone', 'Starting website clone...');
+  log('clone', 'Phase 1: Scraping target site...');
+  const result = await cloneOrch.clone(${JSON.stringify(body.url)});
+  if (result.success) {
+    log('done', 'Clone completed! ' + result.sections.length + ' sections, ' + result.patches.length + ' patches applied.');
+  } else {
+    log('error', 'Clone failed: ' + (result.error || 'unknown error'));
+  }
+} catch (err) { log('error', 'Clone failed: ' + (err.message || err)); }
+`;
+      const scriptPath = path.join(ENGINE_ROOT, `.clone-temp-${id}.mts`);
+      const configPath = path.join(ENGINE_ROOT, `.build-config-${id}.json`);
+      fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), 'utf-8');
+      fs.writeFileSync(scriptPath, cloneScript, 'utf-8');
+
+      const child = exec(`npx tsx .clone-temp-${id}.mts`, { cwd: ENGINE_ROOT, timeout: 600000, env: { ...process.env, NODE_NO_WARNINGS: '1' } });
+
+      child.on('error', (err) => {
+        console.error(`[engine] Clone child error for ${id}:`, err.message);
+        try {
+          let steps: any[] = [];
+          try { steps = JSON.parse(fs.readFileSync(progressFile, 'utf-8')); } catch {}
+          steps.push({ step: 'error', message: 'Clone process error: ' + err.message, ts: Date.now() });
+          fs.writeFileSync(progressFile, JSON.stringify(steps), 'utf-8');
+        } catch {}
+      });
+
+      child.on('exit', (code) => {
+        console.log(`[engine] Clone child exited for ${id} with code ${code}`);
+        try { fs.unlinkSync(scriptPath); } catch {}
+        try { fs.unlinkSync(configPath); } catch {}
+      });
+
+      return json(res, { id, status: 'clone_started', url: body.url });
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
   // ─── Platform Persistence Routes ─────────────────────────────────
