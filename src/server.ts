@@ -5,6 +5,13 @@ import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 import { MCPServer } from './mcp/server.js';
 import { BuildQueue } from './engine/build-queue.js';
+import {
+  createProject, getProject, listProjects, updateProjectStatus,
+  createBuild, updateBuild, getBuilds,
+  upsertWorkspace, getWorkspace, getWorkspaceFile, setWorkspaceFile,
+  createMessage, getMessages,
+  checkDatabaseConnection,
+} from './core/persistence.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = path.resolve(__dirname, '..');
@@ -295,6 +302,100 @@ executeRender();`;
       });
       return json(res, { success: !result.isError, ...result });
     } catch (e: any) { return json(res, { success: false, error: e.message }, 500); }
+  }
+
+  // ─── Platform Persistence Routes ─────────────────────────────────
+
+  // GET /api/health/db
+  if (method === 'GET' && url.pathname === '/api/health/db') {
+    try {
+      const ok = await checkDatabaseConnection();
+      return json(res, { status: ok ? 'ok' : 'error', database: ok ? 'connected' : 'disconnected' });
+    } catch (e: any) { return json(res, { status: 'error', error: e.message }, 500); }
+  }
+
+  // POST /api/projects
+  if (method === 'POST' && url.pathname === '/api/projects') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.userId || !body.name || !body.prompt) {
+        return json(res, { error: 'userId, name, and prompt required' }, 400);
+      }
+      const project = await createProject(body.userId, body.name, body.prompt, body.description);
+      return json(res, project);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/projects/:id
+  if (method === 'GET' && url.pathname.match(/^\/api\/projects\/[^/]+$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const project = await getProject(id);
+      if (!project) return json(res, { error: 'Project not found' }, 404);
+      return json(res, project);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/projects/:id/builds
+  if (method === 'GET' && url.pathname.match(/^\/api\/projects\/[^/]+\/builds$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const builds = await getBuilds(id);
+      return json(res, builds);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // POST /api/projects/:id/builds
+  if (method === 'POST' && url.pathname.match(/^\/api\/projects\/[^/]+\/builds$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const body = JSON.parse(await readBody(req));
+      const build = await createBuild(id, body.prompt || '', body.llmProvider);
+      return json(res, build);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/projects/:id/messages
+  if (method === 'GET' && url.pathname.match(/^\/api\/projects\/[^/]+\/messages$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const messages = await getMessages(id);
+      return json(res, messages);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // POST /api/projects/:id/messages
+  if (method === 'POST' && url.pathname.match(/^\/api\/projects\/[^/]+\/messages$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.role || !body.content) return json(res, { error: 'role and content required' }, 400);
+      const message = await createMessage(id, body.role, body.content);
+      return json(res, message);
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/projects/:id/workspace
+  if (method === 'GET' && url.pathname.match(/^\/api\/projects\/[^/]+\/workspace$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const ws = await getWorkspace(id);
+      if (!ws) return json(res, { error: 'Workspace not found' }, 404);
+      return json(res, { files: ws.files });
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // PUT /api/projects/:id/workspace/files
+  if (method === 'PUT' && url.pathname.match(/^\/api\/projects\/[^/]+\/workspace\/files$/)) {
+    const id = url.pathname.split('/')[3]!;
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.filePath || body.content === undefined) {
+        return json(res, { error: 'filePath and content required' }, 400);
+      }
+      const ws = await setWorkspaceFile(id, body.filePath, body.content);
+      return json(res, { files: ws.files });
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
   json(res, { error: 'Not found' }, 404);
