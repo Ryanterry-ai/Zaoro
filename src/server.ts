@@ -183,11 +183,17 @@ const server = http.createServer(async (req, res) => {
     if (!fs.existsSync(progressFile)) return json(res, { steps: [], pages: [], status: 'in_progress' });
     const rawSteps = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
     const PHASE_LABELS: Record<string, string> = { engine: 'Compiler', llm: 'LLM Gateway', done: 'Complete', error: 'Failed' };
-    const steps = rawSteps.map((s: any) => ({ step: s.step, label: PHASE_LABELS[s.step] || s.step, message: s.message, ts: s.ts }));
+    const steps = rawSteps.map((s: any) => ({ step: s.step, label: PHASE_LABELS[s.step] || s.step, message: s.message, ts: s.ts, data: s.data || null }));
     const pageEvents = steps.filter((s: any) => s.message.startsWith('Page ') || s.message.includes('page') || s.step === 'done' || s.step === 'error');
     const lastStep = steps[steps.length - 1];
     const status = lastStep?.step === 'done' ? 'complete' : lastStep?.step === 'error' ? 'failed' : 'in_progress';
-    return json(res, { steps, pages: pageEvents, status });
+
+    // Read rich clone phases if available
+    const phasesFile = path.join(wsDir, '.clone-phases');
+    let phases: any[] = [];
+    try { if (fs.existsSync(phasesFile)) phases = JSON.parse(fs.readFileSync(phasesFile, 'utf-8')); } catch {}
+
+    return json(res, { steps, pages: pageEvents, status, phases });
   }
 
   // GET /api/workspace/:id/files
@@ -237,7 +243,28 @@ async function executeRender() {
     const Component = mod.default || mod.Home;
     if (!Component) throw new Error("Target component export not found.");
     const html = ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
-    const fullDocument = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"><\/script><style>body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,sans-serif;}</style></head><body>' + html + '</body></html>';
+    const fullDocument = \`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="color-scheme" content="dark light">
+  <title>Preview</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; width: 100%; overflow-x: hidden; }
+    body {
+      background: #09090b;
+      color: #f4f4f5;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+</head>
+<body>\${html}</body>
+</html>\`;
     fs.writeFileSync('${tempHtmlPath.replace(/\\/g, '/')}', fullDocument);
   } catch (err) {
     const errMsg = (err.stack || err.message || String(err)).replace(/</g, '&lt;');
@@ -257,6 +284,8 @@ executeRender();`;
       fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
       try { fs.unlinkSync(tempScriptPath); } catch {}
       try { fs.unlinkSync(tempHtmlPath); } catch {}
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
       return html(res, renderedHtml);
     } catch (err: any) {
       try { fs.unlinkSync(tempScriptPath); } catch {}
@@ -377,21 +406,30 @@ import * as fs from 'fs';
 import * as path from 'path';
 const WS_BASE = ${JSON.stringify(WORKSPACE_BASE)};
 const wsDir = path.join(WS_BASE, ${JSON.stringify(id)});
-function log(step, msg) {
+
+// Write a progress file with both flat steps (for backward compat) and rich phases
+function log(step, msg, data) {
   const f = path.join(wsDir, '.progress');
   let s = [];
   try { if (fs.existsSync(f)) s = JSON.parse(fs.readFileSync(f, 'utf-8')); } catch {}
-  s.push({ step, message: msg, ts: Date.now() });
+  s.push({ step, message: msg, ts: Date.now(), data: data || null });
   fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
+
+  // Also write rich phase progress
+  const pf = path.join(wsDir, '.clone-phases');
+  let phases = [];
+  try { if (fs.existsSync(pf)) phases = JSON.parse(fs.readFileSync(pf, 'utf-8')); } catch {}
+  phases.push({ step, message: msg, ts: Date.now(), data: data || null });
+  fs.writeFileSync(pf, JSON.stringify(phases), 'utf-8');
 }
+
 const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${id}.json`)}), 'utf-8'));
-const cloneOrch = new CloneOrchestrator(wsDir, { provider: config.provider, apiKey: config.apiKey });
+const cloneOrch = new CloneOrchestrator(wsDir, { provider: config.provider, apiKey: config.apiKey }, log);
 try {
-  log('clone', 'Starting website clone...');
-  log('clone', 'Phase 1: Scraping target site...');
+  log('clone', 'Starting deep website clone...');
   const result = await cloneOrch.clone(${JSON.stringify(body.url)});
   if (result.success) {
-    log('done', 'Clone completed! ' + result.sections.length + ' sections, ' + result.patches.length + ' patches applied.');
+    log('done', 'Clone completed! ' + result.pages + ' pages, ' + result.assets + ' assets, ' + result.patches.length + ' files generated.');
   } else {
     log('error', 'Clone failed: ' + (result.error || 'unknown error'));
   }

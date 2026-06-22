@@ -350,7 +350,7 @@ Rules:
       },
       analysis: {
         domain: targetUrl,
-        sectionsFound: cloneResult.sections.length,
+        pagesFound: cloneResult.pages,
         patchesGenerated: cloneResult.patches.length,
       },
       duration: Date.now() - startTime,
