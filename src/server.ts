@@ -4,6 +4,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 import { MCPServer } from './mcp/server.js';
+import { BuildQueue } from './engine/build-queue.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = path.resolve(__dirname, '..');
@@ -16,6 +17,14 @@ const PORT = parseInt(process.env.ENGINE_PORT || '3001', 10);
 
 // Initialize MCP server
 const mcpServer = new MCPServer(WORKSPACE_BASE);
+
+// Initialize build queue
+const buildQueue = new BuildQueue(WORKSPACE_BASE, {
+  maxConcurrent: parseInt(process.env.BUILD_MAX_CONCURRENT || '2', 10),
+  jobTimeoutMs: parseInt(process.env.BUILD_TIMEOUT_MS || '300000', 10), // 5 min
+  memoryLimitMb: parseInt(process.env.BUILD_MEMORY_LIMIT_MB || '512', 10),
+  maxRetries: parseInt(process.env.BUILD_MAX_RETRIES || '2', 10),
+});
 
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -104,87 +113,28 @@ const server = http.createServer(async (req, res) => {
       const promptFile = path.join(PROMPTS_DIR, `${id}.json`);
       if (!fs.existsSync(promptFile)) return json(res, { error: 'No prompt found' }, 404);
       const { prompt } = JSON.parse(fs.readFileSync(promptFile, 'utf-8'));
-      const wsDir = path.join(WORKSPACE_BASE, id);
-      fs.mkdirSync(wsDir, { recursive: true });
 
       // Check if build already in progress
-      const progressFile = path.join(wsDir, '.progress');
-      let existingSteps: any[] = [];
-      try { existingSteps = JSON.parse(fs.readFileSync(progressFile, 'utf-8')); } catch {}
-      const lastStep = existingSteps[existingSteps.length - 1];
-      if (lastStep && (lastStep.step === 'engine' || lastStep.step === 'llm') && !lastStep.step.startsWith('done') && !lastStep.step.startsWith('error')) {
-        return json(res, { id, status: 'already_building', steps: existingSteps });
+      const existing = buildQueue.getJob(id);
+      if (existing && (existing.status === 'queued' || existing.status === 'running')) {
+        return json(res, { id, status: 'already_building', queueStatus: buildQueue.getStatus() });
       }
 
-      // Reset progress
-      fs.writeFileSync(progressFile, JSON.stringify([]), 'utf-8');
-
-      const configPath = path.join(ENGINE_ROOT, `.build-config-${id}.json`);
-      const promptPayloadPath = path.join(ENGINE_ROOT, `.build-prompt-${id}.json`);
-      const provider = process.env.LLM_PROVIDER || 'openai';
-      const apiKey = process.env.LLM_API_KEY || '';
-      fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), 'utf-8');
-      fs.writeFileSync(promptPayloadPath, JSON.stringify({ id, prompt, type: 'build-website' }), 'utf-8');
-
-      const buildScript = `
-import { DeterministicOrchestratorV4 } from './src/agents/deterministic-orchestrator-v4.js';
-import * as fs from 'fs';
-import * as path from 'path';
-const WS_BASE = ${JSON.stringify(WORKSPACE_BASE)};
-const wsDir = path.join(WS_BASE, ${JSON.stringify(id)});
-let progressInitialized = false;
-function log(step, msg) {
-  if (!progressInitialized) { if (!fs.existsSync(wsDir)) return; progressInitialized = true; }
-  const f = path.join(wsDir, '.progress');
-  let s = [];
-  try { if (fs.existsSync(f)) s = JSON.parse(fs.readFileSync(f, 'utf-8')); } catch {}
-  s.push({ step, message: msg, ts: Date.now() });
-  fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
-}
-const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${id}.json`)}), 'utf-8'));
-const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-prompt-${id}.json`)}), 'utf-8'));
-const orch = new DeterministicOrchestratorV4(WS_BASE);
-try {
-  log('engine', 'Starting compilation flow...');
-  if (config.apiKey && config.apiKey.trim() !== '') {
-    log('llm', 'Using ' + config.provider + ' LLM for code generation...');
-  } else {
-    log('llm', 'Using JIT synthesis (no API key set). Set LLM_API_KEY for AI-generated code.');
-  }
-  await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
-  log('done', 'Build completed! Your application is ready.');
-} catch (err) { log('error', 'Build failed: ' + (err.message || err)); }
-`;
-      const scriptPath = path.join(ENGINE_ROOT, `.build-temp-${id}.mts`);
-      fs.writeFileSync(scriptPath, buildScript, 'utf-8');
-
-      // Fire-and-forget: run build asynchronously, don't block the event loop
-      const { exec } = await import('child_process');
-      const child = exec(`npx tsx .build-temp-${id}.mts`, { cwd: ENGINE_ROOT, timeout: 600000, env: { ...process.env, NODE_NO_WARNINGS: '1' } });
-
-      child.on('error', (err) => {
-        console.error(`[engine] Build child error for ${id}:`, err.message);
-        try {
-          let steps: any[] = [];
-          try { steps = JSON.parse(fs.readFileSync(progressFile, 'utf-8')); } catch {}
-          const last = steps[steps.length - 1];
-          if (!last || (last.step !== 'done' && last.step !== 'error')) {
-            steps.push({ step: 'error', message: 'Build process error: ' + err.message, ts: Date.now() });
-            fs.writeFileSync(progressFile, JSON.stringify(steps), 'utf-8');
-          }
-        } catch {}
+      // Enqueue the build
+      const job = buildQueue.enqueue({
+        id,
+        workspaceId: id,
+        prompt,
+        priority: 10,
       });
 
-      child.on('exit', (code) => {
-        console.log(`[engine] Build child exited for ${id} with code ${code}`);
-        try { fs.unlinkSync(scriptPath); } catch {}
-        try { fs.unlinkSync(configPath); } catch {}
-        try { fs.unlinkSync(promptPayloadPath); } catch {}
-      });
-
-      // Return immediately — client polls /progress
-      return json(res, { id, status: 'build_started' });
+      return json(res, { id, status: 'build_started', jobId: job.id, queueStatus: buildQueue.getStatus() });
     } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/queue/status
+  if (method === 'GET' && url.pathname === '/api/queue/status') {
+    return json(res, buildQueue.getStatus());
   }
 
   // GET /api/workspace/:id/progress
