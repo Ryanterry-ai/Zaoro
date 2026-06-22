@@ -1,4 +1,3 @@
-import { BusinessClassifier } from './business-classifier.js';
 import { ATOMIC_PRIMITIVES, buildPrimitivesCatalog } from './primitives.js';
 import { FullStackBlueprint, DataModel, APIRouteSpec, StateStoreSpec } from '../types/index.js';
 import { BusinessIntelligenceEngine, IntelligenceResult } from '../intelligence/business-intelligence-engine.js';
@@ -6,7 +5,7 @@ import { CapabilityGraph, CapabilityNode } from '../intelligence/capability-grap
 
 export interface ArchitectDecision {
   businessType: string;
-  subDomains: string[];
+  capabilities: string[];
   pages: PageDesign[];
   components: ComponentDesign[];
   stateModel: StateModelDesign[];
@@ -18,7 +17,7 @@ export interface ArchitectDecision {
 export interface PageDesign {
   route: string;
   name: string;
-  type: 'home' | 'listing' | 'detail' | 'auth' | 'dashboard' | 'static' | 'booking' | 'shop' | 'profile';
+  type: string;
   sections: string[];
   layout: string;
   description: string;
@@ -46,182 +45,250 @@ export interface ColorScheme {
   mood: string;
 }
 
-export class ArchitectAgent {
-  private classifier: BusinessClassifier;
+// Capability → page mapping (no domain names, just capabilities)
+const CAPABILITY_PAGES: Record<string, Array<{ route: string; name: string; type: string; sections: string[]; description: string }>> = {
+  commerce: [{ route: '/shop', name: 'Shop', type: 'shop', sections: ['filter-bar', 'product-grid', 'pagination'], description: 'Product listing with filters' }],
+  marketplace: [{ route: '/marketplace', name: 'Marketplace', type: 'shop', sections: ['filter-bar', 'product-grid', 'pagination'], description: 'Marketplace listings' }],
+  booking: [{ route: '/booking', name: 'Book', type: 'booking', sections: ['service-select', 'calendar', 'time-slots', 'booking-form'], description: 'Appointment booking' }],
+  'healthcare-clinic': [{ route: '/appointments', name: 'Appointments', type: 'booking', sections: ['service-select', 'calendar', 'time-slots', 'booking-form'], description: 'Patient appointments' }],
+  'fitness-wellness': [{ route: '/classes', name: 'Classes', type: 'listing', sections: ['track-filter', 'course-grid'], description: 'Class schedule' }],
+  education: [{ route: '/courses', name: 'Courses', type: 'listing', sections: ['track-filter', 'course-grid'], description: 'Course catalog' }],
+  content: [{ route: '/blog', name: 'Blog', type: 'listing', sections: ['category-filter', 'post-grid', 'newsletter-cta'], description: 'Blog listing' }],
+  crm: [{ route: '/contacts', name: 'Contacts', type: 'listing', sections: ['filter-bar', 'post-grid'], description: 'Contact management' }],
+  analytics: [{ route: '/dashboard', name: 'Dashboard', type: 'dashboard', sections: ['stats-cards', 'charts', 'activity-feed'], description: 'Analytics dashboard' }],
+  'project-management': [{ route: '/board', name: 'Board', type: 'dashboard', sections: ['stats-cards', 'activity-feed'], description: 'Project board' }],
+  'property-management': [{ route: '/properties', name: 'Properties', type: 'listing', sections: ['filter-bar', 'product-grid', 'pagination'], description: 'Property listings' }],
+  'case-management': [{ route: '/cases', name: 'Cases', type: 'listing', sections: ['filter-bar', 'post-grid'], description: 'Case management' }],
+  'membership-platform': [{ route: '/community', name: 'Community', type: 'listing', sections: ['post-grid'], description: 'Community hub' }],
+  'food-beverage': [{ route: '/menu', name: 'Menu', type: 'listing', sections: ['filter-bar', 'product-grid'], description: 'Menu listings' }],
+  catalog: [{ route: '/catalog', name: 'Catalog', type: 'listing', sections: ['filter-bar', 'product-grid', 'pagination'], description: 'Catalog browsing' }],
+  portfolio: [{ route: '/work', name: 'Work', type: 'listing', sections: ['project-grid', 'case-studies'], description: 'Portfolio showcase' }],
+  agency: [{ route: '/work', name: 'Work', type: 'listing', sections: ['project-grid', 'case-studies'], description: 'Agency work' }],
+  subscriptions: [{ route: '/pricing', name: 'Pricing', type: 'listing', sections: ['pricing-table'], description: 'Subscription plans' }],
+};
 
-  constructor() {
-    this.classifier = new BusinessClassifier();
-  }
+// Capability → home page hero sections
+const CAPABILITY_HERO_SECTIONS: Record<string, string[]> = {
+  commerce: ['featured-products', 'categories', 'testimonials', 'newsletter-cta'],
+  marketplace: ['featured-products', 'categories', 'testimonials', 'newsletter-cta'],
+  booking: ['services-grid', 'testimonials', 'cta'],
+  'healthcare-clinic': ['services-grid', 'team', 'testimonials', 'cta'],
+  'fitness-wellness': ['class-schedule', 'trainers', 'membership-plans', 'testimonials'],
+  education: ['course-featured', 'stats', 'testimonials', 'cta'],
+  content: ['post-grid', 'newsletter-cta', 'testimonials', 'cta'],
+  crm: ['features-grid', 'stats', 'testimonials', 'cta'],
+  analytics: ['features-grid', 'stats', 'testimonials', 'cta'],
+  'project-management': ['features-grid', 'stats', 'testimonials', 'cta'],
+  'property-management': ['featured-products', 'testimonials', 'cta'],
+  'case-management': ['features-grid', 'testimonials', 'cta'],
+  'membership-platform': ['features-grid', 'testimonials', 'cta'],
+  'food-beverage': ['featured-products', 'categories', 'testimonials', 'cta'],
+  catalog: ['featured-products', 'categories', 'testimonials', 'cta'],
+  portfolio: ['featured-projects', 'services', 'skills', 'cta'],
+  agency: ['services', 'case-studies', 'team', 'clients', 'cta'],
+  subscriptions: ['features-grid', 'pricing-table', 'testimonials', 'faq'],
+};
+
+// Capability → state stores
+const CAPABILITY_STATE_STORES: Record<string, { name: string; fields: string[]; description: string }> = {
+  commerce: { name: 'cartState', fields: ['items', 'total', 'count', 'addItem', 'removeItem', 'clearCart'], description: 'Shopping cart state' },
+  marketplace: { name: 'cartState', fields: ['items', 'total', 'count', 'addItem', 'removeItem', 'clearCart'], description: 'Marketplace cart state' },
+  booking: { name: 'bookingState', fields: ['selectedService', 'selectedDate', 'selectedTime', 'contactInfo', 'isBooked'], description: 'Booking flow state' },
+  'healthcare-clinic': { name: 'bookingState', fields: ['selectedService', 'selectedDate', 'selectedTime', 'contactInfo', 'isBooked'], description: 'Appointment state' },
+  'fitness-wellness': { name: 'bookingState', fields: ['selectedClass', 'selectedDate', 'selectedTime', 'contactInfo', 'isBooked'], description: 'Class booking state' },
+  analytics: { name: 'dashboardState', fields: ['stats', 'activity', 'selectedPeriod'], description: 'Dashboard data state' },
+  'project-management': { name: 'boardState', fields: ['columns', 'tasks', 'selectedTask'], description: 'Kanban board state' },
+  crm: { name: 'crmState', fields: ['contacts', 'deals', 'selectedContact'], description: 'CRM state' },
+};
+
+// Capability → color scheme
+const CAPABILITY_COLORS: Record<string, ColorScheme> = {
+  commerce: { primary: 'violet', secondary: 'fuchsia', accent: 'purple', gradient: 'from-violet-400 to-fuchsia-400', mood: 'premium' },
+  marketplace: { primary: 'purple', secondary: 'pink', accent: 'fuchsia', gradient: 'from-purple-400 to-pink-400', mood: 'vibrant' },
+  booking: { primary: 'cyan', secondary: 'blue', accent: 'teal', gradient: 'from-cyan-400 to-blue-400', mood: 'tech' },
+  'healthcare-clinic': { primary: 'emerald', secondary: 'teal', accent: 'green', gradient: 'from-emerald-400 to-teal-400', mood: 'calming' },
+  'fitness-wellness': { primary: 'red', secondary: 'orange', accent: 'amber', gradient: 'from-red-400 to-orange-400', mood: 'energetic' },
+  education: { primary: 'blue', secondary: 'indigo', accent: 'sky', gradient: 'from-blue-400 to-indigo-400', mood: 'trustworthy' },
+  content: { primary: 'rose', secondary: 'pink', accent: 'red', gradient: 'from-rose-400 to-pink-400', mood: 'editorial' },
+  crm: { primary: 'sky', secondary: 'cyan', accent: 'blue', gradient: 'from-sky-400 to-cyan-400', mood: 'professional' },
+  analytics: { primary: 'cyan', secondary: 'blue', accent: 'teal', gradient: 'from-cyan-400 to-blue-400', mood: 'tech' },
+  'project-management': { primary: 'amber', secondary: 'orange', accent: 'yellow', gradient: 'from-amber-400 to-orange-400', mood: 'productive' },
+  'property-management': { primary: 'emerald', secondary: 'teal', accent: 'green', gradient: 'from-emerald-400 to-teal-400', mood: 'trustworthy' },
+  'case-management': { primary: 'slate', secondary: 'gray', accent: 'zinc', gradient: 'from-slate-400 to-gray-400', mood: 'authoritative' },
+  'membership-platform': { primary: 'indigo', secondary: 'violet', accent: 'purple', gradient: 'from-indigo-400 to-violet-400', mood: 'community' },
+  'food-beverage': { primary: 'amber', secondary: 'orange', accent: 'yellow', gradient: 'from-amber-400 to-orange-400', mood: 'warm' },
+  catalog: { primary: 'teal', secondary: 'cyan', accent: 'emerald', gradient: 'from-teal-400 to-cyan-400', mood: 'clean' },
+  portfolio: { primary: 'emerald', secondary: 'cyan', accent: 'teal', gradient: 'from-emerald-400 to-cyan-400', mood: 'creative' },
+  agency: { primary: 'violet', secondary: 'purple', accent: 'indigo', gradient: 'from-violet-400 to-purple-400', mood: 'premium' },
+  subscriptions: { primary: 'cyan', secondary: 'blue', accent: 'teal', gradient: 'from-cyan-400 to-blue-400', mood: 'tech' },
+};
+
+// Section → primitives mapping
+const SECTION_PRIMITIVES: Record<string, string[]> = {
+  hero: ['Hero', 'Container', 'Stack', 'Button', 'Badge'],
+  'stats-bar': ['Grid', 'StatCard', 'Container'],
+  'featured-products': ['Grid', 'ProductCard', 'Container'],
+  'product-grid': ['Grid', 'ProductCard', 'FilterBar', 'Container'],
+  categories: ['Grid', 'Card', 'Container'],
+  testimonials: ['Grid', 'Card', 'StarRating', 'Container'],
+  'newsletter-cta': ['Container', 'InputField', 'Button', 'Card'],
+  'features-grid': ['Grid', 'Card', 'Container'],
+  'pricing-table': ['Grid', 'Card', 'Button', 'Badge', 'Container'],
+  faq: ['Stack', 'Card', 'Container'],
+  services: ['Grid', 'Card', 'Container'],
+  'services-grid': ['Grid', 'Card', 'Button', 'Container'],
+  team: ['Grid', 'Card', 'Avatar', 'Container'],
+  'class-schedule': ['Grid', 'Card', 'Badge', 'Container'],
+  trainers: ['Grid', 'Card', 'Avatar', 'Container'],
+  'membership-plans': ['Grid', 'Card', 'Button', 'Badge', 'Container'],
+  'course-featured': ['Grid', 'Card', 'Badge', 'Container'],
+  'menu-highlights': ['Stack', 'Card', 'Container'],
+  gallery: ['Grid', 'ImagePlaceholder', 'Container'],
+  'featured-projects': ['Grid', 'Card', 'Container'],
+  caseStudies: ['Grid', 'Card', 'Container'],
+  clients: ['Stack', 'Card', 'Container'],
+  cta: ['CTASection', 'Container'],
+  'contact-form': ['InputField', 'Textarea', 'Button', 'Stack', 'Card', 'Container'],
+  'contact-info': ['Stack', 'Card', 'Container'],
+  'filter-bar': ['FilterBar', 'Container'],
+  pagination: ['Stack', 'Button', 'Container'],
+  'service-select': ['Card', 'Grid', 'Container'],
+  calendar: ['InputField', 'Container'],
+  'time-slots': ['TimeSlotPicker', 'Container'],
+  'booking-form': ['BookingForm', 'Container'],
+  'stats-cards': ['Grid', 'StatCard', 'Container'],
+  charts: ['Card', 'Container'],
+  'activity-feed': ['Stack', 'Card', 'Container'],
+  'track-filter': ['ChipGroup', 'Container'],
+  'course-grid': ['Grid', 'Card', 'Badge', 'Container'],
+  'post-grid': ['Grid', 'Card', 'Container'],
+  skills: ['Stack', 'Badge', 'Container'],
+  'project-grid': ['Grid', 'Card', 'Container'],
+};
+
+// Section → props mapping
+const SECTION_PROPS: Record<string, string[]> = {
+  hero: ['title', 'highlight', 'subtitle', 'ctaText', 'onCtaClick', 'badge'],
+  'stats-bar': ['stats'],
+  'featured-products': ['products', 'onAddToCart'],
+  'product-grid': ['products', 'onAddToCart', 'selectedCategory', 'onCategoryChange'],
+  categories: ['categories', 'onSelect'],
+  testimonials: ['testimonials'],
+  'newsletter-cta': ['email', 'onEmailChange', 'onSubmit', 'submitted'],
+  'features-grid': ['features'],
+  'pricing-table': ['plans', 'selected', 'onSelect', 'billingCycle'],
+  faq: ['faqs', 'expanded', 'onToggle'],
+  services: ['services'],
+  'services-grid': ['services', 'onBook'],
+  team: ['members', 'onSelect'],
+  'class-schedule': ['classes', 'onBook'],
+  trainers: ['trainers'],
+  'membership-plans': ['plans', 'selected', 'onSelect'],
+  'course-featured': ['courses', 'selectedTrack', 'onTrackChange', 'onSelect'],
+  'menu-highlights': ['menu', 'selectedCategory', 'onCategoryChange'],
+  gallery: ['images'],
+  'featured-projects': ['projects', 'onSelect'],
+  caseStudies: ['caseStudies'],
+  clients: ['clients'],
+  cta: ['title', 'subtitle', 'ctaText', 'onCtaClick'],
+  'contact-form': ['onSubmit', 'sent'],
+  'contact-info': ['address', 'email', 'phone', 'hours'],
+  'booking-form': ['services', 'onSubmit', 'booked'],
+  'stats-cards': ['stats'],
+};
+
+export class ArchitectAgent {
+  private intelEngine = new BusinessIntelligenceEngine();
 
   designArchitecture(prompt: string): ArchitectDecision {
-    const classification = this.classifier.classifyFromPrompt(prompt);
-    const businessType = classification.type;
+    const intelligence = this.intelEngine.analyze(prompt);
+    const capabilities = this.intelEngine.getTopCapabilities(intelligence, 0.1);
     const name = this.extractName(prompt);
-    const subDomains = this.detectSubDomains(prompt, businessType);
-    const colorScheme = this.inferColorScheme(prompt, businessType);
+    const colorScheme = this.inferColorScheme(prompt, capabilities);
 
-    const pages = this.designPages(prompt, businessType, subDomains);
-    const components = this.designComponents(pages, businessType, subDomains);
-    const stateModel = this.designStateModel(prompt, businessType, subDomains);
+    const pages = this.designPages(prompt, capabilities);
+    const components = this.designComponents(pages);
+    const stateModel = this.designStateModel(capabilities);
 
     return {
-      businessType,
-      subDomains,
+      businessType: capabilities[0] || 'general',
+      capabilities,
       pages,
       components,
       stateModel,
       colorScheme,
       name,
-      description: this.generateDescription(prompt, businessType, subDomains),
+      description: `${name} — ${capabilities.join(', ')} application`,
     };
   }
 
-  private detectSubDomains(prompt: string, primaryType: string): string[] {
-    const subs: string[] = [primaryType];
-    const lower = prompt.toLowerCase();
-
-    const keywords: Record<string, string[]> = {
-      ecommerce: ['shop', 'store', 'sell', 'product', 'cart', 'buy', 'purchase', 'e-commerce', 'merchandise', 'retail'],
-      booking: ['book', 'appointment', 'schedule', 'reserve', 'calendar', 'availability'],
-      blog: ['blog', 'article', 'post', 'newsletter', 'content', 'write', 'publish'],
-      saas: ['dashboard', 'analytics', 'subscription', 'plan', 'pricing', 'api', 'platform'],
-      education: ['course', 'lesson', 'teach', 'learn', 'student', 'curriculum', 'training', 'class'],
-      fitness: ['gym', 'workout', 'fitness', 'exercise', 'training', 'trainer', 'class'],
-      healthcare: ['clinic', 'doctor', 'medical', 'health', 'patient', 'appointment', 'therapy', 'physical therapy'],
-      marketplace: ['marketplace', 'listing', 'seller', 'buyer', 'vendor'],
-      portfolio: ['portfolio', 'showcase', 'projects', 'freelance', 'hire'],
-      agency: ['agency', 'client', 'service', 'consulting', 'digital'],
-      restaurant: ['restaurant', 'menu', 'food', 'dining', 'cuisine', 'chef', 'kitchen'],
-      tea: ['tea', 'organic', 'herbal', 'matcha', 'wellness'],
-      martialarts: ['martial arts', 'karate', 'judo', 'taekwondo', 'mma', 'combat', 'dojo'],
-    };
-
-    for (const [domain, words] of Object.entries(keywords)) {
-      if (words.some(w => lower.includes(w))) {
-        if (!subs.includes(domain)) subs.push(domain);
-      }
-    }
-
-    return subs;
-  }
-
-  private designPages(prompt: string, businessType: string, subDomains: string[]): PageDesign[] {
+  private designPages(prompt: string, capabilities: string[]): PageDesign[] {
     const pages: PageDesign[] = [];
+    const seenRoutes = new Set<string>();
 
+    // Home page always exists
     pages.push({
       route: '/',
       name: 'Home',
       type: 'home',
-      sections: this.determineHeroSections(subDomains),
+      sections: this.determineHeroSections(capabilities),
       layout: 'default',
       description: `Landing page for ${this.extractName(prompt)}`,
     });
+    seenRoutes.add('/');
 
-    if (subDomains.includes('ecommerce') || subDomains.includes('shop') || subDomains.includes('marketplace')) {
-      pages.push({
-        route: '/shop',
-        name: 'Shop',
-        type: 'shop',
-        sections: ['filter-bar', 'product-grid', 'pagination'],
-        layout: 'sidebar',
-        description: 'Product listing with filters',
-      });
+    // Add pages from capabilities
+    for (const cap of capabilities) {
+      const capPages = CAPABILITY_PAGES[cap] || [];
+      for (const p of capPages) {
+        if (!seenRoutes.has(p.route)) {
+          seenRoutes.add(p.route);
+          pages.push({ ...p, layout: 'default' });
+        }
+      }
     }
 
-    if (subDomains.includes('booking') || subDomains.includes('healthcare') || subDomains.includes('fitness')) {
+    // Contact page always exists
+    if (!seenRoutes.has('/contact')) {
       pages.push({
-        route: '/booking',
-        name: 'Book',
-        type: 'booking',
-        sections: ['service-select', 'calendar', 'time-slots', 'booking-form'],
+        route: '/contact',
+        name: 'Contact',
+        type: 'static',
+        sections: ['contact-form', 'contact-info'],
         layout: 'default',
-        description: 'Appointment booking',
+        description: 'Contact page',
       });
     }
-
-    if (subDomains.includes('saas') || subDomains.includes('dashboard')) {
-      pages.push({
-        route: '/dashboard',
-        name: 'Dashboard',
-        type: 'dashboard',
-        sections: ['stats-cards', 'charts', 'activity-feed'],
-        layout: 'sidebar',
-        description: 'Main dashboard',
-      });
-    }
-
-    if (subDomains.includes('education') || subDomains.includes('course')) {
-      pages.push({
-        route: '/courses',
-        name: 'Courses',
-        type: 'listing',
-        sections: ['track-filter', 'course-grid'],
-        layout: 'default',
-        description: 'Course catalog',
-      });
-    }
-
-    if (subDomains.includes('blog') || subDomains.includes('content')) {
-      pages.push({
-        route: '/blog',
-        name: 'Blog',
-        type: 'listing',
-        sections: ['category-filter', 'post-grid', 'newsletter-cta'],
-        layout: 'default',
-        description: 'Blog listing',
-      });
-    }
-
-    if (subDomains.includes('portfolio') || subDomains.includes('agency')) {
-      pages.push({
-        route: '/work',
-        name: 'Work',
-        type: 'listing',
-        sections: ['project-grid', 'case-studies'],
-        layout: 'default',
-        description: 'Portfolio / case studies',
-      });
-    }
-
-    pages.push({
-      route: '/contact',
-      name: 'Contact',
-      type: 'static',
-      sections: ['contact-form', 'contact-info'],
-      layout: 'default',
-      description: 'Contact page',
-    });
 
     return pages;
   }
 
-  private determineHeroSections(subDomains: string[]): string[] {
+  private determineHeroSections(capabilities: string[]): string[] {
     const sections: string[] = ['hero', 'stats-bar'];
 
-    if (subDomains.includes('ecommerce')) {
-      sections.push('featured-products', 'categories', 'testimonials', 'newsletter-cta');
-    } else if (subDomains.includes('saas')) {
-      sections.push('features-grid', 'pricing-table', 'testimonials', 'faq');
-    } else if (subDomains.includes('booking') || subDomains.includes('healthcare')) {
-      sections.push('services-grid', 'team/doctors', 'testimonials', 'cta');
-    } else if (subDomains.includes('fitness')) {
-      sections.push('class-schedule', 'trainers', 'membership-plans', 'testimonials');
-    } else if (subDomains.includes('education')) {
-      sections.push('course-featured', 'stats', 'testimonials', 'cta');
-    } else if (subDomains.includes('restaurant')) {
-      sections.push('menu-highlights', 'gallery', 'testimonials', 'cta');
-    } else if (subDomains.includes('portfolio')) {
-      sections.push('featured-projects', 'services', 'skills', 'cta');
-    } else if (subDomains.includes('agency')) {
-      sections.push('services', 'case-studies', 'team', 'clients', 'cta');
-    } else {
-      sections.push('features', 'testimonials', 'cta');
+    // Collect hero sections from all capabilities, pick the most relevant
+    const allHeroSections: string[] = [];
+    for (const cap of capabilities) {
+      const capSections = CAPABILITY_HERO_SECTIONS[cap] || [];
+      allHeroSections.push(...capSections);
     }
+
+    // Deduplicate and pick top 4 unique sections
+    const seen = new Set<string>();
+    for (const s of allHeroSections) {
+      if (!seen.has(s) && sections.length < 6) {
+        seen.add(s);
+        sections.push(s);
+      }
+    }
+
+    // Always end with cta if not already present
+    if (!sections.includes('cta')) sections.push('cta');
 
     return sections;
   }
 
-  private designComponents(pages: PageDesign[], businessType: string, subDomains: string[]): ComponentDesign[] {
+  private designComponents(pages: PageDesign[]): ComponentDesign[] {
     const components: ComponentDesign[] = [];
     const seen = new Set<string>();
 
@@ -233,8 +300,8 @@ export class ArchitectAgent {
           components.push({
             name: compName,
             type: section,
-            usedPrimitives: this.getPrimitivesForSection(section),
-            props: this.getPropsForSection(section),
+            usedPrimitives: SECTION_PRIMITIVES[section] || ['Card', 'Container'],
+            props: SECTION_PROPS[section] || [],
             description: `Section: ${section}`,
           });
         }
@@ -251,88 +318,7 @@ export class ArchitectAgent {
       .join('');
   }
 
-  private getPrimitivesForSection(section: string): string[] {
-    const map: Record<string, string[]> = {
-      hero: ['Hero', 'Container', 'Stack', 'Button', 'Badge'],
-      'stats-bar': ['Grid', 'StatCard', 'Container'],
-      'featured-products': ['Grid', 'ProductCard', 'Container'],
-      'product-grid': ['Grid', 'ProductCard', 'FilterBar', 'Container'],
-      categories: ['Grid', 'Card', 'Container'],
-      testimonials: ['Grid', 'Card', 'StarRating', 'Container'],
-      'newsletter-cta': ['Container', 'InputField', 'Button', 'Card'],
-      'features-grid': ['Grid', 'Card', 'Container'],
-      'pricing-table': ['Grid', 'Card', 'Button', 'Badge', 'Container'],
-      faq: ['Stack', 'Card', 'Container'],
-      services: ['Grid', 'Card', 'Container'],
-      'services-grid': ['Grid', 'Card', 'Button', 'Container'],
-      'team/doctors': ['Grid', 'Card', 'Avatar', 'Container'],
-      'class-schedule': ['Grid', 'Card', 'Badge', 'Container'],
-      trainers: ['Grid', 'Card', 'Avatar', 'Container'],
-      'membership-plans': ['Grid', 'Card', 'Button', 'Badge', 'Container'],
-      'course-featured': ['Grid', 'Card', 'Badge', 'Container'],
-      'menu-highlights': ['Stack', 'Card', 'Container'],
-      gallery: ['Grid', 'ImagePlaceholder', 'Container'],
-      'featured-projects': ['Grid', 'Card', 'Container'],
-      caseStudies: ['Grid', 'Card', 'Container'],
-      team: ['Grid', 'Card', 'Avatar', 'Container'],
-      clients: ['Stack', 'Card', 'Container'],
-      cta: ['CTASection', 'Container'],
-      'contact-form': ['InputField', 'Textarea', 'Button', 'Stack', 'Card', 'Container'],
-      'contact-info': ['Stack', 'Card', 'Container'],
-      'filter-bar': ['FilterBar', 'Container'],
-      pagination: ['Stack', 'Button', 'Container'],
-      'service-select': ['Card', 'Grid', 'Container'],
-      calendar: ['InputField', 'Container'],
-      'time-slots': ['TimeSlotPicker', 'Container'],
-      'booking-form': ['BookingForm', 'Container'],
-      'stats-cards': ['Grid', 'StatCard', 'Container'],
-      charts: ['Card', 'Container'],
-      'activity-feed': ['Stack', 'Card', 'Container'],
-      'track-filter': ['ChipGroup', 'Container'],
-      'course-grid': ['Grid', 'Card', 'Badge', 'Container'],
-      'post-grid': ['Grid', 'Card', 'Container'],
-      skills: ['Stack', 'Badge', 'Container'],
-    };
-
-    return map[section] || ['Card', 'Container'];
-  }
-
-  private getPropsForSection(section: string): string[] {
-    const map: Record<string, string[]> = {
-      hero: ['title', 'highlight', 'subtitle', 'ctaText', 'onCtaClick', 'badge'],
-      'stats-bar': ['stats'],
-      'featured-products': ['products', 'onAddToCart'],
-      'product-grid': ['products', 'onAddToCart', 'selectedCategory', 'onCategoryChange'],
-      categories: ['categories', 'onSelect'],
-      testimonials: ['testimonials'],
-      'newsletter-cta': ['email', 'onEmailChange', 'onSubmit', 'submitted'],
-      'features-grid': ['features'],
-      'pricing-table': ['plans', 'selected', 'onSelect', 'billingCycle'],
-      faq: ['faqs', 'expanded', 'onToggle'],
-      services: ['services'],
-      'services-grid': ['services', 'onBook'],
-      'team/doctors': ['members', 'onSelect'],
-      'class-schedule': ['classes', 'onBook'],
-      trainers: ['trainers'],
-      'membership-plans': ['plans', 'selected', 'onSelect'],
-      'course-featured': ['courses', 'selectedTrack', 'onTrackChange', 'onSelect'],
-      'menu-highlights': ['menu', 'selectedCategory', 'onCategoryChange'],
-      gallery: ['images'],
-      'featured-projects': ['projects', 'onSelect'],
-      caseStudies: ['caseStudies'],
-      team: ['team'],
-      clients: ['clients'],
-      cta: ['title', 'subtitle', 'ctaText', 'onCtaClick'],
-      'contact-form': ['onSubmit', 'sent'],
-      'contact-info': ['address', 'email', 'phone', 'hours'],
-      'booking-form': ['services', 'onSubmit', 'booked'],
-      'stats-cards': ['stats'],
-    };
-
-    return map[section] || [];
-  }
-
-  private designStateModel(prompt: string, businessType: string, subDomains: string[]): StateModelDesign[] {
+  private designStateModel(capabilities: string[]): StateModelDesign[] {
     const models: StateModelDesign[] = [];
 
     models.push({
@@ -341,50 +327,22 @@ export class ArchitectAgent {
       description: 'Global app state',
     });
 
-    if (subDomains.includes('ecommerce') || subDomains.includes('shop') || subDomains.includes('marketplace')) {
-      models.push({
-        name: 'cartState',
-        fields: ['items', 'total', 'count', 'addItem', 'removeItem', 'clearCart'],
-        description: 'Shopping cart state with items, quantities, and totals',
-      });
-    }
-
-    if (subDomains.includes('booking') || subDomains.includes('healthcare') || subDomains.includes('fitness')) {
-      models.push({
-        name: 'bookingState',
-        fields: ['selectedService', 'selectedDate', 'selectedTime', 'contactInfo', 'isBooked'],
-        description: 'Booking flow state',
-      });
-    }
-
-    if (subDomains.includes('saas')) {
-      models.push({
-        name: 'dashboardState',
-        fields: ['stats', 'activity', 'selectedPeriod'],
-        description: 'Dashboard data state',
-      });
+    const seenStores = new Set<string>();
+    for (const cap of capabilities) {
+      const store = CAPABILITY_STATE_STORES[cap];
+      if (store && !seenStores.has(store.name)) {
+        seenStores.add(store.name);
+        models.push(store);
+      }
     }
 
     return models;
   }
 
-  private inferColorScheme(prompt: string, businessType: string): ColorScheme {
+  private inferColorScheme(prompt: string, capabilities: string[]): ColorScheme {
     const lower = prompt.toLowerCase();
 
-    const moodMap: Record<string, ColorScheme> = {
-      ecommerce: { primary: 'violet', secondary: 'fuchsia', accent: 'purple', gradient: 'from-violet-400 to-fuchsia-400', mood: 'premium' },
-      saas: { primary: 'cyan', secondary: 'blue', accent: 'teal', gradient: 'from-cyan-400 to-blue-400', mood: 'tech' },
-      restaurant: { primary: 'amber', secondary: 'orange', accent: 'yellow', gradient: 'from-amber-400 to-orange-400', mood: 'warm' },
-      portfolio: { primary: 'emerald', secondary: 'cyan', accent: 'teal', gradient: 'from-emerald-400 to-cyan-400', mood: 'creative' },
-      blog: { primary: 'rose', secondary: 'pink', accent: 'red', gradient: 'from-rose-400 to-pink-400', mood: 'editorial' },
-      fitness: { primary: 'red', secondary: 'orange', accent: 'amber', gradient: 'from-red-400 to-orange-400', mood: 'energetic' },
-      education: { primary: 'blue', secondary: 'indigo', accent: 'sky', gradient: 'from-blue-400 to-indigo-400', mood: 'trustworthy' },
-      healthcare: { primary: 'emerald', secondary: 'teal', accent: 'green', gradient: 'from-emerald-400 to-teal-400', mood: 'calming' },
-      marketplace: { primary: 'purple', secondary: 'pink', accent: 'fuchsia', gradient: 'from-purple-400 to-pink-400', mood: 'vibrant' },
-      'local-business': { primary: 'sky', secondary: 'cyan', accent: 'blue', gradient: 'from-sky-400 to-cyan-400', mood: 'friendly' },
-      agency: { primary: 'violet', secondary: 'purple', accent: 'indigo', gradient: 'from-violet-400 to-purple-400', mood: 'premium' },
-    };
-
+    // Prompt-level color overrides (semantic keywords)
     if (lower.includes('green') || lower.includes('organic') || lower.includes('eco') || lower.includes('sustainable')) {
       return { primary: 'emerald', secondary: 'green', accent: 'lime', gradient: 'from-emerald-400 to-green-400', mood: 'eco' };
     }
@@ -398,14 +356,12 @@ export class ArchitectAgent {
       return { primary: 'zinc', secondary: 'neutral', accent: 'stone', gradient: 'from-zinc-400 to-neutral-400', mood: 'minimal' };
     }
 
-    return moodMap[businessType] || { primary: 'violet', secondary: 'purple', accent: 'indigo', gradient: 'from-violet-400 to-purple-400', mood: 'premium' };
-  }
+    // Capability-based color (first matching capability wins)
+    for (const cap of capabilities) {
+      if (CAPABILITY_COLORS[cap]) return CAPABILITY_COLORS[cap];
+    }
 
-  private generateDescription(prompt: string, businessType: string, subDomains: string[]): string {
-    const name = this.extractName(prompt);
-    const uniqueDomains = subDomains.filter(d => d !== businessType);
-    const domainStr = uniqueDomains.length > 0 ? ` with ${uniqueDomains.join(' and ')}` : '';
-    return `A ${businessType}${domainStr} application for ${name}. Built with Next.js, TypeScript, and Tailwind CSS.`;
+    return { primary: 'violet', secondary: 'purple', accent: 'indigo', gradient: 'from-violet-400 to-purple-400', mood: 'premium' };
   }
 
   private extractName(prompt: string): string {
@@ -428,8 +384,7 @@ export class ArchitectAgent {
     return `
 ## Architecture Decision for ${decision.name}
 
-**Business Type**: ${decision.businessType}
-**Sub-domains**: ${decision.subDomains.join(', ')}
+**Capabilities**: ${decision.capabilities.join(', ')}
 **Description**: ${decision.description}
 **Color Scheme**: ${decision.colorScheme.primary} primary, ${decision.colorScheme.mood} mood
 
@@ -544,11 +499,12 @@ export class FullStackArchitect {
   private static inferColorScheme(prompt: string, capabilities: string[]): 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'sky' {
     const lower = prompt.toLowerCase();
     if (lower.includes('green') || lower.includes('organic') || lower.includes('eco')) return 'emerald';
-    if (lower.includes('gym') || lower.includes('fitness') || lower.includes('martial')) return 'rose';
-    if (lower.includes('tea') || lower.includes('coffee') || lower.includes('roast')) return 'amber';
     if (lower.includes('luxury') || lower.includes('premium')) return 'violet';
     if (capabilities.includes('crm') || capabilities.includes('analytics')) return 'sky';
     if (capabilities.includes('commerce') || capabilities.includes('marketplace')) return 'indigo';
+    if (capabilities.includes('fitness-wellness')) return 'rose';
+    if (capabilities.includes('food-beverage')) return 'amber';
+    if (capabilities.includes('healthcare-clinic')) return 'emerald';
     return 'indigo';
   }
 }

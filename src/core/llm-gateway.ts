@@ -388,9 +388,10 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   // Generates deterministic but architecturally sound code from the
   // ArchitectAgent decision — no hardcoded templates, just composition.
   // This is the explicit degraded mode for when no API key is configured.
+  // All content is generic — no domain-specific branches. The LLM handles domain specificity.
 
   private synthesizeFallback(decision: ArchitectDecision, context: LLMContext): ASTPatch[] {
-    console.log(`[gateway] JIT synthesis: ${decision.businessType}, ${decision.pages.length} pages`);
+    console.log(`[gateway] JIT synthesis: ${decision.capabilities?.join(',') || decision.businessType}, ${decision.pages.length} pages`);
 
     const patches: ASTPatch[] = [];
 
@@ -404,15 +405,10 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   private synthesizePage(page: import('../generation/architect.js').PageDesign, decision: ArchitectDecision): ASTPatch {
     const sections = page.sections.map(s => this.synthesizeSection(s, decision)).join('\n\n');
 
-    const navLinks = decision.pages
-      .filter(p => p.route !== page.route)
-      .map(p => ({ label: p.name, route: p.route }))
-      .slice(0, 5);
-
     const componentName = page.route === '/' ? 'Home' : page.name.replace(/\s+/g, '');
     const filePath = page.route === '/' ? 'src/app/page.tsx' : `src/app${page.route}/page.tsx`;
 
-    const ctaText = page.type === 'shop' ? 'View Cart'
+    const ctaText = page.type === 'shop' ? 'View Collection'
       : page.type === 'booking' ? 'Book Now'
       : page.type === 'dashboard' ? 'Open Dashboard'
       : 'Get Started';
@@ -451,104 +447,64 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeSection(section: string, decision: ArchitectDecision): string {
-    const c = decision.colorScheme;
-
     switch (section) {
-      case 'hero':
-        return this.synthesizeHero(decision);
-      case 'stats-bar':
-        return this.synthesizeStatsBar(decision);
+      case 'hero': return this.synthesizeHero(decision);
+      case 'stats-bar': return this.synthesizeStatsBar(decision);
       case 'featured-products':
-      case 'product-grid':
-        return this.synthesizeProductGrid(decision);
-      case 'categories':
-        return this.synthesizeCategories(decision);
-      case 'testimonials':
-        return this.synthesizeTestimonials(decision);
-      case 'newsletter-cta':
-        return this.synthesizeNewsletter(decision);
+      case 'product-grid': return this.synthesizeProductGrid(decision);
+      case 'categories': return this.synthesizeCategories(decision);
+      case 'testimonials': return this.synthesizeTestimonials(decision);
+      case 'newsletter-cta': return this.synthesizeNewsletter(decision);
       case 'features-grid':
-      case 'features':
-        return this.synthesizeFeatures(decision);
-      case 'pricing-table':
-        return this.synthesizePricing(decision);
-      case 'faq':
-        return this.synthesizeFAQ(decision);
+      case 'features': return this.synthesizeFeatures(decision);
+      case 'pricing-table': return this.synthesizePricing(decision);
+      case 'faq': return this.synthesizeFAQ(decision);
       case 'services':
-      case 'services-grid':
-        return this.synthesizeServices(decision);
+      case 'services-grid': return this.synthesizeServices(decision);
       case 'team/doctors':
-      case 'team':
-        return this.synthesizeTeam(decision);
-      case 'class-schedule':
-        return this.synthesizeClassSchedule(decision);
-      case 'trainers':
-        return this.synthesizeTrainers(decision);
-      case 'membership-plans':
-        return this.synthesizeMembership(decision);
-      case 'course-featured':
-        return this.synthesizeCourses(decision);
-      case 'menu-highlights':
-        return this.synthesizeMenu(decision);
-      case 'gallery':
-        return this.synthesizeGallery(decision);
-      case 'featured-projects':
-        return this.synthesizeProjects(decision);
-      case 'caseStudies':
-        return this.synthesizeCaseStudies(decision);
-      case 'clients':
-        return this.synthesizeClients(decision);
-      case 'cta':
-        return this.synthesizeCTA(decision);
-      case 'contact-form':
-        return this.synthesizeContactForm(decision);
-      case 'contact-info':
-        return this.synthesizeContactInfo(decision);
-      case 'filter-bar':
-        return this.synthesizeFilterBar(decision);
-      case 'skills':
-        return this.synthesizeSkills(decision);
-      default:
-        return this.synthesizeGenericSection(section, decision);
+      case 'team': return this.synthesizeTeam(decision);
+      case 'class-schedule': return this.synthesizeClassSchedule(decision);
+      case 'trainers': return this.synthesizeTeam(decision);
+      case 'membership-plans': return this.synthesizePricing(decision);
+      case 'course-featured': return this.synthesizeProductGrid(decision);
+      case 'menu-highlights': return this.synthesizeProductGrid(decision);
+      case 'gallery': return this.synthesizeGallery(decision);
+      case 'featured-projects': return this.synthesizeProductGrid(decision);
+      case 'caseStudies': return this.synthesizeCaseStudies(decision);
+      case 'clients': return this.synthesizeClients(decision);
+      case 'cta': return this.synthesizeCTA(decision);
+      case 'contact-form': return this.synthesizeContactForm(decision);
+      case 'contact-info': return this.synthesizeContactInfo(decision);
+      case 'filter-bar': return this.synthesizeFilterBar(decision);
+      case 'skills': return this.synthesizeSkills(decision);
+      default: return this.synthesizeGenericSection(section, decision);
     }
   }
 
   private synthesizeHero(d: ArchitectDecision): string {
-    const badgeText = d.subDomains.includes('ecommerce') ? 'New Collection 2026'
-      : d.subDomains.includes('saas') ? 'Trusted by 2,800+ teams'
-      : d.subDomains.includes('fitness') ? 'Transform Your Body'
-      : d.subDomains.includes('healthcare') ? 'Trusted Healthcare'
-      : d.subDomains.includes('education') ? 'Learn Without Limits'
-      : d.subDomains.includes('restaurant') ? 'Fine Dining Experience'
-      : d.subDomains.includes('portfolio') ? 'Available for Hire'
-      : d.subDomains.includes('agency') ? 'Full-Service Digital Agency'
-      : d.subDomains.includes('martialarts') ? 'Train Like a Warrior'
-      : d.subDomains.includes('tea') ? 'Organic & Wellness'
+    const caps = d.capabilities || [d.businessType];
+    const hasEcommerce = caps.some(c => ['commerce', 'marketplace', 'catalog', 'food-beverage'].includes(c));
+    const hasBooking = caps.some(c => ['booking', 'healthcare-clinic', 'fitness-wellness'].includes(c));
+    const hasEducation = caps.includes('education');
+    const hasContent = caps.includes('content');
+
+    const badgeText = hasEcommerce ? 'Explore Our Collection'
+      : hasBooking ? 'Book Your Appointment'
+      : hasEducation ? 'Start Learning Today'
+      : hasContent ? 'Fresh Insights'
       : 'Welcome';
 
-    const headline = d.subDomains.includes('ecommerce') ? 'Discover Products You\'ll Love'
-      : d.subDomains.includes('saas') ? `Ship faster with ${d.name}`
-      : d.subDomains.includes('fitness') ? 'Push Your Limits'
-      : d.subDomains.includes('healthcare') ? 'Your Health, Our Priority'
-      : d.subDomains.includes('education') ? 'Learn Without Limits'
-      : d.subDomains.includes('restaurant') ? 'Taste the Extraordinary'
-      : d.subDomains.includes('portfolio') ? 'I Build Digital Products'
-      : d.subDomains.includes('agency') ? `We Build ${d.name}`
-      : d.subDomains.includes('martialarts') ? 'Train Like a Warrior'
-      : d.subDomains.includes('tea') ? 'Sip Wellness, Naturally'
-      : d.name;
+    const headline = hasEcommerce ? `Discover What ${d.name} Offers`
+      : hasBooking ? `Book With ${d.name}`
+      : hasEducation ? `Learn With ${d.name}`
+      : hasContent ? `Insights From ${d.name}`
+      : `Welcome to ${d.name}`;
 
-    const subtitle = d.subDomains.includes('ecommerce') ? 'Premium products curated for quality, comfort, and style. Free shipping on orders over $100.'
-      : d.subDomains.includes('saas') ? 'The all-in-one platform that helps teams collaborate, build, and deploy 10x faster.'
-      : d.subDomains.includes('fitness') ? 'World-class training, expert coaches, and a community that pushes you further.'
-      : d.subDomains.includes('healthcare') ? 'Compassionate care from experienced professionals. Accepting new patients.'
-      : d.subDomains.includes('education') ? 'Expert-led courses to advance your career. Join 15,000+ students already learning.'
-      : d.subDomains.includes('restaurant') ? 'Farm-to-table cuisine crafted with passion and precision. Reserve your table tonight.'
-      : d.subDomains.includes('portfolio') ? 'Full-stack developer helping startups and enterprises ship products that users love.'
-      : d.subDomains.includes('agency') ? 'A full-service digital agency creating products that users love and businesses profit from.'
-      : d.subDomains.includes('martialarts') ? 'Expert instruction in martial arts for all skill levels. Build discipline, strength, and confidence.'
-      : d.subDomains.includes('tea') ? 'Premium organic teas sourced from the world\'s finest gardens. Wellness in every cup.'
-      : `Building something amazing with ${d.name}.`;
+    const subtitle = hasEcommerce ? 'Quality products curated for you. Browse our collection and find what you love.'
+      : hasBooking ? 'Easy online booking. Schedule your appointment in just a few clicks.'
+      : hasEducation ? 'Expert-led content to help you grow. Join our community today.'
+      : hasContent ? 'Stay informed with our latest articles, guides, and resources.'
+      : `Everything you need, all in one place.`;
 
     return `<section className="pt-32 pb-20 px-6 text-center">
         <div className="max-w-3xl mx-auto space-y-6">
@@ -561,21 +517,12 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeStatsBar(d: ArchitectDecision): string {
-    const stats = d.subDomains.includes('ecommerce')
-      ? [{ v: '10K+', l: 'Happy Customers' }, { v: '500+', l: 'Products' }, { v: '4.9', l: 'Average Rating' }, { v: 'Free', l: 'Shipping $100+' }]
-      : d.subDomains.includes('saas')
-      ? [{ v: '2,847+', l: 'Teams Using' }, { v: '99.9%', l: 'Uptime SLA' }, { v: '4.9/5', l: 'Avg Rating' }, { v: '50K+', l: 'Deployments' }]
-      : d.subDomains.includes('fitness')
-      ? [{ v: '500+', l: 'Active Members' }, { v: '30+', l: 'Classes Weekly' }, { v: '15+', l: 'Expert Trainers' }, { v: '4.9', l: 'Member Rating' }]
-      : d.subDomains.includes('healthcare')
-      ? [{ v: '20+', l: 'Years Experience' }, { v: '15K+', l: 'Patients Served' }, { v: '4', l: 'Specialties' }, { v: '4.9', l: 'Patient Rating' }]
-      : d.subDomains.includes('education')
-      ? [{ v: '15K+', l: 'Students' }, { v: '94%', l: 'Completion' }, { v: '4.8/5', l: 'Rating' }, { v: '85%', l: 'Career Advancement' }]
-      : d.subDomains.includes('martialarts')
-      ? [{ v: '500+', l: 'Active Students' }, { v: '10+', l: 'Martial Arts' }, { v: '15+', l: 'Black Belt Instructors' }, { v: '4.9', l: 'Student Rating' }]
-      : d.subDomains.includes('tea')
-      ? [{ v: '50+', l: 'Tea Varieties' }, { v: '12', l: 'Source Countries' }, { v: '100%', l: 'Organic' }, { v: '4.9', l: 'Customer Rating' }]
-      : [{ v: '120+', l: 'Projects' }, { v: '$50M+', l: 'Revenue Generated' }, { v: '80+', l: 'Clients' }, { v: '98%', l: 'Retention' }];
+    const stats = [
+      { v: '1,000+', l: 'Happy Customers' },
+      { v: '50+', l: 'Products' },
+      { v: '4.9', l: 'Average Rating' },
+      { v: '24/7', l: 'Support' },
+    ];
 
     return `<section className="px-6 pb-12">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -585,35 +532,17 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeProductGrid(d: ArchitectDecision): string {
-    const products = d.subDomains.includes('tea')
-      ? [
-          { id: 1, name: 'Dragon Well Green', price: 24, rating: 4.9, reviews: 189, tag: 'Best Seller', emoji: '🍵', desc: 'Hand-picked Longjing from Hangzhou. Sweet, nutty, and floral.' },
-          { id: 2, name: 'Ceremonial Matcha', price: 34, rating: 4.8, reviews: 156, tag: 'Premium', emoji: '🍃', desc: 'Stone-ground Uji matcha. Vibrant green, umami-rich, zero bitterness.' },
-          { id: 3, name: 'Earl Grey Supreme', price: 18, rating: 4.7, reviews: 234, tag: 'Classic', emoji: '🫖', desc: 'Bergamot-kissed Assam with cornflower petals. Bold and aromatic.' },
-          { id: 4, name: 'Chamomile Dreams', price: 16, rating: 4.8, reviews: 178, tag: 'Wellness', emoji: '🌼', desc: 'Egyptian chamomile blossoms. Calming, floral, and naturally sweet.' },
-          { id: 5, name: 'Iron Goddess Oolong', price: 28, rating: 4.9, reviews: 142, tag: 'Rare', emoji: '🏔️', desc: 'Tieguanyin from Anxi. Orchid fragrance with a creamy, lasting finish.' },
-          { id: 6, name: 'Masala Chai Blend', price: 22, rating: 4.7, reviews: 203, tag: 'Spiced', emoji: '🫚', desc: 'Assam black tea with cardamom, ginger, cinnamon, and clove.' },
-        ]
-      : d.subDomains.includes('ecommerce')
-      ? [
-          { id: 1, name: 'Classic Runner', price: 129, rating: 4.8, reviews: 234, tag: 'Best Seller', emoji: '👟', desc: 'Lightweight mesh upper with responsive cushioning.' },
-          { id: 2, name: 'Air Max Pro', price: 189, rating: 4.9, reviews: 189, tag: 'New', emoji: '🏃', desc: 'Maximum air cushioning with a sleek silhouette.' },
-          { id: 3, name: 'Urban Walker', price: 99, rating: 4.6, reviews: 312, tag: 'Popular', emoji: '👞', desc: 'Premium leather with memory foam insole.' },
-          { id: 4, name: 'Trail Blazer', price: 159, rating: 4.7, reviews: 156, tag: 'Outdoor', emoji: '🥾', desc: 'Waterproof Gore-Tex with Vibram outsole.' },
-          { id: 5, name: 'Street Style', price: 119, rating: 4.5, reviews: 278, tag: 'Trending', emoji: '👟', desc: 'Retro-inspired with modern comfort.' },
-          { id: 6, name: 'Speed Elite', price: 209, rating: 4.9, reviews: 98, tag: 'Premium', emoji: '⚡', desc: 'Carbon fiber plate for race-day performance.' },
-        ]
-      : [
-          { id: 1, name: 'Premium Package', price: 99, rating: 4.9, reviews: 156, tag: 'Popular', emoji: '⭐', desc: 'Complete solution with all features included.' },
-          { id: 2, name: 'Starter Kit', price: 49, rating: 4.7, reviews: 234, tag: 'Value', emoji: '📦', desc: 'Everything you need to get started.' },
-          { id: 3, name: 'Pro Edition', price: 149, rating: 4.8, reviews: 189, tag: 'Advanced', emoji: '🚀', desc: 'Advanced features for power users.' },
-          { id: 4, name: 'Team Plan', price: 299, rating: 4.9, reviews: 98, tag: 'Enterprise', emoji: '👥', desc: 'Collaborate with your entire team.' },
-        ];
+    const products = [
+      { id: 1, name: 'Premium Option', price: 99, rating: 4.9, reviews: 156, tag: 'Popular', emoji: '⭐', desc: 'Our most popular choice. Complete with all features.' },
+      { id: 2, name: 'Essential Choice', price: 49, rating: 4.7, reviews: 234, tag: 'Value', emoji: '📦', desc: 'Everything you need to get started at a great price.' },
+      { id: 3, name: 'Pro Edition', price: 149, rating: 4.8, reviews: 189, tag: 'Advanced', emoji: '🚀', desc: 'Advanced features for power users and teams.' },
+      { id: 4, name: 'Team Plan', price: 299, rating: 4.9, reviews: 98, tag: 'Enterprise', emoji: '👥', desc: 'Collaborate with your entire team. Scale as you grow.' },
+    ];
 
     return `<section className="px-6 pb-20">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-2xl font-black mb-8">Featured Collection</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             ${products.map(p => `<div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-700 transition group cursor-pointer">
               <div className="h-48 bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-6xl group-hover:scale-105 transition">${p.emoji}</div>
               <div className="p-5">
@@ -635,11 +564,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeCategories(d: ArchitectDecision): string {
-    const categories = d.subDomains.includes('ecommerce')
-      ? ['Running', 'Lifestyle', 'Outdoor', 'Premium']
-      : d.subDomains.includes('tea')
-      ? ['Green', 'Black', 'Herbal', 'Oolong', 'Matcha']
-      : ['Category 1', 'Category 2', 'Category 3', 'Category 4'];
+    const categories = ['Featured', 'Popular', 'New Arrivals', 'Best Sellers'];
 
     return `<section className="px-6 pb-12">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-4 justify-center text-sm">
@@ -649,23 +574,11 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeTestimonials(d: ArchitectDecision): string {
-    const testimonials = d.subDomains.includes('martialarts')
-      ? [
-          { name: 'Marcus J.', rating: 5, text: 'After 6 months of training, I lost 30 lbs and gained incredible confidence. The instructors truly care about each student.' },
-          { name: 'Sarah K.', rating: 5, text: 'My kids love the youth program. They have learned discipline and respect while having a blast.' },
-          { name: 'David R.', rating: 5, text: 'Best martial arts academy in the city. The facility is top-notch and the community is welcoming.' },
-        ]
-      : d.subDomains.includes('tea')
-      ? [
-          { name: 'Emily W.', rating: 5, text: 'The Dragon Well Green is the best green tea I have ever tasted. The quality is unmatched.' },
-          { name: 'Michael T.', rating: 5, text: 'I switched from coffee to matcha and my energy levels are more stable throughout the day.' },
-          { name: 'Lisa M.', rating: 5, text: 'Beautiful packaging, fast shipping, and the tea is incredibly fresh. A customer for life.' },
-        ]
-      : [
-          { name: 'Sarah M.', rating: 5, text: 'Absolutely love this product! The quality exceeded my expectations.' },
-          { name: 'Mike R.', rating: 5, text: 'Fast shipping and amazing customer service. Will definitely order again.' },
-          { name: 'Emily K.', rating: 5, text: 'Best purchase I have made this year. Highly recommended to everyone.' },
-        ];
+    const testimonials = [
+      { name: 'Alex M.', rating: 5, text: 'Absolutely love this! The quality exceeded my expectations. Highly recommend to everyone.' },
+      { name: 'Jordan K.', rating: 5, text: 'Fast, reliable, and amazing customer service. Will definitely be coming back.' },
+      { name: 'Sam R.', rating: 5, text: 'Best decision I have made this year. The value is unmatched. Five stars!' },
+    ];
 
     return `<section className="px-6 pb-20 bg-zinc-900/50">
         <div className="max-w-5xl mx-auto">
@@ -695,32 +608,14 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeFeatures(d: ArchitectDecision): string {
-    const features = d.subDomains.includes('martialarts')
-      ? [
-          { icon: '🥊', title: 'Expert Instruction', desc: 'Learn from black belt instructors with decades of experience in multiple martial arts disciplines.' },
-          { icon: '🏋️', title: 'All Skill Levels', desc: 'Programs for beginners to advanced fighters. Everyone is welcome on the mat.' },
-          { icon: '🏆', title: 'Competition Ready', desc: 'Optional competition training for students who want to test their skills in tournaments.' },
-          { icon: '🧘', title: 'Mind & Body', desc: 'Develop mental focus, discipline, and physical strength through structured training.' },
-          { icon: '👥', title: 'Community', desc: 'Join a supportive family of martial artists who train, grow, and succeed together.' },
-          { icon: '📅', title: 'Flexible Schedule', desc: 'Morning, afternoon, and evening classes. Train on your schedule.' },
-        ]
-      : d.subDomains.includes('tea')
-      ? [
-          { icon: '🌱', title: '100% Organic', desc: 'Every tea is certified organic, sourced directly from sustainable farms worldwide.' },
-          { icon: '🫖', title: 'Freshly Packed', desc: 'Tea is packed within 24 hours of order to lock in flavor and aroma.' },
-          { icon: '🌍', title: 'Global Sourcing', desc: 'Direct relationships with farms in Japan, China, India, and Sri Lanka.' },
-          { icon: '📚', title: 'Brewing Guides', desc: 'Detailed instructions for each tea type to ensure the perfect cup every time.' },
-          { icon: '🎁', title: 'Gift Sets', desc: 'Curated tea collections in premium packaging. Perfect for any occasion.' },
-          { icon: '🔄', title: 'Subscribe & Save', desc: 'Monthly tea deliveries at 15% off. Cancel anytime.' },
-        ]
-      : [
-          { icon: '⚡', title: 'Lightning Fast', desc: 'Optimized performance that loads in milliseconds. No compromises on speed.' },
-          { icon: '🔒', title: 'Enterprise Security', desc: 'Bank-level encryption and security protocols to keep your data safe.' },
-          { icon: '📱', title: 'Mobile First', desc: 'Responsive design that works beautifully on every device and screen size.' },
-          { icon: '🎨', title: 'Beautiful Design', desc: 'Crafted with attention to every pixel. Design that converts and delights.' },
-          { icon: '🔧', title: 'Easy Setup', desc: 'Get started in minutes with our intuitive onboarding process.' },
-          { icon: '💬', title: '24/7 Support', desc: 'Our team is always here to help you succeed. Chat, email, or phone.' },
-        ];
+    const features = [
+      { icon: '⚡', title: 'Lightning Fast', desc: 'Optimized performance that delivers results in milliseconds.' },
+      { icon: '🔒', title: 'Secure & Reliable', desc: 'Enterprise-grade security to keep your data safe.' },
+      { icon: '📱', title: 'Works Everywhere', desc: 'Responsive design that works beautifully on any device.' },
+      { icon: '🎨', title: 'Beautiful Design', desc: 'Crafted with attention to every detail. Design that converts.' },
+      { icon: '🔧', title: 'Easy to Use', desc: 'Get started in minutes with our intuitive experience.' },
+      { icon: '💬', title: '24/7 Support', desc: 'Our team is always here to help you succeed.' },
+    ];
 
     return `<section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
@@ -737,23 +632,11 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizePricing(d: ArchitectDecision): string {
-    const plans = d.subDomains.includes('fitness')
-      ? [
-          { name: 'Starter', price: 29, features: ['Gym Access', '2 Classes/week', 'Locker Room', 'Basic Tracking'], popular: false },
-          { name: 'Pro', price: 59, features: ['Unlimited Access', 'All Classes', 'Personal Trainer', 'Nutrition Plan', 'Priority Booking'], popular: true },
-          { name: 'Elite', price: 99, features: ['Everything in Pro', 'Private Sessions', 'Recovery Suite', 'VIP Events', 'Guest Passes'], popular: false },
-        ]
-      : d.subDomains.includes('education')
-      ? [
-          { name: 'Basic', price: 19, features: ['5 Courses', 'Community Access', 'Certificate'], popular: false },
-          { name: 'Pro', price: 49, features: ['Unlimited Courses', 'Mentorship', 'Projects', 'Career Support'], popular: true },
-          { name: 'Team', price: 99, features: ['Everything in Pro', 'Team Dashboard', 'Admin Controls', 'SSO'], popular: false },
-        ]
-      : [
-          { name: 'Starter', price: 9, features: ['1 Project', '1GB Storage', 'Email Support'], popular: false },
-          { name: 'Pro', price: 29, features: ['Unlimited Projects', '100GB Storage', 'Priority Support', 'API Access'], popular: true },
-          { name: 'Enterprise', price: 99, features: ['Everything in Pro', 'SSO', 'SLA', 'Dedicated Manager'], popular: false },
-        ];
+    const plans = [
+      { name: 'Starter', price: 9, features: ['1 Project', '1GB Storage', 'Email Support'], popular: false },
+      { name: 'Pro', price: 29, features: ['Unlimited Projects', '100GB Storage', 'Priority Support', 'API Access'], popular: true },
+      { name: 'Enterprise', price: 99, features: ['Everything in Pro', 'SSO', 'SLA', 'Dedicated Manager'], popular: false },
+    ];
 
     return `<section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
@@ -775,7 +658,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
 
   private synthesizeFAQ(d: ArchitectDecision): string {
     const faqs = [
-      { q: 'How do I get started?', a: 'Simply sign up for an account and follow our quick onboarding process. You will be up and running in minutes.' },
+      { q: 'How do I get started?', a: 'Simply sign up and follow our quick onboarding process. You will be up and running in minutes.' },
       { q: 'Can I change plans later?', a: 'Yes! Upgrade or downgrade at any time. Changes take effect immediately with prorated billing.' },
       { q: 'Do you offer refunds?', a: 'We offer a 30-day money-back guarantee on all plans. No questions asked.' },
       { q: 'Is there a free trial?', a: 'Yes, all plans come with a 14-day free trial. No credit card required.' },
@@ -795,19 +678,12 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeServices(d: ArchitectDecision): string {
-    const services = d.subDomains.includes('martialarts')
-      ? [
-          { name: 'Brazilian Jiu-Jitsu', desc: 'Grappling and submission techniques for all levels', price: '$89/mo', duration: '60 min' },
-          { name: 'Muay Thai', desc: 'Striking art using fists, elbows, knees, and shins', price: '$89/mo', duration: '60 min' },
-          { name: 'Karate', desc: 'Traditional striking art emphasizing discipline and form', price: '$79/mo', duration: '45 min' },
-          { name: 'Kids Program', desc: 'Age-appropriate martial arts training for children 5-12', price: '$59/mo', duration: '45 min' },
-        ]
-      : [
-          { name: 'Consultation', desc: 'Free initial assessment and personalized plan', price: '$0', duration: '30 min' },
-          { name: 'Standard Service', desc: 'Complete service with premium quality', price: '$199', duration: '2 hours' },
-          { name: 'Premium Package', desc: 'VIP treatment with dedicated specialist', price: '$399', duration: '4 hours' },
-          { name: 'Maintenance Plan', desc: 'Regular upkeep to keep everything optimal', price: '$99/mo', duration: '1 hour' },
-        ];
+    const services = [
+      { name: 'Consultation', desc: 'Free initial assessment and personalized plan', price: '$0', duration: '30 min' },
+      { name: 'Standard Service', desc: 'Complete service with premium quality', price: '$199', duration: '2 hours' },
+      { name: 'Premium Package', desc: 'VIP treatment with dedicated specialist', price: '$399', duration: '4 hours' },
+      { name: 'Maintenance Plan', desc: 'Regular upkeep to keep everything optimal', price: '$99/mo', duration: '1 hour' },
+    ];
 
     return `<section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
@@ -828,26 +704,12 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeTeam(d: ArchitectDecision): string {
-    const team = d.subDomains.includes('healthcare')
-      ? [
-          { name: 'Dr. Sarah Chen', role: 'Cardiology', exp: '15 years' },
-          { name: 'Dr. James Wilson', role: 'Neurology', exp: '12 years' },
-          { name: 'Dr. Emily Park', role: 'Pediatrics', exp: '10 years' },
-          { name: 'Dr. Michael Brown', role: 'Orthopedics', exp: '18 years' },
-        ]
-      : d.subDomains.includes('martialarts')
-      ? [
-          { name: 'Sensei Tanaka', role: 'Head Instructor', exp: '25 years, 7th Dan' },
-          { name: 'Coach Marcus', role: 'Muay Thai', exp: '15 years, former champion' },
-          { name: 'Prof. Silva', role: 'BJJ', exp: '20 years, Black Belt' },
-          { name: 'Coach Kim', role: 'Karate', exp: '18 years, 6th Dan' },
-        ]
-      : [
-          { name: 'Alex Rivera', role: 'Founder & CEO', exp: '15 years' },
-          { name: 'Sarah Kim', role: 'Head of Design', exp: '10 years' },
-          { name: 'James Chen', role: 'Lead Engineer', exp: '12 years' },
-          { name: 'Maya Patel', role: 'Head of Growth', exp: '8 years' },
-        ];
+    const team = [
+      { name: 'Alex Rivera', role: 'Founder & CEO', exp: '15 years' },
+      { name: 'Sarah Kim', role: 'Head of Design', exp: '10 years' },
+      { name: 'James Chen', role: 'Lead Engineer', exp: '12 years' },
+      { name: 'Maya Patel', role: 'Head of Growth', exp: '8 years' },
+    ];
 
     return `<section className="px-6 pb-20 bg-zinc-900/50">
         <div className="max-w-6xl mx-auto">
@@ -866,17 +728,16 @@ Review any compilation diagnostics carefully and generate AST patches that resol
 
   private synthesizeClassSchedule(d: ArchitectDecision): string {
     const classes = [
-      { name: 'Morning HIIT', time: '6:00 AM', trainer: 'Coach Marcus', spots: 4, intensity: 'High' },
-      { name: 'Yoga Flow', time: '8:00 AM', trainer: 'Sarah K.', spots: 8, intensity: 'Medium' },
-      { name: 'Strength Training', time: '10:00 AM', trainer: 'Alex T.', spots: 6, intensity: 'High' },
-      { name: 'Boxing Basics', time: '4:00 PM', trainer: 'Coach Marcus', spots: 10, intensity: 'Medium' },
-      { name: 'BJJ Fundamentals', time: '6:00 PM', trainer: 'Prof. Silva', spots: 8, intensity: 'Medium' },
-      { name: 'Recovery & Stretch', time: '7:30 PM', trainer: 'Sarah K.', spots: 12, intensity: 'Low' },
+      { name: 'Session A', time: '9:00 AM', trainer: 'Lead Instructor', spots: 8, intensity: 'High' },
+      { name: 'Session B', time: '11:00 AM', trainer: 'Specialist', spots: 12, intensity: 'Medium' },
+      { name: 'Session C', time: '2:00 PM', trainer: 'Coach', spots: 10, intensity: 'Medium' },
+      { name: 'Session D', time: '4:00 PM', trainer: 'Lead Instructor', spots: 6, intensity: 'High' },
+      { name: 'Session E', time: '6:00 PM', trainer: 'Specialist', spots: 14, intensity: 'Low' },
     ];
 
     return `<section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-black mb-8">Today&apos;s Classes</h2>
+          <h2 className="text-2xl font-black mb-8">Schedule</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             ${classes.map(c => `<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-700 transition">
               <div className="flex items-center justify-between mb-3">
@@ -892,26 +753,10 @@ Review any compilation diagnostics carefully and generate AST patches that resol
       </section>`;
   }
 
-  private synthesizeTrainers(d: ArchitectDecision): string {
-    return this.synthesizeTeam(d);
-  }
-
-  private synthesizeMembership(d: ArchitectDecision): string {
-    return this.synthesizePricing(d);
-  }
-
-  private synthesizeCourses(d: ArchitectDecision): string {
-    return this.synthesizeProductGrid(d);
-  }
-
-  private synthesizeMenu(d: ArchitectDecision): string {
-    return this.synthesizeProductGrid(d);
-  }
-
   private synthesizeGallery(d: ArchitectDecision): string {
     return `<section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-black mb-8 text-center">Our Space</h2>
+          <h2 className="text-2xl font-black mb-8 text-center">Gallery</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             ${[1,2,3,4,5,6].map(i => `<div className="aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl flex items-center justify-center text-4xl hover:border-zinc-700 transition cursor-pointer">📸</div>`).join('\n            ')}
           </div>
@@ -919,15 +764,11 @@ Review any compilation diagnostics carefully and generate AST patches that resol
       </section>`;
   }
 
-  private synthesizeProjects(d: ArchitectDecision): string {
-    return this.synthesizeProductGrid(d);
-  }
-
   private synthesizeCaseStudies(d: ArchitectDecision): string {
     const cases = [
-      { title: 'E-Commerce Revamp', client: 'RetailPro', result: '340% Revenue Increase', desc: 'Rebuilt platform with Next.js. Load times dropped 60%, conversion doubled.' },
-      { title: 'SaaS Dashboard', client: 'DataPulse', result: '50K Users in 3 Months', desc: 'Designed and developed analytics dashboard from zero to launch.' },
-      { title: 'Mobile Banking', client: 'FinFlow', result: '4.8 App Store Rating', desc: 'Built mobile banking app serving 200K+ users with zero downtime.' },
+      { title: 'Project Alpha', client: 'Client Corp', result: '340% Improvement', desc: 'Complete overhaul that delivered measurable results.' },
+      { title: 'Project Beta', client: 'Startup Inc', result: '50K Users in 3 Months', desc: 'Built from zero to launch with rapid iteration.' },
+      { title: 'Project Gamma', client: 'Enterprise Co', result: '4.8 Rating', desc: 'Scaled to serve 200K+ users with zero downtime.' },
     ];
 
     return `<section className="px-6 pb-20 bg-zinc-900/50">
@@ -946,7 +787,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeClients(d: ArchitectDecision): string {
-    const clients = ['TechCorp', 'FinanceHub', 'HealthPlus', 'EduLearn', 'RetailPro', 'CloudBase'];
+    const clients = ['Client Alpha', 'Client Beta', 'Client Gamma', 'Client Delta', 'Client Epsilon', 'Client Zeta'];
     return `<section className="px-6 pb-20">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-2xl font-black mb-8">Trusted By</h2>
@@ -1005,11 +846,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   }
 
   private synthesizeFilterBar(d: ArchitectDecision): string {
-    const categories = d.subDomains.includes('ecommerce')
-      ? ['All', 'Running', 'Lifestyle', 'Outdoor', 'Premium']
-      : d.subDomains.includes('tea')
-      ? ['All', 'Green', 'Black', 'Herbal', 'Oolong']
-      : ['All', 'Category 1', 'Category 2', 'Category 3'];
+    const categories = ['All', 'Featured', 'Popular', 'New'];
 
     return `<section className="px-6 pb-8">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
