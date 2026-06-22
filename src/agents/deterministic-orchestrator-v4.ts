@@ -153,32 +153,64 @@ export class DeterministicOrchestratorV4 {
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string }> = [];
     const PER_PAGE_RETRIES = 3;
 
-    for (const [i, page] of blueprint.pages.entries()) {
+    // Build all page prompts upfront for the combined LLM call
+    const pagePromptData = blueprint.pages.map((page, i) => {
       const funcName = DeterministicOrchestratorV4.ROUTE_FUNC_MAP[page.path]
         || page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
+      const targetFile = page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`;
+      const pagePrompt = this.buildPagePrompt(page, funcName, blueprint);
+      return { pagePath: page.path, targetFile, funcName, prompt: pagePrompt };
+    });
+
+    // Single combined LLM call for ALL pages
+    let patchMap: Map<string, ASTPatch[]>;
+    try {
+      patchMap = await gateway.generateAllPatchesCombined(prompt, pagePromptData);
+    } catch (err: any) {
+      console.error(`[orchestrator] Combined LLM call failed: ${err.message}. Falling back to per-page calls.`);
+      patchMap = new Map();
+      // Fallback: per-page calls
+      for (const pp of pagePromptData) {
+        try {
+          const patches = await gateway.generatePatches({ prompt: pp.prompt, attempt: 0, changedFiles: [], errors: [] });
+          patchMap.set(pp.targetFile, patches);
+        } catch {}
+      }
+    }
+
+    // Apply patches per-page with independent rollback scope
+    for (const [i, page] of blueprint.pages.entries()) {
+      const pp = pagePromptData[i];
+      if (!pp) continue;
       const snapshotBase = i * (PER_PAGE_RETRIES + 1);
 
       console.log(`[orchestrator] Compiling page ${i + 1}/${blueprint.pages.length}: ${page.path}`);
-
-      const pagePrompt = this.buildPagePrompt(page, funcName, blueprint);
-
-      const targetFilePath = page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`;
 
       const pageStartTime = Date.now();
       try {
         await this.runCompilationFlow(
           workspaceId,
-          pagePrompt,
-          async (ctx: LLMContext) => {
-            const allPatches = await gateway.generatePatches(ctx);
-            const pagePatch = allPatches.find(p => p.targetFile === targetFilePath);
-            const componentPatches = allPatches.filter(p => {
+          pp.prompt,
+          async (_ctx: LLMContext) => {
+            const ppTarget = pp.targetFile;
+            // Extract page-specific patches from the pre-computed map
+            const pagePatch = patchMap.get(ppTarget)?.find(p => p.targetFile === ppTarget);
+            const componentPatches = (patchMap.get(ppTarget) || []).filter(p => {
               if (!p.targetFile.startsWith('src/components/')) return false;
               const fullPath = path.join(workspace.rootPath, p.targetFile);
               return !fs.existsSync(fullPath);
             });
-            const result = [pagePatch, ...componentPatches].filter(Boolean) as ASTPatch[];
-            return result;
+            // Also include component patches from other pages that don't exist yet
+            for (const [, patches] of patchMap) {
+              for (const p of patches) {
+                if (p.targetFile.startsWith('src/components/') && !fs.existsSync(path.join(workspace.rootPath, p.targetFile))) {
+                  if (!componentPatches.find(cp => cp.targetFile === p.targetFile)) {
+                    componentPatches.push(p);
+                  }
+                }
+              }
+            }
+            return [pagePatch, ...componentPatches].filter(Boolean) as ASTPatch[];
           },
           PER_PAGE_RETRIES,
           true,

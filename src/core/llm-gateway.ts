@@ -63,6 +63,90 @@ export class LLMGateway {
     return this.synthesizeFallback(decision, context);
   }
 
+  /**
+   * Single-call optimization: generates ALL patches for ALL pages in one LLM call.
+   * Returns a Map keyed by target file path for efficient per-page splitting.
+   */
+  public async generateAllPatchesCombined(
+    prompt: string,
+    pagePrompts: Array<{ pagePath: string; targetFile: string; prompt: string }>
+  ): Promise<Map<string, ASTPatch[]>> {
+    const decision = this.architect.designArchitecture(prompt);
+    const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
+
+    const patchMap = new Map<string, ASTPatch[]>();
+
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      console.log(`[gateway] No API key. Falling back to JIT synthesis for combined call.`);
+      const allPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
+      for (const patch of allPatches) {
+        const existing = patchMap.get(patch.targetFile) || [];
+        existing.push(patch);
+        patchMap.set(patch.targetFile, existing);
+      }
+      return patchMap;
+    }
+
+    const pageList = pagePrompts.map((pp, i) =>
+      `Page ${i + 1}: ${pp.pagePath} → target: ${pp.targetFile}\n${pp.prompt}`
+    ).join('\n\n');
+
+    const combinedUserPrompt = `User Directive: "${prompt}"
+
+Generate COMPLETE ASTPatch arrays for ALL of the following pages in a SINGLE JSON array.
+Each patch must have the correct targetFile path for its page.
+
+Pages to generate:
+${pageList}
+
+IMPORTANT:
+- Return ONE JSON array containing patches for ALL pages
+- Each page's patches must target the correct targetFile
+- Include component patches (src/components/*.tsx) as separate entries
+- Each page component must be a complete, self-contained React component with Tailwind CSS
+- Do NOT include import statements in codeBlock
+- Every interactive element must have onClick/handlers
+
+Active Attempt Loop: 0`;
+
+    const systemPrompt = this.buildSystemPrompt(architecturePrompt);
+
+    for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+      try {
+        console.log(`[gateway] Combined LLM call: ${this.provider}/${this.model} (attempt ${attempt}) — ${pagePrompts.length} pages`);
+        const allPatches = await this.callProvider(systemPrompt, combinedUserPrompt);
+        console.log(`[gateway] Received ${allPatches.length} total patches for ${pagePrompts.length} pages`);
+
+        for (const patch of allPatches) {
+          const existing = patchMap.get(patch.targetFile) || [];
+          existing.push(patch);
+          patchMap.set(patch.targetFile, existing);
+        }
+        return patchMap;
+      } catch (err: any) {
+        const isTransient = this.isTransientError(err);
+        const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
+
+        if (attempt < RETRY_ATTEMPTS && isTransient) {
+          console.log(`[gateway] Transient error (${err.message}). Retrying in ${delay}ms...`);
+          await this.sleep(delay);
+          continue;
+        }
+
+        console.log(`[gateway] Combined LLM failed: ${err.message}. Falling back to JIT synthesis.`);
+        const allPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
+        for (const patch of allPatches) {
+          const existing = patchMap.get(patch.targetFile) || [];
+          existing.push(patch);
+          patchMap.set(patch.targetFile, existing);
+        }
+        return patchMap;
+      }
+    }
+
+    return patchMap;
+  }
+
   private async callProvider(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
     switch (this.provider) {
       case 'anthropic': return this.callAnthropic(systemPrompt, userPrompt);
