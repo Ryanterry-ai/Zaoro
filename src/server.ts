@@ -59,6 +59,32 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+  // GET / — Engine landing page
+  if (method === 'GET' && url.pathname === '/') {
+    return json(res, {
+      name: 'build.same engine',
+      version: '1.0.0',
+      status: 'running',
+      endpoints: {
+        create: 'POST /api/create',
+        build: 'POST /api/workspace/:id/build',
+        progress: 'GET /api/workspace/:id/progress',
+        files: 'GET /api/workspace/:id/files',
+        file: 'GET /api/workspace/:id/file?path=...',
+        preview: 'GET /api/workspace/:id/preview',
+        mcp_tools: 'GET /api/mcp/tools',
+        mcp_call: 'POST /api/mcp/call',
+        mcp_scrape: 'POST /api/mcp/scrape',
+        mcp_push: 'POST /api/mcp/push',
+      },
+    });
+  }
+
+  // GET /api/health
+  if (method === 'GET' && url.pathname === '/api/health') {
+    return json(res, { status: 'ok', uptime: process.uptime() });
+  }
+
   // POST /api/create
   if (method === 'POST' && url.pathname === '/api/create') {
     try {
