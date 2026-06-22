@@ -256,18 +256,18 @@ export default function WorkspacePage() {
 
   const iframeWidth = DEVICE_WIDTHS[deviceFrame];
 
-  // Extract rich analysis data from phases
-  const analysisPhase = [...phases].reverse().find(p => p.step === "clone" && p.data);
-  const analysisData = analysisPhase?.data as AnalysisData | undefined;
+  // Extract rich phase data from phases (written by phaseFn)
+  const crawlPhase = [...phases].reverse().find(p => p.message?.includes("Crawling complete"));
+  const crawlData = crawlPhase?.data as { pagesFound: number; pages: Array<{ path: string; title: string; images: number; videos: number }> } | undefined;
 
-  const assetsPhase = [...phases].reverse().find(p => p.message?.includes("assets") || p.message?.includes("Download"));
-  const assetsData = (assetsPhase?.data as AssetsData | undefined) || null;
+  const assetsPhase = [...phases].reverse().find(p => p.message?.includes("Assets downloaded"));
+  const assetsData = assetsPhase?.data as { total: number; downloaded: number; failed: number; assets: Array<{ url: string; local: string; size: number }> } | undefined;
 
-  const generatePhase = [...phases].reverse().find(p => p.message?.includes("Generating") || p.message?.includes("components"));
-  const generateData = (generatePhase?.data as GenerateData | undefined) || null;
+  const generatePhase = [...phases].reverse().find(p => p.message?.includes("Generating components"));
+  const generateData = generatePhase?.data as { pagesTotal: number; pagesDone: number; currentPage: string } | undefined;
 
-  const layoutData = null;
-  const applyData = null;
+  const completePhase = [...phases].reverse().find(p => p.message?.includes("Clone complete"));
+  const completeData = completePhase?.data as { pages: number; assets: number; files: number; duration: number } | undefined;
 
   // ── Fullscreen overlay mode ──
   if (isFullscreen && previewHtml) {
@@ -301,47 +301,36 @@ export default function WorkspacePage() {
     );
   }
 
-  // ── Clone Progress View (left panel) ──
+  // ── Clone Progress View ──
   const renderCloneProgress = () => {
     if (workspaceType !== "clone") return null;
 
-    const phaseList = [
-      { id: "analysis", icon: "🔍", label: "Site Analysis" },
-      { id: "assets", icon: "📦", label: "Asset Download" },
-      { id: "generate", icon: "⚡", label: "Component Generation" },
-      { id: "layout", icon: "🏗", label: "Layout & Navigation" },
-      { id: "apply", icon: "✍", label: "Write Files" },
+    const lastMsg = phases[phases.length - 1]?.message || "";
+    const hasError = lastMsg.includes("failed") || lastMsg.includes("error");
+    const isComplete = lastMsg.includes("Clone complete");
+    const isFailed = lastMsg.includes("Clone failed");
+
+    const phaseSteps = [
+      { id: "crawl", icon: "🔍", label: "Crawl Website", doneWhen: "Crawling complete" },
+      { id: "assets", icon: "📦", label: "Download Assets", doneWhen: "Assets downloaded" },
+      { id: "generate", icon: "⚡", label: "Generate Components", doneWhen: "Generating layout" },
+      { id: "layout", icon: "🏗", label: "Layout & Navigation", doneWhen: "Writing files" },
+      { id: "apply", icon: "✍", label: "Write Files", doneWhen: "Clone complete" },
     ];
 
-    // Find which phases have data by matching message patterns
-    const getPhaseStatus = (phaseId: string): "pending" | "active" | "done" | "error" => {
-      const lastMsg = phases[phases.length - 1]?.message || "";
-      const hasError = lastMsg.includes("failed") || lastMsg.includes("error");
-
-      // Check by phase order
-      const phaseIdx = phaseList.findIndex(p => p.id === phaseId);
-      const currentPhaseIdx = (() => {
-        if (lastMsg.includes("Site Analysis") || lastMsg.includes("Scraping")) return 0;
-        if (lastMsg.includes("Asset") || lastMsg.includes("assets")) return 1;
-        if (lastMsg.includes("Generating") || lastMsg.includes("component")) return 2;
-        if (lastMsg.includes("Layout") || lastMsg.includes("navigation")) return 3;
-        if (lastMsg.includes("Write") || lastMsg.includes("file")) return 4;
-        if (lastMsg.includes("Clone complete") || lastMsg.includes("Clone completed")) return 5;
-        return -1;
-      })();
-
-      if (phaseIdx < currentPhaseIdx) return "done";
-      if (phaseIdx === currentPhaseIdx) {
-        if (hasError && phaseIdx === currentPhaseIdx) return "error";
-        return "active";
-      }
+    const getStatus = (idx: number): "pending" | "active" | "done" | "error" => {
+      const doneIdx = phaseSteps.findIndex(p => lastMsg.includes(p.doneWhen));
+      if (isFailed && idx === Math.min(doneIdx + 1, phaseSteps.length - 1)) return "error";
+      if (isComplete) return "done";
+      if (idx < doneIdx) return "done";
+      if (idx === doneIdx + 1 || (doneIdx === -1 && idx === 0)) return "active";
       return "pending";
     };
 
     return (
       <div className="space-y-2">
-        {phaseList.map((phase) => {
-          const status = getPhaseStatus(phase.id);
+        {phaseSteps.map((phase, idx) => {
+          const status = getStatus(idx);
           return (
             <div key={phase.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
               status === "active" ? "bg-accent/10 border border-accent/20" :
@@ -364,183 +353,99 @@ export default function WorkspacePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-foreground">{phase.label}</div>
-                {status === "active" && (
-                  <div className="text-[11px] text-muted mt-0.5 truncate">{lastPhaseMessage}</div>
-                )}
+                {status === "active" && <div className="text-[11px] text-muted mt-0.5 truncate">{lastMsg}</div>}
               </div>
-              {status === "done" && <span className="text-[10px] text-green-400/60">✓</span>}
             </div>
           );
         })}
+
+        {/* Rich data cards below phases */}
+        {renderPhaseDetails()}
       </div>
     );
   };
 
-  // Render rich analysis data cards
-  const renderAnalysisCards = () => {
-    if (!analysisData) return null;
+  const renderPhaseDetails = () => {
+    const cards: React.ReactNode[] = [];
 
-    return (
-      <div className="space-y-3 mt-3 animate-slide-up">
-        {/* Site Title */}
-        <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1">Website</div>
-          <div className="text-sm font-medium text-foreground">{analysisData.title || "Untitled"}</div>
-          {analysisData.description && (
-            <div className="text-[11px] text-muted mt-0.5 line-clamp-2">{analysisData.description}</div>
-          )}
+    // Pages discovered
+    if (crawlData && crawlData.pages) {
+      cards.push(
+        <div key="pages" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Pages Discovered ({crawlData.pagesFound})</div>
+          <div className="space-y-1 max-h-[150px] overflow-y-auto">
+            {crawlData.pages.map((p, i) => (
+              <div key={i} className="flex items-center gap-2 text-[11px]">
+                <span className="text-green-400">✓</span>
+                <span className="text-foreground/80 truncate flex-1">{p.title || p.path}</span>
+                <span className="text-muted">{p.images}img</span>
+                {p.videos > 0 && <span className="text-purple-400">{p.videos}vid</span>}
+              </div>
+            ))}
+          </div>
         </div>
+      );
+    }
 
-        {/* Technologies */}
-        {analysisData.technologies.length > 0 && (
-          <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Technologies Detected</div>
-            <div className="flex flex-wrap gap-1.5">
-              {analysisData.technologies.map((tech, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-md bg-accent/10 text-accent text-[11px] font-medium">{tech}</span>
-              ))}
-            </div>
+    // Assets
+    if (assetsData) {
+      cards.push(
+        <div key="assets" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Assets</div>
+          <div className="flex gap-3 text-[11px]">
+            <span className="text-green-400/70"><strong>{assetsData.downloaded}</strong> downloaded</span>
+            {assetsData.failed > 0 && <span className="text-red-400/70"><strong>{assetsData.failed}</strong> failed</span>}
+            <span className="text-muted">{assetsData.total} total</span>
           </div>
-        )}
-
-        {/* Pages Found */}
-        {analysisData.pagesFound.length > 0 && (
-          <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Pages Discovered ({analysisData.pagesFound.length})</div>
-            <div className="space-y-1">
-              {analysisData.pagesFound.map((page, i) => (
-                <div key={i} className="flex items-center gap-2 text-[11px]">
-                  <span className="text-green-400">✓</span>
-                  <span className="text-foreground/80 truncate">{page.title || page.path}</span>
-                  <span className="text-muted ml-auto">{page.sections} sections</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Navigation */}
-        {analysisData.navigation.length > 0 && (
-          <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Navigation ({analysisData.navigation.length} items)</div>
-            <div className="flex flex-wrap gap-1.5">
-              {analysisData.navigation.map((nav, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 text-[11px]">{nav.label}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Images */}
-        {analysisData.images.length > 0 && (
-          <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Images ({analysisData.images.length})</div>
-            <div className="grid grid-cols-4 gap-1">
-              {analysisData.images.slice(0, 12).map((img, i) => (
+          {assetsData.assets && assetsData.assets.length > 0 && (
+            <div className="grid grid-cols-4 gap-1 mt-2">
+              {assetsData.assets.slice(0, 8).map((a, i) => (
                 <div key={i} className="aspect-square rounded-lg bg-surface-hover border border-border overflow-hidden flex items-center justify-center">
-                  {img.src.startsWith("http") ? (
-                    <img src={img.src} alt={img.alt} className="w-full h-full object-cover" loading="lazy" />
+                  {a.local && (a.local.endsWith('.png') || a.local.endsWith('.jpg') || a.local.endsWith('.webp') || a.local.endsWith('.svg')) ? (
+                    <img src={a.local} alt="" className="w-full h-full object-cover" loading="lazy" />
                   ) : (
-                    <span className="text-[10px] text-muted">IMG</span>
+                    <span className="text-[9px] text-muted truncate px-0.5">{a.url.split('/').pop()?.split('?')[0]?.slice(0, 10)}</span>
                   )}
                 </div>
               ))}
             </div>
-            {analysisData.images.length > 12 && (
-              <div className="text-[10px] text-muted mt-1">+{analysisData.images.length - 12} more</div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+      );
+    }
 
-        {/* Videos */}
-        {analysisData.videos.length > 0 && (
-          <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Videos ({analysisData.videos.length})</div>
-            <div className="space-y-1">
-              {analysisData.videos.map((vid, i) => (
-                <div key={i} className="flex items-center gap-2 text-[11px]">
-                  <span className="text-purple-400">▶</span>
-                  <span className="text-foreground/80 truncate">{vid.src}</span>
-                  <span className="text-muted ml-auto">{vid.format}</span>
-                </div>
-              ))}
+    // Generation progress
+    if (generateData) {
+      cards.push(
+        <div key="gen" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1">Generating</div>
+          <div className="flex items-center gap-2 text-[11px]">
+            <div className="flex-1 bg-surface-hover rounded-full h-1.5">
+              <div className="bg-accent h-1.5 rounded-full transition-all" style={{ width: `${generateData.pagesTotal > 0 ? (generateData.pagesDone / generateData.pagesTotal) * 100 : 0}%` }} />
             </div>
+            <span className="text-muted">{generateData.pagesDone}/{generateData.pagesTotal}</span>
           </div>
-        )}
+          {generateData.currentPage && <div className="text-[10px] text-muted mt-1 truncate">{generateData.currentPage}</div>}
+        </div>
+      );
+    }
 
-        {/* Design Tokens */}
-        {analysisData.designTokens && (
-          <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Design Tokens</div>
-            <div className="space-y-1.5">
-              {analysisData.designTokens.colors.length > 0 && (
-                <div>
-                  <div className="text-[10px] text-muted mb-1">Colors</div>
-                  <div className="flex flex-wrap gap-1">
-                    {analysisData.designTokens.colors.slice(0, 10).map((color, i) => (
-                      <div key={i} className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-sm border border-white/10" style={{ backgroundColor: color }} />
-                        <span className="text-[9px] text-muted font-mono">{color}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {analysisData.designTokens.fonts.length > 0 && (
-                <div>
-                  <div className="text-[10px] text-muted mb-1">Fonts</div>
-                  <div className="flex flex-wrap gap-1">
-                    {analysisData.designTokens.fonts.slice(0, 5).map((font, i) => (
-                      <span key={i} className="px-1.5 py-0.5 rounded bg-surface-hover text-[10px] text-foreground/70">{font.split(",")[0].replace(/"/g, "")}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Links Summary */}
-        <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1">Link Analysis</div>
-          <div className="flex gap-3 text-[11px]">
-            <span className="text-foreground/70"><strong className="text-foreground">{analysisData.links.total}</strong> total</span>
-            <span className="text-green-400/70"><strong>{analysisData.links.internal}</strong> internal</span>
-            <span className="text-blue-400/70"><strong>{analysisData.links.external}</strong> external</span>
+    // Completion summary
+    if (completeData) {
+      cards.push(
+        <div key="complete" className="px-3 py-3 rounded-xl bg-green-500/5 border border-green-500/10 animate-slide-up">
+          <div className="text-[10px] uppercase tracking-wider text-green-400 mb-1.5">Clone Complete</div>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div><strong className="text-foreground">{completeData.pages}</strong> <span className="text-muted">pages</span></div>
+            <div><strong className="text-foreground">{completeData.assets}</strong> <span className="text-muted">assets</span></div>
+            <div><strong className="text-foreground">{completeData.files}</strong> <span className="text-muted">files</span></div>
+            <div><strong className="text-foreground">{(completeData.duration / 1000).toFixed(1)}s</strong> <span className="text-muted">duration</span></div>
           </div>
         </div>
+      );
+    }
 
-        {/* Blocked Pages */}
-        {analysisData.blockedPages.length > 0 && (
-          <div className="px-3 py-2 rounded-xl bg-red-500/5 border border-red-500/10">
-            <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">Blocked Pages ({analysisData.blockedPages.length})</div>
-            <div className="space-y-1">
-              {analysisData.blockedPages.map((bp, i) => (
-                <div key={i} className="text-[11px] text-red-400/80">
-                  <span className="truncate">{bp.url}</span>
-                  <span className="text-muted ml-1">— {bp.reason}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Forms */}
-        {analysisData.forms.length > 0 && (
-          <div className="px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Forms ({analysisData.forms.length})</div>
-            <div className="space-y-1">
-              {analysisData.forms.map((form, i) => (
-                <div key={i} className="text-[11px] text-foreground/70">
-                  <span className="text-muted">{form.method.toUpperCase()}</span> {form.action || "—"}
-                  <span className="text-muted ml-1">({form.fields.length} fields)</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return cards.length > 0 ? <div className="space-y-2 mt-3">{cards}</div> : null;
   };
 
   const lastPhaseMessage = phases.length > 0 ? phases[phases.length - 1].message : "";
@@ -598,7 +503,6 @@ export default function WorkspacePage() {
                 {workspaceType === "clone" && phases.length > 0 ? (
                   <>
                     {renderCloneProgress()}
-                    {renderAnalysisCards()}
                   </>
                 ) : workspaceType === "clone" && phases.length === 0 ? (
                   <div className="text-center text-muted text-sm py-12">

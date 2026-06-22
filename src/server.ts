@@ -414,8 +414,10 @@ function log(step, msg, data) {
   try { if (fs.existsSync(f)) s = JSON.parse(fs.readFileSync(f, 'utf-8')); } catch {}
   s.push({ step, message: msg, ts: Date.now(), data: data || null });
   fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
+}
 
-  // Also write rich phase progress
+// Write phase events ONLY (for rich progress UI)
+function phaseEvent(step, msg, data) {
   const pf = path.join(wsDir, '.clone-phases');
   let phases = [];
   try { if (fs.existsSync(pf)) phases = JSON.parse(fs.readFileSync(pf, 'utf-8')); } catch {}
@@ -424,7 +426,7 @@ function log(step, msg, data) {
 }
 
 const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${id}.json`)}), 'utf-8'));
-const cloneOrch = new CloneOrchestrator(wsDir, { provider: config.provider, apiKey: config.apiKey }, log);
+const cloneOrch = new CloneOrchestrator(wsDir, { provider: config.provider, apiKey: config.apiKey }, log, phaseEvent);
 try {
   log('clone', 'Starting deep website clone...');
   const result = await cloneOrch.clone(${JSON.stringify(body.url)});

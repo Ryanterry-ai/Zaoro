@@ -332,7 +332,7 @@ Rules:
     // Import and run clone orchestrator
     const { CloneOrchestrator } = await import('../cloning/clone-orchestrator.js');
     const config = llmConfig || { provider: 'openai' as any, apiKey: '' };
-    const cloneOrch = new CloneOrchestrator(workspace.rootPath, config);
+    const cloneOrch = new CloneOrchestrator(workspace.rootPath, config, undefined, undefined);
 
     const cloneResult = await cloneOrch.clone(targetUrl);
 
