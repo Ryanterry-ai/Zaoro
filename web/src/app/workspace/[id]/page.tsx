@@ -26,7 +26,7 @@ export default function WorkspacePage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
   const [activeTab, setActiveTab] = useState<"chat" | "code">("chat");
-  const [rightTab, setRightTab] = useState<"preview" | "files">("preview");
+  const [rightTab, setRightTab] = useState<"preview" | "files" | "code">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
   const [followUp, setFollowUp] = useState("");

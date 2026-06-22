@@ -51,9 +51,23 @@ function ensurePostHog(): PostHog | null {
     console.warn('[telemetry] POSTHOG_API_KEY not set — PostHog disabled');
     return null;
   }
-  posthogClient = new PostHog(config.apiKey, { host: config.host });
+  posthogClient = new PostHog(config.apiKey, {
+    host: config.host,
+    flushAt: 1,
+    flushInterval: 0,
+  });
   console.log('[telemetry] PostHog initialized');
   return posthogClient;
+}
+
+function safePostHogCapture(event: { distinctId: string; event: string; properties?: Record<string, unknown> }): void {
+  const ph = ensurePostHog();
+  if (!ph) return;
+  try {
+    ph.capture(event);
+  } catch (err: any) {
+    console.warn(`[telemetry] PostHog capture failed: ${err.message}`);
+  }
 }
 
 function ensureSupabase(): SupabaseClient | null {
@@ -63,11 +77,20 @@ function ensureSupabase(): SupabaseClient | null {
     console.warn('[telemetry] SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY not set — Supabase disabled');
     return null;
   }
-  supabaseClient = createClient(config.url, config.serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-  console.log('[telemetry] Supabase initialized');
-  return supabaseClient;
+  // Supabase realtime-js requires native WebSocket (Node 22+) or the "ws" package.
+  // Since we only use Supabase for data inserts (not realtime), skip if WebSocket
+  // is unavailable to avoid crashing on Node 20.
+  try {
+    supabaseClient = createClient(config.url, config.serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+    console.log('[telemetry] Supabase initialized');
+    return supabaseClient;
+  } catch (err: any) {
+    console.warn(`[telemetry] Supabase init failed (WebSocket unavailable): ${err.message}`);
+    supabaseClient = null;
+    return null;
+  }
 }
 
 // ─── Public API ──────────────────────────────────────────────────
@@ -108,61 +131,49 @@ export const TelemetryLayer = {
   },
 
   reportBuildStart(workspaceId: string, prompt: string): void {
-    const ph = ensurePostHog();
-    if (ph) {
-      ph.capture({
-        distinctId: workspaceId,
-        event: 'build_started',
-        properties: { prompt: prompt.slice(0, 200), workspaceId },
-      });
-    }
+    safePostHogCapture({
+      distinctId: workspaceId,
+      event: 'build_started',
+      properties: { prompt: prompt.slice(0, 200), workspaceId },
+    });
   },
 
   reportBuildStep(workspaceId: string, step: string, detail?: Record<string, unknown>): void {
-    const ph = ensurePostHog();
-    if (ph) {
-      ph.capture({
-        distinctId: workspaceId,
-        event: 'build_step',
-        properties: { step, workspaceId, ...detail },
-      });
-    }
+    safePostHogCapture({
+      distinctId: workspaceId,
+      event: 'build_step',
+      properties: { step, workspaceId, ...detail },
+    });
   },
 
   reportPageComplete(workspaceId: string, event: PageEvent): void {
-    const ph = ensurePostHog();
-    if (ph) {
-      ph.capture({
-        distinctId: workspaceId,
-        event: 'page_compiled',
-        properties: {
-          workspaceId,
-          pagePath: event.pagePath,
-          succeeded: event.succeeded,
-          attemptCount: event.attemptCount,
-          duration: event.duration,
-          lastError: event.lastError,
-        },
-      });
-    }
+    safePostHogCapture({
+      distinctId: workspaceId,
+      event: 'page_compiled',
+      properties: {
+        workspaceId,
+        pagePath: event.pagePath,
+        succeeded: event.succeeded,
+        attemptCount: event.attemptCount,
+        duration: event.duration,
+        lastError: event.lastError,
+      },
+    });
   },
 
   reportBuildComplete(event: BuildEvent): void {
-    const ph = ensurePostHog();
-    if (ph) {
-      ph.capture({
-        distinctId: event.workspaceId,
-        event: 'build_completed',
-        properties: {
-          workspaceId: event.workspaceId,
-          pagesTotal: event.pagesTotal,
-          pagesSucceeded: event.pagesSucceeded,
-          pagesFailed: event.pagesFailed,
-          duration: event.duration,
-          success: event.success,
-        },
-      });
-    }
+    safePostHogCapture({
+      distinctId: event.workspaceId,
+      event: 'build_completed',
+      properties: {
+        workspaceId: event.workspaceId,
+        pagesTotal: event.pagesTotal,
+        pagesSucceeded: event.pagesSucceeded,
+        pagesFailed: event.pagesFailed,
+        duration: event.duration,
+        success: event.success,
+      },
+    });
 
     const sb = ensureSupabase();
     if (sb) {
@@ -196,32 +207,26 @@ export const TelemetryLayer = {
       });
     }
 
-    const ph = ensurePostHog();
-    if (ph) {
-      ph.capture({
-        distinctId: event.workspaceId,
-        event: 'build_error',
-        properties: {
-          workspaceId: event.workspaceId,
-          error: event.error,
-          code: event.code,
-          file: event.file,
-          line: event.line,
-          phase: event.phase,
-        },
-      });
-    }
+    safePostHogCapture({
+      distinctId: event.workspaceId,
+      event: 'build_error',
+      properties: {
+        workspaceId: event.workspaceId,
+        error: event.error,
+        code: event.code,
+        file: event.file,
+        line: event.line,
+        phase: event.phase,
+      },
+    });
   },
 
   reportHealing(workspaceId: string, attempt: number, errorCount: number): void {
-    const ph = ensurePostHog();
-    if (ph) {
-      ph.capture({
-        distinctId: workspaceId,
-        event: 'auto_healing',
-        properties: { workspaceId, attempt, errorCount },
-      });
-    }
+    safePostHogCapture({
+      distinctId: workspaceId,
+      event: 'auto_healing',
+      properties: { workspaceId, attempt, errorCount },
+    });
   },
 
   async shutdown(): Promise<void> {

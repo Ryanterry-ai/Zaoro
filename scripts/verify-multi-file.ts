@@ -97,9 +97,13 @@ async function runTests() {
       check('Prisma skipped (no data models)', !fs.existsSync(prismaPath));
     }
 
-    // DB client check — DEFERRED: compileDatabaseClient requires @prisma/client
+    // DB client check — now shipped by DBCompiler
     const dbPath = path.join(wsDir, 'src', 'lib', 'db.ts');
-    check('DB client skipped (deferred Phase 2.3)', !fs.existsSync(dbPath));
+    if (blueprint.dataModels.length > 0) {
+      check('DB client exists (src/lib/db.ts)', fs.existsSync(dbPath));
+    } else {
+      check('DB client absent (no data models)', !fs.existsSync(dbPath));
+    }
 
     // State store check
     const storePath = path.join(wsDir, 'src', 'lib', 'store.tsx');
@@ -109,9 +113,22 @@ async function runTests() {
       check('State store skipped (no stores)', !fs.existsSync(storePath));
     }
 
-    // API routes check — DEFERRED: compileAPIRoutes requires @prisma/client
+    // API routes check — now shipped by APICompiler
     const apiDir = path.join(wsDir, 'src', 'app', 'api');
-    check('API routes skipped (deferred Phase 2.3)', !fs.existsSync(apiDir));
+    if (blueprint.dataModels.length > 0) {
+      check('API routes dir exists (src/app/api/)', fs.existsSync(apiDir));
+      const apiRouteCount = fs.existsSync(apiDir)
+        ? fs.readdirSync(apiDir).filter(d =>
+            fs.existsSync(path.join(apiDir, d, 'route.ts'))).length
+        : 0;
+      check(
+        `API route count matches data models (${blueprint.dataModels.length})`,
+        apiRouteCount >= blueprint.dataModels.length,
+        `got ${apiRouteCount}`
+      );
+    } else {
+      check('API routes absent (no data models)', !fs.existsSync(apiDir));
+    }
 
     // pageResults check
     check(
