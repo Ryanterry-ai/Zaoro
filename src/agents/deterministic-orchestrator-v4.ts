@@ -194,7 +194,17 @@ export class DeterministicOrchestratorV4 {
           async (_ctx: LLMContext) => {
             const ppTarget = pp.targetFile;
             // Extract page-specific patches from the pre-computed map
-            const pagePatch = patchMap.get(ppTarget)?.find(p => p.targetFile === ppTarget);
+            // Domain patches always take priority over LLM patches for page files
+            const allPagePatches = (patchMap.get(ppTarget) || []).filter(p => p.targetFile === ppTarget);
+            console.log(`[orchestrator] Page ${pp.pagePath}: ${allPagePatches.length} patches for ${ppTarget}`);
+            for (const [idx, p] of allPagePatches.entries()) {
+              console.log(`  [${idx}] target=${p.targetFile} hasFunction=${p.codeBlock.includes('function ')} first80=${p.codeBlock.substring(0, 80).replace(/\n/g, ' ')}`);
+            }
+            // Always prefer the first patch with 'function ' (domain patches have this)
+            const pagePatch = allPagePatches.find(p => p.codeBlock.includes('function ')) || allPagePatches[0];
+            if (pagePatch) {
+              console.log(`[orchestrator] Selected patch: first100=${pagePatch.codeBlock.substring(0, 100).replace(/\n/g, ' ')}`);
+            }
             const componentPatches = (patchMap.get(ppTarget) || []).filter(p => {
               if (!p.targetFile.startsWith('src/components/')) return false;
               const fullPath = path.join(workspace.rootPath, p.targetFile);

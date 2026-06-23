@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const ENGINE_URL = process.env.ENGINE_URL;
+const ENGINE_URL = process.env.ENGINE_URL || "https://cytoplast-essence-untagged.ngrok-free.dev";
 
 export async function GET(
   req: Request,
@@ -8,15 +8,13 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  if (!ENGINE_URL) {
-    return NextResponse.json({ files: [] });
-  }
-
   try {
+    const cleanUrl = ENGINE_URL.endsWith('/') ? ENGINE_URL.slice(0, -1) : ENGINE_URL;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(`${ENGINE_URL}/api/workspace/${id}/files`, {
+    const res = await fetch(`${cleanUrl}/api/workspace/${id}/files`, {
       signal: controller.signal,
+      headers: { 'ngrok-skip-browser-warning': 'true' },
     });
     clearTimeout(timeout);
     const data = await res.json();

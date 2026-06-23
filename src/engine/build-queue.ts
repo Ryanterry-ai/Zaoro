@@ -167,11 +167,20 @@ try {
       }
     }, this.config.jobTimeoutMs);
 
+    const buildLogPath = path.join(wsDir, '.build-debug.log');
     child = exec(
       `npx tsx .build-temp-${job.id}.mts`,
       { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_NO_WARNINGS: '1' } }
     );
     job.pid = child.pid;
+
+    // Capture child process output for debugging
+    child.stdout?.on('data', (data: string) => {
+      try { fs.appendFileSync(buildLogPath, data); } catch {}
+    });
+    child.stderr?.on('data', (data: string) => {
+      try { fs.appendFileSync(buildLogPath, `[STDERR] ${data}`); } catch {}
+    });
 
     // Memory monitoring
     const memCheck = setInterval(() => {

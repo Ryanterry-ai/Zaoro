@@ -142,10 +142,15 @@ const server = http.createServer(async (req, res) => {
   // POST /api/workspace/:id/build
   if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/build$/)) {
     const id = url.pathname.split('/')[3]!;
+    console.log(`[server] Build request for: ${id}`);
     try {
       const promptFile = path.join(PROMPTS_DIR, `${id}.json`);
-      if (!fs.existsSync(promptFile)) return json(res, { error: 'No prompt found' }, 404);
+      if (!fs.existsSync(promptFile)) {
+        console.log(`[server] No prompt file: ${promptFile}`);
+        return json(res, { error: 'No prompt found' }, 404);
+      }
       const payload = JSON.parse(fs.readFileSync(promptFile, 'utf-8'));
+      console.log(`[server] Prompt type: ${payload.type}, prompt: ${(payload.prompt || '').substring(0, 50)}`);
 
       if (payload.type === 'clone') {
         return json(res, { id, status: 'clone_in_progress' });
@@ -155,7 +160,9 @@ const server = http.createServer(async (req, res) => {
 
       // Check if build already in progress
       const existing = buildQueue.getJob(id);
+      console.log(`[server] Existing job: ${existing ? existing.status : 'none'}`);
       if (existing && (existing.status === 'queued' || existing.status === 'running')) {
+        console.log(`[server] Already building, returning early`);
         return json(res, { id, status: 'already_building', queueStatus: buildQueue.getStatus() });
       }
 
@@ -167,8 +174,13 @@ const server = http.createServer(async (req, res) => {
         priority: 10,
       });
 
-      return json(res, { id, status: 'build_started', jobId: job.id, queueStatus: buildQueue.getStatus() });
-    } catch (e: any) { return json(res, { error: e.message }, 500); }
+      const responseData = { id, status: 'build_started', jobId: job.id, queueStatus: buildQueue.getStatus() };
+      console.log(`[server] Build enqueued, response: ${JSON.stringify(responseData)}`);
+      return json(res, responseData);
+    } catch (e: any) {
+      console.error(`[server] Build error: ${e.message}`);
+      return json(res, { error: e.message }, 500);
+    }
   }
 
   // GET /api/queue/status

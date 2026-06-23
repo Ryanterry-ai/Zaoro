@@ -1,5 +1,8 @@
 import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
+import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
+import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
+import { LLMRouter, createRouterFromEnv, type LLMProviderConfig } from './llm-router.js';
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 1000;
@@ -10,12 +13,25 @@ export class LLMGateway {
   private apiKey: string;
   private model: string;
   private architect: ArchitectAgent;
+  private router?: LLMRouter;
 
   constructor(config: LLMConfig) {
     this.provider = config.provider;
     this.apiKey = config.apiKey;
     this.model = config.model || this.defaultModel(config.provider);
     this.architect = new ArchitectAgent();
+  }
+
+  static createWithRouter(): LLMGateway {
+    const router = createRouterFromEnv();
+    const primary = router.selectProvider('code-generation');
+    const gateway = new LLMGateway({
+      provider: primary?.provider || 'gemini',
+      apiKey: primary?.apiKey || process.env.LLM_API_KEY || '',
+      model: primary?.model || 'gemini-2.5-flash',
+    });
+    gateway.router = router;
+    return gateway;
   }
 
   private defaultModel(provider: LLMProvider): string {
@@ -31,20 +47,31 @@ export class LLMGateway {
     const decision = this.architect.designArchitecture(context.prompt);
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
+    // Always generate domain-specific page patches as the primary UI
+    const domainPatches = this.synthesizeFallback(decision, context);
+    console.log(`[gateway] Generated ${domainPatches.length} domain-specific page patches`);
+
     if (!this.apiKey || this.apiKey.trim() === '') {
-      console.log(`[gateway] No API key. Falling back to JIT synthesis.`);
-      return this.synthesizeFallback(decision, context);
+      console.log(`[gateway] No API key. Using domain synthesis only.`);
+      return domainPatches;
     }
 
     const systemPrompt = this.buildSystemPrompt(architecturePrompt);
     const userPrompt = this.buildUserPrompt(context);
 
+    // Try primary provider
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
         console.log(`[gateway] LLM call: ${this.provider}/${this.model} (attempt ${attempt})`);
-        const patches = await this.callProvider(systemPrompt, userPrompt);
-        console.log(`[gateway] Received ${patches.length} patches`);
-        return patches;
+        const llmPatches = await this.callProvider(systemPrompt, userPrompt);
+        console.log(`[gateway] Received ${llmPatches.length} LLM patches`);
+        if (this.router) this.router.reportSuccess(this.provider);
+
+        // Merge: LLM patches for non-page files (API routes, components), domain patches for pages
+        const pageFiles = new Set(domainPatches.map(p => p.targetFile));
+        const nonPageLlmPatches = llmPatches.filter(p => !pageFiles.has(p.targetFile));
+        console.log(`[gateway] Merging: ${domainPatches.length} domain pages + ${nonPageLlmPatches.length} LLM backend patches`);
+        return [...domainPatches, ...nonPageLlmPatches];
       } catch (err: any) {
         const isTransient = this.isTransientError(err);
         const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
@@ -55,12 +82,36 @@ export class LLMGateway {
           continue;
         }
 
-        console.log(`[gateway] LLM failed: ${err.message}. Falling back to JIT synthesis.`);
-        return this.synthesizeFallback(decision, context);
+        if (this.router) this.router.reportFailure(this.provider, err);
+        break;
       }
     }
 
-    return this.synthesizeFallback(decision, context);
+    // Try fallback providers if router is available
+    if (this.router) {
+      const exclude = [this.provider];
+      let fallback = this.router.selectProvider('code-generation', exclude);
+      while (fallback) {
+        console.log(`[gateway] Trying fallback provider: ${fallback.provider}/${fallback.model}`);
+        try {
+          const tempGateway = new LLMGateway({ provider: fallback.provider, apiKey: fallback.apiKey, model: fallback.model });
+          const llmPatches = await tempGateway.callProvider(systemPrompt, userPrompt);
+          console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${llmPatches.length} patches`);
+          this.router.reportSuccess(fallback.provider);
+          const pageFiles = new Set(domainPatches.map(p => p.targetFile));
+          const nonPageLlmPatches = llmPatches.filter(p => !pageFiles.has(p.targetFile));
+          return [...domainPatches, ...nonPageLlmPatches];
+        } catch (err: any) {
+          console.log(`[gateway] Fallback ${fallback.provider} failed: ${err.message}`);
+          this.router.reportFailure(fallback.provider, err);
+          exclude.push(fallback.provider);
+          fallback = this.router.selectProvider('code-generation', exclude);
+        }
+      }
+    }
+
+    console.log(`[gateway] All LLM providers failed. Using domain synthesis only.`);
+    return domainPatches;
   }
 
   /**
@@ -76,14 +127,17 @@ export class LLMGateway {
 
     const patchMap = new Map<string, ASTPatch[]>();
 
+    // Always generate domain-specific page patches as the primary UI
+    const domainPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
+    for (const patch of domainPatches) {
+      const existing = patchMap.get(patch.targetFile) || [];
+      existing.push(patch);
+      patchMap.set(patch.targetFile, existing);
+    }
+    console.log(`[gateway] Generated ${domainPatches.length} domain-specific page patches`);
+
     if (!this.apiKey || this.apiKey.trim() === '') {
-      console.log(`[gateway] No API key. Falling back to JIT synthesis for combined call.`);
-      const allPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
-      for (const patch of allPatches) {
-        const existing = patchMap.get(patch.targetFile) || [];
-        existing.push(patch);
-        patchMap.set(patch.targetFile, existing);
-      }
+      console.log(`[gateway] No API key. Using domain synthesis only.`);
       return patchMap;
     }
 
@@ -111,13 +165,23 @@ Active Attempt Loop: 0`;
 
     const systemPrompt = this.buildSystemPrompt(architecturePrompt);
 
+    // Try primary provider
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
         console.log(`[gateway] Combined LLM call: ${this.provider}/${this.model} (attempt ${attempt}) — ${pagePrompts.length} pages`);
         const allPatches = await this.callProvider(systemPrompt, combinedUserPrompt);
         console.log(`[gateway] Received ${allPatches.length} total patches for ${pagePrompts.length} pages`);
 
-        for (const patch of allPatches) {
+        if (this.router) this.router.reportSuccess(this.provider);
+        // Merge: LLM patches for non-page files, domain patches for pages
+        const pageFiles = new Set(domainPatches.map(p => p.targetFile));
+        const nonPageLlmPatches = allPatches.filter(p => !pageFiles.has(p.targetFile));
+        const filteredPagePatches = allPatches.filter(p => pageFiles.has(p.targetFile));
+        console.log(`[gateway] LLM returned ${allPatches.length} total patches`);
+        console.log(`[gateway] Page files set: ${[...pageFiles].join(', ')}`);
+        console.log(`[gateway] Filtered out ${filteredPagePatches.length} LLM page patches: ${filteredPagePatches.map(p => p.targetFile).join(', ')}`);
+        console.log(`[gateway] Merging: ${domainPatches.length} domain pages + ${nonPageLlmPatches.length} LLM backend patches`);
+        for (const patch of nonPageLlmPatches) {
           const existing = patchMap.get(patch.targetFile) || [];
           existing.push(patch);
           patchMap.set(patch.targetFile, existing);
@@ -133,17 +197,40 @@ Active Attempt Loop: 0`;
           continue;
         }
 
-        console.log(`[gateway] Combined LLM failed: ${err.message}. Falling back to JIT synthesis.`);
-        const allPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
-        for (const patch of allPatches) {
-          const existing = patchMap.get(patch.targetFile) || [];
-          existing.push(patch);
-          patchMap.set(patch.targetFile, existing);
-        }
-        return patchMap;
+        if (this.router) this.router.reportFailure(this.provider, err);
+        break;
       }
     }
 
+    // Try fallback providers
+    if (this.router) {
+      const exclude = [this.provider];
+      let fallback = this.router.selectProvider('code-generation', exclude);
+      while (fallback) {
+        console.log(`[gateway] Trying fallback: ${fallback.provider}/${fallback.model}`);
+        try {
+          const tempGateway = new LLMGateway({ provider: fallback.provider, apiKey: fallback.apiKey, model: fallback.model });
+          const allPatches = await tempGateway.callProvider(systemPrompt, combinedUserPrompt);
+          console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${allPatches.length} patches`);
+          this.router.reportSuccess(fallback.provider);
+          const pageFiles = new Set(domainPatches.map(p => p.targetFile));
+          const nonPageLlmPatches = allPatches.filter(p => !pageFiles.has(p.targetFile));
+          for (const patch of nonPageLlmPatches) {
+            const existing = patchMap.get(patch.targetFile) || [];
+            existing.push(patch);
+            patchMap.set(patch.targetFile, existing);
+          }
+          return patchMap;
+        } catch (err: any) {
+          console.log(`[gateway] Fallback ${fallback.provider} failed: ${err.message}`);
+          this.router.reportFailure(fallback.provider, err);
+          exclude.push(fallback.provider);
+          fallback = this.router.selectProvider('code-generation', exclude);
+        }
+      }
+    }
+
+    console.log(`[gateway] All LLM providers failed. Using domain synthesis only.`);
     return patchMap;
   }
 
@@ -516,19 +603,36 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   // All content is generic — no domain-specific branches. The LLM handles domain specificity.
 
   private synthesizeFallback(decision: ArchitectDecision, context: LLMContext): ASTPatch[] {
-    console.log(`[gateway] JIT synthesis: ${decision.capabilities?.join(',') || decision.businessType}, ${decision.pages.length} pages`);
+    console.log(`[gateway] Domain-aware synthesis: ${decision.capabilities?.join(',') || decision.businessType}, ${decision.pages.length} pages`);
+    console.log(`[gateway] Pages: ${decision.pages.map(p => `${p.route}(${p.sections.join(',')})`).join('; ')}`);
 
+    const ctx = createDomainSynthesis(context.prompt, decision);
     const patches: ASTPatch[] = [];
 
     for (const page of decision.pages) {
-      patches.push(this.synthesizePage(page, decision));
+      patches.push(this.synthesizePage(page, decision, ctx));
+    }
+
+    console.log(`[gateway] Generated ${patches.length} domain patches: ${patches.map(p => p.targetFile).join(', ')}`);
+    for (const p of patches) {
+      console.log(`  [domain] ${p.targetFile}: hasFunction=${p.codeBlock.includes('function ')} first80=${p.codeBlock.substring(0, 80).replace(/\n/g, ' ')}`);
+    }
+
+    const sampleCode = patches.map(p => p.codeBlock).join('\n');
+    const evalResult = evaluateGeneratedContent(sampleCode, ctx.domain, context.prompt);
+    console.log(`[gateway] Self-evaluation: ${evalResult.score}% (${evalResult.passed ? 'PASS' : 'NEEDS_WORK'})`);
+    if (evalResult.suggestions.length > 0) {
+      console.log(`[gateway] Suggestions: ${evalResult.suggestions.join('; ')}`);
     }
 
     return patches;
   }
 
-  private synthesizePage(page: import('../generation/architect.js').PageDesign, decision: ArchitectDecision): ASTPatch {
-    const sections = page.sections.map(s => this.synthesizeSection(s, decision)).join('\n\n');
+  private synthesizePage(page: import('../generation/architect.js').PageDesign, decision: ArchitectDecision, ctx?: DomainSynthesisContext): ASTPatch {
+    const sections = page.sections.map(s => {
+      if (ctx) return synthesizeDomainSection(s, ctx);
+      return this.synthesizeSection(s, decision);
+    }).join('\n\n');
 
     const componentName = page.route === '/' ? 'Home' : page.name.replace(/\s+/g, '');
     const filePath = page.route === '/' ? 'src/app/page.tsx' : `src/app${page.route}/page.tsx`;
@@ -536,7 +640,15 @@ Review any compilation diagnostics carefully and generate AST patches that resol
     const ctaText = page.type === 'shop' ? 'View Collection'
       : page.type === 'booking' ? 'Book Now'
       : page.type === 'dashboard' ? 'Open Dashboard'
-      : 'Get Started';
+      : ctx?.data.hero.cta || 'Get Started';
+
+    const navItems = ctx
+      ? ctx.data.footer.links.map(l => `<span className="hover:text-white cursor-pointer transition">${l.label}</span>`).join('\n            ')
+      : decision.pages.map(p => `<span className="${p.route === page.route ? 'text-white' : 'hover:text-white cursor-pointer transition'}">${p.name}</span>`).join('\n            ');
+
+    const footerText = ctx
+      ? ctx.data.footer.tagline
+      : `&copy; 2026 ${decision.name}. All rights reserved.`;
 
     const codeBlock = `function ${componentName}() {
   return (
@@ -548,7 +660,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
             <span className="font-black text-lg tracking-tight">${decision.name}</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-zinc-400">
-            ${decision.pages.map(p => `<span className="${p.route === page.route ? 'text-white' : 'hover:text-white cursor-pointer transition'}">${p.name}</span>`).join('\n            ')}
+            ${navItems}
           </div>
           <button className="px-5 py-2.5 rounded-xl bg-${decision.colorScheme.primary}-600 hover:bg-${decision.colorScheme.primary}-700 text-sm font-bold transition">${ctaText}</button>
         </div>
@@ -557,7 +669,7 @@ Review any compilation diagnostics carefully and generate AST patches that resol
       ${sections}
 
       <footer className="border-t border-zinc-800 py-12 px-6 text-center text-sm text-zinc-600">
-        <p>&copy; 2026 ${decision.name}. All rights reserved.</p>
+        <p>${footerText}</p>
       </footer>
     </div>
   );

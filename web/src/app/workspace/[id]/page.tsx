@@ -136,6 +136,10 @@ export default function WorkspacePage() {
   const pollProgress = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspace/${id}/progress`);
+      if (!res.ok) {
+        console.warn(`[progress] HTTP ${res.status} — proxy may be down, engine may not be running`);
+        return;
+      }
       const data = await res.json();
       setSteps(data.steps || []);
       setPhases(data.phases || []);
@@ -157,7 +161,9 @@ export default function WorkspacePage() {
           pollRef.current = null;
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('[progress] Poll failed:', err);
+    }
   }, [id, loadFiles, loadPreview]);
 
   const loadFile = useCallback(async (filePath: string) => {

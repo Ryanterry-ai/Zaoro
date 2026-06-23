@@ -17,3 +17,7 @@ ngrok_output.log
 server.log
 server.err.log
 fix-backticks.cjs
+
+# Docker & Render configs — committed but harmless to ignore local builds
+.docker/
+tmp/
