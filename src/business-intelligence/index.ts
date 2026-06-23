@@ -39,3 +39,17 @@ export { VisualAnalyzer } from './core/visual-analyzer.js';
 export type { DesignTokens, PageAnalysis } from './core/visual-analyzer.js';
 export { WorkspaceManager } from './core/workspace-manager.js';
 export type { CodeQualityReport, CodeIssue } from './core/workspace-manager.js';
+
+// Business Operating System
+export { WorkflowEngine } from './workflow-engine.js';
+export type { WorkflowStep, BusinessWorkflow, WorkflowGraph, Actor } from './workflow-engine.js';
+export { RevenueEngine } from './revenue-engine.js';
+export type { RevenueStream, ConversionPath, RevenueModel, MonetizationModel } from './revenue-engine.js';
+export { CustomerJourneyEngine } from './customer-journey.js';
+export type { JourneyStage, CustomerJourneyGraph, JourneyStageType } from './customer-journey.js';
+export { SolutionArchitect } from './solution-architect.js';
+export type { PageBlueprint, EntityBlueprint, FeatureBlueprint, IntegrationBlueprint, DashboardBlueprint, ApplicationBlueprint } from './solution-architect.js';
+export { TechnicalArchitect } from './technical-architect.js';
+export type { DatabasePlan, APIPlan, AuthPlan, StoragePlan, StatePlan, AnalyticsPlan, DeploymentPlan, TechnicalPlan } from './technical-architect.js';
+export { BusinessOperatingSystem } from './business-operating-system.js';
+export type { BusinessOperatingSystemReport } from './business-operating-system.js';

@@ -1,4 +1,4 @@
-import { WebSearcher, type SearchResult } from '../business-intelligence/core/web-searcher.js';
+import { WebSearcher } from '../business-intelligence/core/web-searcher.js';
 import { AgentReachBridge } from '../business-intelligence/core/agent-reach-bridge.js';
 import type { CrawlResult } from '../business-intelligence/core/agent-reach-bridge.js';
 
@@ -15,7 +15,7 @@ export interface WebResearchData {
   industryPhrases: string[];
   popularServices: string[];
   pricingRange: string;
-  typicalTestimonials: string[];
+ 典型Testimonials: string[];
   ctaExamples: string[];
 }
 
@@ -49,14 +49,10 @@ export class WebResearcher {
     const allCtas: string[] = [];
 
     // Crawl top 3 competitor websites
-    const topResults = results.slice(0, 3).filter((r): r is SearchResult => r !== undefined && r !== null);
-    for (const searchResult of topResults) {
-      const resultUrl: string = searchResult.url;
-      const resultTitle: string = searchResult.title;
-      const resultSnippet: string = searchResult.snippet;
+    for (const result of results.slice(0, 3)) {
       try {
-        console.log(`[web-researcher] Crawling: ${resultUrl}`);
-        const crawlData = await this.reach.crawlWebsite(resultUrl, 5);
+        console.log(`[web-researcher] Crawling: ${result.url}`);
+        const crawlData = await this.reach.crawlWebsite(result.url, 5);
 
         const services = this.extractServices(crawlData);
         const pricing = this.extractPricing(crawlData);
@@ -64,9 +60,9 @@ export class WebResearcher {
         const ctas = this.extractCtas(crawlData);
 
         competitors.push({
-          name: (resultTitle.split('|')[0] ?? '').split('-')[0]?.trim() ?? 'Business',
-          url: resultUrl,
-          description: resultSnippet,
+          name: result.title?.split('|')[0]?.split('-')[0]?.trim() ?? 'Competitor',
+          url: result.url,
+          description: result.snippet,
           pricing,
           services,
           testimonials,
@@ -78,7 +74,7 @@ export class WebResearcher {
         allTestimonials.push(...testimonials);
         allCtas.push(...ctas);
       } catch (err: any) {
-        console.warn(`[web-researcher] Failed to crawl ${resultUrl}: ${err.message}`);
+        console.warn(`[web-researcher] Failed to crawl ${result.url}: ${err.message}`);
       }
     }
 
@@ -87,7 +83,7 @@ export class WebResearcher {
       industryPhrases: this.extractIndustryPhrases(competitors),
       popularServices: this.deduplicateAndRank(allServices).slice(0, 10),
       pricingRange: this.estimatePricingRange(allPricing),
-      typicalTestimonials: this.deduplicateAndRank(allTestimonials).slice(0, 5),
+     典型Testimonials: this.deduplicateAndRank(allTestimonials).slice(0, 5),
       ctaExamples: this.deduplicateAndRank(allCtas).slice(0, 5),
     };
 

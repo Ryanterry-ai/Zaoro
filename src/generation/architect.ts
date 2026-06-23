@@ -2,6 +2,7 @@ import { ATOMIC_PRIMITIVES, buildPrimitivesCatalog } from './primitives.js';
 import { FullStackBlueprint, DataModel, APIRouteSpec, StateStoreSpec } from '../types/index.js';
 import { BusinessIntelligenceEngine, IntelligenceResult } from '../intelligence/business-intelligence-engine.js';
 import { CapabilityGraph, CapabilityNode } from '../intelligence/capability-graph.js';
+import { BusinessOperatingSystem, type BusinessOperatingSystemReport } from '../business-intelligence/business-operating-system.js';
 
 export interface ArchitectDecision {
   businessType: string;
@@ -201,12 +202,23 @@ export class ArchitectAgent {
   private intelEngine = new BusinessIntelligenceEngine();
 
   designArchitecture(prompt: string): ArchitectDecision {
+    // Run BOS first for business intelligence
+    let biReport: BusinessOperatingSystemReport | undefined;
+    try {
+      const bos = new BusinessOperatingSystem();
+      biReport = bos.analyze(prompt);
+      console.log(`[architect] BOS: ${biReport.blueprint.pages.length} pages, ${biReport.blueprint.entities.length} entities`);
+    } catch (err: any) {
+      console.warn(`[architect] BOS failed, falling back to capability graph: ${err.message}`);
+    }
+
     const intelligence = this.intelEngine.analyze(prompt);
     const capabilities = this.intelEngine.getTopCapabilities(intelligence, 0.1);
     const name = this.extractName(prompt);
     const colorScheme = this.inferColorScheme(prompt, capabilities);
 
-    const pages = this.designPages(prompt, capabilities);
+    // Use BOS blueprint pages if available, otherwise fallback to capability-based
+    const pages = biReport ? this.designPagesFromBlueprint(biReport, name) : this.designPages(prompt, capabilities);
     const components = this.designComponents(pages);
     const stateModel = this.designStateModel(capabilities);
 
@@ -220,6 +232,51 @@ export class ArchitectAgent {
       name,
       description: `${name} — ${capabilities.join(', ')} application`,
     };
+  }
+
+  private designPagesFromBlueprint(report: BusinessOperatingSystemReport, appName: string): PageDesign[] {
+    const pages: PageDesign[] = [];
+    const seenRoutes = new Set<string>();
+
+    // Home page from blueprint
+    pages.push({
+      route: '/',
+      name: 'Home',
+      type: 'home',
+      sections: this.determineHeroSections(report.capabilities),
+      layout: 'default',
+      description: `Landing page for ${appName}`,
+    });
+    seenRoutes.add('/');
+
+    // Pages from BOS blueprint
+    for (const page of report.blueprint.pages) {
+      if (!seenRoutes.has(page.route)) {
+        seenRoutes.add(page.route);
+        pages.push({
+          route: page.route,
+          name: page.name,
+          type: page.type,
+          sections: page.requiredFeatures,
+          layout: 'default',
+          description: page.purpose,
+        });
+      }
+    }
+
+    // Contact page always exists
+    if (!seenRoutes.has('/contact')) {
+      pages.push({
+        route: '/contact',
+        name: 'Contact',
+        type: 'static',
+        sections: ['contact-form', 'contact-info'],
+        layout: 'default',
+        description: 'Contact page',
+      });
+    }
+
+    return pages;
   }
 
   private designPages(prompt: string, capabilities: string[]): PageDesign[] {

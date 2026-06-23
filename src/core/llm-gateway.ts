@@ -1,6 +1,6 @@
 import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
-import { createDomainSynthesis, createDomainSynthesisAsync, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
+import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
 import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
 import { LLMRouter, createRouterFromEnv, type LLMProviderConfig } from './llm-router.js';
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
@@ -49,7 +49,7 @@ export class LLMGateway {
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
     // Always generate domain-specific page patches as the primary UI
-    const domainPatches = await this.synthesizeFallback(decision, context);
+    const domainPatches = this.synthesizeFallback(decision, context);
     console.log(`[gateway] Generated ${domainPatches.length} domain-specific page patches`);
 
     if (!this.apiKey || this.apiKey.trim() === '') {
@@ -130,7 +130,7 @@ export class LLMGateway {
     const patchMap = new Map<string, ASTPatch[]>();
 
     // Always generate domain-specific page patches as the primary UI
-    const domainPatches = await this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
+    const domainPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
     for (const patch of domainPatches) {
       const existing = patchMap.get(patch.targetFile) || [];
       existing.push(patch);
@@ -689,11 +689,11 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   // This is the explicit degraded mode for when no API key is configured.
   // All content is generic — no domain-specific branches. The LLM handles domain specificity.
 
-  private async synthesizeFallback(decision: ArchitectDecision, context: LLMContext): Promise<ASTPatch[]> {
+  private synthesizeFallback(decision: ArchitectDecision, context: LLMContext): ASTPatch[] {
     console.log(`[gateway] Domain-aware synthesis: ${decision.capabilities?.join(',') || decision.businessType}, ${decision.pages.length} pages`);
     console.log(`[gateway] Pages: ${decision.pages.map(p => `${p.route}(${p.sections.join(',')})`).join('; ')}`);
 
-    const ctx = await createDomainSynthesisAsync(context.prompt, decision);
+    const ctx = createDomainSynthesis(context.prompt, decision);
     const patches: ASTPatch[] = [];
 
     for (const page of decision.pages) {
