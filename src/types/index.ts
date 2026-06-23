@@ -108,7 +108,7 @@ export interface GenerationIntent {
 export interface PageBuildResult {
   path: string;
   succeeded: boolean;
-  lastError?: string;
+  lastError?: string | undefined;
 }
 
 export interface GenerationResult {

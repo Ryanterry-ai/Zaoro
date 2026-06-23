@@ -23,6 +23,7 @@ import { APICompiler } from '../core/api-compiler.js';
 import { TelemetryLayer } from '../core/telemetry.js';
 import { BusinessIntelligencePipeline } from '../business-intelligence/pipeline.js';
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
+import { SelfHealingEngine } from '../engine/self-healing-engine.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -169,7 +170,7 @@ export class DeterministicOrchestratorV4 {
 
     const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
 
-    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string }> = [];
+    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
     const PER_PAGE_RETRIES = 3;
 
     // Build all page prompts upfront for the combined LLM call
@@ -268,14 +269,48 @@ export class DeterministicOrchestratorV4 {
     const succeeded = pageResults.filter(r => r.succeeded).length;
     const failed = pageResults.filter(r => !r.succeeded);
 
-    if (failed.length > 0) {
+    // ─── Self-Healing Loop ───────────────────────────────────────
+    // If there are TypeScript errors remaining, run the self-healing engine
+    // to automatically fix them via LLM-generated repairs.
+    if (failed.length === 0 || pageResults.some(r => r.succeeded)) {
+      const postCompileErrors = this.auditor.audit(workspace.rootPath);
+      if (postCompileErrors.length > 0) {
+        console.log(`[orchestrator] Post-compile: ${postCompileErrors.length} TypeScript errors detected — running self-healing engine...`);
+
+        const healer = new SelfHealingEngine(5, 20);
+        const healingResult = await healer.heal(
+          workspace.rootPath,
+          gateway,
+          prompt,
+          (iteration, errors, message) => {
+            console.log(`[orchestrator] Self-heal iteration ${iteration}: ${message}`);
+          }
+        );
+
+        console.log(`[orchestrator] Self-healing complete: ${healingResult.errorsFixed} errors fixed, ${healingResult.remainingErrors.length} remaining`);
+        TelemetryLayer.reportHealing(workspaceId, healingResult.iterations, healingResult.errorsFixed);
+
+        // Update page results based on healing outcome
+        if (healingResult.success) {
+          // All pages now compile
+          for (const pr of pageResults) {
+            pr.succeeded = true;
+            pr.lastError = undefined;
+          }
+        }
+      }
+    }
+
+    const finalFailed = pageResults.filter(r => !r.succeeded);
+
+    if (finalFailed.length > 0) {
       console.warn(`[orchestrator] Build partial: ${succeeded}/${pageResults.length} pages succeeded`);
     } else {
       console.log(`[orchestrator] Build complete: ${pageResults.length} pages compiled.`);
     }
 
     const result: GenerationResult = {
-      success: failed.length === 0,
+      success: finalFailed.length === 0,
       intent,
       workspaceId,
       blueprint,
@@ -283,8 +318,8 @@ export class DeterministicOrchestratorV4 {
       duration: Date.now() - startTime,
     };
 
-    if (failed.length > 0) {
-      result.error = `${failed.length} page(s) failed: ${failed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;
+    if (finalFailed.length > 0) {
+      result.error = `${finalFailed.length} page(s) failed: ${finalFailed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;
     }
 
     TelemetryLayer.reportBuildComplete({
@@ -292,7 +327,7 @@ export class DeterministicOrchestratorV4 {
       prompt: prompt.slice(0, 200),
       pagesTotal: pageResults.length,
       pagesSucceeded: succeeded,
-      pagesFailed: failed.length,
+      pagesFailed: finalFailed.length,
       duration: result.duration,
       success: result.success,
     });
