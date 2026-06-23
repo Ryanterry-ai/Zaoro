@@ -1,367 +1,237 @@
 /**
- * Runtime Dependency Resolver — Upgrade 4
- * Detects missing packages from import statements and auto-installs them.
- * Falls back gracefully when packages can't be installed.
+ * Dependency Installation Lock: Ensures npm install completes and all packages
+ * are resolvable before allowing downstream pipeline stages to proceed.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
-export interface MissingPackage {
-  name: string;
-  importPath: string;
-  file: string;
-  line: number;
-  installCommand: string;
+const execFileAsync = promisify(execFile);
+
+export interface DependencyCheckResult {
+  installed: string[];
+  missing: string[];
+  unresolvable: string[];
+  lockAcquired: boolean;
+  durationMs: number;
 }
 
-export interface ResolutionResult {
-  resolved: MissingPackage[];
-  failed: MissingPackage[];
-  alreadyInstalled: string[];
-  newlyInstalled: string[];
-  totalScanned: number;
+export interface DependencyLockOptions {
+  workspacePath: string;
+  requiredPackages?: string[];
+  timeoutMs?: number;
+  retries?: number;
 }
-
-// Known package mappings (import path → npm package name)
-const PACKAGE_MAP: Record<string, string> = {
-  'react': 'react',
-  'react-dom': 'react-dom',
-  'next': 'next',
-  'lucide-react': 'lucide-react',
-  'zustand': 'zustand',
-  '@prisma/client': '@prisma/client',
-  'prisma': 'prisma',
-  'zod': 'zod',
-  'react-hook-form': 'react-hook-form',
-  'react-query': '@tanstack/react-query',
-  '@tanstack/react-query': '@tanstack/react-query',
-  'swr': 'swr',
-  'axios': 'axios',
-  'date-fns': 'date-fns',
-  'dayjs': 'dayjs',
-  'lodash': 'lodash',
-  'lodash-es': 'lodash-es',
-  'clsx': 'clsx',
-  'tailwind-merge': 'tailwind-merge',
-  'class-variance-authority': 'class-variance-authority',
-  'framer-motion': 'framer-motion',
-  'chart.js': 'chart.js',
-  'react-chartjs-2': 'react-chartjs-2',
-  '@stripe/stripe-js': '@stripe/stripe-js',
-  '@stripe/react-stripe-js': '@stripe/react-stripe-js',
-  'stripe': 'stripe',
-  'resend': 'resend',
-  '@sendgrid/mail': '@sendgrid/mail',
-  'nodemailer': 'nodemailer',
-  'sharp': 'sharp',
-  'playwright': 'playwright',
-  'cypress': 'cypress',
-  'jest': 'jest',
-  '@testing-library/react': '@testing-library/react',
-  'tailwindcss': 'tailwindcss',
-  'postcss': 'postcss',
-  'autoprefixer': 'autoprefixer',
-  'eslint': 'eslint',
-  '@eslint/*': '@eslint/*',
-  'typescript': 'typescript',
-  '@types/react': '@types/react',
-  '@types/react-dom': '@types/react-dom',
-  '@types/node': '@types/node',
-};
-
-// Scoped package patterns
-const SCOPED_PACKAGES = [
-  { pattern: /^@prisma\//, package: '@prisma/client' },
-  { pattern: /^@tanstack\//, package: '@tanstack/react-query' },
-  { pattern: /^@eslint\//, package: '@eslint/js' },
-  { pattern: /^@types\//, package: (match: string) => match },
-  { pattern: /^@radix-ui\//, package: (match: string) => match },
-  { pattern: /^@headlessui\//, package: (match: string) => match },
-  { pattern: /^@heroicons\//, package: (match: string) => match },
-];
 
 export class DependencyResolver {
+  private lockFilePath: string;
   private workspacePath: string;
-  private installedPackages: Set<string> = new Set();
 
   constructor(workspacePath: string) {
     this.workspacePath = workspacePath;
-    this.loadInstalledPackages();
+    this.lockFilePath = path.join(workspacePath, '.dependency-lock');
   }
 
   /**
-   * Scan all source files and resolve missing dependencies.
+   * Acquire dependency installation lock. Spawns npm install, awaits exit,
+   * verifies packages exist in node_modules and package.json, then verifies
+   * TypeScript can resolve each package.
    */
-  resolve(): ResolutionResult {
-    console.log('[dep-resolver] Scanning for missing dependencies...');
+  async acquireLock(options: DependencyLockOptions): Promise<DependencyCheckResult> {
+    const startTime = Date.now();
+    const timeoutMs = options.timeoutMs ?? 120_000;
+    const retries = options.retries ?? 2;
+    const requiredPackages = options.requiredPackages ?? [];
 
-    const missingPackages: MissingPackage[] = [];
-    const alreadyInstalled: string[] = [];
-    const srcDir = path.join(this.workspacePath, 'src');
-
-    if (!fs.existsSync(srcDir)) {
-      return { resolved: [], failed: [], alreadyInstalled: [], newlyInstalled: [], totalScanned: 0 };
-    }
-
-    // Scan all source files
-    this.scanDirectory(srcDir, missingPackages);
-
-    // Deduplicate by package name
-    const uniqueMissing = this.deduplicatePackages(missingPackages);
-
-    // Filter out already installed
-    const toInstall = uniqueMissing.filter(p => !this.installedPackages.has(p.name));
-    const installed = uniqueMissing.filter(p => this.installedPackages.has(p.name));
-
-    console.log(`[dep-resolver] Found ${uniqueMissing.length} unique packages, ${toInstall.length} missing, ${installed.length} already installed`);
-
-    // Install missing packages
-    const resolved: MissingPackage[] = [];
-    const failed: MissingPackage[] = [];
-
-    for (const pkg of toInstall) {
-      try {
-        this.installPackage(pkg.name);
-        this.installedPackages.add(pkg.name);
-        resolved.push(pkg);
-        console.log(`[dep-resolver] ✅ Installed: ${pkg.name}`);
-      } catch (err: any) {
-        failed.push(pkg);
-        console.warn(`[dep-resolver] ❌ Failed to install ${pkg.name}: ${err.message}`);
-      }
-    }
-
-    const result: ResolutionResult = {
-      resolved,
-      failed,
-      alreadyInstalled: installed.map(p => p.name),
-      newlyInstalled: resolved.map(p => p.name),
-      totalScanned: missingPackages.length,
-    };
-
-    console.log(`[dep-resolver] Result: ${resolved.length} installed, ${failed.length} failed, ${installed.length} pre-installed`);
-
-    return result;
-  }
-
-  /**
-   * Scan a directory for import statements.
-   */
-  private scanDirectory(dir: string, missing: MissingPackage[]): void {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-
-      if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules' && entry.name !== '.next' && entry.name !== 'dist') {
-          this.scanDirectory(fullPath, missing);
-        }
-        continue;
-      }
-
-      if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx') && !entry.name.endsWith('.js') && !entry.name.endsWith('.jsx')) {
-        continue;
-      }
-
-      this.scanFile(fullPath, missing);
-    }
-  }
-
-  /**
-   * Scan a file for import statements.
-   */
-  private scanFile(filePath: string, missing: MissingPackage[]): void {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n');
-    const relativePath = path.relative(this.workspacePath, filePath).replace(/\\/g, '/');
-
-    // Match import statements
-    const importPattern = /import\s+.*?from\s+['"]([^'"]+)['"]/g;
-    // Match require statements
-    const requirePattern = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-    // Match dynamic imports
-    const dynamicImportPattern = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-
-    for (const pattern of [importPattern, requirePattern, dynamicImportPattern]) {
-      let match;
-      pattern.lastIndex = 0;
-
-      while ((match = pattern.exec(content)) !== null) {
-        const importPath = match[1] ?? '';
-
-        // Skip relative imports
-        if (importPath.startsWith('.') || importPath.startsWith('/')) continue;
-
-        // Skip path aliases (@/)
-        if (importPath.startsWith('@/')) continue;
-
-        // Skip next built-ins
-        if (importPath.startsWith('next/')) continue;
-
-        // Skip react/react-dom (always installed)
-        if (importPath === 'react' || importPath === 'react-dom') continue;
-
-        // Find line number
-        const beforeMatch = content.substring(0, match.index);
-        const lineNum = beforeMatch.split('\n').length;
-
-        // Resolve package name
-        const packageName = this.resolvePackageName(importPath);
-        if (packageName && !this.installedPackages.has(packageName)) {
-          missing.push({
-            name: packageName,
-            importPath,
-            file: relativePath,
-            line: lineNum,
-            installCommand: `npm install ${packageName}`,
-          });
-        }
-      }
-    }
-  }
-
-  /**
-   * Resolve an import path to an npm package name.
-   */
-  private resolvePackageName(importPath: string): string | null {
-    // Check exact matches first
-    if (PACKAGE_MAP[importPath]) {
-      return PACKAGE_MAP[importPath];
-    }
-
-    // Check scoped packages
-    for (const scoped of SCOPED_PACKAGES) {
-      if (scoped.pattern.test(importPath)) {
-        if (typeof scoped.package === 'function') {
-          return scoped.package(importPath);
-        }
-        return scoped.package;
-      }
-    }
-
-    // Check if it's a package name (no relative path)
-    if (!importPath.startsWith('.') && !importPath.startsWith('/')) {
-      // Return the first part before / for scoped packages
-      if (importPath.startsWith('@')) {
-        const parts = importPath.split('/');
-        if (parts.length >= 2) {
-          return `${parts[0]}/${parts[1]}`;
-        }
-      }
-      // Return the package name (first part before /)
-      return importPath.split('/')[0] || null;
-    }
-
-    return null;
-  }
-
-  /**
-   * Load currently installed packages from package.json.
-   */
-  private loadInstalledPackages(): void {
-    const packageJsonPath = path.join(this.workspacePath, 'package.json');
-    if (!fs.existsSync(packageJsonPath)) return;
+    // Write lock file to prevent concurrent installs
+    this.writeLock();
 
     try {
+      // Step 1: Spawn npm install and await exit
+      console.log('[dep-lock] Running npm install...');
+      await this.runNpmInstall(timeoutMs, retries);
+      console.log('[dep-lock] npm install completed');
+
+      // Step 2: Read package.json dependencies
+      const packageJsonPath = path.join(this.workspacePath, 'package.json');
+      if (!fs.existsSync(packageJsonPath)) {
+        return this.buildResult([], requiredPackages, [], false, startTime);
+      }
+
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-      const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-      for (const name of Object.keys(deps)) {
-        this.installedPackages.add(name);
+      const allDeps = {
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+      };
+
+      // Step 3: Verify each package exists in node_modules
+      const installed: string[] = [];
+      const missing: string[] = [];
+
+      for (const pkg of Object.keys(allDeps)) {
+        const pkgPath = path.join(this.workspacePath, 'node_modules', pkg);
+        if (fs.existsSync(pkgPath)) {
+          installed.push(pkg);
+        } else {
+          missing.push(pkg);
+        }
+      }
+
+      // Step 4: Verify required packages specifically
+      for (const pkg of requiredPackages) {
+        if (!installed.includes(pkg)) {
+          const pkgPath = path.join(this.workspacePath, 'node_modules', pkg);
+          if (fs.existsSync(pkgPath)) {
+            installed.push(pkg);
+          } else if (!missing.includes(pkg)) {
+            missing.push(pkg);
+          }
+        }
+      }
+
+      // Step 5: Verify TypeScript can resolve packages
+      const unresolvable = await this.verifyTypeScriptResolution(installed);
+
+      const lockAcquired = missing.length === 0 && unresolvable.length === 0;
+      console.log(`[dep-lock] Lock acquired: ${lockAcquired} (${installed.length} installed, ${missing.length} missing, ${unresolvable.length} unresolvable)`);
+
+      return this.buildResult(installed, missing, unresolvable, lockAcquired, startTime);
+    } finally {
+      this.releaseLock();
+    }
+  }
+
+  /**
+   * Check if a lock is currently held (prevent concurrent installs).
+   */
+  isLocked(): boolean {
+    return fs.existsSync(this.lockFilePath);
+  }
+
+  /**
+   * Release the dependency lock.
+   */
+  releaseLock(): void {
+    try {
+      if (fs.existsSync(this.lockFilePath)) {
+        fs.unlinkSync(this.lockFilePath);
       }
     } catch {
-      // Ignore parse errors
+      // Ignore errors on cleanup
     }
   }
 
-  /**
-   * Install a package using npm.
-   */
-  private installPackage(name: string): void {
-    const packageJsonPath = path.join(this.workspacePath, 'package.json');
+  private writeLock(): void {
+    const lockData = {
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      workspacePath: this.workspacePath,
+    };
+    fs.writeFileSync(this.lockFilePath, JSON.stringify(lockData, null, 2), 'utf-8');
+  }
 
-    // Update package.json
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-    if (!packageJson.dependencies) packageJson.dependencies = {};
+  private async runNpmInstall(timeoutMs: number, retries: number): Promise<void> {
+    let lastError: Error | null = null;
+    const isWindows = process.platform === 'win32';
+    const npmCmd = isWindows ? 'npm.cmd' : 'npm';
+    const shell = isWindows ? true : undefined;
 
-    // Determine if it's a dev dependency
-    const devPackages = ['typescript', '@types/*', 'eslint', '@eslint/*', 'tailwindcss', 'postcss', 'autoprefixer'];
-    const isDev = devPackages.some(p => {
-      if (p.includes('*')) {
-        return name.startsWith(p.replace('*', ''));
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const { stdout, stderr } = await execFileAsync(npmCmd, ['install', '--prefer-offline'], {
+          cwd: this.workspacePath,
+          timeout: timeoutMs,
+          shell,
+          env: { ...process.env, npm_config_loglevel: 'warn' },
+        });
+
+        if (stdout) console.log(`[dep-lock] npm stdout: ${stdout.slice(0, 200)}`);
+        if (stderr) console.warn(`[dep-lock] npm stderr: ${stderr.slice(0, 200)}`);
+        return;
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[dep-lock] npm install attempt ${attempt + 1} failed: ${err.message}`);
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        }
       }
-      return name === p;
-    });
-
-    if (isDev) {
-      if (!packageJson.devDependencies) packageJson.devDependencies = {};
-      packageJson.devDependencies[name] = 'latest';
-    } else {
-      packageJson.dependencies[name] = 'latest';
     }
 
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf-8');
+    throw lastError ?? new Error('npm install failed after retries');
+  }
 
-    // Run npm install
+  private async verifyTypeScriptResolution(packages: string[]): Promise<string[]> {
+    const unresolvable: string[] = [];
+
+    // Create a temporary tsconfig for resolution check
+    const tempTsConfig = path.join(this.workspacePath, '.dep-check-tsconfig.json');
+    const tempTsFile = path.join(this.workspacePath, '.dep-check.ts');
+
     try {
-      execSync('npm install --silent --legacy-peer-deps', {
-        cwd: this.workspacePath,
-        timeout: 60000,
-        stdio: 'pipe',
-      });
-    } catch (err: any) {
-      throw new Error(`npm install failed: ${err.message}`);
+      // Write temp tsconfig
+      fs.writeFileSync(tempTsConfig, JSON.stringify({
+        compilerOptions: {
+          target: 'ES2022',
+          module: 'NodeNext',
+          moduleResolution: 'NodeNext',
+          strict: true,
+          noEmit: true,
+          skipLibCheck: true,
+        },
+        include: [tempTsFile],
+      }), 'utf-8');
+
+      // Write temp import file that tries to import each package
+      const imports = packages.map(pkg => `import '${pkg}';`).join('\n');
+      fs.writeFileSync(tempTsFile, `${imports}\nexport {};\n`, 'utf-8');
+
+      // Run tsc --noEmit
+      try {
+        const isWindows = process.platform === 'win32';
+        const npxCmd = isWindows ? 'npx.cmd' : 'npx';
+        const shell = isWindows ? true : undefined;
+        await execFileAsync(npxCmd, ['tsc', '--noEmit', '-p', tempTsConfig], {
+          cwd: this.workspacePath,
+          timeout: 30_000,
+          shell,
+        });
+      } catch (err: any) {
+        // Parse tsc output to find unresolvable packages
+        const output = err.stdout ?? err.stderr ?? '';
+        for (const pkg of packages) {
+          if (output.includes(`Cannot find module '${pkg}'`) || output.includes(`Could not resolve '${pkg}'`)) {
+            unresolvable.push(pkg);
+          }
+        }
+      }
+    } finally {
+      // Cleanup temp files
+      try {
+        if (fs.existsSync(tempTsConfig)) fs.unlinkSync(tempTsConfig);
+        if (fs.existsSync(tempTsFile)) fs.unlinkSync(tempTsFile);
+      } catch {
+        // Ignore cleanup errors
+      }
     }
+
+    return unresolvable;
   }
 
-  /**
-   * Deduplicate packages by name.
-   */
-  private deduplicatePackages(packages: MissingPackage[]): MissingPackage[] {
-    const seen = new Map<string, MissingPackage>();
-    for (const pkg of packages) {
-      if (!seen.has(pkg.name)) {
-        seen.set(pkg.name, pkg);
-      }
-    }
-    return Array.from(seen.values());
-  }
-
-  /**
-   * Generate a report for the resolution result.
-   */
-  generateReport(result: ResolutionResult): string {
-    const lines: string[] = [];
-
-    lines.push('=== Dependency Resolution Report ===');
-    lines.push(`Total imports scanned: ${result.totalScanned}`);
-    lines.push(`Already installed: ${result.alreadyInstalled.length}`);
-    lines.push(`Newly installed: ${result.newlyInstalled.length}`);
-    lines.push(`Failed to install: ${result.failed.length}`);
-    lines.push('');
-
-    if (result.newlyInstalled.length > 0) {
-      lines.push('Newly installed:');
-      for (const pkg of result.newlyInstalled) {
-        lines.push(`  ✅ ${pkg}`);
-      }
-      lines.push('');
-    }
-
-    if (result.failed.length > 0) {
-      lines.push('Failed to install:');
-      for (const pkg of result.failed) {
-        lines.push(`  ❌ ${pkg.name} (imported in ${pkg.file}:${pkg.line})`);
-      }
-      lines.push('');
-    }
-
-    if (result.failed.length === 0) {
-      lines.push('✅ All dependencies resolved');
-    }
-
-    return lines.join('\n');
+  private buildResult(
+    installed: string[],
+    missing: string[],
+    unresolvable: string[],
+    lockAcquired: boolean,
+    startTime: number,
+  ): DependencyCheckResult {
+    return {
+      installed,
+      missing,
+      unresolvable,
+      lockAcquired,
+      durationMs: Date.now() - startTime,
+    };
   }
 }

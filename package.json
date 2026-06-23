@@ -20,7 +20,13 @@
     "verify:queue": "npx tsx scripts/verify-build-queue.ts",
     "verify:persistence": "npx tsx scripts/verify-persistence.ts",
     "verify:mcp": "npx tsx scripts/test-mcp-pipeline.ts",
-    "verify:all": "npm run verify:generation && npm run verify:multi-file && npm run verify:fullstack && npm run verify:telemetry && npm run verify:intelligence && npm run verify:synthesis && npm run verify:queue && npm run verify:persistence"
+    "verify:dependency-lock": "npx tsx scripts/verify-dependency-lock.ts",
+    "verify:healing-memory": "npx tsx scripts/verify-healing-memory.ts",
+    "verify:export-engine": "npx tsx scripts/verify-export-engine.ts",
+    "verify:production-manifest": "npx tsx scripts/verify-production-manifest.ts",
+    "verify:delivery-pipeline": "npx tsx scripts/verify-delivery-pipeline.ts",
+    "verify:bos": "npx tsx scripts/verify-business-operating-system.ts",
+    "verify:all": "npm run verify:generation && npm run verify:multi-file && npm run verify:fullstack && npm run verify:telemetry && npm run verify:intelligence && npm run verify:synthesis && npm run verify:queue && npm run verify:persistence && npm run verify:dependency-lock && npm run verify:healing-memory && npm run verify:export-engine && npm run verify:production-manifest && npm run verify:delivery-pipeline && npm run verify:bos"
   },
   "dependencies": {
     "@babel/parser": "^7.24.0",
