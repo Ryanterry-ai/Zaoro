@@ -9,6 +9,6 @@ export { ATOMIC_PRIMITIVES, buildPrimitivesCatalog, getPrimitivesForDomain } fro
 export * from './types.js';
 export { detectDomain, type DomainContext } from './domain-detector.js';
 export { getDomainData, getSectionData, type DomainMockData } from './domain-data.js';
-export { resolveDomainImages, resolveSectionImage, type ResolvedImages } from './image-resolver.js';
+export { resolveDomainImages, resolveSingleImage, resolveRandomImage, type ResolvedImages } from './image-resolver.js';
 export { evaluateGeneratedContent, type EvaluationResult } from './self-evaluator.js';
 export { createDomainSynthesis, synthesizeDomainSection, type DomainSynthesisContext } from './domain-synthesizer.js';

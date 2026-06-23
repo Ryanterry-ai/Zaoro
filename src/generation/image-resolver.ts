@@ -1,3 +1,8 @@
+/**
+ * Image Resolver: Generates domain-specific image URLs using Unsplash Source API
+ * with proper keyword mapping. No hardcoded photo IDs — uses search-based URLs.
+ */
+
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -11,66 +16,133 @@ export interface ResolvedImages {
 const UNSPLASH_WIDTH = 1200;
 const UNSPLASH_HEIGHT = 800;
 
+/**
+ * Generate Unsplash Source URL with keyword search.
+ * Returns a random photo matching the keyword — no API key needed.
+ */
 function unsplashUrl(keyword: string, width = UNSPLASH_WIDTH, height = UNSPLASH_HEIGHT): string {
   const query = encodeURIComponent(keyword);
-  return `https://images.unsplash.com/photo-${getPhotoId(keyword)}?w=${width}&h=${height}&fit=crop&auto=format&q=80`;
+  return `https://source.unsplash.com/${width}x${height}/?${query}`;
 }
 
-function getPhotoId(keyword: string): string {
-  const photoMap: Record<string, string> = {
-    'luxury home': '1600596542815-ffad4c1539a9',
-    'modern house': '1600585154340-be6161a56a0c',
-    'apartment interior': '1502672260266-1c1ef2d93688',
-    'real estate': '1560518883-ce09059eeffa',
-    'fine dining': '1414235077428-338989a2e8c0',
-    'restaurant interior': '1517248135467-4c7edcad34c4',
-    'gourmet food': '1504674900247-0877df9cc836',
-    'chef cooking': '1556910103-1c02745aae4d',
-    'gym interior': '1534438327276-14e5300c3a48',
-    'personal training': '1571019614242-c5c5dee9f50b',
-    'yoga class': '1544367567-0f2fcb009e0b',
-    'fitness workout': '1517836357463-d25dfeac3438',
-    'dashboard': '1551288049-bebda4e38f71',
-    'software interface': '1517694712202-14dd9538aa97',
-    'analytics': '1460925895917-afdab827c52f',
-    'team collaboration': '1522071820081-009f0129c71c',
-    'doctor office': '1519494026892-80bbd2d6fd0d',
-    'medical clinic': '1516549655169-df83a0774514',
-    'healthcare professional': '1559839734-2b71ea197ec2',
-    'patient care': '1576091160399-112ba8d25d1d',
-    'law office': '1589829545856-d10d557cf95f',
-    'courtroom': '1589994965851-a8f479c573a9',
-    'legal books': '1507679799987-c73779587ccf',
-    'attorney consultation': '1521791136064-7986c2920216',
-    'product photography': '1505740420928-5e560c06d30e',
-    'online store': '1556742049-0cfed4f6a45d',
-    'shopping': '1472851294608-062f824d29cc',
-    'ecommerce': '1563013544-824ae1b704d3',
-    'business': '1497366216548-37526070297c',
-    'technology': '1518770660439-4636190af475',
-    'office': '1497366811353-6870744d04b2',
-    'teamwork': '1522202176988-66273c2fd55f',
-    'coffee shop': '1501339847302-ac426a4a7cbb',
-    'bakery': '1509440159596-0249088772ff',
-    'pizza': '1565299624946-b28f40a0ae38',
-    'sushi': '1579871494447-9811cf80d66c',
-    'burger': '1568901346375-23c9450c58cd',
-    'wedding': '1519741497674-611481863552',
-    'conference': '1540575467063-178a50c2df87',
-    'concert': '1470229722913-7c0e2dbbafd3',
-    'yoga': '1544367567-0f2fcb009e0b',
-    'pilates': '1518611012118-6920709ab815',
-    'crossfit': '1534438327276-14e5300c3a48',
-    'online learning': '1501504905252-473c47e087f8',
-    'classroom': '1580582932707-520aed937b7b',
-    'university': '1562774053-701939374585',
-    'charity': '1532629345422-7515f3d16bb6',
-    'volunteer': '1559027615-cd4628902d4a',
-  };
+/**
+ * Map domain keywords to specific Unsplash search terms.
+ * These are search queries, not photo IDs — each returns relevant, varied results.
+ */
+const DOMAIN_SEARCH_TERMS: Record<string, string[]> = {
+  // Real Estate
+  'real-estate': ['luxury house exterior', 'modern home', 'apartment building', 'real estate listing'],
+  'property': ['house for sale', 'residential neighborhood', 'home exterior'],
+  
+  // Restaurant / Food
+  'restaurant': ['restaurant interior', 'fine dining plate', 'restaurant ambiance'],
+  'cafe': ['coffee shop interior', 'cafe table', 'latte art'],
+  'coffee-shop': ['coffee shop counter', 'espresso machine', 'cafe pastries'],
+  'bakery': ['artisan bread', 'bakery display', 'fresh pastries'],
+  'pizza': ['pizza restaurant', 'wood fired pizza', 'pizza slice'],
+  'sushi': ['sushi platter', 'japanese restaurant', 'sushi chef'],
+  'burger': ['gourmet burger', 'burger restaurant', 'fries and burger'],
+  'fine-dining': ['fine dining plate', 'gourmet food', 'wine and dinner'],
+  
+  // Fitness / Health
+  'gym': ['gym interior', 'weight room', 'fitness center'],
+  'fitness': ['workout class', 'personal training', 'fitness motivation'],
+  'yoga': ['yoga class', 'yoga studio', 'meditation space'],
+  'crossfit': ['crossfit gym', 'functional training', 'kettlebell workout'],
+  'personal-training': ['personal trainer', 'one on one training', 'fitness coaching'],
+  'pilates': ['pilates studio', 'reformer class', 'pilates mat'],
+  
+  // Healthcare
+  'dental': ['dental office', 'dentist chair', 'dental clinic'],
+  'medical': ['medical clinic', 'doctor office', 'healthcare professional'],
+  'healthcare': ['hospital lobby', 'medical team', 'patient care'],
+  'veterinary': ['veterinary clinic', 'pet doctor', 'animal hospital'],
+  'psychology': ['therapy office', 'counseling session', 'mental health'],
+  
+  // Business / Tech
+  'saas': ['software dashboard', 'tech startup', 'coding screen'],
+  'dashboard': ['analytics dashboard', 'data visualization', 'business metrics'],
+  'crm': ['customer relationship', 'sales pipeline', 'business analytics'],
+  'fintech': ['financial technology', 'mobile banking', 'digital payment'],
+  'startup': ['startup office', 'tech team', 'brainstorm session'],
+  
+  // E-commerce
+  'ecommerce': ['online shopping', 'product display', 'e-commerce store'],
+  'fashion': ['fashion boutique', 'clothing rack', 'style collection'],
+  'jewelry': ['jewelry display', 'luxury accessories', 'gemstone collection'],
+  'electronics': ['tech gadgets', 'electronics store', 'smart devices'],
+  'home-goods': ['home decor', 'furniture showroom', 'interior design'],
+  
+  // Services
+  'law-firm': ['law office', 'legal library', 'attorney desk'],
+  'accounting': ['accounting office', 'financial documents', 'business meeting'],
+  'consulting': ['business consulting', 'strategy meeting', 'professional services'],
+  'marketing': ['marketing team', 'creative agency', 'campaign planning'],
+  'photography': ['photography studio', 'camera equipment', 'photo shoot'],
+  
+  // Education
+  'education': ['classroom', 'university campus', 'online learning'],
+  'tutoring': ['tutoring session', 'study group', 'learning together'],
+  'online-course': ['elearning platform', 'video course', 'digital classroom'],
+  
+  // Auto / Automotive
+  'auto-dealership': ['car dealership', 'luxury cars', 'showroom floor'],
+  'auto-repair': ['auto repair shop', 'mechanic garage', 'car service'],
+  'car-wash': ['car wash', 'auto detailing', 'clean car'],
+  
+  // Beauty / Salon
+  'beauty-salon': ['beauty salon', 'hair styling', 'salon interior'],
+  'spa': ['spa treatment', 'relaxation massage', 'wellness center'],
+  'nail-salon': ['nail art', 'manicure table', 'nail salon'],
+  'barbershop': ['barbershop', 'barber chair', 'haircut'],
+  
+  // Pet Services
+  'pet-grooming': ['pet grooming', 'dog spa', 'grooming table'],
+  'pet-boarding': ['pet hotel', 'dog daycare', 'animal care'],
+  'pet-store': ['pet shop', 'pet supplies', 'animal accessories'],
+  
+  // Events
+  'wedding': ['wedding venue', 'wedding decoration', 'ceremony setup'],
+  'conference': ['conference hall', 'event space', 'presentation stage'],
+  'party': ['party venue', 'celebration', 'event decor'],
+  
+  // Non-profit
+  'charity': ['volunteer work', 'community service', 'charity event'],
+  'nonprofit': ['nonprofit office', 'community outreach', 'social impact'],
+  
+  // Portfolio
+  'portfolio': ['creative workspace', 'design studio', 'artist studio'],
+  'agency': ['creative agency', 'design team', 'office culture'],
+  
+  // Default
+  'business': ['modern office', 'business meeting', 'professional workspace'],
+  'office': ['coworking space', 'office interior', 'workspace design'],
+};
 
-  return photoMap[keyword] || '1505740420928-5e560c06d30e';
+/**
+ * Get search terms for a domain keyword.
+ */
+function getSearchTerms(keyword: string): string[] {
+  const normalized = keyword.toLowerCase().trim();
+  return DOMAIN_SEARCH_TERMS[normalized] || [normalized];
 }
 
+/**
+ * Generate a seeded random index for consistent but varied images.
+ */
+function seededIndex(seed: string, modulus: number): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash) % modulus;
+}
+
+/**
+ * Generate a CSS gradient as fallback.
+ */
 function generateGradientPlaceholder(keyword: string, index: number): string {
   const colors: string[][] = [
     ['#1a1a2e', '#16213e', '#0f3460'],
@@ -79,13 +151,19 @@ function generateGradientPlaceholder(keyword: string, index: number): string {
     ['#0c0c0c', '#1a1a1a', '#2d2d2d'],
     ['#1b1b2f', '#162447', '#1f4068'],
     ['#0f0f0f', '#1a1a1a', '#2a2a2a'],
+    ['#2d1b69', '#11998e', '#1a1a2e'],
+    ['#162447', '#1f4068', '#e43f5a'],
   ];
-  const idx = index % colors.length;
+  const idx = (index + seededIndex(keyword, 100)) % colors.length;
   const pair = colors[idx]!;
-  const angle = 135 + (index * 15);
+  const angle = 135 + ((index * 15) % 90);
   return `linear-gradient(${angle}deg, ${pair[0]}, ${pair[1]}, ${pair[2]})`;
 }
 
+/**
+ * Resolve images for a domain.
+ * Uses Unsplash Source API with keyword search — no hardcoded photo IDs.
+ */
 export function resolveDomainImages(
   imageKeywords: string[],
   itemCount: number,
@@ -93,74 +171,48 @@ export function resolveDomainImages(
   assetsDir?: string,
 ): ResolvedImages {
   const heroKeyword = imageKeywords[0] || 'business';
+  const searchTerms = getSearchTerms(heroKeyword);
 
+  // Hero image — use first search term with variety
+  const heroIndex = seededIndex(heroKeyword, searchTerms.length);
+  const hero = unsplashUrl(searchTerms[heroIndex] || heroKeyword);
+
+  // Item images — rotate through search terms
   const items: string[] = [];
   for (let i = 0; i < itemCount; i++) {
-    const kw = imageKeywords[i % imageKeywords.length] || heroKeyword;
-    items.push(unsplashUrl(kw, 600, 400));
+    const termIndex = (heroIndex + i) % searchTerms.length;
+    const term = searchTerms[termIndex] || heroKeyword;
+    const variation = i > 0 ? ` ${i + 1}` : '';
+    items.push(unsplashUrl(`${term}${variation}`, 600, 400));
   }
 
+  // Team/Avatar images — use portrait-related terms
+  const teamSearchTerms = ['professional portrait', 'headshot', 'business person', 'team member'];
   const team: string[] = [];
   for (let i = 0; i < teamCount; i++) {
-    team.push(`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(`team-${i}`)}&backgroundColor=1a1a2e&textColor=ffffff&fontSize=40`);
+    const termIndex = i % teamSearchTerms.length;
+    team.push(unsplashUrl(teamSearchTerms[termIndex]!, 200, 200));
   }
 
-  return {
-    hero: unsplashUrl(heroKeyword),
-    items,
-    team,
-    fallback: generateGradientPlaceholder(heroKeyword, 0),
-  };
+  // Fallback gradient
+  const fallback = generateGradientPlaceholder(heroKeyword, 0);
+
+  return { hero, items, team, fallback };
 }
 
-export function resolveSectionImage(
-  sectionType: string,
-  imageKeywords: string[],
-  index: number,
-): string {
-  const keywordMap: Record<string, string> = {
-    'hero': imageKeywords[0] || 'business',
-    'featured-properties': 'modern house',
-    'product-grid': 'product photography',
-    'featured-products': 'product photography',
-    'menu-highlights': 'gourmet food',
-    'gallery': imageKeywords[0] || 'portfolio',
-    'team': 'teamwork',
-    'team/doctors': 'healthcare professional',
-    'services': imageKeywords[0] || 'business',
-    'about': 'office',
-    'testimonials': 'teamwork',
-    'contact': 'office',
-  };
-
-  const keyword = keywordMap[sectionType] || imageKeywords[index % imageKeywords.length] || 'business';
-  return unsplashUrl(keyword, 800, 600);
+/**
+ * Resolve a single image URL by keyword.
+ */
+export function resolveSingleImage(keyword: string, width = 600, height = 400): string {
+  const searchTerms = getSearchTerms(keyword);
+  return unsplashUrl(searchTerms[0] || keyword, width, height);
 }
 
-export function generateSvgIcon(text: string, bgColor: string = '#1a1a2e', size: number = 200): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" fill="${bgColor}" rx="16"/>
-  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="white" font-family="system-ui, sans-serif" font-size="${size * 0.4}" font-weight="bold">${text}</text>
-</svg>`;
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-}
-
-export function downloadImages(
-  images: ResolvedImages,
-  assetsDir: string,
-): ResolvedImages {
-  if (!assetsDir) return images;
-
-  fs.mkdirSync(assetsDir, { recursive: true });
-
-  const downloaded: ResolvedImages = { ...images };
-
-  try {
-    const heroFile = path.join(assetsDir, 'hero.jpg');
-    if (!fs.existsSync(heroFile)) {
-      // Don't download in sync mode — just return URLs
-    }
-  } catch {}
-
-  return downloaded;
+/**
+ * Resolve a random image from a set of search terms.
+ */
+export function resolveRandomImage(keywords: string[], width = 600, height = 400): string {
+  const idx = Math.floor(Math.random() * keywords.length);
+  const keyword = keywords[idx] || 'business';
+  return unsplashUrl(keyword, width, height);
 }
