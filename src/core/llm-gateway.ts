@@ -1,11 +1,9 @@
 import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
-import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
+import { createDomainSynthesis, createDomainSynthesisAsync, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
 import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
 import { LLMRouter, createRouterFromEnv, type LLMProviderConfig } from './llm-router.js';
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
-import { IndustryResearcher, type RealBusinessContent } from '../business-intelligence/core/industry-researcher.js';
-import { BILLMCaller } from '../business-intelligence/core/llm-caller.js';
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 1000;
@@ -51,7 +49,7 @@ export class LLMGateway {
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
     // Always generate domain-specific page patches as the primary UI
-    const domainPatches = this.synthesizeFallback(decision, context);
+    const domainPatches = await this.synthesizeFallback(decision, context);
     console.log(`[gateway] Generated ${domainPatches.length} domain-specific page patches`);
 
     if (!this.apiKey || this.apiKey.trim() === '') {
@@ -132,7 +130,7 @@ export class LLMGateway {
     const patchMap = new Map<string, ASTPatch[]>();
 
     // Always generate domain-specific page patches as the primary UI
-    const domainPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
+    const domainPatches = await this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
     for (const patch of domainPatches) {
       const existing = patchMap.get(patch.targetFile) || [];
       existing.push(patch);
@@ -143,22 +141,6 @@ export class LLMGateway {
     if (!this.apiKey || this.apiKey.trim() === '') {
       console.log(`[gateway] No API key. Using domain synthesis only.`);
       return patchMap;
-    }
-
-    // Extract real business content from competitor websites
-    let realContent: RealBusinessContent[] = [];
-    try {
-      const biLlm = new BILLMCaller(this.provider, this.apiKey, this.model);
-      const industryResearcher = new IndustryResearcher(biLlm);
-      const biReport = biResult?.report || {
-        industry: decision.capabilities?.[0] || 'general',
-        business_model: decision.businessType || 'website',
-        business_domain: prompt,
-      };
-      realContent = await industryResearcher.extractRealBusinessContent(biReport as any);
-      console.log(`[gateway] Extracted real content from ${realContent.length} competitors`);
-    } catch (err: any) {
-      console.warn(`[gateway] Real content extraction failed: ${err.message}`);
     }
 
     // Build BI-enriched prompt if BI analysis succeeded
@@ -172,40 +154,27 @@ export class LLMGateway {
       `Page ${i + 1}: ${pp.pagePath} → target: ${pp.targetFile}\n${pp.prompt}`
     ).join('\n\n');
 
-    // Build real content section for prompt
-    let realContentSection = '';
-    if (realContent.length > 0) {
-      realContentSection = `
-REAL BUSINESS CONTENT FROM COMPETITORS:
-${realContent.map((content, index) => `
-Competitor ${index + 1}: ${content.businessName}
-Real Headlines: ${content.heroHeadlines.join(', ')}
-Real Services: ${content.serviceDescriptions.map(s => `${s.name}: ${s.description}`).join('; ')}
-Real Testimonials: ${content.testimonials.slice(0, 2).map(t => `"${t.text}" - ${t.name}`).join('; ')}
-Real Images Available: ${content.realImages.length} images
-Real Pricing Examples: ${content.pricingExamples.map(p => `${p.serviceName}: ${p.price}`).join(', ')}
-`).join('\n')}
-`;
-    }
-
     const combinedUserPrompt = `User Directive: "${prompt}"
-${biContext ? `\n## Business Intelligence Analysis\n${biContext}\n` : ''}
-${realContentSection}
-INSTRUCTIONS:
-1. Generate REALISTIC BUSINESS CONTENT using the competitor examples above
-2. Use ACTUAL service names, descriptions, and pricing from the real examples
-3. Include GENUINE testimonials and social proof
-4. Use REALISTIC headlines and call-to-action text
-5. Reference ACTUAL images by creating realistic image placeholders
-${biResult ? `6. Address the specific business problem: "${biResult.report.primary_problem}"\n7. Focus on delivering the desired outcome: "${biResult.report.desired_outcome}"` : ''}
-8. Each page component must be a complete, self-contained React component with Tailwind CSS
-9. Do NOT include import statements in codeBlock
-10. Every interactive element must have onClick/handlers
 
-IMPORTANT: DO NOT generate generic placeholder content. Use the real business examples as inspiration for authentic, industry-appropriate content.
+${biContext ? `## Business Intelligence Analysis
+${biContext}
+
+Use these insights to generate business-specific code that solves the identified problems and meets customer expectations.
+` : ''}
+Generate COMPLETE ASTPatch arrays for ALL of the following pages in a SINGLE JSON array.
+Each patch must have the correct targetFile path for its page.
 
 Pages to generate:
 ${pageList}
+
+IMPORTANT:
+- Return ONE JSON array containing patches for ALL pages
+- Each page's patches must target the correct targetFile
+- Include component patches (src/components/*.tsx) as separate entries
+- Each page component must be a complete, self-contained React component with Tailwind CSS
+- Do NOT include import statements in codeBlock
+- Every interactive element must have onClick/handlers
+- ${biResult ? 'Generate code that addresses the identified business problems and uses industry best practices' : 'Include realistic mock data that matches the business domain'}
 
 Active Attempt Loop: 0`;
 
@@ -720,11 +689,11 @@ Review any compilation diagnostics carefully and generate AST patches that resol
   // This is the explicit degraded mode for when no API key is configured.
   // All content is generic — no domain-specific branches. The LLM handles domain specificity.
 
-  private synthesizeFallback(decision: ArchitectDecision, context: LLMContext): ASTPatch[] {
+  private async synthesizeFallback(decision: ArchitectDecision, context: LLMContext): Promise<ASTPatch[]> {
     console.log(`[gateway] Domain-aware synthesis: ${decision.capabilities?.join(',') || decision.businessType}, ${decision.pages.length} pages`);
     console.log(`[gateway] Pages: ${decision.pages.map(p => `${p.route}(${p.sections.join(',')})`).join('; ')}`);
 
-    const ctx = createDomainSynthesis(context.prompt, decision);
+    const ctx = await createDomainSynthesisAsync(context.prompt, decision);
     const patches: ASTPatch[] = [];
 
     for (const page of decision.pages) {

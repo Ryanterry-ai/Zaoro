@@ -1,4 +1,4 @@
-import { WebSearcher } from '../business-intelligence/core/web-searcher.js';
+import { WebSearcher, type SearchResult } from '../business-intelligence/core/web-searcher.js';
 import { AgentReachBridge } from '../business-intelligence/core/agent-reach-bridge.js';
 import type { CrawlResult } from '../business-intelligence/core/agent-reach-bridge.js';
 
@@ -15,7 +15,7 @@ export interface WebResearchData {
   industryPhrases: string[];
   popularServices: string[];
   pricingRange: string;
- 典型Testimonials: string[];
+  typicalTestimonials: string[];
   ctaExamples: string[];
 }
 
@@ -49,12 +49,14 @@ export class WebResearcher {
     const allCtas: string[] = [];
 
     // Crawl top 3 competitor websites
-    for (const result of results.slice(0, 3)) {
-      if (!result || !result.url) continue;
-      const r = result as { title: string; url: string; snippet: string };
+    const topResults = results.slice(0, 3).filter((r): r is SearchResult => r !== undefined && r !== null);
+    for (const searchResult of topResults) {
+      const resultUrl: string = searchResult.url;
+      const resultTitle: string = searchResult.title;
+      const resultSnippet: string = searchResult.snippet;
       try {
-        console.log(`[web-researcher] Crawling: ${r.url}`);
-        const crawlData = await this.reach.crawlWebsite(r.url, 5);
+        console.log(`[web-researcher] Crawling: ${resultUrl}`);
+        const crawlData = await this.reach.crawlWebsite(resultUrl, 5);
 
         const services = this.extractServices(crawlData);
         const pricing = this.extractPricing(crawlData);
@@ -62,9 +64,9 @@ export class WebResearcher {
         const ctas = this.extractCtas(crawlData);
 
         competitors.push({
-          name: (r.title || 'Business').split('|')[0]?.split('-')[0]?.trim() || 'Business',
-          url: r.url,
-          description: r.snippet || '',
+          name: (resultTitle.split('|')[0] ?? '').split('-')[0]?.trim() ?? 'Business',
+          url: resultUrl,
+          description: resultSnippet,
           pricing,
           services,
           testimonials,
@@ -76,7 +78,7 @@ export class WebResearcher {
         allTestimonials.push(...testimonials);
         allCtas.push(...ctas);
       } catch (err: any) {
-        console.warn(`[web-researcher] Failed to crawl ${result.url}: ${err.message}`);
+        console.warn(`[web-researcher] Failed to crawl ${resultUrl}: ${err.message}`);
       }
     }
 
@@ -85,7 +87,7 @@ export class WebResearcher {
       industryPhrases: this.extractIndustryPhrases(competitors),
       popularServices: this.deduplicateAndRank(allServices).slice(0, 10),
       pricingRange: this.estimatePricingRange(allPricing),
-     典型Testimonials: this.deduplicateAndRank(allTestimonials).slice(0, 5),
+      typicalTestimonials: this.deduplicateAndRank(allTestimonials).slice(0, 5),
       ctaExamples: this.deduplicateAndRank(allCtas).slice(0, 5),
     };
 
@@ -200,7 +202,7 @@ export class WebResearcher {
     const numbers = pricing
       .map(p => {
         const match = p.match(/\$?([\d,]+)/);
-        return match && match[1] ? parseInt(match[1].replace(/,/g, '')) : 0;
+        return match?.[1] ? parseInt(match[1].replace(/,/g, '')) : 0;
       })
       .filter(n => n > 0);
 
