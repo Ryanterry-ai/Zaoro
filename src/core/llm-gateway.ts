@@ -3,6 +3,9 @@ import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
 import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
 import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
 import { LLMRouter, createRouterFromEnv, type LLMProviderConfig } from './llm-router.js';
+import type { BIPipelineResult } from '../business-intelligence/types/index.js';
+import { IndustryResearcher, type RealBusinessContent } from '../business-intelligence/core/industry-researcher.js';
+import { BILLMCaller } from '../business-intelligence/core/llm-caller.js';
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 1000;
@@ -120,7 +123,8 @@ export class LLMGateway {
    */
   public async generateAllPatchesCombined(
     prompt: string,
-    pagePrompts: Array<{ pagePath: string; targetFile: string; prompt: string }>
+    pagePrompts: Array<{ pagePath: string; targetFile: string; prompt: string }>,
+    biResult?: BIPipelineResult | null
   ): Promise<Map<string, ASTPatch[]>> {
     const decision = this.architect.designArchitecture(prompt);
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
@@ -141,29 +145,71 @@ export class LLMGateway {
       return patchMap;
     }
 
+    // Extract real business content from competitor websites
+    let realContent: RealBusinessContent[] = [];
+    try {
+      const biLlm = new BILLMCaller(this.provider, this.apiKey, this.model);
+      const industryResearcher = new IndustryResearcher(biLlm);
+      const biReport = biResult?.report || {
+        industry: decision.capabilities?.[0] || 'general',
+        business_model: decision.businessType || 'website',
+        business_domain: prompt,
+      };
+      realContent = await industryResearcher.extractRealBusinessContent(biReport as any);
+      console.log(`[gateway] Extracted real content from ${realContent.length} competitors`);
+    } catch (err: any) {
+      console.warn(`[gateway] Real content extraction failed: ${err.message}`);
+    }
+
+    // Build BI-enriched prompt if BI analysis succeeded
+    let biContext = '';
+    if (biResult) {
+      biContext = this.buildBIContext(biResult);
+      console.log(`[gateway] BI context added: ${biContext.length} chars`);
+    }
+
     const pageList = pagePrompts.map((pp, i) =>
       `Page ${i + 1}: ${pp.pagePath} → target: ${pp.targetFile}\n${pp.prompt}`
     ).join('\n\n');
 
-    const combinedUserPrompt = `User Directive: "${prompt}"
+    // Build real content section for prompt
+    let realContentSection = '';
+    if (realContent.length > 0) {
+      realContentSection = `
+REAL BUSINESS CONTENT FROM COMPETITORS:
+${realContent.map((content, index) => `
+Competitor ${index + 1}: ${content.businessName}
+Real Headlines: ${content.heroHeadlines.join(', ')}
+Real Services: ${content.serviceDescriptions.map(s => `${s.name}: ${s.description}`).join('; ')}
+Real Testimonials: ${content.testimonials.slice(0, 2).map(t => `"${t.text}" - ${t.name}`).join('; ')}
+Real Images Available: ${content.realImages.length} images
+Real Pricing Examples: ${content.pricingExamples.map(p => `${p.serviceName}: ${p.price}`).join(', ')}
+`).join('\n')}
+`;
+    }
 
-Generate COMPLETE ASTPatch arrays for ALL of the following pages in a SINGLE JSON array.
-Each patch must have the correct targetFile path for its page.
+    const combinedUserPrompt = `User Directive: "${prompt}"
+${biContext ? `\n## Business Intelligence Analysis\n${biContext}\n` : ''}
+${realContentSection}
+INSTRUCTIONS:
+1. Generate REALISTIC BUSINESS CONTENT using the competitor examples above
+2. Use ACTUAL service names, descriptions, and pricing from the real examples
+3. Include GENUINE testimonials and social proof
+4. Use REALISTIC headlines and call-to-action text
+5. Reference ACTUAL images by creating realistic image placeholders
+${biResult ? `6. Address the specific business problem: "${biResult.report.primary_problem}"\n7. Focus on delivering the desired outcome: "${biResult.report.desired_outcome}"` : ''}
+8. Each page component must be a complete, self-contained React component with Tailwind CSS
+9. Do NOT include import statements in codeBlock
+10. Every interactive element must have onClick/handlers
+
+IMPORTANT: DO NOT generate generic placeholder content. Use the real business examples as inspiration for authentic, industry-appropriate content.
 
 Pages to generate:
 ${pageList}
 
-IMPORTANT:
-- Return ONE JSON array containing patches for ALL pages
-- Each page's patches must target the correct targetFile
-- Include component patches (src/components/*.tsx) as separate entries
-- Each page component must be a complete, self-contained React component with Tailwind CSS
-- Do NOT include import statements in codeBlock
-- Every interactive element must have onClick/handlers
-
 Active Attempt Loop: 0`;
 
-    const systemPrompt = this.buildSystemPrompt(architecturePrompt);
+    const systemPrompt = this.buildSystemPrompt(architecturePrompt, biResult);
 
     // Try primary provider
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
@@ -471,11 +517,34 @@ The component must be self-contained with all data inline — no external API ca
 
   // ─── Prompt Construction ───────────────────────────────────────
 
-  private buildSystemPrompt(architecturePrompt: string): string {
+  private buildSystemPrompt(architecturePrompt: string, biResult?: BIPipelineResult | null): string {
+    const biSection = biResult ? `
+## Business Intelligence Insights
+Industry: ${biResult.report.industry}
+Business Model: ${biResult.report.business_model}
+Customer Type: ${biResult.report.customer_type}
+Primary Problem: ${biResult.report.primary_problem}
+Desired Outcome: ${biResult.report.desired_outcome}
+
+Key Problems to Solve:
+${biResult.problems.slice(0, 5).map((p, i) => `${i + 1}. [${p.severity.toUpperCase()}] ${p.title}: ${p.description}`).join('\n')}
+
+Solution Components:
+${biResult.solution.components.map((c, i) => `${i + 1}. ${c.name} (${c.type}): ${c.description} — Features: ${c.features.slice(0, 3).join(', ')}`).join('\n')}
+
+Industry Best Practices:
+${biResult.knowledge.best_practices.slice(0, 5).map(p => `- ${p}`).join('\n')}
+
+Customer Expectations:
+${biResult.knowledge.customer_expectations.slice(0, 5).map(e => `- ${e}`).join('\n')}
+
+Use these insights to generate business-specific code that solves real problems and meets industry standards.
+` : '';
+
     return `You are build.same, an elite AI software architect and frontend engineer.
 You generate complete, production-quality Next.js App Router applications from atomic primitives.
 You NEVER use pre-built templates. You compose from atomic building blocks like LEGO.
-
+${biSection}
 ## Your Architecture
 ${architecturePrompt}
 
@@ -536,6 +605,55 @@ Review any compilation diagnostics carefully and generate AST patches that resol
     }
 
     return prompt;
+  }
+
+  private buildBIContext(biResult: BIPipelineResult): string {
+    const sections: string[] = [];
+
+    // Business context
+    sections.push(`**Business**: ${biResult.report.business_domain} (${biResult.report.industry})`);
+    sections.push(`**Model**: ${biResult.report.business_model}`);
+    sections.push(`**Customers**: ${biResult.report.customer_type}`);
+    sections.push(`**Problem**: ${biResult.report.primary_problem}`);
+    sections.push(`**Goal**: ${biResult.report.desired_outcome}`);
+
+    // Top problems
+    if (biResult.problems.length > 0) {
+      sections.push(`\n**Critical Problems to Solve**:`);
+      biResult.problems
+        .filter(p => p.severity === 'critical' || p.severity === 'important')
+        .slice(0, 5)
+        .forEach((p, i) => {
+          sections.push(`${i + 1}. ${p.title} (${p.severity}): ${p.description}`);
+          sections.push(`   Root cause: ${p.root_cause}`);
+        });
+    }
+
+    // Solution features
+    if (biResult.solution.components.length > 0) {
+      sections.push(`\n**Solution Features**:`);
+      biResult.solution.components.forEach(c => {
+        sections.push(`- ${c.name}: ${c.features.slice(0, 5).join(', ')}`);
+      });
+    }
+
+    // Customer expectations
+    if (biResult.knowledge.customer_expectations.length > 0) {
+      sections.push(`\n**Customer Expectations**:`);
+      biResult.knowledge.customer_expectations.slice(0, 5).forEach(e => {
+        sections.push(`- ${e}`);
+      });
+    }
+
+    // Business flow
+    if (biResult.flow.stages.length > 0) {
+      sections.push(`\n**Business Flow**:`);
+      biResult.flow.stages.slice(0, 5).forEach(s => {
+        sections.push(`- ${s.name}: ${s.user_actions.slice(0, 3).join(', ')}`);
+      });
+    }
+
+    return sections.join('\n');
   }
 
   // ─── Response Parsing ──────────────────────────────────────────

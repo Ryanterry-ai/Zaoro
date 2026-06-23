@@ -1,6 +1,19 @@
 import { BILLMCaller } from './llm-caller.js';
 import { WebSearcher } from './web-searcher.js';
+import { AgentReachBridge } from './agent-reach-bridge.js';
 import type { BusinessIntelligenceReport, IndustryKnowledgeBase } from '../types/index.js';
+
+export interface RealBusinessContent {
+  businessName: string;
+  url: string;
+  heroHeadlines: string[];
+  serviceDescriptions: Array<{ name: string; description: string; price?: string }>;
+  testimonials: Array<{ text: string; name: string; role?: string }>;
+  pricingExamples: Array<{ serviceName: string; price: string; features?: string[] }>;
+  realImages: string[];
+  ctaText: string[];
+  navItems: string[];
+}
 
 const SYSTEM_PROMPT = `You are an industry research specialist with deep knowledge across all major sectors.
 
@@ -23,10 +36,150 @@ Include at least 5 items per category. Be specific, cite real companies and tool
 export class IndustryResearcher {
   private llm: BILLMCaller;
   private searcher: WebSearcher;
+  private reach: AgentReachBridge;
 
   constructor(llm: BILLMCaller) {
     this.llm = llm;
     this.searcher = new WebSearcher();
+    this.reach = new AgentReachBridge(llm);
+  }
+
+  /**
+   * Extract real business content from competitor websites for authentic code generation.
+   */
+  async extractRealBusinessContent(report: BusinessIntelligenceReport): Promise<RealBusinessContent[]> {
+    console.log(`[phase-3] Extracting real business content for: ${report.industry}`);
+
+    const searchQuery = `${report.industry} ${report.business_model} website`;
+    const results = await this.searcher.search(searchQuery, 6);
+    console.log(`[phase-3] Found ${results.length} competitor websites`);
+
+    const realContents: RealBusinessContent[] = [];
+
+    for (const result of results.slice(0, 3)) {
+      if (!result || !result.url) continue;
+      const r = result as { title: string; url: string; snippet: string };
+      try {
+        console.log(`[phase-3] Crawling: ${r.url}`);
+        const crawlData = await this.reach.crawlWebsite(r.url, 5);
+
+        const heroHeadlines = this.extractHeroHeadlines(crawlData);
+        const services = this.extractServices(crawlData);
+        const testimonials = this.extractTestimonials(crawlData);
+        const pricing = this.extractPricing(crawlData);
+        const images = this.extractImages(crawlData);
+        const ctas = this.extractCtas(crawlData);
+        const navItems = this.extractNavItems(crawlData);
+
+        realContents.push({
+          businessName: (r.title || 'Business').split('|')[0]?.split('-')[0]?.trim() || 'Business',
+          url: r.url,
+          heroHeadlines,
+          serviceDescriptions: services,
+          testimonials,
+          pricingExamples: pricing,
+          realImages: images,
+          ctaText: ctas,
+          navItems,
+        });
+
+        console.log(`[phase-3] Extracted: ${heroHeadlines.length} headlines, ${services.length} services, ${testimonials.length} testimonials`);
+      } catch (err: any) {
+        console.warn(`[phase-3] Failed to crawl ${result.url}: ${err.message}`);
+      }
+    }
+
+    console.log(`[phase-3] Total real content: ${realContents.length} competitors`);
+    return realContents;
+  }
+
+  private extractHeroHeadlines(crawlData: any): string[] {
+    const headlines: string[] = [];
+    for (const page of crawlData.pages || []) {
+      // Extract h1, h2 headings
+      const matches = page.text.match(/^[A-Z][A-Za-z\s',!:&-]{5,60}$/gm) || [];
+      headlines.push(...matches.map((m: string) => m.trim()));
+    }
+    return [...new Set(headlines)].slice(0, 5);
+  }
+
+  private extractServices(crawlData: any): Array<{ name: string; description: string; price?: string }> {
+    const services: Array<{ name: string; description: string; price?: string }> = [];
+    for (const page of crawlData.pages || []) {
+      const text = page.text || '';
+      // Look for service patterns: name followed by description
+      const serviceMatches = text.match(/([A-Z][A-Za-z\s&]{3,30})\s*[-–—]\s*([^\n]{10,100})/g) || [];
+      for (const match of serviceMatches.slice(0, 5)) {
+        const parts = match.split(/[-–—]/);
+        if (parts.length >= 2) {
+          services.push({
+            name: parts[0].trim(),
+            description: parts.slice(1).join('-').trim().substring(0, 100),
+          });
+        }
+      }
+    }
+    return services.slice(0, 8);
+  }
+
+  private extractTestimonials(crawlData: any): Array<{ text: string; name: string; role?: string }> {
+    const testimonials: Array<{ text: string; name: string; role?: string }> = [];
+    for (const page of crawlData.pages || []) {
+      const text = page.text || '';
+      // Look for quoted text patterns
+      const quotes = text.match(/"([^"]{20,200})"/g) || [];
+      for (const quote of quotes.slice(0, 3)) {
+        testimonials.push({
+          text: quote.replace(/"/g, ''),
+          name: 'Valued Customer',
+        });
+      }
+    }
+    return testimonials.slice(0, 5);
+  }
+
+  private extractPricing(crawlData: any): Array<{ serviceName: string; price: string; features?: string[] }> {
+    const pricing: Array<{ serviceName: string; price: string; features?: string[] }> = [];
+    if (crawlData.pricing_info?.plans) {
+      for (const plan of crawlData.pricing_info.plans) {
+        pricing.push({
+          serviceName: plan.name,
+          price: plan.price,
+          features: plan.features,
+        });
+      }
+    }
+    return pricing.slice(0, 5);
+  }
+
+  private extractImages(crawlData: any): string[] {
+    const images: string[] = [];
+    for (const page of crawlData.pages || []) {
+      if (page.images) {
+        images.push(...page.images.slice(0, 3));
+      }
+    }
+    return [...new Set(images)].slice(0, 5);
+  }
+
+  private extractCtas(crawlData: any): string[] {
+    const ctas: string[] = [];
+    for (const page of crawlData.pages || []) {
+      const text = page.text || '';
+      const ctaMatches = text.match(/(?:get started|sign up|book now|contact us|learn more|try free|join|subscribe|schedule|request quote|call now|view more|see pricing)/gi) || [];
+      ctas.push(...ctaMatches);
+    }
+    return [...new Set(ctas.map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase()))].slice(0, 5);
+  }
+
+  private extractNavItems(crawlData: any): string[] {
+    const navItems: string[] = [];
+    for (const page of crawlData.pages || []) {
+      if (page.links) {
+        navItems.push(...page.links.slice(0, 8).map((l: any) => l.text || '').filter((t: string) => t.length > 1 && t.length < 30));
+      }
+    }
+    return [...new Set(navItems)].slice(0, 8);
   }
 
   async researchIndustry(report: BusinessIntelligenceReport): Promise<IndustryKnowledgeBase> {

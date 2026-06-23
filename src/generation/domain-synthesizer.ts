@@ -2,6 +2,7 @@ import { ArchitectDecision } from './architect.js';
 import { DomainContext, detectDomain } from './domain-detector.js';
 import { DomainMockData, getDomainData, getSectionData } from './domain-data.js';
 import { resolveDomainImages, ResolvedImages } from './image-resolver.js';
+import { WebResearcher, WebResearchData } from './web-researcher.js';
 
 function escapeJSX(s: string): string {
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -12,6 +13,32 @@ export interface DomainSynthesisContext {
   data: DomainMockData;
   images: ResolvedImages;
   decision: ArchitectDecision;
+  webResearch?: WebResearchData | undefined;
+}
+
+export async function createDomainSynthesisAsync(prompt: string, decision: ArchitectDecision): Promise<DomainSynthesisContext> {
+  const domain = detectDomain(prompt);
+  const data = getDomainData(domain.industry, domain.subIndustry);
+  const images = resolveDomainImages(
+    domain.imageKeywords.length > 0 ? domain.imageKeywords : data.imageKeywords,
+    data.items.length,
+    data.team.length,
+  );
+
+  console.log(`[domain-synth] Detected: ${domain.industry}/${domain.subIndustry || 'general'} mood=${domain.mood}`);
+  console.log(`[domain-synth] Sections: ${domain.suggestedSections.join(', ')}`);
+
+  // Research real competitors in the domain
+  let webResearch: WebResearchData | undefined;
+  try {
+    const researcher = new WebResearcher();
+    webResearch = await researcher.researchDomain(domain.industry, domain.subIndustry || 'general');
+    console.log(`[domain-synth] Web research: ${webResearch.competitors.length} competitors, ${webResearch.popularServices.length} services`);
+  } catch (err: any) {
+    console.warn(`[domain-synth] Web research failed (using mock data): ${err.message}`);
+  }
+
+  return { domain, data, images, decision, webResearch };
 }
 
 export function createDomainSynthesis(prompt: string, decision: ArchitectDecision): DomainSynthesisContext {
@@ -30,8 +57,12 @@ export function createDomainSynthesis(prompt: string, decision: ArchitectDecisio
 }
 
 export function synthesizeDomainHero(ctx: DomainSynthesisContext): string {
-  const { data, decision: d, images } = ctx;
+  const { data, decision: d, images, webResearch } = ctx;
   const h = data.hero;
+
+  // Use real CTA from web research if available
+  const cta = webResearch?.ctaExamples[0] || h.cta;
+  const ctaSecondary = webResearch?.ctaExamples[1] || h.ctaSecondary;
 
   return `<section className="relative pt-32 pb-20 px-6 overflow-hidden">
       <div className="absolute inset-0 z-0">
@@ -43,8 +74,8 @@ export function synthesizeDomainHero(ctx: DomainSynthesisContext): string {
         <h1 className="text-5xl md:text-7xl font-black tracking-tight">${escapeJSX(h.headline.split(' ').slice(0, Math.ceil(h.headline.split(' ').length / 2)).join(' '))} <span className="text-transparent bg-clip-text bg-gradient-to-r ${d.colorScheme.gradient}">${escapeJSX(h.headline.split(' ').slice(Math.ceil(h.headline.split(' ').length / 2)).join(' '))}</span></h1>
         <p className="text-zinc-400 text-lg max-w-xl mx-auto">${escapeJSX(h.subtitle)}</p>
         <div className="flex items-center justify-center gap-4">
-          <button className="px-8 py-4 rounded-xl bg-${d.colorScheme.primary}-600 hover:bg-${d.colorScheme.primary}-700 font-bold transition-all">${escapeJSX(h.cta)}</button>
-          ${h.ctaSecondary ? `<button className="px-8 py-4 rounded-xl border border-zinc-700 hover:border-zinc-500 font-bold transition-all">${escapeJSX(h.ctaSecondary)}</button>` : ''}
+          <button className="px-8 py-4 rounded-xl bg-${d.colorScheme.primary}-600 hover:bg-${d.colorScheme.primary}-700 font-bold transition-all">${escapeJSX(cta)}</button>
+          ${ctaSecondary ? `<button className="px-8 py-4 rounded-xl border border-zinc-700 hover:border-zinc-500 font-bold transition-all">${escapeJSX(ctaSecondary)}</button>` : ''}
         </div>
       </div>
     </section>`;

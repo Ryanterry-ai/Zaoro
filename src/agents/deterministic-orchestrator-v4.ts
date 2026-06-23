@@ -21,6 +21,8 @@ import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
 import { DBCompiler } from '../core/db-compiler.js';
 import { APICompiler } from '../core/api-compiler.js';
 import { TelemetryLayer } from '../core/telemetry.js';
+import { BusinessIntelligencePipeline } from '../business-intelligence/pipeline.js';
+import type { BIPipelineResult } from '../business-intelligence/types/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -148,6 +150,23 @@ export class DeterministicOrchestratorV4 {
 
     TelemetryLayer.reportBuildStart(workspaceId, prompt);
 
+    // Run Business Intelligence analysis to get business-specific insights
+    let biResult: BIPipelineResult | null = null;
+    try {
+      console.log(`[orchestrator] Running Business Intelligence analysis...`);
+      const biPipeline = new BusinessIntelligencePipeline(
+        llmConfig?.provider || 'gemini',
+        llmConfig?.apiKey || process.env.LLM_API_KEY || '',
+        llmConfig?.model
+      );
+      biResult = await biPipeline.run(prompt, (phase, detail) => {
+        console.log(`[orchestrator] BI: ${phase} - ${detail}`);
+      });
+      console.log(`[orchestrator] BI analysis complete: ${biResult.report.industry}, ${biResult.problems.length} problems identified, ${biResult.solution.components.length} solution components`);
+    } catch (err: any) {
+      console.warn(`[orchestrator] BI analysis failed (continuing without): ${err.message}`);
+    }
+
     const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
 
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string }> = [];
@@ -162,10 +181,10 @@ export class DeterministicOrchestratorV4 {
       return { pagePath: page.path, targetFile, funcName, prompt: pagePrompt };
     });
 
-    // Single combined LLM call for ALL pages
+    // Single combined LLM call for ALL pages with BI insights
     let patchMap: Map<string, ASTPatch[]>;
     try {
-      patchMap = await gateway.generateAllPatchesCombined(prompt, pagePromptData);
+      patchMap = await gateway.generateAllPatchesCombined(prompt, pagePromptData, biResult);
     } catch (err: any) {
       console.error(`[orchestrator] Combined LLM call failed: ${err.message}. Falling back to per-page calls.`);
       patchMap = new Map();
