@@ -1,181 +1,192 @@
 /**
- * Mock Data Validator — Upgrade 2
- * Detects and blocks hardcoded mock data patterns in generated code.
- * Ensures generated apps use real data flows, not static arrays.
+ * Mock Data Validator: Ensures generated code uses realistic data,
+ * not placeholders, and that data is connected to interactive elements.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-
-export interface MockDataViolation {
-  file: string;
-  line: number;
-  pattern: string;
-  severity: 'error' | 'warning';
-  message: string;
-  suggestion: string;
+export interface MockDataValidation {
+  filePath: string;
+  hasRealisticData: boolean;
+  hasPlaceholderData: boolean;
+  dataConnections: DataConnection[];
+  issues: string[];
+  score: number;
 }
 
-export interface ValidationResult {
-  passed: boolean;
-  violations: MockDataViolation[];
-  filesChecked: number;
-  patternsDetected: string[];
+export interface DataConnection {
+  type: 'state-to-ui' | 'api-to-state' | 'form-to-action' | 'data-to-chart';
+  source: string;
+  target: string;
+  connected: boolean;
 }
 
-// Patterns that indicate hardcoded mock data
-const MOCK_PATTERNS = [
-  { regex: /const\s+\w+\s*=\s*\[[\s\S]*?\]/g, name: 'hardcoded-array', severity: 'error' as const, message: 'Hardcoded array detected. Use API calls or database queries instead.' },
-  { regex: /const\s+\w+\s*=\s*\{[\s\S]*?\}/g, name: 'hardcoded-object', severity: 'warning' as const, message: 'Hardcoded object detected. Use server actions or API routes.' },
-  { regex: /id:\s*\d+,\s*name:\s*['"][^'"]+['"]/g, name: 'mock-record', severity: 'error' as const, message: 'Mock record pattern (id + name). Use database records.' },
-  { regex: /price:\s*\d+(\.\d+)?/g, name: 'hardcoded-price', severity: 'warning' as const, message: 'Hardcoded price. Use database values.' },
-  { regex: /description:\s*['"][^'"]{20,}['"]/g, name: 'hardcoded-description', severity: 'warning' as const, message: 'Hardcoded description. Use CMS or database content.' },
-  { regex: /products\s*=\s*\[/g, name: 'mock-products', severity: 'error' as const, message: 'Hardcoded products array. Use Prisma query.' },
-  { regex: /users\s*=\s*\[/g, name: 'mock-users', severity: 'error' as const, message: 'Hardcoded users array. Use authentication system.' },
-  { regex: /orders\s*=\s*\[/g, name: 'mock-orders', severity: 'error' as const, message: 'Hardcoded orders array. Use database queries.' },
-  { regex: /services\s*=\s*\[/g, name: 'mock-services', severity: 'error' as const, message: 'Hardcoded services array. Use API or database.' },
-  { regex: /items\s*=\s*\[/g, name: 'mock-items', severity: 'error' as const, message: 'Hardcoded items array. Use data fetching.' },
-  { regex: /const\s+\w+\s*=\s*\[[\s\S]*?{[\s\S]*?}[\s\S]*?\]/g, name: 'array-of-objects', severity: 'error' as const, message: 'Array of objects. Should come from API or database.' },
+// ─── Placeholder Patterns (BAD) ────────────────────────────────
+
+const PLACEHOLDER_PATTERNS = [
+  { pattern: /lorem ipsum/gi, name: 'Lorem Ipsum' },
+  { pattern: /placeholder/gi, name: 'Placeholder text' },
+  { pattern: /example\.com/gi, name: 'Example domain' },
+  { pattern: /john doe|jane doe/gi, name: 'Generic names' },
+  { pattern: /test@test|user@example/gi, name: 'Test emails' },
+  { pattern: /\[\s*.*?\s*\]/g, name: 'Bracket placeholders' },
+  { pattern: /\{\{\s*.*?\s*\}\}/g, name: 'Template placeholders' },
+  { pattern: /TODO|FIXME|XXX/gi, name: 'Code markers' },
+  { pattern: /coming soon/gi, name: 'Coming soon' },
+  { pattern: /coming soon/gi, name: 'Coming soon' },
 ];
 
-// Allowed patterns (test fixtures, constants, etc.)
-const ALLOWED_PATTERNS = [
-  /test|mock|fixture|sample|dummy/i,
-  /\.test\./,
-  /\.spec\./,
-  /__tests__/,
-  /test-fixtures/,
-  /seed/,
-];
+// ─── Realistic Data Patterns (GOOD) ────────────────────────────
 
-// File patterns to skip
-const SKIP_FILES = [
-  /node_modules/,
-  /\.next/,
-  /dist/,
-  /build/,
-  /domain-data\.ts$/, // Our domain data is used for fallback synthesis, not in generated code
-  /image-resolver\.ts$/,
-  /self-evaluator\.ts$/,
-  /constants\.ts$/,
-  /config\.ts$/,
-];
+const REALISTIC_DATA_PATTERNS = {
+  // Business names
+  businessNames: /["'`](?:Acme|Stellar|Nova|Apex|Pulse|Zenith|Flux|Core|Edge|Peak|Swift|Bright|Smart|True|Prime)[\w\s]*["'`]/gi,
+  
+  // Real pricing
+  pricing: /\$[\d,]+(?:\.\d{2})?(?:\/mo|\/year|\/month|\/user)?/g,
+  
+  // Real email formats
+  emails: /["'`][\w.-]+@[\w.-]+\.\w+["'`]/g,
+  
+  // Real dates
+  dates: /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2},?\s+\d{4}/g,
+  
+  // Real numbers (not round)
+  realisticNumbers: /\b\d{1,3},?\d{3}\b/g,
+  
+  // Status values
+  statuses: /["'`](?:active|inactive|pending|completed|failed|processing|draft|published)["'`]/g,
+  
+  // Role values
+  roles: /["'`](?:admin|user|manager|viewer|editor|owner)["'`]/g,
+};
 
-export class MockDataValidator {
-  /**
-   * Validate a workspace for mock data patterns.
-   */
-  validate(workspacePath: string): ValidationResult {
-    const violations: MockDataViolation[] = [];
-    const patternsDetected: Set<string> = new Set();
-    let filesChecked = 0;
+// ─── Data Connection Patterns ──────────────────────────────────
 
-    const checkDir = (dir: string) => {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
+const CONNECTION_PATTERNS = {
+  'state-to-ui': {
+    source: /const\s+\[(\w+),\s*set\w+\]/g,
+    target: /\{\s*\w+\s*\}/g,
+  },
+  'api-to-state': {
+    source: /await\s+fetch\s*\(\s*["'`](\/api\/[\w/]+)["'`]/g,
+    target: /setData|setItems|setResult/g,
+  },
+  'form-to-action': {
+    source: /action\s*=\s*\{\s*(\w+)/g,
+    target: /["']use server["']|async\s+function/g,
+  },
+  'data-to-chart': {
+    source: /(?:data|datasets|labels)\s*[=:]\s*\[/g,
+    target: /Chart|LineChart|BarChart|PieChart/g,
+  },
+};
 
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
+// ─── Validation Engine ─────────────────────────────────────────
 
-        if (entry.isDirectory()) {
-          if (!SKIP_FILES.some(p => p.test(entry.name))) {
-            checkDir(fullPath);
-          }
-          continue;
-        }
+export function validateMockData(code: string, filePath: string): MockDataValidation {
+  const issues: string[] = [];
+  const dataConnections: DataConnection[] = [];
 
-        if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx') && !entry.name.endsWith('.js') && !entry.name.endsWith('.jsx')) {
-          continue;
-        }
-
-        // Skip non-src files
-        if (!fullPath.includes('src/')) continue;
-
-        // Check skip patterns
-        if (SKIP_FILES.some(p => p.test(fullPath))) continue;
-
-        const content = fs.readFileSync(fullPath, 'utf-8');
-        const lines = content.split('\n');
-        filesChecked++;
-
-        for (const pattern of MOCK_PATTERNS) {
-          let match;
-          pattern.regex.lastIndex = 0;
-
-          while ((match = pattern.regex.exec(content)) !== null) {
-            // Find line number
-            const beforeMatch = content.substring(0, match.index);
-            const lineNum = beforeMatch.split('\n').length;
-
-            // Check if in allowed context
-            const line = lines[lineNum - 1] || '';
-            if (ALLOWED_PATTERNS.some(p => p.test(line)) || ALLOWED_PATTERNS.some(p => p.test(fullPath))) {
-              continue;
-            }
-
-            // Skip if it's a type definition or import
-            if (line.trim().startsWith('import ') || line.trim().startsWith('export type ') || line.trim().startsWith('interface ')) {
-              continue;
-            }
-
-            const relativePath = path.relative(workspacePath, fullPath).replace(/\\/g, '/');
-
-            violations.push({
-              file: relativePath,
-              line: lineNum,
-              pattern: pattern.name,
-              severity: pattern.severity,
-              message: pattern.message,
-              suggestion: `Replace with API call: const data = await fetch('/api/endpoint').then(r => r.json())`,
-            });
-
-            patternsDetected.add(pattern.name);
-          }
-        }
-      }
-    };
-
-    checkDir(workspacePath);
-
-    return {
-      passed: violations.filter(v => v.severity === 'error').length === 0,
-      violations,
-      filesChecked,
-      patternsDetected: Array.from(patternsDetected),
-    };
+  // Check for placeholder data
+  let hasPlaceholder = false;
+  for (const { pattern, name } of PLACEHOLDER_PATTERNS) {
+    if (pattern.test(code)) {
+      issues.push(`Placeholder detected: ${name}`);
+      hasPlaceholder = true;
+    }
   }
 
-  /**
-   * Generate a report for the validation result.
-   */
-  generateReport(result: ValidationResult): string {
-    const lines: string[] = [];
-
-    lines.push('=== Mock Data Validation Report ===');
-    lines.push(`Files checked: ${result.filesChecked}`);
-    lines.push(`Violations: ${result.violations.length} (${result.violations.filter(v => v.severity === 'error').length} errors)`);
-    lines.push(`Patterns detected: ${result.patternsDetected.join(', ') || 'none'}`);
-    lines.push('');
-
-    if (result.passed) {
-      lines.push('✅ PASSED — No hardcoded mock data detected');
-    } else {
-      lines.push('❌ FAILED — Hardcoded mock data detected');
-      lines.push('');
-
-      for (const v of result.violations.filter(v => v.severity === 'error')) {
-        lines.push(`  ${v.file}:${v.line} — ${v.message}`);
-        lines.push(`    Fix: ${v.suggestion}`);
-      }
+  // Check for realistic data
+  let hasRealistic = false;
+  for (const [name, pattern] of Object.entries(REALISTIC_DATA_PATTERNS)) {
+    if (pattern.test(code)) {
+      hasRealistic = true;
+      break;
     }
-
-    if (result.violations.some(v => v.severity === 'warning')) {
-      lines.push('');
-      lines.push('Warnings:');
-      for (const v of result.violations.filter(v => v.severity === 'warning')) {
-        lines.push(`  ${v.file}:${v.line} — ${v.message}`);
-      }
-    }
-
-    return lines.join('\n');
   }
+
+  // Check data connections
+  for (const [type, patterns] of Object.entries(CONNECTION_PATTERNS)) {
+    const sourceMatches = code.match(patterns.source);
+    const targetMatches = code.match(patterns.target);
+    
+    if (sourceMatches && targetMatches) {
+      dataConnections.push({
+        type: type as DataConnection['type'],
+        source: sourceMatches[0],
+        target: targetMatches[0],
+        connected: true,
+      });
+    } else if (sourceMatches) {
+      dataConnections.push({
+        type: type as DataConnection['type'],
+        source: sourceMatches[0],
+        target: 'NOT FOUND',
+        connected: false,
+      });
+      issues.push(`Disconnected ${type}: ${sourceMatches[0]} has no target`);
+    }
+  }
+
+  // Calculate score
+  let score = 100;
+  if (hasPlaceholder) score -= 30;
+  if (!hasRealistic) score -= 20;
+  
+  const disconnectedCount = dataConnections.filter(c => !c.connected).length;
+  score -= disconnectedCount * 10;
+  
+  score = Math.max(0, score);
+
+  return {
+    filePath,
+    hasRealisticData: hasRealistic,
+    hasPlaceholderData: hasPlaceholder,
+    dataConnections,
+    issues,
+    score,
+  };
+}
+
+/**
+ * Generate mock data validation rules for LLM prompt.
+ */
+export function generateMockDataRules(): string {
+  return `
+## MOCK DATA RULES (CRITICAL)
+
+### NEVER USE:
+- Lorem ipsum text
+- "Placeholder" or "Example" text
+- Generic names like "John Doe" or "Jane Smith"
+- Test emails like test@example.com
+- Bracket placeholders like [Your Name]
+- Template markers like {{variable}}
+- TODO/FIXME comments
+- "Coming soon" messages
+
+### ALWAYS USE:
+- Realistic business names: "Stellar Solutions", "NovaTech", "Apex Digital"
+- Real pricing: "$49/mo", "$1,299/year", "$29/user/month"
+- Real email formats: "sarah@acme.com", "billing@startup.io"
+- Real dates: "Jan 15, 2026", "March 3, 2025"
+- Status values: "active", "pending", "completed", "processing"
+- Roles: "admin", "manager", "viewer", "editor"
+- Realistic metrics: "12,847 users", "$847,293 revenue", "94.2% uptime"
+
+### DATA CONNECTION RULES:
+Every data source MUST connect to a UI element:
+1. useState variables MUST appear in JSX
+2. fetch() calls MUST update state with setData()
+3. Form actions MUST connect to Server Actions
+4. Chart data MUST come from state or props
+
+Example of CORRECT data flow:
+\`\`\`tsx
+const [invoices, setInvoices] = useState([]);
+useEffect(() => {
+  fetch("/api/invoices").then(r => r.json()).then(setInvoices);
+}, []);
+return invoices.map(inv => <div>{inv.amount}</div>);
+\`\`\`
+`;
 }

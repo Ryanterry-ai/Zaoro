@@ -528,6 +528,33 @@ interface ASTPatch {
   codeBlock: string;      // Valid TypeScript/JSX code
 }
 
+## CRITICAL ENFORCEMENT RULES (MANDATORY)
+
+### RULE 1: BAN STATIC FRAMES
+NEVER generate pure promotional landing blocks (testimonial grids, feature summary cards, pricing cards) WITHOUT interactive elements.
+Every section MUST contain at least one of:
+- Active <form> submitters with onSubmit handlers
+- Data table pagination hooks (useState for page, .map() for rows)
+- State-driven dynamic elements (isOpen, showModal, filter state)
+- onClick handlers that modify state or call APIs
+
+### RULE 2: ENFORCE FORM INTERACTIVITY
+Every page MUST generate at least TWO (2) operational:
+- Next.js Server Actions ("use server" at top of file)
+- OR async fetch handlers connected to /api/ endpoints
+- OR form submission handlers with real database operations
+
+### RULE 3: LOGIC HYDRATION OVERRIDE
+NEVER serve a generic landing page. Every page MUST be a FUNCTIONAL WORKSPACE containing:
+1. A data table with useState for sorting/filtering
+2. A form with onSubmit connected to a Server Action
+3. A chart or visualization with dynamic data
+4. CRUD operations (Create, Read, Update, Delete)
+
+### RULE 4: MOCK DATA REQUIREMENTS
+NEVER use: Lorem ipsum, placeholder text, "John Doe", test@example.com, [brackets], {{templates}}
+ALWAYS use: Realistic business names, real pricing ($49/mo), real emails, status values, actual numbers
+
 ## Rules
 1. Generate COMPLETE, production-quality React components with Tailwind CSS
 2. Use the atomic primitives catalog above to compose sections
@@ -544,6 +571,8 @@ interface ASTPatch {
 13. Ensure all JSX is valid and will compile without errors
 14. Include realistic product/service/feature data — NOT placeholder "lorem ipsum"
 15. Every interactive element must have onClick/handlers that update state
+16. Every page MUST include Server Actions or fetch handlers for data mutations
+17. Every data display MUST use .map() to render from state, not hardcoded JSX
 
 ## Code Style
 - Use inline React.useState for all state
@@ -554,7 +583,8 @@ interface ASTPatch {
 - Buttons use px-6 py-3 rounded-xl font-bold transition-all
 - Headings use text-5xl md:text-7xl font-black tracking-tight
 
-Generate ASTPatch[] that builds every page and component listed in the architecture.`;
+Generate ASTPatch[] that builds every page and component listed in the architecture.
+REMEMBER: Static pages without interactivity will be REJECTED. Every component must be FUNCTIONAL.`;
   }
 
   private buildUserPrompt(context: LLMContext): string {
