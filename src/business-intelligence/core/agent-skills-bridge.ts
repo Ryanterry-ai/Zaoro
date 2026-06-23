@@ -5,24 +5,32 @@ import { VisualAnalyzer } from './visual-analyzer.js';
 import type { PageAnalysis } from './visual-analyzer.js';
 import { WorkspaceManager } from './workspace-manager.js';
 import type { CodeQualityReport } from './workspace-manager.js';
+import { AgentReachBridge } from './agent-reach-bridge.js';
+import type { CrawlResult, StructuredData, SocialLinks, PricingInfo, ContactInfo, APIEndpoint } from './agent-reach-bridge.js';
+
+export type {
+  CrawlResult, StructuredData, SocialLinks, PricingInfo, ContactInfo, APIEndpoint
+} from './agent-reach-bridge.js';
 
 /**
  * AgentSkillsBridge: Unified interface for all agent capabilities.
  * 
  * Wraps web search, content extraction, visual analysis, code quality,
- * and research capabilities that enhance the BI pipeline and build system.
+ * research, and deep crawling capabilities that enhance the BI pipeline.
  */
 export class AgentSkillsBridge {
   private searcher: WebSearcher;
   private llm: BILLMCaller | null;
   private visualAnalyzer: VisualAnalyzer;
   private workspaceManager: WorkspaceManager;
+  private agentReach: AgentReachBridge;
 
   constructor(llm?: BILLMCaller) {
     this.searcher = new WebSearcher();
     this.llm = llm || null;
     this.visualAnalyzer = new VisualAnalyzer();
     this.workspaceManager = new WorkspaceManager();
+    this.agentReach = new AgentReachBridge(llm);
   }
 
   // ─── Web Search ───────────────────────────────────────────
@@ -272,5 +280,38 @@ Return JSON:
 
   analyzeCodeQuality(workspacePath: string): CodeQualityReport {
     return this.workspaceManager.analyzeWorkspace(workspacePath);
+  }
+
+  // ─── Deep Web Crawling (Agent-Reach) ─────────────────────
+
+  async crawlWebsite(url: string, maxPages?: number): Promise<CrawlResult> {
+    console.log(`[agent-skills] Deep crawling: ${url}`);
+    return this.agentReach.crawlWebsite(url, maxPages);
+  }
+
+  async extractStructuredData(html: string): Promise<StructuredData> {
+    return this.agentReach.extractStructuredData(html);
+  }
+
+  async extractSocialLinks(html: string, baseUrl: string): Promise<SocialLinks> {
+    return this.agentReach.extractSocialLinks(html, baseUrl);
+  }
+
+  async extractPricingInfo(pages: WebContent[], baseUrl: string): Promise<PricingInfo> {
+    return this.agentReach.extractPricingInfo(pages, baseUrl);
+  }
+
+  async extractContactInfo(html: string, socialLinks: SocialLinks): Promise<ContactInfo> {
+    return this.agentReach.extractContactInfo(html, socialLinks);
+  }
+
+  async discoverAPIEndpoints(pages: WebContent[]): Promise<APIEndpoint[]> {
+    return this.agentReach.discoverAPIEndpoints(pages);
+  }
+
+  async researchCompetitors(industry: string, businessModel: string): Promise<Array<{
+    name: string; url: string; description: string; technologies: string[];
+  }>> {
+    return this.agentReach.researchCompetitors(industry, businessModel);
   }
 }

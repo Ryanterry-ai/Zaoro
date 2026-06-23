@@ -1,3 +1,4 @@
+import * as cheerio from 'cheerio';
 import { WebSearcher } from './web-searcher.js';
 
 export interface DesignTokens {
@@ -23,6 +24,10 @@ export interface PageAnalysis {
   cta_buttons: Array<{ text: string; style: string; position: string }>;
   forms: Array<{ action: string; fields: string[] }>;
   technologies: string[];
+  structured_data?: Array<Record<string, unknown>>;
+  social_links?: Record<string, string[]>;
+  pricing_signals?: { has_pricing: boolean; price_mentions: string[] };
+  meta_tags?: Record<string, string>;
 }
 
 /**
@@ -57,13 +62,18 @@ export class VisualAnalyzer {
       title = content.title;
     }
 
+    const $ = cheerio.load(html);
     const designTokens = this.extractDesignTokens(html);
     const sections = this.extractSections(html);
-    const navigation = this.extractNavigation(html);
-    const images = this.extractImages(html);
-    const ctaButtons = this.extractCTAs(html);
-    const forms = this.extractForms(html);
+    const navigation = this.extractNavigationCheerio($);
+    const images = this.extractImagesCheerio($);
+    const ctaButtons = this.extractCTAsCheerio($);
+    const forms = this.extractFormsCheerio($);
     const technologies = this.detectTechnologies(html);
+    const structuredData = this.extractStructuredDataCheerio($);
+    const socialLinks = this.extractSocialLinksCheerio($);
+    const pricingSignals = this.extractPricingSignalsCheerio($);
+    const metaTags = this.extractMetaTagsCheerio($);
 
     return {
       url,
@@ -74,7 +84,11 @@ export class VisualAnalyzer {
       images,
       cta_buttons: ctaButtons,
       forms,
-      technologies
+      technologies,
+      structured_data: structuredData,
+      social_links: socialLinks,
+      pricing_signals: pricingSignals,
+      meta_tags: metaTags
     };
   }
 
@@ -233,5 +247,126 @@ export class VisualAnalyzer {
     if (/centered.*hero|hero.*center|full.*hero/i.test(html)) return 'centered';
     if (/video.*hero|hero.*video/i.test(html)) return 'video';
     return 'standard';
+  }
+
+  // ─── Cheerio-Based Extraction Methods ──────────────────
+
+  private extractNavigationCheerio($: cheerio.CheerioAPI): Array<{ text: string; href: string }> {
+    const nav: Array<{ text: string; href: string }> = [];
+    $('nav a[href], header a[href]').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const text = $(el).text().trim();
+      if (text && href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        nav.push({ text, href });
+      }
+    });
+    return nav.slice(0, 20);
+  }
+
+  private extractImagesCheerio($: cheerio.CheerioAPI): Array<{ alt: string; src: string; role: string }> {
+    const images: Array<{ alt: string; src: string; role: string }> = [];
+    $('img[src]').each((_, el) => {
+      const src = $(el).attr('src') || '';
+      const alt = $(el).attr('alt') || '';
+      const role = /logo|brand|icon/i.test(alt + src) ? 'logo' :
+                   /hero|banner|background|cover/i.test(alt + src) ? 'hero' :
+                   /product|item/i.test(alt + src) ? 'product' : 'content';
+      images.push({ alt, src, role });
+    });
+    return images.slice(0, 15);
+  }
+
+  private extractCTAsCheerio($: cheerio.CheerioAPI): Array<{ text: string; style: string; position: string }> {
+    const ctas: Array<{ text: string; style: string; position: string }> = [];
+    $('button, a[class*="btn"], a[class*="button"], a[class*="cta"], a[class*="Button"]').each((_, el) => {
+      const text = $(el).text().trim();
+      if (text && text.length < 50 && text.length > 1) {
+        const className = $(el).attr('class') || '';
+        const style = /primary|hero|main|filled/i.test(className) ? 'primary' : 'secondary';
+        const isHero = $(el).closest('[class*="hero"], [class*="Hero"]').length > 0;
+        ctas.push({ text, style, position: isHero ? 'hero' : 'unknown' });
+      }
+    });
+    return ctas.slice(0, 8);
+  }
+
+  private extractFormsCheerio($: cheerio.CheerioAPI): Array<{ action: string; fields: string[] }> {
+    const forms: Array<{ action: string; fields: string[] }> = [];
+    $('form').each((_, el) => {
+      const action = $(el).attr('action') || '';
+      const fields: string[] = [];
+      $(el).find('input, select, textarea').each((_, input) => {
+        const name = $(input).attr('name') || $(input).attr('placeholder') || $(input).attr('aria-label') || '';
+        if (name) fields.push(name);
+      });
+      forms.push({ action, fields });
+    });
+    return forms;
+  }
+
+  private extractStructuredDataCheerio($: cheerio.CheerioAPI): Array<Record<string, unknown>> {
+    const data: Array<Record<string, unknown>> = [];
+    $('script[type="application/ld+json"]').each((_, el) => {
+      try {
+        const parsed = JSON.parse($(el).html() || '{}');
+        if (parsed['@graph']) {
+          for (const item of (parsed['@graph'] as Array<Record<string, unknown>>)) {
+            data.push(item);
+          }
+        } else if (parsed['@type']) {
+          data.push(parsed);
+        }
+      } catch {
+        // Skip malformed JSON-LD
+      }
+    });
+    return data;
+  }
+
+  private extractSocialLinksCheerio($: cheerio.CheerioAPI): Record<string, string[]> {
+    const social: Record<string, string[]> = {};
+    const patterns: Array<[string, RegExp]> = [
+      ['linkedin', /linkedin\.com/i],
+      ['twitter', /twitter\.com|x\.com/i],
+      ['facebook', /facebook\.com|fb\.com/i],
+      ['instagram', /instagram\.com/i],
+      ['youtube', /youtube\.com/i],
+      ['github', /github\.com/i],
+    ];
+
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      for (const [platform, pattern] of patterns) {
+        if (pattern.test(href)) {
+          if (!social[platform]) social[platform] = [];
+          if (!social[platform]!.includes(href)) social[platform]!.push(href);
+          break;
+        }
+      }
+    });
+
+    return social;
+  }
+
+  private extractPricingSignalsCheerio($: cheerio.CheerioAPI): { has_pricing: boolean; price_mentions: string[] } {
+    const text = $('body').text();
+    const priceMentions = text.match(/\$[\d,]+(?:\.\d{2})?(?:\s*\/\s*(?:mo|month|yr|year))?/gi) || [];
+    const hasPricingLink = $('a[href*="pricing"], a[href*="plans"]').length > 0;
+    const hasPricingSection = /pricing|plans|packages/i.test(text);
+
+    return {
+      has_pricing: hasPricingLink || hasPricingSection,
+      price_mentions: [...new Set(priceMentions)].slice(0, 10)
+    };
+  }
+
+  private extractMetaTagsCheerio($: cheerio.CheerioAPI): Record<string, string> {
+    const meta: Record<string, string> = {};
+    $('meta[name], meta[property]').each((_, el) => {
+      const key = $(el).attr('name') || $(el).attr('property') || '';
+      const content = $(el).attr('content') || '';
+      if (key && content) meta[key] = content;
+    });
+    return meta;
   }
 }
