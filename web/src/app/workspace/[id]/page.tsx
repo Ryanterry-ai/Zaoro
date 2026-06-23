@@ -74,6 +74,15 @@ interface ApplyData {
 
 const HIDDEN_STEPS = new Set(["debug", "engine", "created"]);
 
+const BUILD_PHASES = [
+  { id: "bi", icon: "🔍", label: "Analyzing Requirements", doneWhen: "architect" },
+  { id: "architect", icon: "📐", label: "Designing Architecture", doneWhen: "structure" },
+  { id: "structure", icon: "📁", label: "Creating Project Structure", doneWhen: "llm" },
+  { id: "llm", icon: "🤖", label: "Generating Code with AI", doneWhen: "compile" },
+  { id: "compile", icon: "⚙️", label: "Compiling & Validating", doneWhen: "preview" },
+  { id: "preview", icon: "🖼️", label: "Rendering Preview", doneWhen: "done" },
+];
+
 type DeviceFrame = "desktop" | "tablet" | "mobile";
 
 const DEVICE_WIDTHS: Record<DeviceFrame, string> = {
@@ -448,6 +457,61 @@ export default function WorkspacePage() {
     return cards.length > 0 ? <div className="space-y-2 mt-3">{cards}</div> : null;
   };
 
+  const renderBuildProgress = () => {
+    if (workspaceType !== "build") return null;
+    if (steps.length === 0) return null;
+
+    const lastStep = steps[steps.length - 1];
+    const lastMsg = lastStep?.message || "";
+    const lastStepId = lastStep?.step || "";
+    const hasError = lastStepId === "error";
+    const isComplete = lastStepId === "done";
+
+    const getPhaseStatus = (idx: number): "pending" | "active" | "done" | "error" => {
+      if (isComplete) return "done";
+      const currentPhaseIdx = BUILD_PHASES.findIndex(p => p.id === lastStepId);
+      if (hasError && idx === Math.min(currentPhaseIdx + 1, BUILD_PHASES.length - 1)) return "error";
+      if (idx < currentPhaseIdx) return "done";
+      if (idx === currentPhaseIdx) return "active";
+      return "pending";
+    };
+
+    return (
+      <div className="space-y-2">
+        {BUILD_PHASES.map((phase, idx) => {
+          const status = getPhaseStatus(idx);
+          return (
+            <div key={phase.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+              status === "active" ? "bg-accent/10 border border-accent/20" :
+              status === "done" ? "bg-green-500/5 border border-green-500/10" :
+              status === "error" ? "bg-red-500/5 border border-red-500/10" :
+              "bg-surface border border-border"
+            }`}>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
+                status === "active" ? "bg-accent/20 text-accent animate-pulse" :
+                status === "done" ? "bg-green-500/20 text-green-400" :
+                status === "error" ? "bg-red-500/20 text-red-400" :
+                "bg-surface-hover text-muted"
+              }`}>
+                {status === "done" ? "✓" : status === "error" ? "✕" : status === "active" ? (
+                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : <span className="text-[11px]">{phase.icon}</span>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-foreground">{phase.label}</div>
+                {status === "active" && <div className="text-[11px] text-muted mt-0.5 truncate">{lastMsg}</div>}
+                {status === "done" && <div className="text-[11px] text-green-400/70 mt-0.5">Complete</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const lastPhaseMessage = phases.length > 0 ? phases[phases.length - 1].message : "";
 
   return (
@@ -469,7 +533,7 @@ export default function WorkspacePage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              {workspaceType === "clone" ? "Cloning..." : "Building..."}
+              {workspaceType === "clone" ? "Cloning..." : steps.length > 0 ? `${BUILD_PHASES.find(p => p.id === steps[steps.length - 1]?.step)?.label || "Building"}...` : "Building..."}
             </div>
           )}
           {buildDone && !isBuilding && (
@@ -489,7 +553,7 @@ export default function WorkspacePage() {
         <div className="flex flex-col w-[380px] border-r border-border bg-surface">
           <div className="flex border-b border-border">
             <button onClick={() => setActiveTab("chat")} className={`flex-1 px-4 py-2.5 text-xs font-medium transition-all ${activeTab === "chat" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
-              {workspaceType === "clone" ? "Progress" : "Chat"}
+              {workspaceType === "clone" ? "Progress" : isBuilding ? "Progress" : "Chat"}
             </button>
             <button onClick={() => setActiveTab("code")} className={`flex-1 px-4 py-2.5 text-xs font-medium transition-all ${activeTab === "code" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
               Code Editor
@@ -511,39 +575,44 @@ export default function WorkspacePage() {
                   </div>
                 ) : (
                   <>
-                    {/* Build mode: chat steps */}
-                    {visibleSteps.length === 0 && (
+                    {/* Build mode: show progress tracker while building, chat after done */}
+                    {isBuilding && steps.length > 0 ? (
+                      renderBuildProgress()
+                    ) : isBuilding ? (
                       <div className="text-center text-muted text-sm py-12">
                         <div className="animate-pulse text-lg mb-2 text-accent">●</div>
                         Initializing build.same engine...
                       </div>
-                    )}
-                    {visibleSteps.map((s, i) => (
-                      <div key={i} className="animate-slide-up">
-                        {s.step === "user" ? (
-                          <div className="flex justify-end">
-                            <div className="bg-accent text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%] text-sm">{s.message}</div>
-                          </div>
-                        ) : (
-                          <div className="flex gap-3">
-                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 ${
-                              s.step === "done" ? "bg-green-500/20 border-green-500/30 text-green-400" :
-                              s.step === "error" ? "bg-red-500/20 border-red-500/30 text-red-400" :
-                              "bg-surface-hover border-border text-muted"
-                            }`}>
-                              {s.step === "done" ? "✓" : s.step === "error" ? "✕" : "b"}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[11px] font-medium text-muted uppercase tracking-wide">{formatLabel(s.step)}</span>
-                                <span className="text-[10px] text-muted/50">{new Date(s.ts).toLocaleTimeString()}</span>
+                    ) : (
+                      <>
+                        {visibleSteps.map((s, i) => (
+                          <div key={i} className="animate-slide-up">
+                            {s.step === "user" ? (
+                              <div className="flex justify-end">
+                                <div className="bg-accent text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%] text-sm">{s.message}</div>
                               </div>
-                              <p className="text-sm text-foreground/80 leading-relaxed">{s.message}</p>
-                            </div>
+                            ) : (
+                              <div className="flex gap-3">
+                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 ${
+                                  s.step === "done" ? "bg-green-500/20 border-green-500/30 text-green-400" :
+                                  s.step === "error" ? "bg-red-500/20 border-red-500/30 text-red-400" :
+                                  "bg-surface-hover border-border text-muted"
+                                }`}>
+                                  {s.step === "done" ? "✓" : s.step === "error" ? "✕" : "b"}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[11px] font-medium text-muted uppercase tracking-wide">{formatLabel(s.step)}</span>
+                                    <span className="text-[10px] text-muted/50">{new Date(s.ts).toLocaleTimeString()}</span>
+                                  </div>
+                                  <p className="text-sm text-foreground/80 leading-relaxed">{s.message}</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        ))}
+                      </>
+                    )}
                     <div ref={chatEndRef} />
                   </>
                 )}

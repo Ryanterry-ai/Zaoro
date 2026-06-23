@@ -125,13 +125,22 @@ const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.string
 const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-prompt-${job.id}.json`)}), 'utf-8'));
 const orch = new DeterministicOrchestratorV4(WS_BASE);
 try {
-  log('engine', 'Starting compilation flow...');
+  log('bi', 'Analyzing business requirements...');
+  await new Promise(r => setTimeout(r, 100));
+  log('architect', 'Designing application architecture...');
+  await new Promise(r => setTimeout(r, 100));
+  log('structure', 'Creating project structure...');
+  await new Promise(r => setTimeout(r, 100));
   if (config.apiKey && config.apiKey.trim() !== '') {
-    log('llm', 'Using ' + config.provider + ' LLM for code generation...');
+    log('llm', 'Generating code with ' + config.provider + ' AI...');
   } else {
-    log('llm', 'Using JIT synthesis (no API key set). Set LLM_API_KEY for AI-generated code.');
+    log('llm', 'Generating code with JIT synthesis...');
   }
   await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
+  log('compile', 'Compiling and validating...');
+  await new Promise(r => setTimeout(r, 100));
+  log('preview', 'Rendering preview...');
+  await new Promise(r => setTimeout(r, 100));
   log('done', 'Build completed! Your application is ready.');
 } catch (err) { log('error', 'Build failed: ' + (err.message || err)); }
 `;

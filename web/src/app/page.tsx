@@ -129,22 +129,7 @@ export default function Home() {
           {/* Input */}
           <div className="relative">
             <div className="rounded-2xl border border-border bg-surface p-1 transition-all focus-within:border-accent focus-within:ring-1 focus-within:ring-accent">
-              {mode === "build" ? (
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleBuild();
-                    }
-                  }}
-                  placeholder="What do you want to build?"
-                  rows={3}
-                  className="w-full bg-transparent px-4 py-3 text-base resize-none outline-none placeholder:text-muted"
-                  disabled={isBuilding}
-                />
-              ) : (
+              {mode === "clone" ? (
                 <input
                   type="url"
                   value={cloneUrl}
@@ -157,6 +142,21 @@ export default function Home() {
                   }}
                   placeholder="https://example.com"
                   className="w-full bg-transparent px-4 py-3 text-base outline-none placeholder:text-muted"
+                  disabled={isBuilding}
+                />
+              ) : (
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleBuild();
+                    }
+                  }}
+                  placeholder="What do you want to build?"
+                  rows={3}
+                  className="w-full bg-transparent px-4 py-3 text-base resize-none outline-none placeholder:text-muted"
                   disabled={isBuilding}
                 />
               )}
