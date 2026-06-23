@@ -96,6 +96,7 @@ const server = http.createServer(async (req, res) => {
         mcp_call: 'POST /api/mcp/call',
         mcp_scrape: 'POST /api/mcp/scrape',
         mcp_push: 'POST /api/mcp/push',
+        bi_run: 'POST /api/bi/run',
       },
     });
   }
@@ -103,6 +104,27 @@ const server = http.createServer(async (req, res) => {
   // GET /api/health
   if (method === 'GET' && url.pathname === '/api/health') {
     return json(res, { status: 'ok', uptime: process.uptime() });
+  }
+
+  // POST /api/bi/run — Business Intelligence Pipeline
+  if (method === 'POST' && url.pathname === '/api/bi/run') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.prompt || typeof body.prompt !== 'string') {
+        return json(res, { error: 'prompt is required' }, 400);
+      }
+      const provider = (process.env.LLM_PROVIDER || 'gemini') as any;
+      const apiKey = process.env.LLM_API_KEY || '';
+      if (!apiKey) return json(res, { error: 'LLM_API_KEY not configured' }, 500);
+
+      const { BusinessIntelligencePipeline } = await import('./business-intelligence/pipeline.js');
+      const pipeline = new BusinessIntelligencePipeline(provider, apiKey);
+      const result = await pipeline.run(body.prompt);
+      return json(res, { success: true, result });
+    } catch (err: any) {
+      console.error('[bi] Pipeline error:', err.message);
+      return json(res, { error: err.message }, 500);
+    }
   }
 
   // POST /api/create

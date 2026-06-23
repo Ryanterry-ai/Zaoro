@@ -30,3 +30,6 @@ export { Validator } from './core/validator.js';
 export { Corrector } from './core/corrector.js';
 export { BILLMCaller } from './core/llm-caller.js';
 export { BusinessIntelligencePipeline } from './pipeline.js';
+export { WebSearcher } from './core/web-searcher.js';
+export type { SearchResult, WebContent } from './core/web-searcher.js';
+export { AgentSkillsBridge } from './core/agent-skills-bridge.js';
