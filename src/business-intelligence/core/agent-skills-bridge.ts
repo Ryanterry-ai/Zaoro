@@ -1,20 +1,28 @@
 import { WebSearcher } from './web-searcher.js';
 import type { SearchResult, WebContent } from './web-searcher.js';
 import { BILLMCaller } from './llm-caller.js';
+import { VisualAnalyzer } from './visual-analyzer.js';
+import type { PageAnalysis } from './visual-analyzer.js';
+import { WorkspaceManager } from './workspace-manager.js';
+import type { CodeQualityReport } from './workspace-manager.js';
 
 /**
- * AgentSkillsBridge: Unified interface for agent capabilities.
+ * AgentSkillsBridge: Unified interface for all agent capabilities.
  * 
- * Wraps web search, content extraction, and analysis capabilities
- * that enhance the BI pipeline and build system.
+ * Wraps web search, content extraction, visual analysis, code quality,
+ * and research capabilities that enhance the BI pipeline and build system.
  */
 export class AgentSkillsBridge {
   private searcher: WebSearcher;
   private llm: BILLMCaller | null;
+  private visualAnalyzer: VisualAnalyzer;
+  private workspaceManager: WorkspaceManager;
 
   constructor(llm?: BILLMCaller) {
     this.searcher = new WebSearcher();
     this.llm = llm || null;
+    this.visualAnalyzer = new VisualAnalyzer();
+    this.workspaceManager = new WorkspaceManager();
   }
 
   // ─── Web Search ───────────────────────────────────────────
@@ -157,5 +165,112 @@ export class AgentSkillsBridge {
       key_segments: results.slice(0, 3).map(r => r.title),
       sources: results.map(r => r.url)
     };
+  }
+
+  // ─── Table Extraction ─────────────────────────────────────
+
+  async extractTables(html: string): Promise<Array<{
+    headers: string[];
+    rows: string[][];
+    location: string;
+  }>> {
+    const cheerio = await import('cheerio');
+    const $ = cheerio.load(html);
+    const tables: Array<{ headers: string[]; rows: string[][]; location: string }> = [];
+
+    $('table').each((i, table) => {
+      const headers: string[] = [];
+      $(table).find('thead th, thead td, tr:first-child th').each((_, th) => {
+        headers.push($(th).text().trim());
+      });
+
+      const rows: string[][] = [];
+      $(table).find('tbody tr, tr:not(:first-child)').each((_, tr) => {
+        const row: string[] = [];
+        $(tr).find('td, th').each((_, td) => {
+          row.push($(td).text().trim());
+        });
+        if (row.length > 0) rows.push(row);
+      });
+
+      if (headers.length > 0 || rows.length > 0) {
+        tables.push({ headers, rows, location: `table_${i}` });
+      }
+    });
+
+    console.log(`[agent-skills] Extracted ${tables.length} tables`);
+    return tables;
+  }
+
+  // ─── Image Description ────────────────────────────────────
+
+  async describeImage(imageUrl: string): Promise<{
+    alt_text: string;
+    visual_description: string;
+    usage_context: string;
+    dominant_colors: string[];
+    dimensions_guess: string;
+  }> {
+    // Fetch the page containing the image to get context
+    const page = await this.fetchWebpage(imageUrl);
+    const alt = page.images.find(i => i.src === imageUrl)?.alt || '';
+
+    // Use LLM to analyze if available
+    if (this.llm) {
+      try {
+        return await this.llm.callStructured(`Describe this image based on its URL and context:
+Image URL: ${imageUrl}
+Alt text: ${alt}
+
+Return JSON:
+{ "alt_text": "${alt}", "visual_description": "string", "usage_context": "string",
+  "dominant_colors": ["string"], "dimensions_guess": "string" }`,
+          `Analyze this image from the URL and any context available.`);
+      } catch {
+        // Fall through to heuristic
+      }
+    }
+
+    // Heuristic analysis
+    const isLogo = /logo|brand|icon/i.test(imageUrl + alt);
+    const isHero = /hero|banner|background|cover/i.test(imageUrl + alt);
+    const isProduct = /product|item|photo|img_\d/i.test(imageUrl + alt);
+
+    return {
+      alt_text: alt,
+      visual_description: isLogo ? 'Logo or brand mark' : isHero ? 'Hero or background image' : isProduct ? 'Product or item photo' : 'Page image',
+      usage_context: isLogo ? 'header/branding' : isHero ? 'hero section' : isProduct ? 'product showcase' : 'content',
+      dominant_colors: [],
+      dimensions_guess: isHero ? '1920x1080' : isLogo ? '200x60' : '800x600'
+    };
+  }
+
+  async describeMultipleImages(imageUrls: string[]): Promise<Array<{
+    url: string;
+    alt_text: string;
+    visual_description: string;
+    usage_context: string;
+  }>> {
+    const results = await Promise.allSettled(imageUrls.map(u => this.describeImage(u)));
+    return results.map((r, i) => ({
+      url: imageUrls[i] || '',
+      ...(r.status === 'fulfilled' ? r.value : { alt_text: '', visual_description: 'Failed to analyze', usage_context: 'unknown' })
+    }));
+  }
+
+  // ─── Visual Analysis ──────────────────────────────────────
+
+  async analyzeWebsiteDesign(url: string): Promise<PageAnalysis> {
+    return this.visualAnalyzer.analyzePage(url);
+  }
+
+  async analyzeMultipleWebsites(urls: string[]): Promise<PageAnalysis[]> {
+    return this.visualAnalyzer.analyzeMultiple(urls);
+  }
+
+  // ─── Workspace Analysis ───────────────────────────────────
+
+  analyzeCodeQuality(workspacePath: string): CodeQualityReport {
+    return this.workspaceManager.analyzeWorkspace(workspacePath);
   }
 }

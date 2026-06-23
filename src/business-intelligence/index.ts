@@ -33,3 +33,7 @@ export { BusinessIntelligencePipeline } from './pipeline.js';
 export { WebSearcher } from './core/web-searcher.js';
 export type { SearchResult, WebContent } from './core/web-searcher.js';
 export { AgentSkillsBridge } from './core/agent-skills-bridge.js';
+export { VisualAnalyzer } from './core/visual-analyzer.js';
+export type { DesignTokens, PageAnalysis } from './core/visual-analyzer.js';
+export { WorkspaceManager } from './core/workspace-manager.js';
+export type { CodeQualityReport, CodeIssue } from './core/workspace-manager.js';

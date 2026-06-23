@@ -10,10 +10,12 @@ import { Architect } from './core/architect.js';
 import { Builder } from './core/builder.js';
 import { Validator } from './core/validator.js';
 import { Corrector } from './core/corrector.js';
+import { AgentSkillsBridge } from './core/agent-skills-bridge.js';
 import type { BIPipelineResult } from './types/index.js';
 
 export class BusinessIntelligencePipeline {
   private llm: BILLMCaller;
+  private bridge: AgentSkillsBridge;
   private inputAnalyzer: InputAnalyzer;
   private intentMapper: IntentMapper;
   private industryResearcher: IndustryResearcher;
@@ -27,6 +29,7 @@ export class BusinessIntelligencePipeline {
 
   constructor(provider: LLMProvider, apiKey: string, model?: string) {
     this.llm = new BILLMCaller(provider, apiKey, model);
+    this.bridge = new AgentSkillsBridge(this.llm);
     this.inputAnalyzer = new InputAnalyzer(this.llm);
     this.intentMapper = new IntentMapper(this.llm);
     this.industryResearcher = new IndustryResearcher(this.llm);
@@ -46,6 +49,16 @@ export class BusinessIntelligencePipeline {
     console.log('='.repeat(60));
 
     const report = (await phase('Phase 1: Input Understanding', () => this.inputAnalyzer.analyzePrompt(prompt)));
+
+    // Phase 1.5: Competitive research via AgentSkillsBridge (parallel with intent)
+    let competitors: Awaited<ReturnType<AgentSkillsBridge['analyzeCompetitors']>> | null = null;
+    try {
+      competitors = await this.bridge.analyzeCompetitors(report.industry, report.business_model);
+      console.log(`[pipeline] Competitor research: ${competitors.competitors.length} competitors, ${competitors.opportunities.length} opportunities`);
+    } catch (err: any) {
+      console.warn(`[pipeline] Competitor research failed: ${err.message}`);
+    }
+
     const intent = (await phase('Phase 2: Intent Analysis', () => this.intentMapper.mapIntent(report)));
     const knowledge = (await phase('Phase 3: Industry Research', () => this.industryResearcher.researchIndustry(report)));
     const flow = (await phase('Phase 4: Business Flow Mapping', () => this.flowMapper.mapBusinessFlow(report, knowledge)));
@@ -68,7 +81,6 @@ export class BusinessIntelligencePipeline {
         return c;
       });
       correctionIterations = corrected.iterations;
-      // Update solution, architecture, manifest with corrected versions
       validation = this.validator.validate(report, problems, corrected.solution, corrected.architecture);
     }
 
@@ -96,7 +108,6 @@ export class BusinessIntelligencePipeline {
     async function phase<T>(name: string, fn: () => Promise<T>): Promise<T> {
       console.log(`\n--- ${name} ---`);
       onProgress?.(name, 'started');
-      // Rate limit: 4s delay between LLM calls
       await new Promise(r => setTimeout(r, 4000));
       const result = await fn();
       onProgress?.(name, 'completed');
