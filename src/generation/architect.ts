@@ -435,13 +435,23 @@ export class ArchitectAgent {
       // Match "Build a <Industry> <Type>" — capture first meaningful word
       /(?:build|create|make)\s+(?:a\s+)?([A-Z][A-Za-z0-9]+)/i,
     ];
+
+    // Industry words that should NOT be used as app names — use keyword fallback instead
+    const industryWords = new Set([
+      'saas', 'ecommerce', 'e-commerce', 'fitness', 'healthcare', 'restaurant',
+      'portfolio', 'agency', 'education', 'blog', 'news', 'law', 'legal',
+      'travel', 'booking', 'hotel', 'cafe', 'food', 'dental', 'medical',
+      'real estate', 'property', 'gym', 'yoga', 'store', 'shop', 'dashboard',
+      'analytics', 'crm', 'ecommerce',
+    ]);
+
     for (const pat of patterns) {
       const m = prompt.match(pat);
       if (m && m[1]) {
         const captured = m[1].trim();
-        // Skip generic words
+        // Skip generic words and industry words
         const skip = ['a', 'an', 'the', 'with', 'for', 'that', 'and', 'or', 'landing', 'website', 'app', 'page', 'platform', 'dashboard', 'store', 'site'];
-        if (!skip.includes(captured.toLowerCase())) {
+        if (!skip.includes(captured.toLowerCase()) && !industryWords.has(captured.toLowerCase())) {
           // Capitalize first letter
           return captured.charAt(0).toUpperCase() + captured.slice(1);
         }
