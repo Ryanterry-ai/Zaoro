@@ -436,6 +436,25 @@ export class ArchitectAgent {
       const m = prompt.match(pat);
       if (m && m[1]) return m[1].trim();
     }
+
+    // Fallback: generate a name based on keywords in the prompt
+    const lower = prompt.toLowerCase();
+    const nameMap: Record<string, string> = {
+      'saas': 'Nexus', 'dashboard': 'Insight', 'analytics': 'Metric',
+      'ecommerce': 'ShopFlow', 'store': 'ShopFlow', 'shop': 'ShopFlow',
+      'restaurant': 'Savora', 'cafe': 'Brew & Co', 'food': 'Savora',
+      'fitness': 'FitForge', 'gym': 'FitForge', 'yoga': 'ZenFlow',
+      'healthcare': 'MedConnect', 'dental': 'SmileCare', 'medical': 'MedConnect',
+      'real estate': 'HomeVista', 'property': 'HomeVista',
+      'portfolio': 'Craftfolio', 'agency': 'StudioNova',
+      'education': 'LearnHub', 'course': 'LearnHub', 'academy': 'LearnHub',
+      'blog': 'BlogEngine', 'news': 'NewsFlow',
+      'law': 'LexFirm', 'legal': 'LexFirm', 'attorney': 'LexFirm',
+      'travel': 'Wanderly', 'booking': 'BookEase', 'hotel': 'Hospita',
+    };
+    for (const [keyword, name] of Object.entries(nameMap)) {
+      if (lower.includes(keyword)) return name;
+    }
     return 'Your Brand';
   }
 

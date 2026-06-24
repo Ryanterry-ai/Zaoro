@@ -108,28 +108,32 @@ export function synthesizeDomainItems(ctx: DomainSynthesisContext, sectionType: 
 
   if (items.length === 0) return '';
 
+  // Pricing cards don't show product images — they show features and prices
+  const isPricing = sectionType === 'pricing-table' || sectionType === 'membership-plans';
+
   const itemCards = items.slice(0, 4).map((item, i) => {
     const itemImage = images.items[i % images.items.length];
     const hasPrice = item.price !== undefined && item.price > 0;
 
     return `<div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-700 transition group cursor-pointer">
-        <div className="h-48 overflow-hidden relative">
+        ${!isPricing ? `<div className="h-48 overflow-hidden relative">
           <img src="${itemImage}" alt="${item.name}" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
           ${item.tag ? `<span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-xs font-bold bg-${d.colorScheme.primary}-600/90 text-white backdrop-blur-sm">${escapeJSX(item.tag)}</span>` : ''}
-        </div>
-        <div className="p-5">
-          ${item.rating ? `<div className="flex items-center gap-1 mb-2">
+        </div>` : ''}
+        <div className="${isPricing ? 'p-6' : 'p-5'}">
+          ${item.tag && isPricing ? `<span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-${d.colorScheme.primary}-600/20 text-${d.colorScheme.primary}-400 mb-3">${escapeJSX(item.tag)}</span>` : ''}
+          ${item.rating && !isPricing ? `<div className="flex items-center gap-1 mb-2">
             <span className="text-yellow-400 text-sm">${'★'.repeat(Math.floor(item.rating))}</span>
             <span className="text-xs text-zinc-500">${item.rating} (${item.reviews} reviews)</span>
           </div>` : ''}
           <h3 className="font-bold text-lg">${escapeJSX(item.name)}</h3>
-          <p className="text-xs text-zinc-400 mt-1 line-clamp-2">${escapeJSX(item.description)}</p>
+          <p className="text-xs text-zinc-400 mt-1 ${isPricing ? '' : 'line-clamp-2'}">${escapeJSX(item.description)}</p>
           ${item.details ? `<div className="flex flex-wrap gap-2 mt-3">
             ${item.details.map(d => `<span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">${escapeJSX(d)}</span>`).join('')}
           </div>` : ''}
           <div className="flex items-center justify-between mt-4">
-            ${hasPrice ? `<span className="text-xl font-black text-${d.colorScheme.primary}-400">$${item.price!.toLocaleString()}</span>` : '<span></span>'}
-            <button className="px-4 py-2 rounded-lg bg-${d.colorScheme.primary}-600 hover:bg-${d.colorScheme.primary}-700 text-sm font-bold transition">View Details</button>
+            ${hasPrice ? `<span className="text-2xl font-black text-${d.colorScheme.primary}-400">$${item.price!.toLocaleString()}<span className="text-sm font-normal text-zinc-500">/mo</span></span>` : '<span></span>'}
+            <button className="px-4 py-2 rounded-lg bg-${d.colorScheme.primary}-600 hover:bg-${d.colorScheme.primary}-700 text-sm font-bold transition">${isPricing ? 'Get Started' : 'View Details'}</button>
           </div>
         </div>
       </div>`;
@@ -248,6 +252,7 @@ export function synthesizeDomainFooter(ctx: DomainSynthesisContext): string {
 export function synthesizeDomainSection(section: string, ctx: DomainSynthesisContext): string {
   switch (section) {
     case 'hero': return synthesizeDomainHero(ctx);
+    case 'stats':
     case 'stats-bar': return synthesizeDomainStats(ctx);
     case 'featured-properties':
     case 'product-grid':
