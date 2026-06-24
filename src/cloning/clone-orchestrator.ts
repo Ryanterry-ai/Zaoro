@@ -126,14 +126,9 @@ export class CloneOrchestrator {
       const patches: ASTPatch[] = [];
       const typeComponents = new Map<string, ASTPatch[]>();
       let totalLlmCalls = 0;
-      const MAX_LLM_CALLS = 15;
       let llmAvailable = true;
 
       for (const [type, pages] of Object.entries(groups)) {
-        if (totalLlmCalls >= MAX_LLM_CALLS) {
-          this.log(`Hit LLM call cap (${MAX_LLM_CALLS}), using templates for remaining ${type} pages`);
-          break;
-        }
         this.phase('Generating components', { pagesTotal: generatable.length, pagesDone: patches.length, currentPage: pages[0]!.pagePath, groupType: type });
 
         if (llmAvailable) {
@@ -151,7 +146,6 @@ export class CloneOrchestrator {
               patches.push(...templatePatches);
 
               for (let i = 1; i < pages.length; i++) {
-                if (totalLlmCalls >= MAX_LLM_CALLS) break;
                 const adapted = await this.adaptPageFromTemplate(pages[i]!, pages[0]!, templatePatches, crawled, assetMap);
                 patches.push(...adapted);
               }

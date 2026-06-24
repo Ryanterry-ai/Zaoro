@@ -408,17 +408,12 @@ export class CloneOrchestrator {
       const generateResults: GeneratePageResult[] = [];
       const typeComponents = new Map<string, ASTPatch[]>();
       let totalLlmCalls = 0;
-      const MAX_LLM_CALLS = 200;
       let llmAvailable = true;
       let pagesGenerated = 0;
       let filesWrittenCount = 0;
       const writtenFiles: string[] = [];
 
       for (const [type, pages] of Object.entries(groups)) {
-        if (llmAvailable && totalLlmCalls >= MAX_LLM_CALLS) {
-          this.progress.emit('generate', 'active', `LLM call cap reached (${MAX_LLM_CALLS}), using templates for remaining ${type} pages`);
-          break;
-        }
 
         if (llmAvailable) {
           try {
