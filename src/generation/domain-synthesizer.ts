@@ -1,7 +1,7 @@
 import { ArchitectDecision } from './architect.js';
 import { DomainContext, detectDomain } from './domain-detector.js';
 import { DomainMockData, getDomainData, getSectionData } from './domain-data.js';
-import { resolveDomainImages, ResolvedImages } from './image-resolver.js';
+import { resolveDomainImages, ResolvedImages, SVG_ICONS, resolveIconSvg, resolveDashboardMockup } from './image-resolver.js';
 import { WebResearcher, WebResearchData } from './web-researcher.js';
 
 function escapeJSX(s: string): string {
@@ -57,12 +57,19 @@ export function createDomainSynthesis(prompt: string, decision: ArchitectDecisio
 }
 
 export function synthesizeDomainHero(ctx: DomainSynthesisContext): string {
-  const { data, decision: d, images, webResearch } = ctx;
+  const { data, decision: d, images, webResearch, domain } = ctx;
   const h = data.hero;
 
   // Use real CTA from web research if available
   const cta = webResearch?.ctaExamples[0] || h.cta;
   const ctaSecondary = webResearch?.ctaExamples[1] || h.ctaSecondary;
+
+  // For SaaS domains, add a dashboard mockup below the hero
+  const isSaaS = domain.industry === 'saas' || domain.subIndustry === 'saas';
+  const dashboardMockup = isSaaS ? `
+      <div className="relative z-10 max-w-5xl mx-auto mt-12">
+        <img src="${resolveDashboardMockup(d.colorScheme.primary)}" alt="Dashboard preview" className="w-full rounded-2xl border border-zinc-800 shadow-2xl" />
+      </div>` : '';
 
   return `<section className="relative pt-32 pb-20 px-6 overflow-hidden">
       <div className="absolute inset-0 z-0">
@@ -77,7 +84,7 @@ export function synthesizeDomainHero(ctx: DomainSynthesisContext): string {
           <button className="px-8 py-4 rounded-xl bg-${d.colorScheme.primary}-600 hover:bg-${d.colorScheme.primary}-700 font-bold transition-all">${escapeJSX(cta)}</button>
           ${ctaSecondary ? `<button className="px-8 py-4 rounded-xl border border-zinc-700 hover:border-zinc-500 font-bold transition-all">${escapeJSX(ctaSecondary)}</button>` : ''}
         </div>
-      </div>
+      </div>${dashboardMockup}
     </section>`;
 }
 
@@ -147,11 +154,14 @@ export function synthesizeDomainFeatures(ctx: DomainSynthesisContext): string {
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-12">Why Choose ${d.name}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          ${data.features.map(f => `<div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">
-            <div className="text-3xl mb-3">${f.icon}</div>
+          ${data.features.map(f => {
+            const iconSvg = resolveIconSvg(f.iconKeyword || f.title);
+            return `<div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">
+            <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-zinc-800">${iconSvg}</div>
             <h3 className="font-bold text-lg">${f.title}</h3>
             <p className="text-sm text-zinc-400 mt-2">${f.description}</p>
-          </div>`).join('\n          ')}
+          </div>`;
+          }).join('\n          ')}
         </div>
       </div>
     </section>`;

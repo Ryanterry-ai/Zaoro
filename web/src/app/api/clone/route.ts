@@ -1,39 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from 'next/server';
+import { engineFetch } from '@/lib/engine';
 
-const ENGINE_URL = process.env.ENGINE_URL || "https://cytoplast-essence-untagged.ngrok-free.dev";
+export async function POST(req: NextRequest) {
+  const body = await req.text();
+  let parsed: any;
+  try { parsed = JSON.parse(body); } catch { parsed = {}; }
 
-export async function POST(req: Request) {
-  const { url: rawUrl, workspaceId } = await req.json();
+  const id = parsed?.id || `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const prompt = parsed?.prompt || '';
 
-  if (!rawUrl || typeof rawUrl !== "string") {
-    return NextResponse.json({ error: "URL is required" }, { status: 400 });
-  }
+  const result = await engineFetch('/api/clone', {
+    method: 'POST',
+    body: JSON.stringify({ id, prompt, url: parsed?.url }),
+    headers: { 'Content-Type': 'application/json' },
+    timeoutMs: 300000,
+  });
 
-  let url = rawUrl.trim();
-  if (!/^https?:\/\//i.test(url)) {
-    url = `https://${url}`;
-  }
-
-  const id = workspaceId || `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-  try {
-    const cleanUrl = ENGINE_URL.endsWith('/') ? ENGINE_URL.slice(0, -1) : ENGINE_URL;
-    const res = await fetch(`${cleanUrl}/api/workspace/${id}/clone`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
-      body: JSON.stringify({ url }),
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    }
-    const err = await res.text();
-    return NextResponse.json({ error: err }, { status: res.status });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 502 });
-  }
+  return Response.json(result.data, { status: result.status });
 }

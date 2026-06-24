@@ -1,26 +1,14 @@
-import { NextResponse } from "next/server";
-
-const ENGINE_URL = process.env.ENGINE_URL || "https://cytoplast-essence-untagged.ngrok-free.dev";
+import { NextRequest } from 'next/server';
+import { engineFetch } from '@/lib/engine';
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const url = new URL(req.url);
-  const filePath = url.searchParams.get("path");
-
-  try {
-    const cleanUrl = ENGINE_URL.endsWith('/') ? ENGINE_URL.slice(0, -1) : ENGINE_URL;
-    const engineUrl = filePath
-      ? `${cleanUrl}/api/workspace/${id}/file?path=${encodeURIComponent(filePath)}`
-      : `${cleanUrl}/api/workspace/${id}/file`;
-    const res = await fetch(engineUrl, {
-      headers: { 'ngrok-skip-browser-warning': 'true' },
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "Engine unreachable" }, { status: 502 });
-  }
+  const filePath = url.searchParams.get('path');
+  const qs = filePath ? `?path=${encodeURIComponent(filePath)}` : '';
+  const result = await engineFetch(`/api/workspace/${id}/file${qs}`);
+  return Response.json(result.data, { status: result.status });
 }

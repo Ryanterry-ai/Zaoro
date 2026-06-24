@@ -1,41 +1,37 @@
 import { NextRequest } from 'next/server';
-
-const ENGINE_URL = process.env.ENGINE_URL || "https://cytoplast-essence-untagged.ngrok-free.dev";
+import { getEngineUrl } from '@/lib/engine';
 
 export async function GET(
   req: NextRequest,
-  props: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const params = await props.params;
-  const id = params.id;
+  const { id } = await params;
 
   try {
-    const cleanUrl = ENGINE_URL.endsWith('/') ? ENGINE_URL.slice(0, -1) : ENGINE_URL;
-    const targetUrl = `${cleanUrl}/api/workspace/${id}/preview`;
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
-    const engineRes = await fetch(targetUrl, {
+    const res = await fetch(`${getEngineUrl()}/api/workspace/${id}/preview`, {
       signal: controller.signal,
-      headers: { 
-        "Accept": "text/html",
-        "ngrok-skip-browser-warning": "true",
+      headers: {
+        'Accept': 'text/html',
+        'ngrok-skip-browser-warning': 'true',
+        'bypass-tunnel-reminder': 'true',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       },
     });
     clearTimeout(timeout);
-    const html = await engineRes.text();
+    const html = await res.text();
     return new Response(html, {
-      status: engineRes.status,
-      headers: { "Content-Type": "text/html" },
+      status: res.status,
+      headers: { 'Content-Type': 'text/html' },
     });
-  } catch (err: any) {
-    const isTimeout = err?.name === "AbortError";
+  } catch {
     return new Response(
       `<html><body style="background:#09090b;color:#f43f5e;font-family:sans-serif;padding:2rem;">
-        <h3>${isTimeout ? "Preview Timeout" : "Engine Unreachable"}</h3>
+        <h3>Engine Unreachable</h3>
         <p style="color:#71717a;font-size:0.875rem;margin-top:1rem;">Workspace: ${id}</p>
       </body></html>`,
-      { headers: { "Content-Type": "text/html" } }
+      { headers: { 'Content-Type': 'text/html' } }
     );
   }
 }

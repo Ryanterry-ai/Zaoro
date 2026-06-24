@@ -74,15 +74,34 @@ interface ApplyData {
   filesWritten: string[];
 }
 
-const HIDDEN_STEPS = new Set(["debug", "engine", "created"]);
+const BUILD_PIPELINE = [
+  { id: "bi", label: "BI" },
+  { id: "research", label: "Research" },
+  { id: "architect", label: "Architect" },
+  { id: "design", label: "Design" },
+  { id: "components", label: "Components" },
+  { id: "assets", label: "Assets" },
+  { id: "motion", label: "Motion" },
+  { id: "synthesize", label: "Synthesize" },
+  { id: "ux-eval", label: "UX" },
+  { id: "biz-eval", label: "Biz" },
+  { id: "assembly", label: "Assembly" },
+  { id: "correction", label: "Fix" },
+  { id: "compile", label: "Compile" },
+  { id: "browser-verify", label: "Verify" },
+  { id: "repair", label: "Repair" },
+  { id: "preview", label: "Preview" },
+  { id: "complete", label: "Done" },
+];
 
-const BUILD_PHASES = [
-  { id: "bi", icon: "🔍", label: "Analyzing Requirements", doneWhen: "architect" },
-  { id: "architect", icon: "📐", label: "Designing Architecture", doneWhen: "structure" },
-  { id: "structure", icon: "📁", label: "Creating Project Structure", doneWhen: "llm" },
-  { id: "llm", icon: "🤖", label: "Generating Code with AI", doneWhen: "compile" },
-  { id: "compile", icon: "⚙️", label: "Compiling & Validating", doneWhen: "preview" },
-  { id: "preview", icon: "🖼️", label: "Rendering Preview", doneWhen: "done" },
+const CLONE_PHASES = [
+  { id: "analyze", label: "Analyze" },
+  { id: "crawl", label: "Crawl" },
+  { id: "assets", label: "Assets" },
+  { id: "generate", label: "Generate" },
+  { id: "self-contain", label: "Self-Contain" },
+  { id: "preview", label: "Preview" },
+  { id: "complete", label: "Complete" },
 ];
 
 type DeviceFrame = "desktop" | "tablet" | "mobile";
@@ -93,6 +112,8 @@ const DEVICE_WIDTHS: Record<DeviceFrame, string> = {
   mobile: "375px",
 };
 
+type StageStatus = "pending" | "active" | "done" | "error";
+
 export default function WorkspacePage() {
   const params = useParams();
   const id = params.id as string;
@@ -102,8 +123,7 @@ export default function WorkspacePage() {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
-  const [activeTab, setActiveTab] = useState<"chat" | "code">("chat");
-  const [rightTab, setRightTab] = useState<"preview" | "files" | "code">("preview");
+  const [rightTab, setRightTab] = useState<"preview" | "files">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
   const [workspaceType, setWorkspaceType] = useState<"build" | "clone">("build");
@@ -139,7 +159,7 @@ export default function WorkspacePage() {
     try {
       const res = await fetch(`/api/workspace/${id}/progress`);
       if (!res.ok) {
-        console.warn(`[progress] HTTP ${res.status} — proxy may be down, engine may not be running`);
+        console.warn(`[progress] HTTP ${res.status}`);
         return;
       }
       const data = await res.json();
@@ -164,7 +184,7 @@ export default function WorkspacePage() {
         }
       }
     } catch (err) {
-      console.error('[progress] Poll failed:', err);
+      console.error("[progress] Poll failed:", err);
     }
   }, [id, loadFiles, loadPreview]);
 
@@ -174,7 +194,7 @@ export default function WorkspacePage() {
       const data = await res.json();
       setFileContent(data.content || "");
       setSelectedFile(filePath);
-      setRightTab("code");
+      setRightTab("files");
     } catch {}
   }, [id]);
 
@@ -236,13 +256,17 @@ export default function WorkspacePage() {
       }
     }
     initWorkspace();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [id, pollProgress, triggerBuild]);
 
   useEffect(() => {
     if (!isBuilding) return;
     pollRef.current = setInterval(pollProgress, workspaceType === "clone" ? 500 : 1000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [isBuilding, pollProgress, workspaceType]);
 
   useEffect(() => {
@@ -257,23 +281,8 @@ export default function WorkspacePage() {
       !f.path.includes("package-lock")
   );
 
-  const visibleSteps = steps.filter((s) => !HIDDEN_STEPS.has(s.step));
-
-  const formatLabel = (step: string) => {
-    switch (step) {
-      case "llm": return "AI Agent";
-      case "clone": return "Clone";
-      case "agent": return "Agent";
-      case "done": return "Complete";
-      case "error": return "Error";
-      case "user": return "You";
-      default: return step;
-    }
-  };
-
   const iframeWidth = DEVICE_WIDTHS[deviceFrame];
 
-  // ── Fullscreen overlay mode ──
   if (isFullscreen && previewHtml) {
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
@@ -305,531 +314,58 @@ export default function WorkspacePage() {
     );
   }
 
-  // ── Clone Progress View ──
-  const renderCloneProgress = () => {
-    if (workspaceType !== "clone") return null;
+  const buildStageOrder = BUILD_PIPELINE.map((p) => p.id);
+  const lastBuildStep = steps[steps.length - 1];
+  const lastBuildStepId = lastBuildStep?.step || "";
+  const buildHasError = lastBuildStepId === "error";
+  const buildIsComplete = lastBuildStepId === "done";
+  const buildActiveIdx = buildIsComplete ? BUILD_PIPELINE.length - 1 : buildStageOrder.indexOf(lastBuildStepId);
 
-    const lastMsg = phases[phases.length - 1]?.message || "";
-    const lastPhase = phases[phases.length - 1]?.phase || "";
-    const isComplete = lastMsg.includes("Clone complete") || lastMsg.includes("Clone finished");
-    const isFailed = lastMsg.includes("Clone failed");
+  const getBuildStageStatus = (stageId: string, idx: number): StageStatus => {
+    if (buildIsComplete) return "done";
+    if (buildHasError && idx === buildActiveIdx) return "error";
+    if (idx < buildActiveIdx) return "done";
+    if (stageId === lastBuildStepId && !buildIsComplete && !buildHasError) return "active";
+    return "pending";
+  };
 
-    const CLONE_PHASES = [
-      { id: "analyze", icon: "🔍", label: "Analyze Site", description: "Detecting tech stack, sitemap, robots.txt" },
-      { id: "crawl", icon: "🕷", label: "Crawl Pages", description: "Extracting content from each page" },
-      { id: "assets", icon: "📦", label: "Download Assets", description: "Images, videos, fonts, SVGs" },
-      { id: "generate", icon: "⚡", label: "Generate Code", description: "Creating page components" },
-      { id: "self-contain", icon: "🔒", label: "Self-Contain", description: "Rewriting URLs, removing dependencies" },
-      { id: "preview", icon: "🖼", label: "Preview", description: "Preparing live preview" },
-      { id: "complete", icon: "✅", label: "Complete", description: "Ready to download or deploy" },
-    ];
+  const buildEventCounts: Record<string, number> = {};
+  const buildStageEvents: Record<string, ProgressStep[]> = {};
+  for (const ev of steps) {
+    const stage = ev.step || "unknown";
+    buildEventCounts[stage] = (buildEventCounts[stage] || 0) + 1;
+    if (!buildStageEvents[stage]) buildStageEvents[stage] = [];
+    buildStageEvents[stage].push(ev);
+  }
 
-    const phaseOrder = CLONE_PHASES.map(p => p.id);
-    const activePhaseIdx = isComplete ? CLONE_PHASES.length - 1 : isFailed ? phaseOrder.indexOf(lastPhase) : phaseOrder.indexOf(lastPhase);
-
-    const getPhaseStatus = (phaseId: string, idx: number): "pending" | "active" | "done" | "error" => {
-      if (isComplete) return "done";
-      if (isFailed && idx === activePhaseIdx) return "error";
-      if (idx < activePhaseIdx) return "done";
-      if (phaseId === lastPhase && !isComplete && !isFailed) return "active";
-      return "pending";
-    };
-
-    // Count events per phase
-    const eventCounts: Record<string, number> = {};
-    const phaseEvents: Record<string, any[]> = {};
-    for (const ev of phases) {
-      const phaseKey = ev.phase || ev.step || 'unknown';
-      eventCounts[phaseKey] = (eventCounts[phaseKey] || 0) + 1;
-      if (!phaseEvents[phaseKey]) phaseEvents[phaseKey] = [];
-      phaseEvents[phaseKey].push(ev);
-    }
-
-    const latestPerPhase: Record<string, string> = {};
-    for (const ev of phases) {
-      const phaseKey = ev.phase || ev.step || 'unknown';
-      latestPerPhase[phaseKey] = ev.message;
-    }
-
-    const getPhaseProgress = (phaseId: string): { current: number; total: number } | null => {
-      const evts = phaseEvents[phaseId] || [];
-      for (let i = evts.length - 1; i >= 0; i--) {
-        const d = evts[i].data;
-        if (d && typeof d.index === 'number' && typeof d.total === 'number') {
-          return { current: d.index + 1, total: d.total };
-        }
+  const getBuildStageProgress = (stageId: string): { current: number; total: number } | null => {
+    const evts = buildStageEvents[stageId] || [];
+    for (let i = evts.length - 1; i >= 0; i--) {
+      const d = evts[i].data;
+      if (d && typeof d.index === "number" && typeof d.total === "number") {
+        return { current: d.index + 1, total: d.total };
       }
-      return null;
-    };
-
-    // Count files generated from events
-    const filesGenerated = phases.filter(ev => ev.message?.startsWith('Wrote:')).length;
-    const assetsDownloaded = phases.filter(ev => ev.message?.startsWith('Downloaded ')).length;
-    const pagesCrawled = phases.filter(ev => ev.message?.startsWith('Crawled ')).length;
-
-    return (
-      <div className="flex flex-col h-full">
-        {/* Compact phase progress — top bar */}
-        <div className="px-3 py-2 border-b border-border bg-surface">
-          <div className="flex items-center gap-1 mb-2">
-            {CLONE_PHASES.map((phase, idx) => {
-              const status = getPhaseStatus(phase.id, idx);
-              return (
-                <div key={phase.id} className={`flex-1 h-1.5 rounded-full transition-all ${
-                  status === "done" ? "bg-green-500" :
-                  status === "active" ? "bg-accent animate-pulse" :
-                  status === "error" ? "bg-red-500" :
-                  "bg-surface-hover"
-                }`} />
-              );
-            })}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium text-foreground">
-                {CLONE_PHASES.find(p => p.id === lastPhase)?.label || "Starting..."}
-              </span>
-              {isComplete && <span className="text-[10px] text-green-400">Done</span>}
-              {isFailed && <span className="text-[10px] text-red-400">Failed</span>}
-            </div>
-            <div className="flex items-center gap-3 text-[10px] text-muted">
-              {pagesCrawled > 0 && <span>{pagesCrawled} pages</span>}
-              {assetsDownloaded > 0 && <span>{assetsDownloaded} assets</span>}
-              {filesGenerated > 0 && <span>{filesGenerated} files</span>}
-            </div>
-          </div>
-        </div>
-
-        {/* Phase details — compact list */}
-        <div className="px-3 py-2 space-y-1 border-b border-border">
-          {CLONE_PHASES.map((phase, idx) => {
-            const status = getPhaseStatus(phase.id, idx);
-            const eventCount = eventCounts[phase.id] || 0;
-            const progress = getPhaseProgress(phase.id);
-            const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
-
-            if (status === "pending" && eventCount === 0) return null;
-
-            return (
-              <div key={phase.id} className="flex items-center gap-2 text-[11px]">
-                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${
-                  status === "done" ? "bg-green-500/20 text-green-400" :
-                  status === "active" ? "bg-accent/20 text-accent" :
-                  status === "error" ? "bg-red-500/20 text-red-400" :
-                  "text-muted/40"
-                }`}>
-                  {status === "done" ? "✓" : status === "active" ? (
-                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  ) : status === "error" ? "✕" : <span className="text-[9px]">{phase.icon}</span>}
-                </div>
-                <span className={`${status === "done" ? "text-foreground/60" : status === "active" ? "text-foreground" : "text-muted/50"}`}>
-                  {phase.label}
-                </span>
-                {eventCount > 0 && (
-                  <span className="text-[9px] text-muted bg-surface-hover px-1 rounded">{eventCount}</span>
-                )}
-                {progress && status === "active" && (
-                  <>
-                    <div className="flex-1 h-1 bg-surface-hover rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="text-[9px] text-accent font-mono">{progress.current}/{progress.total}</span>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Live Activity — fills remaining space */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="px-3 py-1.5 flex items-center justify-between border-b border-border">
-            <span className="text-[10px] uppercase tracking-wider text-muted font-medium">Live Activity</span>
-            <span className="text-[10px] text-muted">{phases.length} events</span>
-          </div>
-          <div className="flex-1 overflow-y-auto px-3 py-1" ref={chatEndRef}>
-            {[...phases].reverse().map((ev, i) => {
-              const ts = new Date(ev.ts).toLocaleTimeString();
-              const isFile = ev.message?.startsWith('Wrote:');
-              const isDownload = ev.message?.startsWith('Downloaded ');
-              const isCrawl = ev.message?.startsWith('Crawled ');
-              const isFailed = ev.phaseStatus === 'failed';
-              const isDone = ev.phaseStatus === 'done';
-
-              return (
-                <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${
-                  isFile ? 'bg-green-500/5' : ''
-                }`}>
-                  <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
-                  <span className={`flex-shrink-0 mt-0.5 text-[8px] ${
-                    isDone ? 'text-green-400' :
-                    isFailed ? 'text-red-400' :
-                    isFile ? 'text-green-400' :
-                    isDownload ? 'text-blue-400' :
-                    isCrawl ? 'text-accent' :
-                    'text-accent/60'
-                  }`}>
-                    {isDone ? '●' : isFailed ? '●' : isFile ? '📄' : isDownload ? '⬇' : '◉'}
-                  </span>
-                  <span className={`leading-relaxed flex-1 min-w-0 ${
-                    isFile ? 'text-green-400/80' :
-                    isFailed ? 'text-red-400/80' :
-                    'text-foreground/60'
-                  }`}>
-                    {ev.message}
-                  </span>
-                </div>
-              );
-            })}
-            <div ref={chatEndRef} />
-          </div>
-        </div>
-
-        {/* Completion summary */}
-        {isComplete && (
-          <div className="px-3 py-2 border-t border-border bg-surface">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase tracking-wider text-green-400 font-medium">Clone Complete</span>
-              <span className="text-[10px] text-muted">{filesGenerated} files generated</span>
-            </div>
-            <div className="flex gap-2">
-              <a
-                href={`/api/workspace/${id}/download`}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-all"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download ZIP
-              </a>
-              <button
-                onClick={() => loadPreview()}
-                className="px-3 py-2 rounded-lg border border-border text-xs text-foreground hover:bg-surface-hover transition-all"
-              >
-                Preview
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    }
+    return null;
   };
 
-  const renderPhaseDetails = () => {
-    const cards: React.ReactNode[] = [];
+  const lastCloneMsg = phases.length > 0 ? phases[phases.length - 1].message : "";
+  const cloneIsComplete = lastCloneMsg.includes("Clone complete") || lastCloneMsg.includes("Clone finished");
+  const cloneIsFailed = lastCloneMsg.includes("Clone failed");
+  const lastClonePhase = phases.length > 0 ? (phases[phases.length - 1].phase || phases[phases.length - 1].step || "") : "";
+  const clonePhaseOrder = CLONE_PHASES.map((p) => p.id);
+  const cloneActiveIdx = cloneIsComplete ? CLONE_PHASES.length - 1 : cloneIsFailed ? clonePhaseOrder.indexOf(lastClonePhase) : clonePhaseOrder.indexOf(lastClonePhase);
 
-    // Helper to find events by phase
-    const findEvents = (phase: string) => phases.filter(p => (p.phase || p.step) === phase);
-    const findLastEvent = (phase: string) => [...phases].reverse().find(p => (p.phase || p.step) === phase);
-    const findEventWith = (phase: string, substr: string) => phases.find(p => (p.phase || p.step) === phase && p.message.includes(substr));
-
-    // Analyze phase details
-    const analyzeDone = findEventWith('analyze', 'Analysis complete');
-    if (analyzeDone?.data) {
-      const d = analyzeDone.data as any;
-      cards.push(
-        <div key="analyze" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Site Analysis</div>
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div><strong className="text-foreground">{d.analyzeResult?.pages?.length || '?'}</strong> <span className="text-muted">pages found</span></div>
-            <div><strong className="text-foreground">{d.analyzeResult?.navItems?.length || '?'}</strong> <span className="text-muted">nav items</span></div>
-            <div><strong className="text-foreground">{d.analyzeResult?.techStack?.framework || '?'}</strong> <span className="text-muted">framework</span></div>
-            <div><strong className="text-foreground">{d.analyzeResult?.techStack?.cms || 'none'}</strong> <span className="text-muted">CMS</span></div>
-          </div>
-        </div>
-      );
-    }
-
-    // Crawl phase details
-    const crawlDone = findLastEvent('crawl');
-    if (crawlDone?.data) {
-      const d = crawlDone.data as any;
-      const crawlResults = d.crawlResults || [];
-      const ok = crawlResults.filter((r: any) => r.status === 'done').length;
-      const failed = crawlResults.filter((r: any) => r.status === 'failed').length;
-      cards.push(
-        <div key="crawl" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Crawled Pages ({ok}/{crawlResults.length})</div>
-          <div className="space-y-1 max-h-[150px] overflow-y-auto">
-            {crawlResults.slice(0, 15).map((r: any, i: number) => (
-              <div key={i} className="flex items-center gap-2 text-[11px]">
-                <span className={r.status === 'done' ? 'text-green-400' : 'text-red-400'}>{r.status === 'done' ? '✓' : '✕'}</span>
-                <span className="text-foreground/80 truncate flex-1">{r.title || r.path}</span>
-                <span className="text-muted">{r.imagesFound}img</span>
-                {r.videosFound > 0 && <span className="text-purple-400">{r.videosFound}vid</span>}
-                <span className="text-muted/50">{r.duration}ms</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    // Assets phase details
-    const assetsDone = findLastEvent('assets');
-    if (assetsDone?.data) {
-      const d = assetsDone.data as any;
-      const byCat = d.byCategory || {};
-      cards.push(
-        <div key="assets" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Assets Downloaded</div>
-          <div className="flex flex-wrap gap-3 text-[11px]">
-            <span className="text-green-400/70"><strong>{d.assetsOk || 0}</strong> downloaded</span>
-            {(d.assetsFailed || 0) > 0 && <span className="text-red-400/70"><strong>{d.assetsFailed}</strong> failed</span>}
-            {Object.entries(byCat).map(([cat, count]) => (
-              <span key={cat} className="text-muted">{cat}: <strong>{count as number}</strong></span>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    // Generate phase details
-    const genDone = findLastEvent('generate');
-    if (genDone?.data) {
-      const d = genDone.data as any;
-      const genResults = d.generateResults || [];
-      cards.push(
-        <div key="gen" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1">Generated Pages ({genResults.length})</div>
-          <div className="space-y-1 max-h-[120px] overflow-y-auto">
-            {genResults.slice(0, 15).map((r: any, i: number) => (
-              <div key={i} className="flex items-center gap-2 text-[11px]">
-                <span className={r.status === 'done' ? 'text-green-400' : r.status === 'failed' ? 'text-red-400' : 'text-muted'}>{r.status === 'done' ? '✓' : r.status === 'failed' ? '✕' : '○'}</span>
-                <span className="text-foreground/80 truncate flex-1">{r.path}</span>
-                <span className="text-muted">{r.componentCount}patch</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-1 text-[10px] text-muted">{d.totalPatches} total patches, {d.totalLlmCalls} LLM calls</div>
-        </div>
-      );
-    }
-
-    // Self-contain details
-    const selfContainDone = findLastEvent('self-contain');
-    if (selfContainDone?.data) {
-      const d = selfContainDone.data as any;
-      cards.push(
-        <div key="selfcontain" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Self-Contained</div>
-          <div className="flex gap-3 text-[11px]">
-            <span className="text-foreground/70"><strong>{d.filesWritten?.length || 0}</strong> files</span>
-            <span className="text-foreground/70"><strong>{d.filesModified || 0}</strong> scrubbed</span>
-            <span className={d.externalUrlsRemaining > 0 ? 'text-yellow-400' : 'text-green-400'}><strong>{d.externalUrlsRemaining || 0}</strong> external URLs</span>
-          </div>
-        </div>
-      );
-    }
-
-    // Completion summary
-    const completeDone = findLastEvent('complete');
-    if (completeDone?.data && (completeDone.phaseStatus || 'done') === 'done') {
-      const d = completeDone.data as any;
-      cards.push(
-        <div key="complete" className="px-3 py-3 rounded-xl bg-green-500/5 border border-green-500/10 animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-green-400 mb-1.5">Clone Complete</div>
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div><strong className="text-foreground">{d.pages || 0}</strong> <span className="text-muted">pages</span></div>
-            <div><strong className="text-foreground">{d.assets || 0}</strong> <span className="text-muted">assets</span></div>
-            <div><strong className="text-foreground">{d.files || 0}</strong> <span className="text-muted">files</span></div>
-            <div><strong className="text-foreground">{d.duration ? (d.duration / 1000).toFixed(1) : '0'}s</strong> <span className="text-muted">duration</span></div>
-          </div>
-        </div>
-      );
-    }
-
-    return cards.length > 0 ? <div className="space-y-2 mt-3">{cards}</div> : null;
+  const getClonePhaseStatus = (phaseId: string, idx: number): StageStatus => {
+    if (cloneIsComplete) return "done";
+    if (cloneIsFailed && idx === cloneActiveIdx) return "error";
+    if (idx < cloneActiveIdx) return "done";
+    if (phaseId === lastClonePhase && !cloneIsComplete && !cloneIsFailed) return "active";
+    return "pending";
   };
-
-  const renderBuildProgress = () => {
-    if (workspaceType !== "build") return null;
-    if (steps.length === 0) return null;
-
-    const lastStep = steps[steps.length - 1];
-    const lastMsg = lastStep?.message || "";
-    const lastStepId = lastStep?.step || "";
-    const hasError = lastStepId === "error";
-    const isComplete = lastStepId === "done";
-
-    // Build phases from events
-    const BUILD_PIPELINE = [
-      { id: "bi", icon: "🔍", label: "Business Intelligence", description: "Analyzing requirements, industry, competitors" },
-      { id: "research", icon: "📊", label: "Research Agent", description: "Competitors, market, content strategy" },
-      { id: "architect", icon: "📐", label: "Architect", description: "Page structure, components, state stores" },
-      { id: "design", icon: "🎨", label: "Design System", description: "Typography, colors, spacing, layout" },
-      { id: "components", icon: "🧩", label: "Component Sourcer", description: "Section compositions, shared components" },
-      { id: "assets", icon: "🖼", label: "Asset Intelligence", description: "Images, icons, illustrations" },
-      { id: "motion", icon: "✨", label: "Motion Engine", description: "Animations, micro-interactions" },
-      { id: "synthesize", icon: "🤖", label: "Synthesizer + LLM", description: "Domain-specific code generation" },
-      { id: "ux-eval", icon: "👁", label: "UX Evaluator", description: "Accessibility, hierarchy, contrast" },
-      { id: "biz-eval", icon: "💼", label: "Business Validator", description: "Revenue, flows, market fit" },
-      { id: "assembly", icon: "🏗", label: "Assembly QA", description: "File writing, integrity checks" },
-      { id: "correction", icon: "🔄", label: "Self-Correction", description: "Re-plan and re-generate if needed" },
-      { id: "compile", icon: "⚙", label: "Compile & Validate", description: "TypeScript compilation" },
-      { id: "browser-verify", icon: "🌐", label: "Browser Verification", description: "E2E tests, console errors, broken assets" },
-      { id: "repair", icon: "🔧", label: "Repair Loop", description: "Auto-fix issues found during verification" },
-      { id: "preview", icon: "🖼", label: "Preview", description: "Render live preview" },
-      { id: "complete", icon: "✅", label: "Complete", description: "Ready to download or deploy" },
-    ];
-
-    // Count events per stage and extract progress data
-    const eventCounts: Record<string, number> = {};
-    const stageEvents: Record<string, any[]> = {};
-    for (const ev of steps) {
-      const stage = ev.step || 'unknown';
-      eventCounts[stage] = (eventCounts[stage] || 0) + 1;
-      if (!stageEvents[stage]) stageEvents[stage] = [];
-      stageEvents[stage].push(ev);
-    }
-
-    // Get latest message per stage
-    const latestPerStage: Record<string, string> = {};
-    for (const ev of steps) {
-      const stage = ev.step || 'unknown';
-      latestPerStage[stage] = ev.message;
-    }
-
-    // Extract progress counters from events
-    const getStageProgress = (stageId: string): { current: number; total: number } | null => {
-      const evts = stageEvents[stageId] || [];
-      for (let i = evts.length - 1; i >= 0; i--) {
-        const d = evts[i].data;
-        if (d && typeof d.index === 'number' && typeof d.total === 'number') {
-          return { current: d.index + 1, total: d.total };
-        }
-      }
-      return null;
-    };
-
-    // Determine active stage
-    const stageOrder = BUILD_PIPELINE.map(p => p.id);
-    const activeIdx = isComplete ? BUILD_PIPELINE.length - 1 : stageOrder.indexOf(lastStepId);
-
-    const getStageStatus = (stageId: string, idx: number): "pending" | "active" | "done" | "error" => {
-      if (isComplete) return "done";
-      if (hasError && idx === activeIdx) return "error";
-      if (idx < activeIdx) return "done";
-      if (stageId === lastStepId && !isComplete && !hasError) return "active";
-      return "pending";
-    };
-
-    return (
-      <div className="space-y-2">
-        {BUILD_PIPELINE.map((phase, idx) => {
-          const status = getStageStatus(phase.id, idx);
-          const eventCount = eventCounts[phase.id] || 0;
-          const latestMsg = latestPerStage[phase.id] || "";
-          const progress = getStageProgress(phase.id);
-          const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
-
-          return (
-            <div key={phase.id} className={`rounded-xl text-sm transition-all overflow-hidden ${
-              status === "active" ? "bg-accent/10 border border-accent/20" :
-              status === "done" ? "bg-green-500/5 border border-green-500/10" :
-              status === "error" ? "bg-red-500/5 border border-red-500/10" :
-              "bg-surface border border-border"
-            }`}>
-              <div className="flex items-center gap-3 px-3 py-2.5">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
-                  status === "active" ? "bg-accent/20 text-accent animate-pulse" :
-                  status === "done" ? "bg-green-500/20 text-green-400" :
-                  status === "error" ? "bg-red-500/20 text-red-400" :
-                  "bg-surface-hover text-muted"
-                }`}>
-                  {status === "done" ? "✓" : status === "error" ? "✕" : status === "active" ? (
-                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  ) : <span className="text-[11px]">{phase.icon}</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-foreground">{phase.label}</span>
-                    {eventCount > 0 && status !== "pending" && (
-                      <span className="text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{eventCount}</span>
-                    )}
-                    {progress && status === "active" && (
-                      <span className="text-[10px] text-accent font-mono">{progress.current}/{progress.total}</span>
-                    )}
-                  </div>
-                  {/* Progress bar */}
-                  {progress && status === "active" && (
-                    <div className="w-full h-1 bg-surface-hover rounded-full mt-1.5 overflow-hidden">
-                      <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-                    </div>
-                  )}
-                  {status === "active" && latestMsg && (
-                    <div className="text-[11px] text-muted mt-1 truncate">{latestMsg}</div>
-                  )}
-                  {status === "done" && (
-                    <div className="text-[11px] text-green-400/70 mt-0.5">{phase.description}</div>
-                  )}
-                  {status === "pending" && (
-                    <div className="text-[11px] text-muted/50 mt-0.5">{phase.description}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Live event feed — per-operation progress */}
-        {steps.length > 0 && (
-          <div className="mt-3 px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase tracking-wider text-muted">Live Activity</span>
-              <span className="text-[10px] text-muted">{steps.length} events</span>
-            </div>
-            <div className="space-y-0.5 max-h-[300px] overflow-y-auto" ref={chatEndRef}>
-              {[...steps].reverse().slice(0, 50).map((ev, i) => {
-                const ts = new Date(ev.ts).toLocaleTimeString();
-                return (
-                  <div key={i} className="flex items-start gap-2 text-[11px] py-0.5">
-                    <span className="text-muted/50 font-mono flex-shrink-0 w-[60px]">{ts}</span>
-                    <span className={`flex-shrink-0 mt-0.5 ${
-                      ev.step === 'done' ? 'text-green-400' :
-                      ev.step === 'error' ? 'text-red-400' : 'text-accent'
-                    }`}>
-                      {ev.step === 'done' ? '●' : ev.step === 'error' ? '●' : '◉'}
-                    </span>
-                    <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Score cards when complete */}
-        {isComplete && (
-          <div className="mt-3 space-y-2">
-            {lastMsg.includes("UX:") && (
-              <div className="px-3 py-2 rounded-xl bg-green-500/5 border border-green-500/10">
-                <div className="text-[10px] uppercase tracking-wider text-green-400 mb-1.5">Build Complete</div>
-                <div className="text-[11px] text-foreground/80">{lastMsg}</div>
-              </div>
-            )}
-            <a
-              href={`/api/workspace/${id}/download`}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download as ZIP
-            </a>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const lastPhaseMessage = phases.length > 0 ? phases[phases.length - 1].message : "";
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      {/* Top Bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface">
         <div className="flex items-center gap-3">
           <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -846,7 +382,7 @@ export default function WorkspacePage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              {workspaceType === "clone" ? "Cloning..." : steps.length > 0 ? `${BUILD_PHASES.find(p => p.id === steps[steps.length - 1]?.step)?.label || "Building"}...` : "Building..."}
+              {workspaceType === "clone" ? "Cloning..." : steps.length > 0 ? `${BUILD_PIPELINE.find((p) => p.id === steps[steps.length - 1]?.step)?.label || "Building"}...` : "Building..."}
             </div>
           )}
           {buildDone && !isBuilding && (
@@ -856,116 +392,133 @@ export default function WorkspacePage() {
             </div>
           )}
           <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all">Share</button>
-          <a
-            href={`/api/workspace/${id}/download`}
-            className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all flex items-center gap-1.5"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <a href={`/api/workspace/${id}/download`} className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             Download
           </a>
           <button className="px-3 py-1.5 rounded-lg text-xs bg-accent text-white hover:bg-accent-hover transition-all">Deploy</button>
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel */}
         <div className="flex flex-col w-[380px] border-r border-border bg-surface">
-          <div className="flex border-b border-border">
-            <button onClick={() => setActiveTab("chat")} className={`flex-1 px-4 py-2.5 text-xs font-medium transition-all ${activeTab === "chat" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
-              {workspaceType === "clone" ? "Progress" : isBuilding ? "Progress" : "Chat"}
-            </button>
-            <button onClick={() => setActiveTab("code")} className={`flex-1 px-4 py-2.5 text-xs font-medium transition-all ${activeTab === "code" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
-              Code Editor
-            </button>
-          </div>
-
-          {activeTab === "chat" ? (
-            <>
-              <div className={`flex-1 overflow-hidden ${workspaceType === "clone" ? "flex flex-col" : "overflow-y-auto p-4 space-y-3"}`}>
-                {/* Clone mode: show phase progress filling full sidebar */}
-                {workspaceType === "clone" && phases.length > 0 ? (
-                  <div className="flex-1 overflow-hidden">
-                    {renderCloneProgress()}
-                  </div>
-                ) : workspaceType === "clone" && phases.length === 0 ? (
-                  <div className="text-center text-muted text-sm py-12">
-                    <div className="animate-pulse text-lg mb-2 text-accent">●</div>
-                    Initializing clone engine...
-                  </div>
-                ) : (
-                  <>
-                    {/* Build mode: show progress tracker while building, chat after done */}
-                    {isBuilding && steps.length > 0 ? (
-                      renderBuildProgress()
-                    ) : isBuilding ? (
-                      <div className="text-center text-muted text-sm py-12">
-                        <div className="animate-pulse text-lg mb-2 text-accent">●</div>
-                        Initializing build.same engine...
-                      </div>
-                    ) : (
-                      <>
-                        {visibleSteps.map((s, i) => (
-                          <div key={i} className="animate-slide-up">
-                            {s.step === "user" ? (
-                              <div className="flex justify-end">
-                                <div className="bg-accent text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%] text-sm">{s.message}</div>
-                              </div>
-                            ) : (
-                              <div className="flex gap-3">
-                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5 ${
-                                  s.step === "done" ? "bg-green-500/20 border-green-500/30 text-green-400" :
-                                  s.step === "error" ? "bg-red-500/20 border-red-500/30 text-red-400" :
-                                  "bg-surface-hover border-border text-muted"
-                                }`}>
-                                  {s.step === "done" ? "✓" : s.step === "error" ? "✕" : "b"}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-[11px] font-medium text-muted uppercase tracking-wide">{formatLabel(s.step)}</span>
-                                    <span className="text-[10px] text-muted/50">{new Date(s.ts).toLocaleTimeString()}</span>
-                                  </div>
-                                  <p className="text-sm text-foreground/80 leading-relaxed">{s.message}</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </>
-                    )}
-                    <div ref={chatEndRef} />
-                  </>
-                )}
+          {workspaceType === "build" && steps.length > 0 && (
+            <div className="px-3 py-2 border-b border-border">
+              <div className="flex items-center gap-1 flex-wrap">
+                {BUILD_PIPELINE.map((stage, idx) => {
+                  const status = getBuildStageStatus(stage.id, idx);
+                  const progress = getBuildStageProgress(stage.id);
+                  const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
+                  return (
+                    <span key={stage.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] ${status === "done" ? "bg-green-500/10 text-green-400" : status === "active" ? "bg-accent/10 text-accent" : status === "error" ? "bg-red-500/10 text-red-400" : "text-muted/40"}`}>
+                      {status === "done" ? "✓" : status === "active" ? <span className="animate-pulse">●</span> : status === "error" ? "✕" : "○"}
+                      {stage.label}
+                      {progress && status === "active" && (
+                        <span className="font-mono text-[9px]">{progress.current}/{progress.total}</span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
+              {(() => {
+                const activeProgress = getBuildStageProgress(lastBuildStepId);
+                if (!activeProgress || getBuildStageStatus(lastBuildStepId, buildActiveIdx) !== "active") return null;
+                const pct = Math.round((activeProgress.current / activeProgress.total) * 100);
+                return (
+                  <div className="w-full h-1 bg-surface-hover rounded-full mt-1.5 overflow-hidden">
+                    <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
-              <div className="p-3 border-t border-border">
-                <div className="flex gap-2">
-                  <input
-                    value={followUp}
-                    onChange={(e) => setFollowUp(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleFollowUp()}
-                    placeholder={workspaceType === "clone" ? "Describe changes after clone..." : "Describe changes..."}
-                    className="flex-1 bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-accent transition-all placeholder:text-muted"
-                    disabled={isBuilding}
-                  />
-                  <button onClick={handleFollowUp} disabled={isBuilding || !followUp.trim()} className="px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover disabled:opacity-30 transition-all">→</button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-auto">
-                {selectedFile ? (
-                  <pre className="p-4 text-xs font-mono text-foreground/80 whitespace-pre-wrap leading-relaxed">{fileContent}</pre>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted text-sm">Select a file from the Files tab</div>
-                )}
+          {workspaceType === "clone" && phases.length > 0 && (
+            <div className="px-3 py-2 border-b border-border">
+              <div className="flex items-center gap-1 flex-wrap">
+                {CLONE_PHASES.map((phase, idx) => {
+                  const status = getClonePhaseStatus(phase.id, idx);
+                  return (
+                    <span key={phase.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] ${status === "done" ? "bg-green-500/10 text-green-400" : status === "active" ? "bg-accent/10 text-accent" : status === "error" ? "bg-red-500/10 text-red-400" : "text-muted/40"}`}>
+                      {status === "done" ? "✓" : status === "active" ? <span className="animate-pulse">●</span> : status === "error" ? "✕" : "○"}
+                      {phase.label}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}
+
+          {!isBuilding && workspaceType === "clone" && phases.length === 0 && (
+            <div className="px-3 py-2 border-b border-border text-center text-muted text-xs">Initializing clone engine...</div>
+          )}
+
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="px-3 py-2 flex items-center justify-between border-b border-border">
+              <span className="text-[10px] uppercase tracking-wider text-muted font-medium">Live Activity</span>
+              <span className="text-[10px] text-muted">{workspaceType === "clone" ? phases.length : steps.length} events</span>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 py-2" ref={chatEndRef}>
+              {workspaceType === "clone"
+                ? [...phases].reverse().map((ev, i) => {
+                    const ts = new Date(ev.ts).toLocaleTimeString();
+                    const isFile = ev.message?.startsWith("Wrote:");
+                    const isDone = ev.phaseStatus === "done";
+                    const isFailed = ev.phaseStatus === "failed";
+                    return (
+                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : ""}`}>
+                        <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
+                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : "text-accent/60"}`}>
+                          {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : "◉"}
+                        </span>
+                        <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : "text-foreground/60"}`}>
+                          {ev.message}
+                        </span>
+                      </div>
+                    );
+                  })
+                : [...steps].reverse().map((ev, i) => {
+                    const ts = new Date(ev.ts).toLocaleTimeString();
+                    const isFile = ev.message?.startsWith("Wrote:");
+                    const isDone = ev.step === "done";
+                    const isFailed = ev.step === "error";
+                    const isUser = ev.step === "user";
+                    return (
+                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : ""}`}>
+                        <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
+                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : isUser ? "text-accent" : "text-accent/60"}`}>
+                          {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : isUser ? "→" : "◉"}
+                        </span>
+                        <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : isUser ? "text-accent font-medium" : "text-foreground/60"}`}>
+                          {ev.message}
+                        </span>
+                      </div>
+                    );
+                  })}
+              {((workspaceType === "clone" && phases.length === 0) || (workspaceType === "build" && steps.length === 0)) && (
+                <div className="flex flex-col items-center justify-center h-full text-muted">
+                  <div className="animate-pulse text-lg mb-2 text-accent">●</div>
+                  <span className="text-xs">{workspaceType === "clone" ? "Waiting for clone events..." : "Waiting for build events..."}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="p-3 border-t border-border">
+            <div className="flex gap-2">
+              <input
+                value={followUp}
+                onChange={(e) => setFollowUp(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleFollowUp()}
+                placeholder="Describe changes..."
+                className="flex-1 bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-accent transition-all placeholder:text-muted"
+                disabled={isBuilding}
+              />
+              <button onClick={handleFollowUp} disabled={isBuilding || !followUp.trim()} className="px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover disabled:opacity-30 transition-all">→</button>
+            </div>
+          </div>
         </div>
 
-        {/* Right Panel: Preview + Files */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between border-b border-border bg-surface">
             <div className="flex">

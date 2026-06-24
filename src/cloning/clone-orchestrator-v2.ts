@@ -539,6 +539,11 @@ export class CloneOrchestrator {
             this.log(`LLM failed for group ${type}: ${err.message}, falling back to templates`);
             llmAvailable = false;
 
+            // Notify user that we're building without LLM
+            this.progress.emit('generate', 'active', `⚠️ LLM unavailable — building with template engine instead`, {
+              status: 'llm-fallback', reason: err.message,
+            });
+
             // Fallback: generate all pages in group with template — write each immediately
             for (const page of pages) {
               const templateCode = this.generateTemplatePage(page, crawled, assetMap);

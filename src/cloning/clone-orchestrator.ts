@@ -160,6 +160,8 @@ export class CloneOrchestrator {
               this.log(`LLM failed for ${type}: ${err.message}. Falling back to no-LLM templates.`);
               llmAvailable = false;
             }
+            // Notify user that we're building without LLM
+            this.phase('⚠️ LLM unavailable — building with template engine instead');
           }
         }
 

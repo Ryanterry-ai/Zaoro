@@ -3,7 +3,7 @@ export interface DomainMockData {
   stats: Array<{ value: string; label: string }>;
   items: Array<{ name: string; description: string; price?: number; tag?: string; rating?: number; reviews?: number; emoji: string; details?: string[] }>;
   testimonials: Array<{ name: string; role: string; text: string; rating: number }>;
-  features: Array<{ icon: string; title: string; description: string }>;
+  features: Array<{ icon: string; title: string; description: string; iconKeyword?: string }>;
   services: Array<{ name: string; description: string; icon: string }>;
   team: Array<{ name: string; role: string; bio: string; emoji: string }>;
   cta: { headline: string; subtitle: string; button: string };
@@ -38,12 +38,12 @@ const DOMAIN_DATA: Record<string, DomainMockData> = {
       { name: 'Emily Chen', role: 'First-time Buyer', text: 'Made the entire process stress-free. They walked me through every step and negotiated a great price.', rating: 5 },
     ],
     features: [
-      { icon: '🏠', title: 'Virtual Tours', description: 'Explore properties from home with immersive 360° virtual walkthroughs.' },
-      { icon: '📍', title: 'Neighborhood Insights', description: 'Detailed area guides with schools, amenities, and commute times.' },
-      { icon: '💰', title: 'Mortgage Calculator', description: 'Estimate your monthly payments and compare financing options.' },
-      { icon: '📱', title: 'Instant Alerts', description: 'Get notified the moment a property matching your criteria hits the market.' },
-      { icon: '🤝', title: 'Expert Agents', description: 'Work with licensed agents who specialize in your target area.' },
-      { icon: '📊', title: 'Market Analysis', description: 'Real-time pricing trends and comparable sales data.' },
+      { icon: '🏠', title: 'Virtual Tours', description: 'Explore properties from home with immersive 360° virtual walkthroughs.', iconKeyword: 'virtual tour' },
+      { icon: '📍', title: 'Neighborhood Insights', description: 'Detailed area guides with schools, amenities, and commute times.', iconKeyword: 'location' },
+      { icon: '💰', title: 'Mortgage Calculator', description: 'Estimate your monthly payments and compare financing options.', iconKeyword: 'dollar' },
+      { icon: '📱', title: 'Instant Alerts', description: 'Get notified the moment a property matching your criteria hits the market.', iconKeyword: 'notification' },
+      { icon: '🤝', title: 'Expert Agents', description: 'Work with licensed agents who specialize in your target area.', iconKeyword: 'team' },
+      { icon: '📊', title: 'Market Analysis', description: 'Real-time pricing trends and comparable sales data.', iconKeyword: 'analytics' },
     ],
     services: [
       { name: 'Buyer Representation', description: 'Dedicated agent to guide you through every step of the purchase.', icon: '🏠' },
@@ -86,12 +86,12 @@ const DOMAIN_DATA: Record<string, DomainMockData> = {
       { name: 'Marco Rossi', role: 'Chef', text: 'As a chef myself, I appreciate the attention to detail. The ingredient quality is outstanding.', rating: 5 },
     ],
     features: [
-      { icon: '🌿', title: 'Farm-to-Table', description: 'Locally sourced ingredients from partner farms within 50 miles.' },
-      { icon: '🍷', title: 'Curated Wine List', description: 'Over 200 labels from renowned vineyards around the world.' },
-      { icon: '👨‍🍳', title: 'Open Kitchen', description: 'Watch our chefs craft your meal in our state-of-the-art open kitchen.' },
-      { icon: '🎵', title: 'Live Music', description: 'Jazz performances every Friday and Saturday evening.' },
-      { icon: '🚗', title: 'Valet Parking', description: 'Complimentary valet service for all dinner reservations.' },
-      { icon: '📱', title: 'Online Reservations', description: 'Book your table instantly through our website or app.' },
+      { icon: '🌿', title: 'Farm-to-Table', description: 'Locally sourced ingredients from partner farms within 50 miles.', iconKeyword: 'refresh' },
+      { icon: '🍷', title: 'Curated Wine List', description: 'Over 200 labels from renowned vineyards around the world.', iconKeyword: 'coffee' },
+      { icon: '👨‍🍳', title: 'Open Kitchen', description: 'Watch our chefs craft your meal in our state-of-the-art open kitchen.', iconKeyword: 'tool' },
+      { icon: '🎵', title: 'Live Music', description: 'Jazz performances every Friday and Saturday evening.', iconKeyword: 'music' },
+      { icon: '🚗', title: 'Valet Parking', description: 'Complimentary valet service for all dinner reservations.', iconKeyword: 'car' },
+      { icon: '📱', title: 'Online Reservations', description: 'Book your table instantly through our website or app.', iconKeyword: 'reservation' },
     ],
     services: [
       { name: 'Dine-In', description: 'Intimate seating, private rooms, and chef\'s table experiences.', icon: '🍽️' },
@@ -182,12 +182,12 @@ const DOMAIN_DATA: Record<string, DomainMockData> = {
       { name: 'Carlos Mendez', role: 'DevOps Engineer', text: 'The best developer experience I\'ve used. Clean API, great docs, and the support team is incredibly responsive.', rating: 5 },
     ],
     features: [
-      { icon: '⚡', title: 'Lightning Fast', description: 'Sub-second response times with global CDN and edge computing.' },
-      { icon: '🔌', title: '200+ Integrations', description: 'Connect with Slack, GitHub, Jira, and all your favorite tools.' },
-      { icon: '🔒', title: 'SOC 2 Compliant', description: 'Enterprise-grade security with end-to-end encryption.' },
-      { icon: '📊', title: 'Real-time Analytics', description: 'Track usage, performance, and ROI with live dashboards.' },
-      { icon: '🤖', title: 'AI-Powered', description: 'Smart suggestions and automation powered by machine learning.' },
-      { icon: '🌍', title: 'Global Scale', description: 'Deploy across 30+ regions with automatic failover.' },
+      { icon: '⚡', title: 'Lightning Fast', description: 'Sub-second response times with global CDN and edge computing.', iconKeyword: 'lightning' },
+      { icon: '🔌', title: '200+ Integrations', description: 'Connect with Slack, GitHub, Jira, and all your favorite tools.', iconKeyword: 'integration' },
+      { icon: '🔒', title: 'SOC 2 Compliant', description: 'Enterprise-grade security with end-to-end encryption.', iconKeyword: 'security' },
+      { icon: '📊', title: 'Real-time Analytics', description: 'Track usage, performance, and ROI with live dashboards.', iconKeyword: 'analytics' },
+      { icon: '🤖', title: 'AI-Powered', description: 'Smart suggestions and automation powered by machine learning.', iconKeyword: 'ai' },
+      { icon: '🌍', title: 'Global Scale', description: 'Deploy across 30+ regions with automatic failover.', iconKeyword: 'global' },
     ],
     services: [
       { name: 'Onboarding', description: 'White-glove setup and team training.', icon: '🎓' },
@@ -230,12 +230,12 @@ const DOMAIN_DATA: Record<string, DomainMockData> = {
       { name: 'Angela Davis', role: 'Patient', text: 'Best medical practice I\'ve ever been to. The telehealth option is a lifesaver for busy schedules.', rating: 5 },
     ],
     features: [
-      { icon: '🕐', title: 'Same-Day Appointments', description: 'Walk-ins welcome and same-day booking available.' },
-      { icon: '💻', title: 'Telehealth', description: 'Virtual visits from anywhere with secure video.' },
-      { icon: '📋', title: 'Patient Portal', description: 'Access records, lab results, and prescriptions online.' },
-      { icon: '💳', title: 'Insurance Accepted', description: 'We accept most major insurance plans.' },
-      { icon: '🅿️', title: 'Free Parking', description: 'Ample free parking right at our entrance.' },
-      { icon: '🌙', title: 'Extended Hours', description: 'Early morning and evening appointments available.' },
+      { icon: '🕐', title: 'Same-Day Appointments', description: 'Walk-ins welcome and same-day booking available.', iconKeyword: 'clock' },
+      { icon: '💻', title: 'Telehealth', description: 'Virtual visits from anywhere with secure video.', iconKeyword: 'monitor' },
+      { icon: '📋', title: 'Patient Portal', description: 'Access records, lab results, and prescriptions online.', iconKeyword: 'book' },
+      { icon: '💳', title: 'Insurance Accepted', description: 'We accept most major insurance plans.', iconKeyword: 'creditCard' },
+      { icon: '🅿️', title: 'Free Parking', description: 'Ample free parking right at our entrance.', iconKeyword: 'car' },
+      { icon: '🌙', title: 'Extended Hours', description: 'Early morning and evening appointments available.', iconKeyword: 'time' },
     ],
     services: [
       { name: 'Primary Care', description: 'Comprehensive health management for all ages.', icon: '🩺' },
