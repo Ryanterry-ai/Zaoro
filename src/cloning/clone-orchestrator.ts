@@ -237,14 +237,22 @@ export class CloneOrchestrator {
     const visited = new Set<string>();
     const queue = [root.pathname];
     const results: CrawledPage[] = [];
-    const MAX_PAGES = 100;
+    const MAX_PAGES = 30;
 
     const ctx = await browser.newContext({
       viewport: { width: 1440, height: 900 },
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
     });
 
+    const CRAWL_TIMEOUT_MS = 120_000; // 2 min total crawl timeout
+    const PAGE_TIMEOUT_MS = 15_000; // 15s per page
+    const crawlStart = Date.now();
+
     while (queue.length > 0 && results.length < MAX_PAGES) {
+      if (Date.now() - crawlStart > CRAWL_TIMEOUT_MS) {
+        this.log(`Crawl timeout after ${CRAWL_TIMEOUT_MS / 1000}s — stopping with ${results.length} pages`);
+        break;
+      }
       const pagePath = queue.shift()!;
       const normalized = pagePath === '' ? '/' : pagePath.split('?')[0]!.split('#')[0]!;
       if (visited.has(normalized)) continue;
@@ -256,10 +264,11 @@ export class CloneOrchestrator {
       const fullUrl = normalized === '/' ? origin : `${origin}${normalized}`;
       this.log(`Crawling: ${normalized}`);
 
+      let page: any = null;
       try {
-        const page = await ctx.newPage();
-        await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-        await page.waitForTimeout(2000);
+        page = await ctx.newPage();
+        await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
+        await page.waitForTimeout(1500);
 
         // Get rendered HTML and parse with jsdom (avoids __name serialization issue)
         const html = await page.content();
@@ -418,6 +427,7 @@ export class CloneOrchestrator {
         await page.close();
       } catch (err: any) {
         this.log(`Failed to crawl ${normalized}: ${err.message}`);
+        if (page) { try { await page.close(); } catch {} }
       }
     }
 

@@ -21,3 +21,5 @@ fix-backticks.cjs
 # Docker & Render configs — committed but harmless to ignore local builds
 .docker/
 tmp/
+
+.vercel

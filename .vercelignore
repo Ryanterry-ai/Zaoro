@@ -1,0 +1,9 @@
+sandbox_workspaces/
+generated_projects/
+screenshots-*/
+node_modules/
+.git/
+*.log
+test-*.png
+engine-*.log
+dist/

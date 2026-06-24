@@ -17,7 +17,9 @@ interface FileEntry {
 }
 
 interface ClonePhase {
-  step: string;
+  step?: string;
+  phase?: string;
+  phaseStatus?: string;
   message: string;
   ts: number;
   data?: Record<string, unknown> | null;
@@ -239,9 +241,9 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     if (!isBuilding) return;
-    pollRef.current = setInterval(pollProgress, 1000);
+    pollRef.current = setInterval(pollProgress, workspaceType === "clone" ? 500 : 1000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [isBuilding, pollProgress]);
+  }, [isBuilding, pollProgress, workspaceType]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -270,19 +272,6 @@ export default function WorkspacePage() {
   };
 
   const iframeWidth = DEVICE_WIDTHS[deviceFrame];
-
-  // Extract rich phase data from phases (written by phaseFn)
-  const crawlPhase = [...phases].reverse().find(p => p.message?.includes("Crawling complete"));
-  const crawlData = crawlPhase?.data as { pagesFound: number; pages: Array<{ path: string; title: string; images: number; videos: number }> } | undefined;
-
-  const assetsPhase = [...phases].reverse().find(p => p.message?.includes("Assets downloaded"));
-  const assetsData = assetsPhase?.data as { total: number; downloaded: number; failed: number; assets: Array<{ url: string; local: string; size: number }> } | undefined;
-
-  const generatePhase = [...phases].reverse().find(p => p.message?.includes("Generating components"));
-  const generateData = generatePhase?.data as { pagesTotal: number; pagesDone: number; currentPage: string } | undefined;
-
-  const completePhase = [...phases].reverse().find(p => p.message?.includes("Clone complete"));
-  const completeData = completePhase?.data as { pages: number; assets: number; files: number; duration: number } | undefined;
 
   // ── Fullscreen overlay mode ──
   if (isFullscreen && previewHtml) {
@@ -321,58 +310,134 @@ export default function WorkspacePage() {
     if (workspaceType !== "clone") return null;
 
     const lastMsg = phases[phases.length - 1]?.message || "";
-    const hasError = lastMsg.includes("failed") || lastMsg.includes("error");
-    const isComplete = lastMsg.includes("Clone complete");
+    const lastPhase = phases[phases.length - 1]?.phase || "";
+    const isComplete = lastMsg.includes("Clone complete") || lastMsg.includes("Clone finished");
     const isFailed = lastMsg.includes("Clone failed");
 
-    const phaseSteps = [
-      { id: "crawl", icon: "🔍", label: "Crawl Website", doneWhen: "Crawling complete" },
-      { id: "assets", icon: "📦", label: "Download Assets", doneWhen: "Assets downloaded" },
-      { id: "generate", icon: "⚡", label: "Generate Components", doneWhen: "Generating layout" },
-      { id: "layout", icon: "🏗", label: "Layout & Navigation", doneWhen: "Writing files" },
-      { id: "apply", icon: "✍", label: "Write Files", doneWhen: "Clone complete" },
+    const CLONE_PHASES = [
+      { id: "analyze", icon: "🔍", label: "Analyze Site", description: "Detecting tech stack, sitemap, robots.txt" },
+      { id: "crawl", icon: "🕷", label: "Crawl Pages", description: "Extracting content from each page" },
+      { id: "assets", icon: "📦", label: "Download Assets", description: "Images, videos, fonts, SVGs" },
+      { id: "generate", icon: "⚡", label: "Generate Code", description: "Creating page components" },
+      { id: "self-contain", icon: "🔒", label: "Self-Contain", description: "Rewriting URLs, removing dependencies" },
+      { id: "preview", icon: "🖼", label: "Preview", description: "Preparing live preview" },
+      { id: "complete", icon: "✅", label: "Complete", description: "Ready to download or deploy" },
     ];
 
-    const getStatus = (idx: number): "pending" | "active" | "done" | "error" => {
-      const doneIdx = phaseSteps.findIndex(p => lastMsg.includes(p.doneWhen));
-      if (isFailed && idx === Math.min(doneIdx + 1, phaseSteps.length - 1)) return "error";
+    // Determine which phase is active
+    const phaseOrder = CLONE_PHASES.map(p => p.id);
+    const activePhaseIdx = isComplete ? CLONE_PHASES.length - 1 : isFailed ? phaseOrder.indexOf(lastPhase) : phaseOrder.indexOf(lastPhase);
+
+    const getPhaseStatus = (phaseId: string, idx: number): "pending" | "active" | "done" | "error" => {
       if (isComplete) return "done";
-      if (idx < doneIdx) return "done";
-      if (idx === doneIdx + 1 || (doneIdx === -1 && idx === 0)) return "active";
+      if (isFailed && idx === activePhaseIdx) return "error";
+      if (idx < activePhaseIdx) return "done";
+      if (phaseId === lastPhase && !isComplete && !isFailed) return "active";
       return "pending";
     };
 
+    // Count events per phase
+    const eventCounts: Record<string, number> = {};
+    for (const ev of phases) {
+      const phaseKey = ev.phase || ev.step || 'unknown';
+      eventCounts[phaseKey] = (eventCounts[phaseKey] || 0) + 1;
+    }
+
+    // Get latest message per phase
+    const latestPerPhase: Record<string, string> = {};
+    for (const ev of phases) {
+      const phaseKey = ev.phase || ev.step || 'unknown';
+      latestPerPhase[phaseKey] = ev.message;
+    }
+
     return (
       <div className="space-y-2">
-        {phaseSteps.map((phase, idx) => {
-          const status = getStatus(idx);
+        {CLONE_PHASES.map((phase, idx) => {
+          const status = getPhaseStatus(phase.id, idx);
+          const eventCount = eventCounts[phase.id] || 0;
+          const latestMsg = latestPerPhase[phase.id] || "";
+
           return (
-            <div key={phase.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+            <div key={phase.id} className={`rounded-xl text-sm transition-all overflow-hidden ${
               status === "active" ? "bg-accent/10 border border-accent/20" :
               status === "done" ? "bg-green-500/5 border border-green-500/10" :
               status === "error" ? "bg-red-500/5 border border-red-500/10" :
               "bg-surface border border-border"
             }`}>
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
-                status === "active" ? "bg-accent/20 text-accent animate-pulse" :
-                status === "done" ? "bg-green-500/20 text-green-400" :
-                status === "error" ? "bg-red-500/20 text-red-400" :
-                "bg-surface-hover text-muted"
-              }`}>
-                {status === "done" ? "✓" : status === "error" ? "✕" : status === "active" ? (
-                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : <span className="text-[11px]">{phase.icon}</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-foreground">{phase.label}</div>
-                {status === "active" && <div className="text-[11px] text-muted mt-0.5 truncate">{lastMsg}</div>}
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
+                  status === "active" ? "bg-accent/20 text-accent animate-pulse" :
+                  status === "done" ? "bg-green-500/20 text-green-400" :
+                  status === "error" ? "bg-red-500/20 text-red-400" :
+                  "bg-surface-hover text-muted"
+                }`}>
+                  {status === "done" ? "✓" : status === "error" ? "✕" : status === "active" ? (
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : <span className="text-[11px]">{phase.icon}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground">{phase.label}</span>
+                    {eventCount > 0 && status !== "pending" && (
+                      <span className="text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{eventCount}</span>
+                    )}
+                  </div>
+                  {status === "active" && latestMsg && (
+                    <div className="text-[11px] text-muted mt-0.5 truncate">{latestMsg}</div>
+                  )}
+                  {status === "done" && (
+                    <div className="text-[11px] text-green-400/70 mt-0.5">{phase.description}</div>
+                  )}
+                  {status === "pending" && (
+                    <div className="text-[11px] text-muted/50 mt-0.5">{phase.description}</div>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
+
+        {/* Live event feed */}
+        {phases.length > 0 && (
+          <div className="mt-3 px-3 py-2 rounded-xl bg-surface border border-border">
+            <div className="text-[10px] uppercase tracking-wider text-muted mb-2">Live Activity</div>
+            <div className="space-y-1 max-h-[200px] overflow-y-auto" ref={chatEndRef}>
+              {[...phases].reverse().slice(0, 20).map((ev, i) => (
+                <div key={i} className="flex items-start gap-2 text-[11px]">
+                  <span className={`flex-shrink-0 mt-0.5 ${
+                    ev.phaseStatus === 'done' ? 'text-green-400' :
+                    ev.phaseStatus === 'failed' ? 'text-red-400' : 'text-accent'
+                  }`}>
+                    {ev.phaseStatus === 'done' ? '●' : ev.phaseStatus === 'failed' ? '●' : '◉'}
+                  </span>
+                  <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Download button when complete */}
+        {isComplete && (
+          <div className="mt-3 flex gap-2">
+            <a
+              href={`/api/workspace/${id}/download`}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download as ZIP
+            </a>
+            <button
+              onClick={() => loadPreview()}
+              className="px-4 py-3 rounded-xl border border-border text-sm text-foreground hover:bg-surface-hover transition-all"
+            >
+              Preview
+            </button>
+          </div>
+        )}
 
         {/* Rich data cards below phases */}
         {renderPhaseDetails()}
@@ -383,18 +448,46 @@ export default function WorkspacePage() {
   const renderPhaseDetails = () => {
     const cards: React.ReactNode[] = [];
 
-    // Pages discovered
-    if (crawlData && crawlData.pages) {
+    // Helper to find events by phase
+    const findEvents = (phase: string) => phases.filter(p => (p.phase || p.step) === phase);
+    const findLastEvent = (phase: string) => [...phases].reverse().find(p => (p.phase || p.step) === phase);
+    const findEventWith = (phase: string, substr: string) => phases.find(p => (p.phase || p.step) === phase && p.message.includes(substr));
+
+    // Analyze phase details
+    const analyzeDone = findEventWith('analyze', 'Analysis complete');
+    if (analyzeDone?.data) {
+      const d = analyzeDone.data as any;
       cards.push(
-        <div key="pages" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Pages Discovered ({crawlData.pagesFound})</div>
+        <div key="analyze" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Site Analysis</div>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div><strong className="text-foreground">{d.analyzeResult?.pages?.length || '?'}</strong> <span className="text-muted">pages found</span></div>
+            <div><strong className="text-foreground">{d.analyzeResult?.navItems?.length || '?'}</strong> <span className="text-muted">nav items</span></div>
+            <div><strong className="text-foreground">{d.analyzeResult?.techStack?.framework || '?'}</strong> <span className="text-muted">framework</span></div>
+            <div><strong className="text-foreground">{d.analyzeResult?.techStack?.cms || 'none'}</strong> <span className="text-muted">CMS</span></div>
+          </div>
+        </div>
+      );
+    }
+
+    // Crawl phase details
+    const crawlDone = findLastEvent('crawl');
+    if (crawlDone?.data) {
+      const d = crawlDone.data as any;
+      const crawlResults = d.crawlResults || [];
+      const ok = crawlResults.filter((r: any) => r.status === 'done').length;
+      const failed = crawlResults.filter((r: any) => r.status === 'failed').length;
+      cards.push(
+        <div key="crawl" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Crawled Pages ({ok}/{crawlResults.length})</div>
           <div className="space-y-1 max-h-[150px] overflow-y-auto">
-            {crawlData.pages.map((p, i) => (
+            {crawlResults.slice(0, 15).map((r: any, i: number) => (
               <div key={i} className="flex items-center gap-2 text-[11px]">
-                <span className="text-green-400">✓</span>
-                <span className="text-foreground/80 truncate flex-1">{p.title || p.path}</span>
-                <span className="text-muted">{p.images}img</span>
-                {p.videos > 0 && <span className="text-purple-400">{p.videos}vid</span>}
+                <span className={r.status === 'done' ? 'text-green-400' : 'text-red-400'}>{r.status === 'done' ? '✓' : '✕'}</span>
+                <span className="text-foreground/80 truncate flex-1">{r.title || r.path}</span>
+                <span className="text-muted">{r.imagesFound}img</span>
+                {r.videosFound > 0 && <span className="text-purple-400">{r.videosFound}vid</span>}
+                <span className="text-muted/50">{r.duration}ms</span>
               </div>
             ))}
           </div>
@@ -402,59 +495,75 @@ export default function WorkspacePage() {
       );
     }
 
-    // Assets
-    if (assetsData) {
+    // Assets phase details
+    const assetsDone = findLastEvent('assets');
+    if (assetsDone?.data) {
+      const d = assetsDone.data as any;
+      const byCat = d.byCategory || {};
       cards.push(
         <div key="assets" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Assets</div>
-          <div className="flex gap-3 text-[11px]">
-            <span className="text-green-400/70"><strong>{assetsData.downloaded}</strong> downloaded</span>
-            {assetsData.failed > 0 && <span className="text-red-400/70"><strong>{assetsData.failed}</strong> failed</span>}
-            <span className="text-muted">{assetsData.total} total</span>
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Assets Downloaded</div>
+          <div className="flex flex-wrap gap-3 text-[11px]">
+            <span className="text-green-400/70"><strong>{d.assetsOk || 0}</strong> downloaded</span>
+            {(d.assetsFailed || 0) > 0 && <span className="text-red-400/70"><strong>{d.assetsFailed}</strong> failed</span>}
+            {Object.entries(byCat).map(([cat, count]) => (
+              <span key={cat} className="text-muted">{cat}: <strong>{count as number}</strong></span>
+            ))}
           </div>
-          {assetsData.assets && assetsData.assets.length > 0 && (
-            <div className="grid grid-cols-4 gap-1 mt-2">
-              {assetsData.assets.slice(0, 8).map((a, i) => (
-                <div key={i} className="aspect-square rounded-lg bg-surface-hover border border-border overflow-hidden flex items-center justify-center">
-                  {a.local && (a.local.endsWith('.png') || a.local.endsWith('.jpg') || a.local.endsWith('.webp') || a.local.endsWith('.svg')) ? (
-                    <img src={a.local} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <span className="text-[9px] text-muted truncate px-0.5">{a.url.split('/').pop()?.split('?')[0]?.slice(0, 10)}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       );
     }
 
-    // Generation progress
-    if (generateData) {
+    // Generate phase details
+    const genDone = findLastEvent('generate');
+    if (genDone?.data) {
+      const d = genDone.data as any;
+      const genResults = d.generateResults || [];
       cards.push(
         <div key="gen" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
-          <div className="text-[10px] uppercase tracking-wider text-muted mb-1">Generating</div>
-          <div className="flex items-center gap-2 text-[11px]">
-            <div className="flex-1 bg-surface-hover rounded-full h-1.5">
-              <div className="bg-accent h-1.5 rounded-full transition-all" style={{ width: `${generateData.pagesTotal > 0 ? (generateData.pagesDone / generateData.pagesTotal) * 100 : 0}%` }} />
-            </div>
-            <span className="text-muted">{generateData.pagesDone}/{generateData.pagesTotal}</span>
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1">Generated Pages ({genResults.length})</div>
+          <div className="space-y-1 max-h-[120px] overflow-y-auto">
+            {genResults.slice(0, 15).map((r: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 text-[11px]">
+                <span className={r.status === 'done' ? 'text-green-400' : r.status === 'failed' ? 'text-red-400' : 'text-muted'}>{r.status === 'done' ? '✓' : r.status === 'failed' ? '✕' : '○'}</span>
+                <span className="text-foreground/80 truncate flex-1">{r.path}</span>
+                <span className="text-muted">{r.componentCount}patch</span>
+              </div>
+            ))}
           </div>
-          {generateData.currentPage && <div className="text-[10px] text-muted mt-1 truncate">{generateData.currentPage}</div>}
+          <div className="mt-1 text-[10px] text-muted">{d.totalPatches} total patches, {d.totalLlmCalls} LLM calls</div>
+        </div>
+      );
+    }
+
+    // Self-contain details
+    const selfContainDone = findLastEvent('self-contain');
+    if (selfContainDone?.data) {
+      const d = selfContainDone.data as any;
+      cards.push(
+        <div key="selfcontain" className="px-3 py-2 rounded-xl bg-surface border border-border animate-slide-up">
+          <div className="text-[10px] uppercase tracking-wider text-muted mb-1.5">Self-Contained</div>
+          <div className="flex gap-3 text-[11px]">
+            <span className="text-foreground/70"><strong>{d.filesWritten?.length || 0}</strong> files</span>
+            <span className="text-foreground/70"><strong>{d.filesModified || 0}</strong> scrubbed</span>
+            <span className={d.externalUrlsRemaining > 0 ? 'text-yellow-400' : 'text-green-400'}><strong>{d.externalUrlsRemaining || 0}</strong> external URLs</span>
+          </div>
         </div>
       );
     }
 
     // Completion summary
-    if (completeData) {
+    const completeDone = findLastEvent('complete');
+    if (completeDone?.data && (completeDone.phaseStatus || 'done') === 'done') {
+      const d = completeDone.data as any;
       cards.push(
         <div key="complete" className="px-3 py-3 rounded-xl bg-green-500/5 border border-green-500/10 animate-slide-up">
           <div className="text-[10px] uppercase tracking-wider text-green-400 mb-1.5">Clone Complete</div>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div><strong className="text-foreground">{completeData.pages}</strong> <span className="text-muted">pages</span></div>
-            <div><strong className="text-foreground">{completeData.assets}</strong> <span className="text-muted">assets</span></div>
-            <div><strong className="text-foreground">{completeData.files}</strong> <span className="text-muted">files</span></div>
-            <div><strong className="text-foreground">{(completeData.duration / 1000).toFixed(1)}s</strong> <span className="text-muted">duration</span></div>
+            <div><strong className="text-foreground">{d.pages || 0}</strong> <span className="text-muted">pages</span></div>
+            <div><strong className="text-foreground">{d.assets || 0}</strong> <span className="text-muted">assets</span></div>
+            <div><strong className="text-foreground">{d.files || 0}</strong> <span className="text-muted">files</span></div>
+            <div><strong className="text-foreground">{d.duration ? (d.duration / 1000).toFixed(1) : '0'}s</strong> <span className="text-muted">duration</span></div>
           </div>
         </div>
       );
@@ -549,6 +658,12 @@ export default function WorkspacePage() {
             </div>
           )}
           <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all">Share</button>
+          {buildDone && workspaceType === "clone" && (
+            <a href={`/api/workspace/${id}/download`} className="px-3 py-1.5 rounded-lg text-xs bg-green-500 text-white hover:bg-green-600 transition-all flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download
+            </a>
+          )}
           <button className="px-3 py-1.5 rounded-lg text-xs bg-accent text-white hover:bg-accent-hover transition-all">Deploy</button>
         </div>
       </header>

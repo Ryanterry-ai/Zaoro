@@ -1,0 +1,8 @@
+{
+  "experimentalServices": {
+    "build-same-engine": {
+      "type": "web",
+      "routePrefix": "/"
+    }
+  }
+}

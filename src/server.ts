@@ -12,7 +12,7 @@ import {
   createMessage, getMessages,
   checkDatabaseConnection, isPersistenceAvailable,
 } from './core/persistence.js';
-import { CloneOrchestrator } from './cloning/clone-orchestrator.js';
+import { CloneOrchestrator } from './cloning/clone-orchestrator-v2.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = path.resolve(__dirname, '..');
@@ -98,6 +98,8 @@ const server = http.createServer(async (req, res) => {
         mcp_push: 'POST /api/mcp/push',
         bi_run: 'POST /api/bi/run',
         pipeline: 'POST /api/pipeline',
+        clone_state: 'GET /api/workspace/:id/clone-state',
+        download: 'GET /api/workspace/:id/download',
       },
     });
   }
@@ -242,6 +244,35 @@ const server = http.createServer(async (req, res) => {
   if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/progress$/)) {
     const id = url.pathname.split('/')[3]!;
     const wsDir = path.join(WORKSPACE_BASE, id);
+
+    // New format: .clone-state.json (from CloneOrchestratorV2)
+    const cloneStateFile = path.join(wsDir, '.clone-state.json');
+    if (fs.existsSync(cloneStateFile)) {
+      try {
+        const events = JSON.parse(fs.readFileSync(cloneStateFile, 'utf-8'));
+        const lastEvent = events[events.length - 1];
+        const status = lastEvent?.phaseStatus === 'done' && lastEvent?.phase === 'complete'
+          ? 'complete'
+          : lastEvent?.phaseStatus === 'failed' ? 'failed' : 'in_progress';
+
+        const phaseMap: Record<string, any> = {};
+        for (const ev of events) {
+          if (!phaseMap[ev.phase]) phaseMap[ev.phase] = { phase: ev.phase, status: ev.phaseStatus, items: [] };
+          phaseMap[ev.phase].status = ev.phaseStatus;
+          phaseMap[ev.phase].items.push({ message: ev.message, ts: ev.ts, data: ev.data });
+        }
+
+        return json(res, {
+          steps: events.map((e: any) => ({ step: e.phase, message: e.message, ts: e.ts, data: e.data })),
+          phases: events,
+          phasesSummary: Object.values(phaseMap),
+          status,
+          eventCount: events.length,
+        });
+      } catch {}
+    }
+
+    // Fallback: legacy format
     const progressFile = path.join(wsDir, '.progress');
     if (!fs.existsSync(progressFile)) return json(res, { steps: [], pages: [], status: 'in_progress' });
     const rawSteps = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
@@ -251,7 +282,6 @@ const server = http.createServer(async (req, res) => {
     const lastStep = steps[steps.length - 1];
     const status = lastStep?.step === 'done' ? 'complete' : lastStep?.step === 'error' ? 'failed' : 'in_progress';
 
-    // Read rich clone phases if available
     const phasesFile = path.join(wsDir, '.clone-phases');
     let phases: any[] = [];
     try { if (fs.existsSync(phasesFile)) phases = JSON.parse(fs.readFileSync(phasesFile, 'utf-8')); } catch {}
@@ -469,13 +499,13 @@ const server = http.createServer(async (req, res) => {
       // Fire-and-forget async clone
       const { exec } = await import('child_process');
       const cloneScript = `
-import { CloneOrchestrator } from './src/cloning/clone-orchestrator.js';
+import { CloneOrchestrator } from './src/cloning/clone-orchestrator-v2.js';
 import * as fs from 'fs';
 import * as path from 'path';
 const WS_BASE = ${JSON.stringify(WORKSPACE_BASE)};
 const wsDir = path.join(WS_BASE, ${JSON.stringify(id)});
 
-// Write a progress file with both flat steps (for backward compat) and rich phases
+// Write a progress file for backward compat with old UI
 function log(step, msg, data) {
   const f = path.join(wsDir, '.progress');
   let s = [];
@@ -484,8 +514,10 @@ function log(step, msg, data) {
   fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
 }
 
-// Write phase events ONLY (for rich progress UI)
+// The new orchestrator writes to .clone-state.json automatically
+// Also write backward-compat .progress and .clone-phases files
 function phaseEvent(step, msg, data) {
+  // backward compat
   const pf = path.join(wsDir, '.clone-phases');
   let phases = [];
   try { if (fs.existsSync(pf)) phases = JSON.parse(fs.readFileSync(pf, 'utf-8')); } catch {}
@@ -530,6 +562,58 @@ try {
 
       return json(res, { id, status: 'clone_started', url: body.url });
     } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/workspace/:id/download — Download workspace as ZIP
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/download$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    try {
+      const archiverModule = await import('archiver');
+      const archiver = (archiverModule as any).default || archiverModule;
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${id}.zip"`,
+        'Access-Control-Allow-Origin': '*',
+      });
+
+      const archive = archiver('zip', { zlib: { level: 6 } });
+      archive.on('error', (err: any) => { console.error('[download] Archive error:', err.message); });
+      archive.pipe(res);
+
+      // Add src/ directory
+      const srcDir = path.join(wsDir, 'src');
+      if (fs.existsSync(srcDir)) archive.directory(srcDir, 'src');
+
+      // Add public/ directory
+      const publicDir = path.join(wsDir, 'public');
+      if (fs.existsSync(publicDir)) archive.directory(publicDir, 'public');
+
+      // Add root config files
+      for (const f of ['package.json', 'tsconfig.json', 'next.config.ts', 'tailwind.config.ts', 'postcss.config.js', 'tailwind.config.js']) {
+        const fp = path.join(wsDir, f);
+        if (fs.existsSync(fp)) archive.file(fp, { name: f });
+      }
+
+      await archive.finalize();
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/workspace/:id/clone-state — Full clone state (structured)
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/clone-state$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    const stateFile = path.join(wsDir, '.clone-state.json');
+    if (!fs.existsSync(stateFile)) return json(res, { events: [], status: 'pending' });
+    try {
+      const events = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
+      const lastEvent = events[events.length - 1];
+      const status = lastEvent?.phaseStatus === 'done' && lastEvent?.phase === 'complete'
+        ? 'complete' : lastEvent?.phaseStatus === 'failed' ? 'failed' : 'in_progress';
+      return json(res, { events, status, count: events.length });
+    } catch { return json(res, { events: [], status: 'error' }); }
   }
 
   // ─── Platform Persistence Routes ─────────────────────────────────
