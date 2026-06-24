@@ -430,11 +430,22 @@ export class ArchitectAgent {
       /called\s+([A-Z][A-Za-z0-9\s&'.-]+)/,
       /named\s+([A-Z][A-Za-z0-9\s&'.-]+)/,
       /for\s+([A-Z][A-Za-z0-9\s&'.-]+)/,
-      /(?:build|create|make)\s+(?:a\s+)?(?:\w+\s+){0,3}([A-Z][A-Za-z0-9\s&'.-]+?)(?:\s+(?:with|for|that|called|named)|\s*$)/i,
+      // Match "Build a <Industry> landing page" — capture the industry word
+      /(?:build|create|make)\s+(?:a\s+)?(\w+)\s+(?:landing|website|app|page|platform|dashboard|store|site)/i,
+      // Match "Build a <Industry> <Type>" — capture first meaningful word
+      /(?:build|create|make)\s+(?:a\s+)?([A-Z][A-Za-z0-9]+)/i,
     ];
     for (const pat of patterns) {
       const m = prompt.match(pat);
-      if (m && m[1]) return m[1].trim();
+      if (m && m[1]) {
+        const captured = m[1].trim();
+        // Skip generic words
+        const skip = ['a', 'an', 'the', 'with', 'for', 'that', 'and', 'or', 'landing', 'website', 'app', 'page', 'platform', 'dashboard', 'store', 'site'];
+        if (!skip.includes(captured.toLowerCase())) {
+          // Capitalize first letter
+          return captured.charAt(0).toUpperCase() + captured.slice(1);
+        }
+      }
     }
 
     // Fallback: generate a name based on keywords in the prompt
