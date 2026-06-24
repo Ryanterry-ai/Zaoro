@@ -576,53 +576,147 @@ export default function WorkspacePage() {
     if (workspaceType !== "build") return null;
     if (steps.length === 0) return null;
 
+    // Check for new build state format
+    const buildState = (steps as any).buildState || null;
     const lastStep = steps[steps.length - 1];
     const lastMsg = lastStep?.message || "";
     const lastStepId = lastStep?.step || "";
     const hasError = lastStepId === "error";
     const isComplete = lastStepId === "done";
 
-    const getPhaseStatus = (idx: number): "pending" | "active" | "done" | "error" => {
+    // Build phases from events
+    const BUILD_PIPELINE = [
+      { id: "bi", icon: "🔍", label: "Business Intelligence", description: "Analyzing requirements, industry, competitors" },
+      { id: "research", icon: "📊", label: "Research Agent", description: "Competitors, market, content strategy" },
+      { id: "architect", icon: "📐", label: "Architect", description: "Page structure, components, state stores" },
+      { id: "design", icon: "🎨", label: "Design System", description: "Typography, colors, spacing, layout" },
+      { id: "components", icon: "🧩", label: "Component Sourcer", description: "Section compositions, shared components" },
+      { id: "assets", icon: "🖼", label: "Asset Intelligence", description: "Images, icons, illustrations" },
+      { id: "motion", icon: "✨", label: "Motion Engine", description: "Animations, micro-interactions" },
+      { id: "synthesize", icon: "🤖", label: "Synthesizer + LLM", description: "Domain-specific code generation" },
+      { id: "ux-eval", icon: "👁", label: "UX Evaluator", description: "Accessibility, hierarchy, contrast" },
+      { id: "biz-eval", icon: "💼", label: "Business Validator", description: "Revenue, flows, market fit" },
+      { id: "assembly", icon: "🏗", label: "Assembly QA", description: "File writing, integrity checks" },
+      { id: "correction", icon: "🔄", label: "Self-Correction", description: "Re-plan and re-generate if needed" },
+      { id: "compile", icon: "⚙", label: "Compile & Validate", description: "TypeScript compilation" },
+      { id: "preview", icon: "🖼", label: "Preview", description: "Render live preview" },
+      { id: "complete", icon: "✅", label: "Complete", description: "Ready to download or deploy" },
+    ];
+
+    // Count events per stage
+    const eventCounts: Record<string, number> = {};
+    for (const ev of steps) {
+      const stage = ev.step || 'unknown';
+      eventCounts[stage] = (eventCounts[stage] || 0) + 1;
+    }
+
+    // Get latest message per stage
+    const latestPerStage: Record<string, string> = {};
+    for (const ev of steps) {
+      const stage = ev.step || 'unknown';
+      latestPerStage[stage] = ev.message;
+    }
+
+    // Determine active stage
+    const stageOrder = BUILD_PIPELINE.map(p => p.id);
+    const activeIdx = isComplete ? BUILD_PIPELINE.length - 1 : stageOrder.indexOf(lastStepId);
+
+    const getStageStatus = (stageId: string, idx: number): "pending" | "active" | "done" | "error" => {
       if (isComplete) return "done";
-      const currentPhaseIdx = BUILD_PHASES.findIndex(p => p.id === lastStepId);
-      if (hasError && idx === Math.min(currentPhaseIdx + 1, BUILD_PHASES.length - 1)) return "error";
-      if (idx < currentPhaseIdx) return "done";
-      if (idx === currentPhaseIdx) return "active";
+      if (hasError && idx === activeIdx) return "error";
+      if (idx < activeIdx) return "done";
+      if (stageId === lastStepId && !isComplete && !hasError) return "active";
       return "pending";
     };
 
     return (
       <div className="space-y-2">
-        {BUILD_PHASES.map((phase, idx) => {
-          const status = getPhaseStatus(idx);
+        {BUILD_PIPELINE.map((phase, idx) => {
+          const status = getStageStatus(phase.id, idx);
+          const eventCount = eventCounts[phase.id] || 0;
+          const latestMsg = latestPerStage[phase.id] || "";
+
           return (
-            <div key={phase.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+            <div key={phase.id} className={`rounded-xl text-sm transition-all overflow-hidden ${
               status === "active" ? "bg-accent/10 border border-accent/20" :
               status === "done" ? "bg-green-500/5 border border-green-500/10" :
               status === "error" ? "bg-red-500/5 border border-red-500/10" :
               "bg-surface border border-border"
             }`}>
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
-                status === "active" ? "bg-accent/20 text-accent animate-pulse" :
-                status === "done" ? "bg-green-500/20 text-green-400" :
-                status === "error" ? "bg-red-500/20 text-red-400" :
-                "bg-surface-hover text-muted"
-              }`}>
-                {status === "done" ? "✓" : status === "error" ? "✕" : status === "active" ? (
-                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : <span className="text-[11px]">{phase.icon}</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-foreground">{phase.label}</div>
-                {status === "active" && <div className="text-[11px] text-muted mt-0.5 truncate">{lastMsg}</div>}
-                {status === "done" && <div className="text-[11px] text-green-400/70 mt-0.5">Complete</div>}
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
+                  status === "active" ? "bg-accent/20 text-accent animate-pulse" :
+                  status === "done" ? "bg-green-500/20 text-green-400" :
+                  status === "error" ? "bg-red-500/20 text-red-400" :
+                  "bg-surface-hover text-muted"
+                }`}>
+                  {status === "done" ? "✓" : status === "error" ? "✕" : status === "active" ? (
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : <span className="text-[11px]">{phase.icon}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground">{phase.label}</span>
+                    {eventCount > 0 && status !== "pending" && (
+                      <span className="text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{eventCount}</span>
+                    )}
+                  </div>
+                  {status === "active" && latestMsg && (
+                    <div className="text-[11px] text-muted mt-0.5 truncate">{latestMsg}</div>
+                  )}
+                  {status === "done" && (
+                    <div className="text-[11px] text-green-400/70 mt-0.5">{phase.description}</div>
+                  )}
+                  {status === "pending" && (
+                    <div className="text-[11px] text-muted/50 mt-0.5">{phase.description}</div>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
+
+        {/* Live event feed */}
+        {steps.length > 0 && (
+          <div className="mt-3 px-3 py-2 rounded-xl bg-surface border border-border">
+            <div className="text-[10px] uppercase tracking-wider text-muted mb-2">Live Activity</div>
+            <div className="space-y-1 max-h-[200px] overflow-y-auto" ref={chatEndRef}>
+              {[...steps].reverse().slice(0, 20).map((ev, i) => (
+                <div key={i} className="flex items-start gap-2 text-[11px]">
+                  <span className={`flex-shrink-0 mt-0.5 ${
+                    ev.step === 'done' ? 'text-green-400' :
+                    ev.step === 'error' ? 'text-red-400' : 'text-accent'
+                  }`}>
+                    {ev.step === 'done' ? '●' : ev.step === 'error' ? '●' : '◉'}
+                  </span>
+                  <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Score cards when complete */}
+        {isComplete && (
+          <div className="mt-3 space-y-2">
+            {lastMsg.includes("UX:") && (
+              <div className="px-3 py-2 rounded-xl bg-green-500/5 border border-green-500/10">
+                <div className="text-[10px] uppercase tracking-wider text-green-400 mb-1.5">Build Complete</div>
+                <div className="text-[11px] text-foreground/80">{lastMsg}</div>
+              </div>
+            )}
+            <a
+              href={`/api/workspace/${id}/download`}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download as ZIP
+            </a>
+          </div>
+        )}
       </div>
     );
   };

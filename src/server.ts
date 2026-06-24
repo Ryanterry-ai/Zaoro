@@ -272,6 +272,26 @@ const server = http.createServer(async (req, res) => {
       } catch {}
     }
 
+    // New format: .build-state.json (from PipelineOrchestrator)
+    const buildStateFile = path.join(wsDir, '.build-state.json');
+    if (fs.existsSync(buildStateFile)) {
+      try {
+        const buildState = JSON.parse(fs.readFileSync(buildStateFile, 'utf-8'));
+        const lastEvent = buildState.events?.[buildState.events.length - 1];
+        const status = buildState.success
+          ? 'complete'
+          : lastEvent?.stageStatus === 'failed' ? 'failed' : 'in_progress';
+
+        return json(res, {
+          steps: (buildState.events || []).map((e: any) => ({ step: e.stage, message: e.message, ts: e.ts, data: e.data })),
+          phases: buildState.events || [],
+          buildState,
+          status,
+          eventCount: buildState.events?.length || 0,
+        });
+      } catch {}
+    }
+
     // Fallback: legacy format
     const progressFile = path.join(wsDir, '.progress');
     if (!fs.existsSync(progressFile)) return json(res, { steps: [], pages: [], status: 'in_progress' });

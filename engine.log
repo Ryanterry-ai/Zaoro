@@ -1,0 +1,20 @@
+◇ injected env (8) from .env // tip: ⌘ override existing { override: true }
+Engine server running on http://localhost:3001
+Workspace base: C:\Users\viren\OneDrive\Desktop\build-same-engine\sandbox_workspaces
+[server] Build request for: ws-1782230661524-iy64md
+[server] Prompt type: build, prompt: coffee shop with online ordering
+[server] Existing job: none
+[queue] Enqueued build ws-1782230661524-iy64md (priority 10, queue size: 1)
+[queue] Starting build ws-1782230661524-iy64md (1 running, 0 queued)
+[server] Build enqueued, response: {"id":"ws-1782230661524-iy64md","status":"build_started","jobId":"ws-1782230661524-iy64md","queueStatus":{"queued":0,"running":1,"completed":0}}
+[queue] Build ws-1782230661524-iy64md completed successfully
+[queue] Build ws-1782230661524-iy64md finished: completed in 208164ms
+[server] Build request for: ws-1782230993087-halgs9
+[server] Prompt type: build, prompt: coffee shop with online ordering
+[server] Existing job: none
+[queue] Enqueued build ws-1782230993087-halgs9 (priority 10, queue size: 1)
+[queue] Starting build ws-1782230993087-halgs9 (1 running, 0 queued)
+[server] Build enqueued, response: {"id":"ws-1782230993087-halgs9","status":"build_started","jobId":"ws-1782230993087-halgs9","queueStatus":{"queued":0,"running":1,"completed":1}}
+[queue] Build ws-1782230993087-halgs9 completed successfully
+[queue] Build ws-1782230993087-halgs9 finished: completed in 188036ms
+[engine] Clone child exited for ws-1782232067646-ayzi7a with code 0

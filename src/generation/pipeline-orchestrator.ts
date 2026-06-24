@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import { ArchitectAgent, ArchitectDecision } from './architect.js';
 import { generateDesignSystem, DesignSystem } from './design-system-generator.js';
 import { ResearchAgent, ResearchResult } from './research-agent.js';
@@ -11,6 +12,7 @@ import { AssemblyQA, AssemblyResult } from './assembly-qa.js';
 import { createDomainSynthesisAsync, synthesizeDomainSection, DomainSynthesisContext } from './domain-synthesizer.js';
 import { LLMGateway } from '../core/llm-gateway.js';
 import { LLMConfig, ASTPatch } from '../types/index.js';
+import { BuildProgressEvent, BuildStage, createBuildState, BuildState } from '../engine/build-progress.js';
 
 export interface PipelineResult {
   success: boolean;
@@ -25,6 +27,7 @@ export interface PipelineResult {
   assemblyResult: AssemblyResult;
   iterations: number;
   patches: ASTPatch[];
+  buildState: BuildState;
   error?: string;
 }
 
@@ -54,6 +57,8 @@ export class PipelineOrchestrator {
   private llmConfig: LLMConfig;
   private logFn: ((step: string, msg: string, data?: Record<string, unknown>) => void) | undefined;
   private phaseFn: ((step: string, msg: string, data?: Record<string, unknown>) => void) | undefined;
+  private stateFile: string;
+  private buildState: BuildState;
 
   constructor(
     workspaceRoot: string,
@@ -65,6 +70,8 @@ export class PipelineOrchestrator {
     this.llmConfig = llmConfig;
     this.logFn = logFn;
     this.phaseFn = phaseFn;
+    this.stateFile = path.join(workspaceRoot, '.build-state.json');
+    this.buildState = createBuildState('');
   }
 
   private log(msg: string) {
@@ -76,63 +83,163 @@ export class PipelineOrchestrator {
     this.phaseFn?.('phase', msg, data);
   }
 
+  private emit(stage: BuildStage, stageStatus: 'active' | 'done' | 'failed', message: string, data?: Record<string, unknown>) {
+    const event: BuildProgressEvent = data !== undefined
+      ? { ts: Date.now(), stage, stageStatus, message, data }
+      : { ts: Date.now(), stage, stageStatus, message };
+    this.buildState.events.push(event);
+
+    // Update stage progress
+    const sp = this.buildState.stages[stage];
+    if (sp) {
+      if (stageStatus === 'active' && sp.status === 'pending') {
+        sp.status = 'active';
+        sp.startedAt = Date.now();
+      }
+      if (stageStatus === 'done') {
+        sp.status = 'done';
+        sp.completedAt = Date.now();
+      }
+      if (stageStatus === 'failed') {
+        sp.status = 'failed';
+        sp.completedAt = Date.now();
+      }
+    }
+
+    // Flush to file
+    this.flushState();
+
+    // Legacy callbacks
+    this.logFn?.(stage, message, data);
+    this.phaseFn?.('phase', message, data);
+  }
+
+  private flushState() {
+    try {
+      fs.writeFileSync(this.stateFile, JSON.stringify(this.buildState, null, 2), 'utf-8');
+    } catch {}
+  }
+
   async run(prompt: string): Promise<PipelineResult> {
     const startTime = Date.now();
     let iterations = 0;
+    this.buildState = createBuildState(prompt);
 
     this.log(`Starting pipeline for: "${prompt.slice(0, 80)}..."`);
+    this.emit('bi', 'active', `Starting pipeline: "${prompt.slice(0, 100)}..."`);
 
     // ═══ Stage 1: Business Intelligence ═══════════════════════════
-    this.phase('Business Intelligence', { stage: 1 });
+    this.emit('bi', 'active', `Analyzing business requirements — detecting industry, features, competitors...`);
     const architect = new ArchitectAgent();
     const decision = architect.designArchitecture(prompt);
-    this.log(`BI: ${decision.name} — ${decision.businessType}, ${decision.pages.length} pages`);
+    this.emit('bi', 'active', `Detected: ${decision.name} — ${decision.businessType}, ${decision.pages.length} pages, ${decision.components.length} components`);
+    this.emit('bi', 'done', `BI complete — ${decision.businessType} business, ${decision.pages.length} pages planned`, {
+      name: decision.name,
+      businessType: decision.businessType,
+      pages: decision.pages.map(p => ({ name: p.name, route: p.route, sections: p.sections.length })),
+      components: decision.components.length,
+      stateModel: decision.stateModel.length,
+    });
 
     // ═══ Stage 2: Research Agent ═════════════════════════════════
-    this.phase('Research Agent', { stage: 2 });
+    this.emit('research', 'active', `Researching competitors, market insights, and content strategy...`);
     const researcher = new ResearchAgent();
     const domain = decision.pages[0] ? { industry: decision.businessType } : undefined;
     const research = researcher.research(prompt, decision);
-    this.log(`Research: ${research.competitors.length} competitors, ${research.recommendedFeatures.length} features`);
+    this.emit('research', 'active', `Found ${research.competitors.length} competitors, ${research.recommendedFeatures.length} features`);
+    if (research.competitors.length > 0) {
+      this.emit('research', 'active', `Competitors: ${research.competitors.slice(0, 5).map(c => c.name).join(', ')}`);
+    }
+    this.emit('research', 'done', `Research complete — ${research.competitors.length} competitors, ${research.recommendedFeatures.length} features, ${research.contentStrategy.keyMessages.length} key messages`, {
+      competitors: research.competitors.map(c => ({ name: c.name, features: c.features })),
+      recommendedFeatures: research.recommendedFeatures,
+      contentStrategy: { keyMessages: research.contentStrategy.keyMessages.length, tone: research.contentStrategy.toneOfVoice },
+    });
 
     // ═══ Stage 3: Architect ═══════════════════════════════════════
-    this.phase('Architect', { stage: 3 });
-    this.log(`Architect: ${decision.pages.length} pages, ${decision.components.length} components`);
+    this.emit('architect', 'active', `Designing ${decision.pages.length} page architectures...`);
+    for (const page of decision.pages) {
+      this.emit('architect', 'active', `Page: ${page.name} — ${page.sections.length} sections: ${page.sections.join(', ')}`);
+    }
+    this.emit('architect', 'done', `Architecture complete — ${decision.pages.length} pages, ${decision.components.length} components, ${decision.stateModel.length} state models`, {
+      pages: decision.pages.map(p => ({ name: p.name, route: p.route, sections: p.sections })),
+      components: decision.components,
+    });
 
     // ═══ Stage 4: Design System ══════════════════════════════════
-    this.phase('Design System', { stage: 4 });
+    this.emit('design', 'active', `Generating design system — typography, colors, spacing, layout...`);
     const designSystem = generateDesignSystem(decision);
-    this.log(`Design: ${Object.keys(designSystem.typography.scale).length} type scales, ${Object.keys(designSystem.spacing.scale).length} spacing`);
+    this.emit('design', 'active', `Typography: ${Object.keys(designSystem.typography.scale).length} scales, ${designSystem.typography.fontFamily.heading}/${designSystem.typography.fontFamily.body}`);
+    this.emit('design', 'active', `Colors: primary=${designSystem.colors.primary[500]}, accent=${designSystem.colors.accent[500]}`);
+    this.emit('design', 'active', `Spacing: ${Object.keys(designSystem.spacing.scale).length} scales, container=${designSystem.layout.containerClass}`);
+    this.emit('design', 'done', `Design system complete — ${Object.keys(designSystem.typography.scale).length} type scales, ${Object.keys(designSystem.spacing.scale).length} spacing`, {
+      typography: { headingFont: designSystem.typography.fontFamily.heading, bodyFont: designSystem.typography.fontFamily.body, scales: Object.keys(designSystem.typography.scale).length },
+      colors: { primary: designSystem.colors.primary[500], accent: designSystem.colors.accent[500], surface: designSystem.colors.surface },
+      layout: designSystem.layout,
+    });
 
     // ═══ Stage 5: Component Sourcer ══════════════════════════════
-    this.phase('Component Sourcer', { stage: 5 });
+    this.emit('components', 'active', `Sourcing components for ${decision.pages.length} pages...`);
     const sourcer = new ComponentSourcer();
     const componentPlan = sourcer.sourceComponents(decision, designSystem, research);
-    this.log(`Components: ${componentPlan.sections.length} sections, ${componentPlan.sharedComponents.length} shared`);
+    this.emit('components', 'active', `Planned ${componentPlan.sections.length} section compositions, ${componentPlan.sharedComponents.length} shared components`);
+    for (const section of componentPlan.sections.slice(0, 10)) {
+      this.emit('components', 'active', `Section "${section.sectionType}" → ${section.sources.length} sources: ${section.sources.map(s => s.name).join(', ')}`);
+    }
+    this.emit('components', 'done', `Components sourced — ${componentPlan.sections.length} sections, ${componentPlan.sharedComponents.length} shared`, {
+      sections: componentPlan.sections.map(s => ({ type: s.sectionType, sources: s.sources.length })),
+      sharedComponents: componentPlan.sharedComponents,
+    });
 
     // ═══ Stage 6: Asset Intelligence ═════════════════════════════
-    this.phase('Asset Intelligence', { stage: 6 });
+    this.emit('assets', 'active', `Planning images, icons, and media assets...`);
     const assetIntel = new AssetIntelligence();
     const assetPlan = assetIntel.planAssets(decision, designSystem, research);
-    this.log(`Assets: ${assetPlan.images.length} images, ${assetPlan.icons.length} icons`);
+    this.emit('assets', 'active', `Planned ${assetPlan.images.length} images, ${assetPlan.icons.length} icons, ${assetPlan.illustrations.length} illustrations`);
+    for (const img of assetPlan.images.slice(0, 5)) {
+      this.emit('assets', 'active', `Image: ${img.query} (${img.purpose}, ${img.priority} priority)`);
+    }
+    this.emit('assets', 'done', `Asset plan complete — ${assetPlan.images.length} images, ${assetPlan.icons.length} icons`, {
+      images: assetPlan.images.map(i => ({ query: i.query, purpose: i.purpose, priority: i.priority })),
+      icons: assetPlan.icons,
+      illustrations: assetPlan.illustrations.length,
+    });
 
     // ═══ Stage 7: Motion Engine ═══════════════════════════════════
-    this.phase('Motion Engine', { stage: 7 });
+    this.emit('motion', 'active', `Planning animations and micro-interactions...`);
     const motionEngine = new MotionEngine();
     const motionPlan = motionEngine.planMotion(decision, designSystem, componentPlan);
-    this.log(`Motion: ${motionPlan.sectionAnimations.length} section animations, ${motionPlan.microInteractions.length} micro-interactions`);
+    this.emit('motion', 'active', `Planned ${motionPlan.sectionAnimations.length} section animations, ${motionPlan.microInteractions.length} micro-interactions`);
+    for (const anim of motionPlan.sectionAnimations.slice(0, 5)) {
+      this.emit('motion', 'active', `Animation: ${anim.sectionType} → ${anim.enter.animation} + ${anim.hover?.animation || 'none'}`);
+    }
+    this.emit('motion', 'done', `Motion plan complete — ${motionPlan.sectionAnimations.length} animations, ${motionPlan.microInteractions.length} micro-interactions`, {
+      sectionAnimations: motionPlan.sectionAnimations.map(a => ({ section: a.sectionType, entrance: a.enter.animation, hover: a.hover?.animation })),
+      microInteractions: motionPlan.microInteractions.map(m => ({ trigger: m.interaction, type: m.animation })),
+      globalMotion: motionPlan.globalMotion,
+    });
 
     // ═══ Stage 8: Domain Synthesis + LLM Generation ══════════════
-    this.phase('Synthesizer + LLM', { stage: 8 });
+    this.emit('synthesize', 'active', `Generating domain-specific content...`);
     let domainCtx: DomainSynthesisContext | undefined;
     try {
+      this.emit('synthesize', 'active', `Creating domain synthesis context...`);
       domainCtx = await createDomainSynthesisAsync(prompt, decision);
+      this.emit('synthesize', 'active', `Domain context ready — ${domainCtx.domain.industry}, mood=${domainCtx.domain.mood}`);
     } catch {
+      this.emit('synthesize', 'active', `Domain synthesis unavailable — using primitives`);
       domainCtx = undefined;
     }
 
+    this.emit('synthesize', 'active', `Generating sections...`);
     const generatedSections = await this.generateSections(decision, designSystem, domainCtx);
-    this.log(`Generated ${generatedSections.size} sections`);
+    this.emit('synthesize', 'active', `Generated ${generatedSections.size} sections`);
+    for (const [section] of generatedSections) {
+      this.emit('synthesize', 'active', `Section: ${section}`);
+    }
+    this.emit('synthesize', 'done', `Code generation complete — ${generatedSections.size} sections`, {
+      sections: [...generatedSections.keys()],
+    });
 
     // ═══ Self-Correction Loop ═════════════════════════════════════
     let ctx: PipelineContext = {
@@ -150,60 +257,91 @@ export class PipelineOrchestrator {
     };
 
     for (iterations = 1; iterations <= MAX_ITERATIONS; iterations++) {
-      this.phase(`Self-Correction Iteration ${iterations}`, { iteration: iterations, stage: 'eval' });
+      this.buildState.iteration = iterations;
+      this.emit('correction', 'active', `Self-correction iteration ${iterations}/${MAX_ITERATIONS}`);
 
       // ═══ Stage 9: UX Evaluator ═══════════════════════════════
-      this.phase('UX Evaluator', { stage: 9 });
+      this.emit('ux-eval', 'active', `Evaluating UX quality — accessibility, hierarchy, contrast, spacing...`);
       const evaluator = new UXEvaluator();
       const allCode = [...generatedSections.values()].join('\n');
       const uxResult = evaluator.evaluate(decision, designSystem, componentPlan, motionPlan, allCode);
       ctx.uxResult = uxResult;
-      this.log(`UX Score: ${uxResult.overall}/100`);
+      this.emit('ux-eval', 'active', `UX Score: ${uxResult.overall}/100 — ${uxResult.issues.length} issues found`);
+      for (const issue of uxResult.issues.slice(0, 5)) {
+        this.emit('ux-eval', 'active', `${issue.severity}: ${issue.message} → ${issue.fix}`);
+      }
+      this.emit('ux-eval', 'done', `UX evaluation complete — ${uxResult.overall}/100`, {
+        overall: uxResult.overall,
+        issues: uxResult.issues.length,
+        critical: uxResult.issues.filter(i => i.severity === 'critical').length,
+        categories: uxResult.categories,
+      });
 
-      // ═══ Stage 10: Business Validator ═════════════════════════
-      this.phase('Business Validator', { stage: 10 });
+      // ═══ Stage 10: Business Validator ═══════════════════════
+      this.emit('biz-eval', 'active', `Validating business requirements — revenue, flows, market fit...`);
       const validator = new BusinessValidator();
       const businessResult = validator.validate(decision, research, designSystem);
       ctx.businessResult = businessResult;
-      this.log(`Business Score: ${businessResult.overall}/100`);
+      this.emit('biz-eval', 'active', `Business Score: ${businessResult.overall}/100 — ${businessResult.checks.length} checks`);
+      for (const check of businessResult.checks.slice(0, 5)) {
+        this.emit('biz-eval', 'active', `${check.passed ? '✓' : '✕'} ${check.name}: ${check.score}/100`);
+      }
+      this.emit('biz-eval', 'done', `Business validation complete — ${businessResult.overall}/100`, {
+        overall: businessResult.overall,
+        checks: businessResult.checks.map(c => ({ name: c.name, passed: c.passed, score: c.score })),
+      });
 
-      // ═══ Stage 11: Assembly QA ════════════════════════════════
-      this.phase('Assembly QA', { stage: 11 });
+      // ═══ Stage 11: Assembly QA ══════════════════════════════
+      this.emit('assembly', 'active', `Assembling final output — writing files, integrity checks...`);
       const assembler = new AssemblyQA(this.workspaceRoot);
       const assemblyResult = await assembler.assemble(
         decision, designSystem, componentPlan, assetPlan, motionPlan,
         uxResult, businessResult, generatedSections,
       );
       ctx.assemblyResult = assemblyResult;
-      this.log(`Assembly Score: ${assemblyResult.overallScore}/100, ${assemblyResult.filesWritten.length} files`);
+      this.emit('assembly', 'active', `Assembly Score: ${assemblyResult.overallScore}/100 — ${assemblyResult.filesWritten.length} files written`);
+      for (const file of assemblyResult.filesWritten) {
+        this.emit('assembly', 'active', `Wrote: ${file}`);
+      }
+      this.emit('assembly', 'done', `Assembly complete — ${assemblyResult.overallScore}/100, ${assemblyResult.filesWritten.length} files`, {
+        overallScore: assemblyResult.overallScore,
+        filesWritten: assemblyResult.filesWritten,
+        checks: assemblyResult.checks.map(c => ({ name: c.name, passed: c.passed })),
+      });
 
-      // ═══ Self-Correction Check ════════════════════════════════
+      // ═══ Self-Correction Check ══════════════════════════════
       const uxScore = uxResult.overall;
       const bizScore = businessResult.overall;
       const buildScore = assemblyResult.overallScore;
 
-      this.log(`Iteration ${iterations}: UX=${uxScore} Business=${bizScore} Build=${buildScore}`);
+      this.buildState.scores = { ux: uxScore, business: bizScore, build: buildScore };
+      this.flushState();
+
+      this.emit('correction', 'active', `Iteration ${iterations}: UX=${uxScore} (need ${UX_THRESHOLD}), Business=${bizScore} (need ${BUSINESS_THRESHOLD}), Build=${buildScore} (need ${BUILD_THRESHOLD})`);
 
       if (uxScore >= UX_THRESHOLD && bizScore >= BUSINESS_THRESHOLD && buildScore >= BUILD_THRESHOLD) {
-        this.log(`All scores pass threshold — shipping`);
+        this.emit('correction', 'done', `All scores pass threshold — shipping! UX=${uxScore} Biz=${bizScore} Build=${buildScore}`);
         break;
       }
 
       if (iterations < MAX_ITERATIONS) {
-        this.log(`Scores below threshold — re-planning (UX:${uxScore}<${UX_THRESHOLD} || Biz:${bizScore}<${BUSINESS_THRESHOLD} || Build:${buildScore}<${BUILD_THRESHOLD})`);
+        this.emit('correction', 'active', `Scores below threshold — re-planning (UX:${uxScore}<${UX_THRESHOLD} || Biz:${bizScore}<${BUSINESS_THRESHOLD} || Build:${buildScore}<${BUILD_THRESHOLD})`);
 
-        // Re-plan based on evaluation feedback
         const fixes = this.generateFixes(uxResult, businessResult, assemblyResult);
-        this.log(`Applying ${fixes.length} fixes`);
+        this.emit('correction', 'active', `Applying ${fixes.length} fixes`);
+        for (const fix of fixes.slice(0, 5)) {
+          this.emit('correction', 'active', `Fix: ${fix.type} — ${fix.detail.slice(0, 80)}`);
+        }
 
-        // Re-generate affected sections
         for (const fix of fixes) {
           if (fix.section && !generatedSections.has(fix.section)) {
             try {
+              this.emit('correction', 'active', `Re-generating section: ${fix.section}`);
               const code = await this.regenerateSection(fix.section, decision, designSystem, domainCtx);
               if (code) generatedSections.set(fix.section, code);
+              this.emit('correction', 'active', `Re-generated: ${fix.section}`);
             } catch (err: any) {
-              this.log(`Re-generation failed for ${fix.section}: ${err.message}`);
+              this.emit('correction', 'active', `Re-generation failed for ${fix.section}: ${err.message}`);
             }
           }
         }
@@ -211,9 +349,8 @@ export class PipelineOrchestrator {
     }
 
     // ═══ Final Assembly ═══════════════════════════════════════════
-    this.phase('Final Assembly', { stage: 'final' });
+    this.emit('compile', 'active', `Compiling and validating TypeScript...`);
 
-    // Build patches from generated sections
     const patches: ASTPatch[] = [];
     for (const [section, code] of generatedSections) {
       const componentName = this.toPascalCase(section);
@@ -223,9 +360,27 @@ export class PipelineOrchestrator {
         codeBlock: `'use client';\n\n${code}`,
       });
     }
+    this.buildState.patchesGenerated = patches.length;
+
+    this.emit('compile', 'done', `Compilation complete — ${patches.length} patches`);
+
+    this.emit('preview', 'active', `Rendering preview...`);
+    this.emit('preview', 'done', `Preview ready`);
 
     const duration = Date.now() - startTime;
-    this.log(`Pipeline complete: ${iterations} iterations, ${patches.length} patches, ${(duration / 1000).toFixed(1)}s`);
+    this.buildState.completedAt = Date.now();
+    this.buildState.totalDuration = duration;
+    this.buildState.success = true;
+    this.buildState.filesWritten = ctx.assemblyResult?.filesWritten || [];
+    this.flushState();
+
+    this.emit('complete', 'done', `Pipeline complete: ${iterations} iterations, ${patches.length} patches, ${(duration / 1000).toFixed(1)}s`, {
+      iterations,
+      patches: patches.length,
+      duration,
+      scores: this.buildState.scores,
+      filesWritten: this.buildState.filesWritten,
+    });
 
     return {
       success: true,
@@ -240,6 +395,7 @@ export class PipelineOrchestrator {
       assemblyResult: ctx.assemblyResult!,
       iterations,
       patches,
+      buildState: this.buildState,
     };
   }
 
