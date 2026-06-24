@@ -324,7 +324,6 @@ export default function WorkspacePage() {
       { id: "complete", icon: "✅", label: "Complete", description: "Ready to download or deploy" },
     ];
 
-    // Determine which phase is active
     const phaseOrder = CLONE_PHASES.map(p => p.id);
     const activePhaseIdx = isComplete ? CLONE_PHASES.length - 1 : isFailed ? phaseOrder.indexOf(lastPhase) : phaseOrder.indexOf(lastPhase);
 
@@ -336,7 +335,7 @@ export default function WorkspacePage() {
       return "pending";
     };
 
-    // Count events per phase and extract progress data
+    // Count events per phase
     const eventCounts: Record<string, number> = {};
     const phaseEvents: Record<string, any[]> = {};
     for (const ev of phases) {
@@ -346,14 +345,12 @@ export default function WorkspacePage() {
       phaseEvents[phaseKey].push(ev);
     }
 
-    // Get latest message per phase
     const latestPerPhase: Record<string, string> = {};
     for (const ev of phases) {
       const phaseKey = ev.phase || ev.step || 'unknown';
       latestPerPhase[phaseKey] = ev.message;
     }
 
-    // Extract progress counters from events
     const getPhaseProgress = (phaseId: string): { current: number; total: number } | null => {
       const evts = phaseEvents[phaseId] || [];
       for (let i = evts.length - 1; i >= 0; i--) {
@@ -365,116 +362,156 @@ export default function WorkspacePage() {
       return null;
     };
 
-    return (
-      <div className="space-y-2">
-        {CLONE_PHASES.map((phase, idx) => {
-          const status = getPhaseStatus(phase.id, idx);
-          const eventCount = eventCounts[phase.id] || 0;
-          const latestMsg = latestPerPhase[phase.id] || "";
-          const progress = getPhaseProgress(phase.id);
-          const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
+    // Count files generated from events
+    const filesGenerated = phases.filter(ev => ev.message?.startsWith('Wrote:')).length;
+    const assetsDownloaded = phases.filter(ev => ev.message?.startsWith('Downloaded ')).length;
+    const pagesCrawled = phases.filter(ev => ev.message?.startsWith('Crawled ')).length;
 
-          return (
-            <div key={phase.id} className={`rounded-xl text-sm transition-all overflow-hidden ${
-              status === "active" ? "bg-accent/10 border border-accent/20" :
-              status === "done" ? "bg-green-500/5 border border-green-500/10" :
-              status === "error" ? "bg-red-500/5 border border-red-500/10" :
-              "bg-surface border border-border"
-            }`}>
-              <div className="flex items-center gap-3 px-3 py-2.5">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${
-                  status === "active" ? "bg-accent/20 text-accent animate-pulse" :
+    return (
+      <div className="flex flex-col h-full">
+        {/* Compact phase progress — top bar */}
+        <div className="px-3 py-2 border-b border-border bg-surface">
+          <div className="flex items-center gap-1 mb-2">
+            {CLONE_PHASES.map((phase, idx) => {
+              const status = getPhaseStatus(phase.id, idx);
+              return (
+                <div key={phase.id} className={`flex-1 h-1.5 rounded-full transition-all ${
+                  status === "done" ? "bg-green-500" :
+                  status === "active" ? "bg-accent animate-pulse" :
+                  status === "error" ? "bg-red-500" :
+                  "bg-surface-hover"
+                }`} />
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-foreground">
+                {CLONE_PHASES.find(p => p.id === lastPhase)?.label || "Starting..."}
+              </span>
+              {isComplete && <span className="text-[10px] text-green-400">Done</span>}
+              {isFailed && <span className="text-[10px] text-red-400">Failed</span>}
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-muted">
+              {pagesCrawled > 0 && <span>{pagesCrawled} pages</span>}
+              {assetsDownloaded > 0 && <span>{assetsDownloaded} assets</span>}
+              {filesGenerated > 0 && <span>{filesGenerated} files</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Phase details — compact list */}
+        <div className="px-3 py-2 space-y-1 border-b border-border">
+          {CLONE_PHASES.map((phase, idx) => {
+            const status = getPhaseStatus(phase.id, idx);
+            const eventCount = eventCounts[phase.id] || 0;
+            const progress = getPhaseProgress(phase.id);
+            const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
+
+            if (status === "pending" && eventCount === 0) return null;
+
+            return (
+              <div key={phase.id} className="flex items-center gap-2 text-[11px]">
+                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${
                   status === "done" ? "bg-green-500/20 text-green-400" :
+                  status === "active" ? "bg-accent/20 text-accent" :
                   status === "error" ? "bg-red-500/20 text-red-400" :
-                  "bg-surface-hover text-muted"
+                  "text-muted/40"
                 }`}>
-                  {status === "done" ? "✓" : status === "error" ? "✕" : status === "active" ? (
-                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                  {status === "done" ? "✓" : status === "active" ? (
+                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                  ) : <span className="text-[11px]">{phase.icon}</span>}
+                  ) : status === "error" ? "✕" : <span className="text-[9px]">{phase.icon}</span>}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-foreground">{phase.label}</span>
-                    {eventCount > 0 && status !== "pending" && (
-                      <span className="text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{eventCount}</span>
-                    )}
-                    {progress && status === "active" && (
-                      <span className="text-[10px] text-accent font-mono">{progress.current}/{progress.total}</span>
-                    )}
-                  </div>
-                  {/* Progress bar */}
-                  {progress && status === "active" && (
-                    <div className="w-full h-1 bg-surface-hover rounded-full mt-1.5 overflow-hidden">
-                      <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                <span className={`${status === "done" ? "text-foreground/60" : status === "active" ? "text-foreground" : "text-muted/50"}`}>
+                  {phase.label}
+                </span>
+                {eventCount > 0 && (
+                  <span className="text-[9px] text-muted bg-surface-hover px-1 rounded">{eventCount}</span>
+                )}
+                {progress && status === "active" && (
+                  <>
+                    <div className="flex-1 h-1 bg-surface-hover rounded-full overflow-hidden">
+                      <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                  )}
-                  {status === "active" && latestMsg && (
-                    <div className="text-[11px] text-muted mt-1 truncate">{latestMsg}</div>
-                  )}
-                  {status === "done" && (
-                    <div className="text-[11px] text-green-400/70 mt-0.5">{phase.description}</div>
-                  )}
-                  {status === "pending" && (
-                    <div className="text-[11px] text-muted/50 mt-0.5">{phase.description}</div>
-                  )}
-                </div>
+                    <span className="text-[9px] text-accent font-mono">{progress.current}/{progress.total}</span>
+                  </>
+                )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
-        {/* Live event feed — per-operation progress */}
-        {phases.length > 0 && (
-          <div className="mt-3 px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase tracking-wider text-muted">Live Activity</span>
-              <span className="text-[10px] text-muted">{phases.length} events</span>
-            </div>
-            <div className="space-y-0.5 max-h-[300px] overflow-y-auto" ref={chatEndRef}>
-              {[...phases].reverse().slice(0, 50).map((ev, i) => {
-                const ts = new Date(ev.ts).toLocaleTimeString();
-                const phaseLabel = ev.phase || ev.step || '';
-                return (
-                  <div key={i} className="flex items-start gap-2 text-[11px] py-0.5">
-                    <span className="text-muted/50 font-mono flex-shrink-0 w-[60px]">{ts}</span>
-                    <span className={`flex-shrink-0 mt-0.5 ${
-                      ev.phaseStatus === 'done' ? 'text-green-400' :
-                      ev.phaseStatus === 'failed' ? 'text-red-400' : 'text-accent'
-                    }`}>
-                      {ev.phaseStatus === 'done' ? '●' : ev.phaseStatus === 'failed' ? '●' : '◉'}
-                    </span>
-                    <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Live Activity — fills remaining space */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="px-3 py-1.5 flex items-center justify-between border-b border-border">
+            <span className="text-[10px] uppercase tracking-wider text-muted font-medium">Live Activity</span>
+            <span className="text-[10px] text-muted">{phases.length} events</span>
           </div>
-        )}
+          <div className="flex-1 overflow-y-auto px-3 py-1" ref={chatEndRef}>
+            {[...phases].reverse().map((ev, i) => {
+              const ts = new Date(ev.ts).toLocaleTimeString();
+              const isFile = ev.message?.startsWith('Wrote:');
+              const isDownload = ev.message?.startsWith('Downloaded ');
+              const isCrawl = ev.message?.startsWith('Crawled ');
+              const isFailed = ev.phaseStatus === 'failed';
+              const isDone = ev.phaseStatus === 'done';
 
-        {/* Download button when complete */}
+              return (
+                <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${
+                  isFile ? 'bg-green-500/5' : ''
+                }`}>
+                  <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
+                  <span className={`flex-shrink-0 mt-0.5 text-[8px] ${
+                    isDone ? 'text-green-400' :
+                    isFailed ? 'text-red-400' :
+                    isFile ? 'text-green-400' :
+                    isDownload ? 'text-blue-400' :
+                    isCrawl ? 'text-accent' :
+                    'text-accent/60'
+                  }`}>
+                    {isDone ? '●' : isFailed ? '●' : isFile ? '📄' : isDownload ? '⬇' : '◉'}
+                  </span>
+                  <span className={`leading-relaxed flex-1 min-w-0 ${
+                    isFile ? 'text-green-400/80' :
+                    isFailed ? 'text-red-400/80' :
+                    'text-foreground/60'
+                  }`}>
+                    {ev.message}
+                  </span>
+                </div>
+              );
+            })}
+            <div ref={chatEndRef} />
+          </div>
+        </div>
+
+        {/* Completion summary */}
         {isComplete && (
-          <div className="mt-3 flex gap-2">
-            <a
-              href={`/api/workspace/${id}/download`}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-all"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download as ZIP
-            </a>
-            <button
-              onClick={() => loadPreview()}
-              className="px-4 py-3 rounded-xl border border-border text-sm text-foreground hover:bg-surface-hover transition-all"
-            >
-              Preview
-            </button>
+          <div className="px-3 py-2 border-t border-border bg-surface">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] uppercase tracking-wider text-green-400 font-medium">Clone Complete</span>
+              <span className="text-[10px] text-muted">{filesGenerated} files generated</span>
+            </div>
+            <div className="flex gap-2">
+              <a
+                href={`/api/workspace/${id}/download`}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-all"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download ZIP
+              </a>
+              <button
+                onClick={() => loadPreview()}
+                className="px-3 py-2 rounded-lg border border-border text-xs text-foreground hover:bg-surface-hover transition-all"
+              >
+                Preview
+              </button>
+            </div>
           </div>
         )}
-
-        {/* Rich data cards below phases */}
-        {renderPhaseDetails()}
       </div>
     );
   };
@@ -819,12 +856,13 @@ export default function WorkspacePage() {
             </div>
           )}
           <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all">Share</button>
-          {buildDone && workspaceType === "clone" && (
-            <a href={`/api/workspace/${id}/download`} className="px-3 py-1.5 rounded-lg text-xs bg-green-500 text-white hover:bg-green-600 transition-all flex items-center gap-1.5">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download
-            </a>
-          )}
+          <a
+            href={`/api/workspace/${id}/download`}
+            className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all flex items-center gap-1.5"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download
+          </a>
           <button className="px-3 py-1.5 rounded-lg text-xs bg-accent text-white hover:bg-accent-hover transition-all">Deploy</button>
         </div>
       </header>
@@ -844,12 +882,12 @@ export default function WorkspacePage() {
 
           {activeTab === "chat" ? (
             <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {/* Clone mode: show phase progress */}
+              <div className={`flex-1 overflow-hidden ${workspaceType === "clone" ? "flex flex-col" : "overflow-y-auto p-4 space-y-3"}`}>
+                {/* Clone mode: show phase progress filling full sidebar */}
                 {workspaceType === "clone" && phases.length > 0 ? (
-                  <>
+                  <div className="flex-1 overflow-hidden">
                     {renderCloneProgress()}
-                  </>
+                  </div>
                 ) : workspaceType === "clone" && phases.length === 0 ? (
                   <div className="text-center text-muted text-sm py-12">
                     <div className="animate-pulse text-lg mb-2 text-accent">●</div>

@@ -566,7 +566,7 @@ try {
       fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), 'utf-8');
       fs.writeFileSync(scriptPath, cloneScript, 'utf-8');
 
-      const child = exec(`npx tsx .clone-temp-${id}.ts`, { cwd: ENGINE_ROOT, timeout: 600000, env: { ...process.env, NODE_NO_WARNINGS: '1' } });
+      const child = exec(`npx tsx .clone-temp-${id}.ts`, { cwd: ENGINE_ROOT, timeout: 0, env: { ...process.env, NODE_NO_WARNINGS: '1' } });
 
       child.on('error', (err) => {
         console.error(`[engine] Clone child error for ${id}:`, err.message);

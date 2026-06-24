@@ -27,9 +27,11 @@ export interface AssemblyCheck {
 
 export class AssemblyQA {
   private workspaceRoot: string;
+  private onFileWritten: ((filePath: string) => void) | undefined;
 
-  constructor(workspaceRoot: string) {
+  constructor(workspaceRoot: string, onFileWritten?: (filePath: string) => void) {
     this.workspaceRoot = workspaceRoot;
+    this.onFileWritten = onFileWritten;
   }
 
   async assemble(
@@ -53,35 +55,40 @@ export class AssemblyQA {
       const globalsCss = this.generateGlobalsCss(designSystem, motionPlan);
       this.writeFile('src/app/globals.css', globalsCss);
       filesWritten.push('src/app/globals.css');
+      this.onFileWritten?.('src/app/globals.css');
       checks.push({ name: 'globals.css', passed: true, detail: 'Design system CSS written' });
 
       // 2. Write tailwind.config.ts
       const tailwindConfig = designSystemToTailwindConfig(designSystem);
       this.writeFile('tailwind.config.ts', tailwindConfig);
       filesWritten.push('tailwind.config.ts');
+      this.onFileWritten?.('tailwind.config.ts');
       checks.push({ name: 'tailwind.config.ts', passed: true, detail: 'Tailwind config written' });
 
       // 3. Write layout.tsx
       const layout = this.generateLayout(decision, designSystem, componentPlan);
       this.writeFile('src/app/layout.tsx', layout);
       filesWritten.push('src/app/layout.tsx');
+      this.onFileWritten?.('src/app/layout.tsx');
       checks.push({ name: 'layout.tsx', passed: true, detail: 'Root layout written' });
 
-      // 4. Write page.tsx files
+      // 4. Write page.tsx files — each one emits progress immediately
       for (const page of decision.pages) {
         const pageCode = this.generatePage(page, designSystem, generatedSections);
         const routePath = page.route === '/' ? 'src/app/page.tsx' : `src/app${page.route}/page.tsx`;
         this.writeFile(routePath, pageCode);
         filesWritten.push(routePath);
+        this.onFileWritten?.(routePath);
         checks.push({ name: routePath, passed: true, detail: `Page "${page.name}" written` });
       }
 
-      // 5. Write shared components
+      // 5. Write shared components — each one emits progress immediately
       for (const shared of componentPlan.sharedComponents) {
         const compPath = `src/components/${shared.name}.tsx`;
         const compCode = this.generateSharedComponent(shared, designSystem);
         this.writeFile(compPath, compCode);
         filesWritten.push(compPath);
+        this.onFileWritten?.(compPath);
         checks.push({ name: compPath, passed: true, detail: `Shared component "${shared.name}" written` });
       }
 
@@ -89,6 +96,7 @@ export class AssemblyQA {
       const nextConfig = this.generateNextConfig(assetPlan);
       this.writeFile('next.config.ts', nextConfig);
       filesWritten.push('next.config.ts');
+      this.onFileWritten?.('next.config.ts');
       checks.push({ name: 'next.config.ts', passed: true, detail: 'Next.js config written' });
 
       // 7. Run integrity checks

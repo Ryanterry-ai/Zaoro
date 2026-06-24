@@ -185,7 +185,8 @@ export class CloneOrchestrator {
       this.progress.emit('crawl', 'active', `Crawling ${analyzeResult.pages.length} pages with Playwright...`);
 
       const { chromium } = await import('playwright');
-      const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+      const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
+      const crawlContext = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36' });
 
       // Crawl pages with per-page progress
       const crawled: CrawledPage[] = [];
@@ -195,68 +196,63 @@ export class CloneOrchestrator {
 
       this.progress.emit('crawl', 'active', `Crawling ${toCrawl.length} of ${analyzeResult.pages.length} discovered pages...`);
 
-      // Dynamic timeouts based on page count
-      const PAGE_TIMEOUT_MS = 15_000;
-      const CRAWL_TIMEOUT_MS = Math.max(120_000, toCrawl.length * 8_000); // 8s per page minimum, 2min floor
-      const crawlStart = Date.now();
+      // No timeout — clone runs until all pages are crawled
+      // Reuse browser contexts instead of create/destroy per page
+      const BATCH_SIZE = 10;
+      let crawledCount = 0;
 
-      // Parallel crawl: 5 at a time
-      const BATCH_SIZE = 5;
       for (let i = 0; i < toCrawl.length; i += BATCH_SIZE) {
-        // Check crawl timeout
-        if (Date.now() - crawlStart > CRAWL_TIMEOUT_MS) {
-          this.progress.emit('crawl', 'active', `Crawl timeout after ${Math.round(CRAWL_TIMEOUT_MS / 1000)}s — stopping with ${crawled.length} pages`);
-          break;
-        }
         const batch = toCrawl.slice(i, i + BATCH_SIZE);
         const results = await Promise.allSettled(
           batch.map(async (ap) => {
             const pageStart = Date.now();
-            this.progress.emit('crawl', 'active', `Crawling ${i + batch.indexOf(ap) + 1}/${toCrawl.length}: ${ap.path}`, {
+            const pageIdx = crawledCount + batch.indexOf(ap) + 1;
+            this.progress.emit('crawl', 'active', `Crawling ${pageIdx}/${toCrawl.length}: ${ap.path}`, {
               pagePath: ap.path,
               category: ap.category,
-              index: i + batch.indexOf(ap),
+              index: pageIdx - 1,
               total: toCrawl.length,
             });
 
+            // Reuse page from shared context — don't create/destroy per page
+            let page: any;
             try {
-              const ctx = await browser.newContext();
-              const page = await ctx.newPage();
+              page = await crawlContext.newPage();
+              const targetUrl = new URL(ap.path, url).href;
+              await page.goto(targetUrl, { timeout: 20000, waitUntil: 'domcontentloaded' });
+              // Conditional wait: wait for network to settle, max 3s instead of flat 2s
               try {
-                const targetUrl = new URL(ap.path, url).href;
-                await page.goto(targetUrl, { timeout: 15000, waitUntil: 'domcontentloaded' });
-                await page.waitForTimeout(2000);
-
-                const crawledPage = await this.extractPageData(page, targetUrl);
-                const result: CrawlPageResult = {
-                  path: ap.path,
-                  title: crawledPage.title,
-                  status: 'done',
-                  error: undefined,
-                  imagesFound: crawledPage.images.length,
-                  videosFound: crawledPage.videos.length,
-                  fontsFound: crawledPage.fonts.length,
-                  linksFound: crawledPage.links.length,
-                  duration: Date.now() - pageStart,
-                };
-                crawlResults.push(result);
-                crawled.push(crawledPage);
-
-                this.progress.emit('crawl', 'active', `Crawled ${ap.path} — ${crawledPage.images.length} images, ${crawledPage.videos.length} videos, ${crawledPage.links.length} links`, {
-                  pagePath: ap.path,
-                  category: ap.category,
-                  status: 'done',
-                  images: crawledPage.images.length,
-                  videos: crawledPage.videos.length,
-                  links: crawledPage.links.length,
-                  duration: result.duration,
-                  index: i + batch.indexOf(ap),
-                  total: toCrawl.length,
-                });
-              } finally {
-                await page.close().catch(() => {});
-                await ctx.close().catch(() => {});
+                await page.waitForLoadState('networkidle', { timeout: 3000 });
+              } catch {
+                // networkidle not reached — page is heavy, proceed anyway
               }
+
+              const crawledPage = await this.extractPageData(page, targetUrl);
+              const result: CrawlPageResult = {
+                path: ap.path,
+                title: crawledPage.title,
+                status: 'done',
+                error: undefined,
+                imagesFound: crawledPage.images.length,
+                videosFound: crawledPage.videos.length,
+                fontsFound: crawledPage.fonts.length,
+                linksFound: crawledPage.links.length,
+                duration: Date.now() - pageStart,
+              };
+              crawlResults.push(result);
+              crawled.push(crawledPage);
+
+              this.progress.emit('crawl', 'active', `Crawled ${ap.path} — ${crawledPage.images.length} images, ${crawledPage.videos.length} videos, ${crawledPage.links.length} links`, {
+                pagePath: ap.path,
+                category: ap.category,
+                status: 'done',
+                images: crawledPage.images.length,
+                videos: crawledPage.videos.length,
+                links: crawledPage.links.length,
+                duration: result.duration,
+                index: pageIdx - 1,
+                total: toCrawl.length,
+              });
             } catch (err: any) {
               const result: CrawlPageResult = {
                 path: ap.path,
@@ -276,12 +272,15 @@ export class CloneOrchestrator {
                 pagePath: ap.path,
                 status: 'failed',
                 error: result.error,
-                index: i + batch.indexOf(ap),
+                index: pageIdx - 1,
                 total: toCrawl.length,
               });
+            } finally {
+              try { await page?.close(); } catch {}
             }
           })
         );
+        crawledCount += batch.length;
       }
 
       const crawledOk = crawlResults.filter(r => r.status === 'done').length;
@@ -317,12 +316,11 @@ export class CloneOrchestrator {
       this.progress.emit('assets', 'active', `Discovered ${assetUrls.length} unique assets — downloading in batches...`);
       this.updatePhaseTotal('assets', assetUrls.length);
 
-      // Download with per-asset progress
+      // Download with per-asset progress — using fetch() (no Playwright needed)
       const allAssets: AssetEntry[] = [];
       const assetResults: AssetDownloadResult[] = [];
-      const downloadCtx = await browser.newContext();
 
-      const ASSET_BATCH = 8;
+      const ASSET_BATCH = 15;
       for (let i = 0; i < assetUrls.length; i += ASSET_BATCH) {
         const batch = assetUrls.slice(i, i + ASSET_BATCH);
         await Promise.all(batch.map(async ([assetUrl, hint], batchIdx) => {
@@ -336,7 +334,7 @@ export class CloneOrchestrator {
           });
 
           try {
-            const entry = await this.downloadSingleAsset(downloadCtx, assetUrl, category, assetsDir);
+            const entry = await this.downloadSingleAsset(null, assetUrl, category, assetsDir);
             allAssets.push(entry);
             assetResults.push({
               url: entry.originalUrl,
@@ -373,7 +371,7 @@ export class CloneOrchestrator {
         }));
       }
 
-      await downloadCtx.close().catch(() => {});
+      await crawlContext.close().catch(() => {});
       await browser.close().catch(() => {});
 
       // Summary
@@ -410,12 +408,14 @@ export class CloneOrchestrator {
       const generateResults: GeneratePageResult[] = [];
       const typeComponents = new Map<string, ASTPatch[]>();
       let totalLlmCalls = 0;
-      const MAX_LLM_CALLS = 15;
+      const MAX_LLM_CALLS = 200;
       let llmAvailable = true;
       let pagesGenerated = 0;
+      let filesWrittenCount = 0;
+      const writtenFiles: string[] = [];
 
       for (const [type, pages] of Object.entries(groups)) {
-        if (totalLlmCalls >= MAX_LLM_CALLS) {
+        if (llmAvailable && totalLlmCalls >= MAX_LLM_CALLS) {
           this.progress.emit('generate', 'active', `LLM call cap reached (${MAX_LLM_CALLS}), using templates for remaining ${type} pages`);
           break;
         }
@@ -434,6 +434,17 @@ export class CloneOrchestrator {
               const pagePatches = await this.generatePage(pages[0]!, crawled, assetMap);
               typeComponents.set(type, pagePatches);
               patches.push(...pagePatches);
+
+              // Write files immediately — progressive generation
+              const writtenNow = this.applyPatches(pagePatches);
+              writtenFiles.push(...writtenNow);
+              filesWrittenCount += writtenNow.length;
+              for (const wf of writtenNow) {
+                this.progress.emit('generate', 'active', `Wrote: ${wf}`, {
+                  pagePath, status: 'file-written', filePath: wf, index: pagesGenerated, total: generatable.length,
+                });
+              }
+
               pagesGenerated++;
 
               generateResults.push({
@@ -445,8 +456,8 @@ export class CloneOrchestrator {
                 componentCount: pagePatches.length,
               });
 
-              this.progress.emit('generate', 'active', `Generated ${pagePath} — ${pagePatches.length} patches`, {
-                pagePath, status: 'done', patches: pagePatches.length, index: pagesGenerated, total: generatable.length,
+              this.progress.emit('generate', 'active', `Generated ${pagePath} — ${pagePatches.length} patches, ${writtenNow.length} files written`, {
+                pagePath, status: 'done', patches: pagePatches.length, filesWritten: filesWrittenCount, index: pagesGenerated, total: generatable.length,
               });
             } else {
               // Generate template from first page, adapt for rest
@@ -458,6 +469,17 @@ export class CloneOrchestrator {
               const templatePatches = await this.generatePage(firstPage, crawled, assetMap);
               typeComponents.set(type, templatePatches);
               patches.push(...templatePatches);
+
+              // Write template file immediately
+              const writtenNow = this.applyPatches(templatePatches);
+              writtenFiles.push(...writtenNow);
+              filesWrittenCount += writtenNow.length;
+              for (const wf of writtenNow) {
+                this.progress.emit('generate', 'active', `Wrote: ${wf}`, {
+                  pagePath: firstPage.pagePath, status: 'file-written', filePath: wf, index: pagesGenerated, total: generatable.length,
+                });
+              }
+
               pagesGenerated++;
 
               generateResults.push({
@@ -473,12 +495,23 @@ export class CloneOrchestrator {
                 pagePath: firstPage.pagePath, templateFor: type, adaptingCount: pages.length - 1,
               });
 
-              // Adapt remaining pages from template (no LLM call)
+              // Adapt remaining pages from template (no LLM call) — write each immediately
               for (let pi = 1; pi < pages.length; pi++) {
                 const adaptPage = pages[pi]!;
                 const adapted = await this.adaptPageFromTemplate(adaptPage, firstPage, templatePatches, crawled, assetMap);
                 if (adapted.length > 0) {
                   patches.push(...adapted);
+
+                  // Write adapted file immediately
+                  const adaptedWritten = this.applyPatches(adapted);
+                  writtenFiles.push(...adaptedWritten);
+                  filesWrittenCount += adaptedWritten.length;
+                  for (const wf of adaptedWritten) {
+                    this.progress.emit('generate', 'active', `Wrote: ${wf}`, {
+                      pagePath: adaptPage.pagePath, status: 'file-written', filePath: wf, index: pagesGenerated, total: generatable.length,
+                    });
+                  }
+
                   pagesGenerated++;
 
                   generateResults.push({
@@ -490,8 +523,8 @@ export class CloneOrchestrator {
                     componentCount: adapted.length,
                   });
 
-                  this.progress.emit('generate', 'active', `Adapted ${adaptPage.pagePath} from template`, {
-                    pagePath: adaptPage.pagePath, method: 'template-adapt', index: pagesGenerated, total: generatable.length,
+                  this.progress.emit('generate', 'active', `Adapted ${adaptPage.pagePath} from template — ${adaptedWritten.length} files written`, {
+                    pagePath: adaptPage.pagePath, method: 'template-adapt', index: pagesGenerated, total: generatable.length, filesWritten: filesWrittenCount,
                   });
                 } else {
                   generateResults.push({
@@ -511,10 +544,21 @@ export class CloneOrchestrator {
             this.log(`LLM failed for group ${type}: ${err.message}, falling back to templates`);
             llmAvailable = false;
 
-            // Fallback: generate all pages in group with template
+            // Fallback: generate all pages in group with template — write each immediately
             for (const page of pages) {
               const templateCode = this.generateTemplatePage(page, crawled, assetMap);
-              patches.push({ action: 'insert', targetFile: page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${page.pagePath.replace(/^\//, '')}/page.tsx`, codeBlock: templateCode });
+              const pagePatch: ASTPatch = { action: 'insert', targetFile: page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${page.pagePath.replace(/^\//, '')}/page.tsx`, codeBlock: templateCode };
+              patches.push(pagePatch);
+
+              const writtenNow = this.applyPatches([pagePatch]);
+              writtenFiles.push(...writtenNow);
+              filesWrittenCount += writtenNow.length;
+              for (const wf of writtenNow) {
+                this.progress.emit('generate', 'active', `Wrote: ${wf}`, {
+                  pagePath: page.pagePath, status: 'file-written', filePath: wf, index: pagesGenerated, total: generatable.length,
+                });
+              }
+
               pagesGenerated++;
 
               generateResults.push({
@@ -526,16 +570,27 @@ export class CloneOrchestrator {
                 componentCount: 1,
               });
 
-              this.progress.emit('generate', 'active', `Template fallback for ${page.pagePath}`, {
-                pagePath: page.pagePath, method: 'template-fallback', index: pagesGenerated, total: generatable.length,
+              this.progress.emit('generate', 'active', `Template fallback for ${page.pagePath} — ${writtenNow.length} files written`, {
+                pagePath: page.pagePath, method: 'template-fallback', index: pagesGenerated, total: generatable.length, filesWritten: filesWrittenCount,
               });
             }
           }
         } else {
-          // No LLM — template fallback
+          // No LLM — template fallback — write each immediately
           for (const page of pages) {
             const templateCode = this.generateTemplatePage(page, crawled, assetMap);
-            patches.push({ action: 'insert', targetFile: page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${page.pagePath.replace(/^\//, '')}/page.tsx`, codeBlock: templateCode });
+            const pagePatch: ASTPatch = { action: 'insert', targetFile: page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${page.pagePath.replace(/^\//, '')}/page.tsx`, codeBlock: templateCode };
+            patches.push(pagePatch);
+
+            const writtenNow = this.applyPatches([pagePatch]);
+            writtenFiles.push(...writtenNow);
+            filesWrittenCount += writtenNow.length;
+            for (const wf of writtenNow) {
+              this.progress.emit('generate', 'active', `Wrote: ${wf}`, {
+                pagePath: page.pagePath, status: 'file-written', filePath: wf, index: pagesGenerated, total: generatable.length,
+              });
+            }
+
             pagesGenerated++;
 
             generateResults.push({
@@ -547,14 +602,14 @@ export class CloneOrchestrator {
               componentCount: 1,
             });
 
-            this.progress.emit('generate', 'active', `Template fallback for ${page.pagePath}`, {
-              pagePath: page.pagePath, method: 'template-fallback', index: pagesGenerated, total: generatable.length,
+            this.progress.emit('generate', 'active', `Template fallback for ${page.pagePath} — ${writtenNow.length} files written`, {
+              pagePath: page.pagePath, method: 'template-fallback', index: pagesGenerated, total: generatable.length, filesWritten: filesWrittenCount,
             });
           }
         }
       }
 
-      // Generate layout + zero-404 infrastructure (with retry for transient LLM errors)
+      // Generate layout + zero-404 infrastructure — write immediately
       this.progress.emit('generate', 'active', `Generating layout, globals, and zero-404 infrastructure...`);
 
       let layoutPatches: ASTPatch[] = [];
@@ -574,28 +629,38 @@ export class CloneOrchestrator {
         }
       }
       patches.push(...layoutPatches);
-      this.progress.emit('generate', 'active', `Layout + CSS generated — ${layoutPatches.length} files`);
+      const layoutWritten = this.applyPatches(layoutPatches);
+      writtenFiles.push(...layoutWritten);
+      filesWrittenCount += layoutWritten.length;
+      for (const wf of layoutWritten) {
+        this.progress.emit('generate', 'active', `Wrote: ${wf}`, { status: 'file-written', filePath: wf });
+      }
+      this.progress.emit('generate', 'active', `Layout + CSS generated — ${layoutPatches.length} files written`);
 
       const zeroPatches = await this.generateZeroFourFourInfra(crawled);
       patches.push(...zeroPatches);
-      this.progress.emit('generate', 'active', `Zero-404 infra — ${zeroPatches.length} files (sitemap, robots, not-found, config)`);
+      const zeroWritten = this.applyPatches(zeroPatches);
+      writtenFiles.push(...zeroWritten);
+      filesWrittenCount += zeroWritten.length;
+      for (const wf of zeroWritten) {
+        this.progress.emit('generate', 'active', `Wrote: ${wf}`, { status: 'file-written', filePath: wf });
+      }
+      this.progress.emit('generate', 'active', `Zero-404 infra — ${zeroPatches.length} files written (sitemap, robots, not-found, config)`);
 
-      this.progress.emit('generate', 'done', `Code generation complete — ${patches.length} total patches across ${generatable.length} pages`, {
+      this.progress.emit('generate', 'done', `Code generation complete — ${filesWrittenCount} files written across ${generatable.length} pages`, {
         generateResults,
         totalPatches: patches.length,
         totalLlmCalls,
+        filesWritten: filesWrittenCount,
       });
       this.state.generateResults = generateResults;
       this.completePhase('generate');
 
       // ═══════════════════════════════════════════════════════════
-      // PHASE 4: SELF-CONTAIN (URL rewriting, verification)
+      // PHASE 4: SELF-CONTAIN (URL rewriting — files already written)
       // ═══════════════════════════════════════════════════════════
       this.startPhase('self-contain', 0);
-      this.progress.emit('self-contain', 'active', `Writing ${patches.length} files to workspace...`);
-
-      const writtenFiles = this.applyPatches(patches);
-      this.progress.emit('self-contain', 'active', `Wrote ${writtenFiles.length} files — starting self-contain post-process...`);
+      this.progress.emit('self-contain', 'active', `${filesWrittenCount} files already on disk — starting self-contain post-process...`);
 
       this.progress.emit('self-contain', 'active', `Scrubbing external URLs and rewriting to local paths...`);
       this.selfContainedPostProcess(assetMap, crawled);
@@ -608,7 +673,7 @@ export class CloneOrchestrator {
       this.progress.emit('self-contain', 'done', `Self-contained — ${verification.filesModified} files scrubbed, ${verification.externalUrlsRemaining} external URLs remaining`, {
         filesModified: verification.filesModified,
         externalUrlsRemaining: verification.externalUrlsRemaining,
-        filesWritten: writtenFiles,
+        filesWritten: filesWrittenCount,
       });
       this.completePhase('self-contain');
 
@@ -616,8 +681,8 @@ export class CloneOrchestrator {
       // PHASE 5: PREVIEW (ready)
       // ═══════════════════════════════════════════════════════════
       this.startPhase('preview', 1);
-      this.progress.emit('preview', 'active', `Preview ready — ${writtenFiles.length} files available`);
-      this.progress.emit('preview', 'done', `Clone complete! ${crawled.length} pages, ${assetsOk} assets, ${writtenFiles.length} files generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+      this.progress.emit('preview', 'active', `Preview ready — ${filesWrittenCount} files available`);
+      this.progress.emit('preview', 'done', `Clone complete! ${crawled.length} pages, ${assetsOk} assets, ${filesWrittenCount} files generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
       this.completePhase('preview');
 
       // ═══════════════════════════════════════════════════════════
@@ -840,58 +905,66 @@ export class CloneOrchestrator {
 
   // ─── Asset download ────────────────────────────────────────────
 
-  private async downloadSingleAsset(ctx: any, assetUrl: string, category: AssetCategory, assetsDir: string): Promise<AssetEntry> {
-    if (category === 'svg') {
-      const page = await ctx.newPage();
-      try {
-        const resp = await page.goto(assetUrl, { timeout: 10000 });
-        if (resp && resp.ok()) {
+  private async downloadSingleAsset(_ctx: any, assetUrl: string, category: AssetCategory, assetsDir: string): Promise<AssetEntry> {
+    // Use fetch() instead of Playwright page.goto() — 50x faster, zero browser memory
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      if (category === 'svg') {
+        const resp = await fetch(assetUrl, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (resp.ok) {
           const text = await resp.text();
           const safeName = assetUrl.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 120) + '.svg';
           fs.writeFileSync(path.join(assetsDir, safeName), text, 'utf-8');
           return { originalUrl: assetUrl, localPath: '/assets/' + safeName, localFileName: safeName, category, size: Buffer.byteLength(text), status: 'ok' };
         }
         return { originalUrl: assetUrl, localPath: '', localFileName: '', category, size: 0, status: 'failed' };
-      } finally { await page.close().catch(() => {}); }
-    }
+      }
 
-    if (category === 'font' && assetUrl.includes('googleapis.com')) {
-      const page = await ctx.newPage();
-      try {
-        const resp = await page.goto(assetUrl, { timeout: 10000 });
-        if (resp && resp.ok()) {
-          const cssText = await resp.text();
+      if (category === 'font' && assetUrl.includes('googleapis.com')) {
+        const cssResp = await fetch(assetUrl, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (cssResp.ok) {
+          const cssText = await cssResp.text();
           const fontUrls = [...cssText.matchAll(/url\(([^)]+)\)/g)].map(m => m[1]?.replace(/['"]/g, '')).filter((u): u is string => !!u && u.startsWith('http'));
           for (const fUrl of fontUrls) {
-            const fResp = await page.goto(fUrl, { timeout: 10000 });
-            if (fResp && fResp.ok()) {
-              const buf = await fResp.body();
-              const ext = fUrl.split('.').pop()?.split('?')[0] || 'woff2';
-              const safeName = fUrl.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 120) + '.' + ext;
-              fs.writeFileSync(path.join(assetsDir, safeName), buf);
-              return { originalUrl: fUrl, localPath: '/assets/' + safeName, localFileName: safeName, category: 'font', size: buf.length, status: 'ok' };
-            }
+            try {
+              const fResp = await fetch(fUrl, { signal: AbortSignal.timeout(10000) });
+              if (fResp.ok) {
+                const buf = Buffer.from(await fResp.arrayBuffer());
+                const ext = fUrl.split('.').pop()?.split('?')[0] || 'woff2';
+                const safeName = fUrl.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 120) + '.' + ext;
+                fs.writeFileSync(path.join(assetsDir, safeName), buf);
+                return { originalUrl: fUrl, localPath: '/assets/' + safeName, localFileName: safeName, category: 'font', size: buf.length, status: 'ok' };
+              }
+            } catch {}
           }
         }
         return { originalUrl: assetUrl, localPath: '', localFileName: '', category, size: 0, status: 'failed' };
-      } finally { await page.close().catch(() => {}); }
-    }
+      }
 
-    // Default: download via page.goto
-    const ext = this.guessExt(assetUrl, category);
-    const safeName = assetUrl.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 120) + '.' + ext;
-    const localPath = '/assets/' + safeName;
-    const filePath = path.join(assetsDir, safeName);
-    const page = await ctx.newPage();
-    try {
-      const resp = await page.goto(assetUrl, { timeout: 15000 });
-      if (resp && resp.ok()) {
-        const buf = await resp.body();
+      // Default: download via fetch()
+      const ext = this.guessExt(assetUrl, category);
+      const safeName = assetUrl.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 120) + '.' + ext;
+      const localPath = '/assets/' + safeName;
+      const filePath = path.join(assetsDir, safeName);
+
+      const resp = await fetch(assetUrl, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (resp.ok) {
+        const buf = Buffer.from(await resp.arrayBuffer());
+        // Skip files larger than 10MB (likely videos or huge images)
+        if (buf.length > 10 * 1024 * 1024) {
+          return { originalUrl: assetUrl, localPath: '', localFileName: '', category, size: buf.length, status: 'failed' };
+        }
         fs.writeFileSync(filePath, buf);
         return { originalUrl: assetUrl, localPath, localFileName: safeName, category, size: buf.length, status: 'ok' };
       }
       return { originalUrl: assetUrl, localPath: '', localFileName: '', category, size: 0, status: 'failed' };
-    } finally { await page.close().catch(() => {}); }
+    } catch {
+      return { originalUrl: assetUrl, localPath: '', localFileName: '', category, size: 0, status: 'failed' };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   private categorizeAsset(url: string, hint: string): AssetCategory {

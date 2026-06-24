@@ -303,16 +303,15 @@ export class PipelineOrchestrator {
 
       // ═══ Stage 11: Assembly QA ══════════════════════════════
       this.emit('assembly', 'active', `Assembling final output — writing files, integrity checks...`);
-      const assembler = new AssemblyQA(this.workspaceRoot);
+      const assembler = new AssemblyQA(this.workspaceRoot, (filePath: string) => {
+        this.emit('assembly', 'active', `Wrote: ${filePath}`, { status: 'file-written', filePath });
+      });
       const assemblyResult = await assembler.assemble(
         decision, designSystem, componentPlan, assetPlan, motionPlan,
         uxResult, businessResult, generatedSections,
       );
       ctx.assemblyResult = assemblyResult;
       this.emit('assembly', 'active', `Assembly Score: ${assemblyResult.overallScore}/100 — ${assemblyResult.filesWritten.length} files written`);
-      for (const file of assemblyResult.filesWritten) {
-        this.emit('assembly', 'active', `Wrote: ${file}`);
-      }
       this.emit('assembly', 'done', `Assembly complete — ${assemblyResult.overallScore}/100, ${assemblyResult.filesWritten.length} files`, {
         overallScore: assemblyResult.overallScore,
         filesWritten: assemblyResult.filesWritten,
