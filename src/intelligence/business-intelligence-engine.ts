@@ -130,7 +130,12 @@ const CAPABILITY_SIGNALS: Record<string, CapabilitySignal> = {
   },
   'project-management': {
     keywords: ['project', 'task', 'kanban', 'board', 'sprint', 'backlog', 'epic', 'story', 'milestone', 'deadline', 'todo', 'assignee', 'status', 'progress', 'gantt', 'timeline', 'roadmap', 'iteration', 'release'],
-    phrases: ['kanban board', 'project management', 'task management', 'sprint planning', 'backlog management', 'project tracker', 'task board', 'project dashboard', 'team tasks', 'project timeline'],
+    phrases: ['kanban board', 'project management', 'task management', 'sprint planning', 'backlog management', 'project tracker', 'task board', 'project dashboard', 'team tasks', 'project timeline', 'project management tool', 'project management app', 'manage projects'],
+    weight: 10,
+  },
+  saas: {
+    keywords: ['saas', 'software', 'platform', 'dashboard', 'analytics', 'api', 'integration', 'workflow', 'automation', 'subscription', 'cloud', 'multi-tenant', 'tenant', 'onboarding', 'trial'],
+    phrases: ['saas application', 'saas platform', 'software as a service', 'saas tool', 'saas app', 'cloud software', 'web application', 'web app', 'web platform', 'software platform'],
     weight: 10,
   },
   'reporting': {
@@ -196,7 +201,12 @@ export class BusinessIntelligenceEngine {
       }
     }
 
-    capabilities.sort((a, b) => b.confidence - a.confidence || b.priority - a.priority);
+    capabilities.sort((a, b) => {
+      // Prefer higher priority (weight) capabilities first
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      // Then by confidence
+      return b.confidence - a.confidence;
+    });
 
     const hybridModels: string[] = [];
     for (const hp of HYBRID_PATTERNS) {

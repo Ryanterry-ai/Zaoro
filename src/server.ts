@@ -97,6 +97,7 @@ const server = http.createServer(async (req, res) => {
         mcp_scrape: 'POST /api/mcp/scrape',
         mcp_push: 'POST /api/mcp/push',
         bi_run: 'POST /api/bi/run',
+        pipeline: 'POST /api/pipeline',
       },
     });
   }
@@ -127,15 +128,41 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // POST /api/pipeline — Full 13-stage pipeline with self-correction loop
+  if (method === 'POST' && url.pathname === '/api/pipeline') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.prompt || typeof body.prompt !== 'string') {
+        return json(res, { error: 'prompt is required' }, 400);
+      }
+      const provider = (process.env.LLM_PROVIDER || 'gemini') as any;
+      const apiKey = process.env.LLM_API_KEY || '';
+      const model = process.env.LLM_MODEL || undefined;
+
+      const { PipelineOrchestrator } = await import('./generation/pipeline-orchestrator.js');
+      const wsBase = path.join(ENGINE_ROOT, 'sandbox_workspaces', `pipeline-${Date.now()}`);
+      const orchestrator = new PipelineOrchestrator(wsBase, { provider, apiKey, model: model || 'gemini-2.5-flash' },
+        (step, msg) => console.log(`[pipeline:${step}] ${msg}`),
+        (step, msg) => console.log(`[pipeline:phase] ${step}: ${msg}`),
+      );
+      const result = await orchestrator.run(body.prompt);
+      return json(res, { success: true, result });
+    } catch (err: any) {
+      console.error('[pipeline] Error:', err.message);
+      return json(res, { error: err.message }, 500);
+    }
+  }
+
   // POST /api/create
   if (method === 'POST' && url.pathname === '/api/create') {
     try {
       const body = JSON.parse(await readBody(req));
       if (!body.prompt || typeof body.prompt !== 'string') return json(res, { error: 'Prompt is required' }, 400);
       const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const usePipeline = body.pipeline === true;
       fs.mkdirSync(PROMPTS_DIR, { recursive: true });
-      fs.writeFileSync(path.join(PROMPTS_DIR, `${id}.json`), JSON.stringify({ id, type: 'build', prompt: body.prompt, createdAt: new Date().toISOString() }), 'utf-8');
-      return json(res, { id, prompt: body.prompt });
+      fs.writeFileSync(path.join(PROMPTS_DIR, `${id}.json`), JSON.stringify({ id, type: usePipeline ? 'pipeline' : 'build', prompt: body.prompt, pipeline: usePipeline, createdAt: new Date().toISOString() }), 'utf-8');
+      return json(res, { id, prompt: body.prompt, pipeline: usePipeline });
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
@@ -157,6 +184,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const prompt = payload.prompt as string;
+      const usePipeline = payload.pipeline === true;
 
       // Check if build already in progress
       const existing = buildQueue.getJob(id);
@@ -171,6 +199,7 @@ const server = http.createServer(async (req, res) => {
         id,
         workspaceId: id,
         prompt,
+        pipeline: usePipeline,
         priority: 10,
       });
 

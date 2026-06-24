@@ -7,6 +7,7 @@ export interface BuildJob {
   id: string;
   workspaceId: string;
   prompt: string;
+  pipeline?: boolean;
   status: 'queued' | 'running' | 'completed' | 'failed' | 'timeout' | 'crashed';
   priority: number;
   createdAt: number;
@@ -104,10 +105,9 @@ export class BuildQueue extends EventEmitter {
     const provider = process.env.LLM_PROVIDER || 'openai';
     const apiKey = process.env.LLM_API_KEY || '';
     fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), 'utf-8');
-    fs.writeFileSync(promptPath, JSON.stringify({ id: job.workspaceId, prompt: job.prompt, type: 'build-website' }), 'utf-8');
+    fs.writeFileSync(promptPath, JSON.stringify({ id: job.workspaceId, prompt: job.prompt, type: job.pipeline ? 'pipeline' : 'build-website', pipeline: !!job.pipeline }), 'utf-8');
 
     const buildScript = `
-import { DeterministicOrchestratorV4 } from './src/agents/deterministic-orchestrator-v4.js';
 import * as fs from 'fs';
 import * as path from 'path';
 const WS_BASE = ${JSON.stringify(this.workspaceBase)};
@@ -123,26 +123,58 @@ function log(step, msg) {
 }
 const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${job.id}.json`)}), 'utf-8'));
 const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-prompt-${job.id}.json`)}), 'utf-8'));
-const orch = new DeterministicOrchestratorV4(WS_BASE);
-try {
-  log('bi', 'Analyzing business requirements...');
-  await new Promise(r => setTimeout(r, 100));
-  log('architect', 'Designing application architecture...');
-  await new Promise(r => setTimeout(r, 100));
-  log('structure', 'Creating project structure...');
-  await new Promise(r => setTimeout(r, 100));
-  if (config.apiKey && config.apiKey.trim() !== '') {
-    log('llm', 'Generating code with ' + config.provider + ' AI...');
-  } else {
-    log('llm', 'Generating code with JIT synthesis...');
-  }
-  await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
-  log('compile', 'Compiling and validating...');
-  await new Promise(r => setTimeout(r, 100));
-  log('preview', 'Rendering preview...');
-  await new Promise(r => setTimeout(r, 100));
-  log('done', 'Build completed! Your application is ready.');
-} catch (err) { log('error', 'Build failed: ' + (err.message || err)); }
+
+const usePipeline = payload.type === 'pipeline' || payload.pipeline === true;
+
+if (usePipeline) {
+  const { PipelineOrchestrator } = await import('./src/generation/pipeline-orchestrator.js');
+  const orch = new PipelineOrchestrator(
+    WS_BASE,
+    { provider: config.provider, apiKey: config.apiKey },
+    (step, msg) => log(step, msg),
+    (step, msg) => log(step, msg),
+  );
+  try {
+    log('bi', 'Stage 1: Business Intelligence analysis...');
+    log('research', 'Stage 2: Researching competitors and market...');
+    log('architect', 'Stage 3: Designing application architecture...');
+    log('design', 'Stage 4: Generating design system...');
+    log('components', 'Stage 5: Sourcing production components...');
+    log('assets', 'Stage 6: Planning images and icons...');
+    log('motion', 'Stage 7: Planning animations and interactions...');
+    log('llm', 'Stage 8: Synthesizing sections with AI...');
+    log('eval', 'Stage 9-10: Evaluating UX and business impact...');
+    log('assembly', 'Stage 11: Assembling final output...');
+    const result = await orch.run(payload.prompt);
+    log('compile', 'Compiling and validating...');
+    await new Promise(r => setTimeout(r, 100));
+    log('preview', 'Rendering preview...');
+    await new Promise(r => setTimeout(r, 100));
+    log('done', 'Pipeline completed! UX: ' + result.uxResult.overall + '/100, Business: ' + result.businessResult.overall + '/100, Build: ' + result.assemblyResult.overallScore + '/100 (' + result.iterations + ' iterations)');
+  } catch (err) { log('error', 'Pipeline failed: ' + (err.message || err)); }
+} else {
+  const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
+  const orch = new DeterministicOrchestratorV4(WS_BASE);
+  try {
+    log('bi', 'Analyzing business requirements...');
+    await new Promise(r => setTimeout(r, 100));
+    log('architect', 'Designing application architecture...');
+    await new Promise(r => setTimeout(r, 100));
+    log('structure', 'Creating project structure...');
+    await new Promise(r => setTimeout(r, 100));
+    if (config.apiKey && config.apiKey.trim() !== '') {
+      log('llm', 'Generating code with ' + config.provider + ' AI...');
+    } else {
+      log('llm', 'Generating code with JIT synthesis...');
+    }
+    await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
+    log('compile', 'Compiling and validating...');
+    await new Promise(r => setTimeout(r, 100));
+    log('preview', 'Rendering preview...');
+    await new Promise(r => setTimeout(r, 100));
+    log('done', 'Build completed! Your application is ready.');
+  } catch (err) { log('error', 'Build failed: ' + (err.message || err)); }
+}
 `;
     const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.mts`);
     fs.writeFileSync(scriptPath, buildScript, 'utf-8');

@@ -12,3 +12,12 @@ export { getDomainData, getSectionData, type DomainMockData } from './domain-dat
 export { resolveDomainImages, resolveSingleImage, resolveRandomImage, type ResolvedImages } from './image-resolver.js';
 export { evaluateGeneratedContent, type EvaluationResult } from './self-evaluator.js';
 export { createDomainSynthesis, synthesizeDomainSection, type DomainSynthesisContext } from './domain-synthesizer.js';
+export { generateDesignSystem, designSystemToCss, designSystemToTailwindConfig, type DesignSystem, type TypographySystem, type ColorSystem, type SpacingSystem, type LayoutSystem, type MotionSystem } from './design-system-generator.js';
+export { ResearchAgent, type CompetitorData, type MarketInsight, type ResearchResult, type ContentStrategy } from './research-agent.js';
+export { ComponentSourcer, type ComponentPlan, type SectionComponent, type SharedComponent, type ComponentSource } from './component-sourcer.js';
+export { AssetIntelligence, type AssetPlan, type ImageAsset, type IconAsset, type IllustrationAsset } from './asset-intelligence.js';
+export { MotionEngine, type MotionPlan, type MotionProfile, type SectionMotion, type MicroInteraction } from './motion-engine.js';
+export { UXEvaluator, type UXAuditResult, type AuditCategory, type AuditIssue, type UXScore } from './ux-evaluator.js';
+export { BusinessValidator, type BusinessValidation, type BusinessCheck, type RevenueModelAssessment, type UserFlowAssessment } from './business-validator.js';
+export { AssemblyQA, type AssemblyResult, type AssemblyCheck } from './assembly-qa.js';
+export { PipelineOrchestrator, type PipelineResult } from './pipeline-orchestrator.js';

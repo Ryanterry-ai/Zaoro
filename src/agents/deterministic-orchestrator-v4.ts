@@ -24,9 +24,6 @@ import { TelemetryLayer } from '../core/telemetry.js';
 import { BusinessIntelligencePipeline } from '../business-intelligence/pipeline.js';
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
 import { SelfHealingEngine } from '../engine/self-healing-engine.js';
-import { validateCodeManifest, type ValidationReport } from '../pipeline/production-manifest.js';
-import { validateMockData, type MockDataValidation } from '../pipeline/mock-data-validator.js';
-import { generateDataDashboardFallback } from '../pipeline/logic-hydration.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -200,55 +197,6 @@ export class DeterministicOrchestratorV4 {
         } catch {}
       }
     }
-
-    // ─── Manifest Validation ──────────────────────────────────────
-    // Validate generated patches against production manifest rules.
-    // If LLM failed or generated static content, inject functional fallback.
-    console.log(`[orchestrator] Validating ${patchMap.size} files against production manifest...`);
-    
-    let manifestViolations = 0;
-    let mockDataIssues = 0;
-    let fallbackInjected = false;
-    
-    for (const [filePath, patches] of patchMap) {
-      for (const patch of patches) {
-        if (!patch.codeBlock || patch.codeBlock.length < 50) continue;
-        
-        // Run manifest validation
-        const manifestResult = validateCodeManifest(patch.codeBlock, filePath);
-        if (!manifestResult.passed) {
-          manifestViolations++;
-          for (const v of manifestResult.violations) {
-            if (v.severity === 'block') {
-              console.warn(`[manifest] BLOCKED ${filePath}: ${v.message}`);
-            }
-          }
-        }
-        
-        // Run mock data validation
-        const mockResult = validateMockData(patch.codeBlock, filePath);
-        if (mockResult.hasPlaceholderData) {
-          mockDataIssues++;
-          console.warn(`[mock-data] PLACEHOLDER detected in ${filePath}`);
-        }
-      }
-    }
-    
-    // If LLM failed or generated mostly static content, inject fallback
-    if (patchMap.size === 0 || manifestViolations > patchMap.size * 0.5) {
-      console.log(`[orchestrator] LLM output insufficient (${patchMap.size} files, ${manifestViolations} violations) — injecting logic hydration fallback...`);
-      
-      const fallbackPatches = generateDataDashboardFallback(prompt);
-      for (const patch of fallbackPatches) {
-        if (!patchMap.has(patch.targetFile)) {
-          patchMap.set(patch.targetFile, []);
-        }
-        patchMap.get(patch.targetFile)!.push(patch);
-      }
-      fallbackInjected = true;
-    }
-    
-    console.log(`[orchestrator] Manifest: ${manifestViolations} violations, ${mockDataIssues} mock data issues, fallback: ${fallbackInjected}`);
 
     // Apply patches per-page with independent rollback scope
     for (const [i, page] of blueprint.pages.entries()) {

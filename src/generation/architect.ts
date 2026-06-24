@@ -58,6 +58,7 @@ const CAPABILITY_PAGES: Record<string, Array<{ route: string; name: string; type
   crm: [{ route: '/contacts', name: 'Contacts', type: 'listing', sections: ['filter-bar', 'post-grid'], description: 'Contact management' }],
   analytics: [{ route: '/dashboard', name: 'Dashboard', type: 'dashboard', sections: ['stats-cards', 'charts', 'activity-feed'], description: 'Analytics dashboard' }],
   'project-management': [{ route: '/board', name: 'Board', type: 'dashboard', sections: ['stats-cards', 'activity-feed'], description: 'Project board' }],
+  saas: [{ route: '/dashboard', name: 'Dashboard', type: 'dashboard', sections: ['stats-cards', 'charts', 'activity-feed'], description: 'SaaS dashboard' }],
   'property-management': [{ route: '/properties', name: 'Properties', type: 'listing', sections: ['filter-bar', 'product-grid', 'pagination'], description: 'Property listings' }],
   'case-management': [{ route: '/cases', name: 'Cases', type: 'listing', sections: ['filter-bar', 'post-grid'], description: 'Case management' }],
   'membership-platform': [{ route: '/community', name: 'Community', type: 'listing', sections: ['post-grid'], description: 'Community hub' }],
@@ -80,6 +81,7 @@ const CAPABILITY_HERO_SECTIONS: Record<string, string[]> = {
   crm: ['features-grid', 'stats', 'testimonials', 'cta'],
   analytics: ['features-grid', 'stats', 'testimonials', 'cta'],
   'project-management': ['features-grid', 'stats', 'testimonials', 'cta'],
+  saas: ['features-grid', 'stats', 'pricing-table', 'testimonials', 'cta'],
   'property-management': ['featured-products', 'testimonials', 'cta'],
   'case-management': ['features-grid', 'testimonials', 'cta'],
   'membership-platform': ['features-grid', 'testimonials', 'cta'],
@@ -99,6 +101,7 @@ const CAPABILITY_STATE_STORES: Record<string, { name: string; fields: string[]; 
   'fitness-wellness': { name: 'bookingState', fields: ['selectedClass', 'selectedDate', 'selectedTime', 'contactInfo', 'isBooked'], description: 'Class booking state' },
   analytics: { name: 'dashboardState', fields: ['stats', 'activity', 'selectedPeriod'], description: 'Dashboard data state' },
   'project-management': { name: 'boardState', fields: ['columns', 'tasks', 'selectedTask'], description: 'Kanban board state' },
+  saas: { name: 'appState', fields: ['user', 'workspace', 'notifications', 'settings'], description: 'SaaS app state' },
   crm: { name: 'crmState', fields: ['contacts', 'deals', 'selectedContact'], description: 'CRM state' },
 };
 
@@ -114,6 +117,7 @@ const CAPABILITY_COLORS: Record<string, ColorScheme> = {
   crm: { primary: 'sky', secondary: 'cyan', accent: 'blue', gradient: 'from-sky-400 to-cyan-400', mood: 'professional' },
   analytics: { primary: 'cyan', secondary: 'blue', accent: 'teal', gradient: 'from-cyan-400 to-blue-400', mood: 'tech' },
   'project-management': { primary: 'amber', secondary: 'orange', accent: 'yellow', gradient: 'from-amber-400 to-orange-400', mood: 'productive' },
+  saas: { primary: 'indigo', secondary: 'violet', accent: 'purple', gradient: 'from-indigo-400 to-violet-400', mood: 'tech' },
   'property-management': { primary: 'emerald', secondary: 'teal', accent: 'green', gradient: 'from-emerald-400 to-teal-400', mood: 'trustworthy' },
   'case-management': { primary: 'slate', secondary: 'gray', accent: 'zinc', gradient: 'from-slate-400 to-gray-400', mood: 'authoritative' },
   'membership-platform': { primary: 'indigo', secondary: 'violet', accent: 'purple', gradient: 'from-indigo-400 to-violet-400', mood: 'community' },
