@@ -631,6 +631,8 @@ export default function WorkspacePage() {
       { id: "assembly", icon: "🏗", label: "Assembly QA", description: "File writing, integrity checks" },
       { id: "correction", icon: "🔄", label: "Self-Correction", description: "Re-plan and re-generate if needed" },
       { id: "compile", icon: "⚙", label: "Compile & Validate", description: "TypeScript compilation" },
+      { id: "browser-verify", icon: "🌐", label: "Browser Verification", description: "E2E tests, console errors, broken assets" },
+      { id: "repair", icon: "🔧", label: "Repair Loop", description: "Auto-fix issues found during verification" },
       { id: "preview", icon: "🖼", label: "Preview", description: "Render live preview" },
       { id: "complete", icon: "✅", label: "Complete", description: "Ready to download or deploy" },
     ];

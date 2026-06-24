@@ -100,6 +100,10 @@ const server = http.createServer(async (req, res) => {
         pipeline: 'POST /api/pipeline',
         clone_state: 'GET /api/workspace/:id/clone-state',
         download: 'GET /api/workspace/:id/download',
+        screenshots: 'POST /api/workspace/:id/screenshots',
+        screenshots_get: 'GET /api/workspace/:id/screenshots',
+        verify: 'POST /api/workspace/:id/verify',
+        verification: 'GET /api/workspace/:id/verification',
       },
     });
   }
@@ -634,6 +638,114 @@ try {
         ? 'complete' : lastEvent?.phaseStatus === 'failed' ? 'failed' : 'in_progress';
       return json(res, { events, status, count: events.length });
     } catch { return json(res, { events: [], status: 'error' }); }
+  }
+
+  // ─── Sprint B: Runtime Endpoints ──────────────────────────────────
+
+  // POST /api/workspace/:id/screenshots — Capture screenshots of generated site
+  if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/screenshots$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    try {
+      const body = JSON.parse(await readBody(req));
+      const port = body.port || 3456;
+
+      const serverLog = (step: string, msg: string, data?: Record<string, unknown>) => {
+        console.log(`[server:${step}] ${msg}`);
+      };
+
+      const { RuntimeManager } = await import('./engine/runtime-manager.js');
+      const { ScreenshotRunner } = await import('./engine/screenshot-runner.js');
+      const { BuildRunner } = await import('./engine/build-runner.js');
+
+      const runtime = new RuntimeManager({ headless: true }, serverLog);
+      const buildRunner = new BuildRunner(wsDir, { port }, serverLog);
+
+      // Start dev server
+      const devResult = await buildRunner.startDevServer();
+      if (!devResult.running) {
+        return json(res, { error: 'Failed to start dev server', output: devResult.startupOutput }, 500);
+      }
+
+      await runtime.start();
+      const screenshotRunner = new ScreenshotRunner(wsDir, runtime, {}, serverLog);
+      const manifest = await screenshotRunner.capture(devResult.url);
+
+      await runtime.stop();
+      await buildRunner.stopDevServer();
+
+      return json(res, { success: true, manifest });
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/workspace/:id/screenshots — Get screenshot manifest
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/screenshots$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    const manifestPath = path.join(wsDir, 'screenshots', 'manifest.json');
+    if (!fs.existsSync(manifestPath)) return json(res, { screenshots: [], status: 'none' });
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+      return json(res, { manifest, status: 'ready' });
+    } catch { return json(res, { screenshots: [], status: 'error' }); }
+  }
+
+  // POST /api/workspace/:id/verify — Run browser verification
+  if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/verify$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    try {
+      const body = JSON.parse(await readBody(req));
+      const port = body.port || 3456;
+
+      const serverLog = (step: string, msg: string, data?: Record<string, unknown>) => {
+        console.log(`[server:${step}] ${msg}`);
+      };
+
+      const { RuntimeManager } = await import('./engine/runtime-manager.js');
+      const { BrowserVerifier } = await import('./engine/browser-verifier.js');
+      const { BuildRunner } = await import('./engine/build-runner.js');
+
+      const runtime = new RuntimeManager({ headless: true }, serverLog);
+      const buildRunner = new BuildRunner(wsDir, { port }, serverLog);
+
+      const devResult = await buildRunner.startDevServer();
+      if (!devResult.running) {
+        return json(res, { error: 'Failed to start dev server', output: devResult.startupOutput }, 500);
+      }
+
+      await runtime.start();
+      const verifier = new BrowserVerifier(runtime, {}, serverLog);
+
+      // Verify all page routes
+      const urls = (body.urls || ['http://localhost:' + port]).map((u: string) => u.startsWith('http') ? u : 'http://localhost:' + port + u);
+      const result = await verifier.verify(urls);
+
+      await runtime.stop();
+      await buildRunner.stopDevServer();
+
+      // Save verification report
+      const reportPath = path.join(wsDir, '.verification-report.json');
+      fs.writeFileSync(reportPath, JSON.stringify(result, null, 2), 'utf-8');
+
+      return json(res, { success: true, result });
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/workspace/:id/verification — Get verification report
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/verification$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    const reportPath = path.join(wsDir, '.verification-report.json');
+    if (!fs.existsSync(reportPath)) return json(res, { status: 'none' });
+    try {
+      const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+      return json(res, { report, status: 'ready' });
+    } catch { return json(res, { status: 'error' }); }
   }
 
   // ─── Platform Persistence Routes ─────────────────────────────────

@@ -15,6 +15,8 @@ export type BuildStage =
   | 'assembly'      // Assembly QA
   | 'correction'    // Self-Correction
   | 'compile'       // Compile & Validate
+  | 'browser-verify'// Browser Verification (Sprint B)
+  | 'repair'        // Repair Loop (Sprint B)
   | 'preview'       // Render Preview
   | 'complete';     // Done
 
@@ -78,7 +80,7 @@ export function createBuildState(prompt: string): BuildState {
   const stageIds: BuildStage[] = [
     'bi', 'research', 'architect', 'design', 'components', 'assets',
     'motion', 'synthesize', 'ux-eval', 'biz-eval', 'assembly',
-    'correction', 'compile', 'preview', 'complete',
+    'correction', 'compile', 'browser-verify', 'repair', 'preview', 'complete',
   ];
 
   const stages: Record<BuildStage, BuildStageProgress> = {} as any;

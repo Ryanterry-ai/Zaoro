@@ -13,6 +13,10 @@ import { createDomainSynthesisAsync, synthesizeDomainSection, DomainSynthesisCon
 import { LLMGateway } from '../core/llm-gateway.js';
 import { LLMConfig, ASTPatch } from '../types/index.js';
 import { BuildProgressEvent, BuildStage, createBuildState, BuildState } from '../engine/build-progress.js';
+import { RuntimeManager } from '../engine/runtime-manager.js';
+import { BuildRunner } from '../engine/build-runner.js';
+import { BrowserVerifier, VerificationResult } from '../engine/browser-verifier.js';
+import { RepairLoop, RepairResult } from '../engine/repair-loop.js';
 
 export interface PipelineResult {
   success: boolean;
@@ -25,6 +29,8 @@ export interface PipelineResult {
   uxResult: UXAuditResult;
   businessResult: BusinessValidation;
   assemblyResult: AssemblyResult;
+  verificationResult: VerificationResult | undefined;
+  repairResult: RepairResult | undefined;
   iterations: number;
   patches: ASTPatch[];
   buildState: BuildState;
@@ -43,6 +49,8 @@ interface PipelineContext {
   uxResult: UXAuditResult | undefined;
   businessResult: BusinessValidation | undefined;
   assemblyResult: AssemblyResult | undefined;
+  verificationResult: VerificationResult | undefined;
+  repairResult: RepairResult | undefined;
 }
 
 const MAX_ITERATIONS = 3;
@@ -254,6 +262,8 @@ export class PipelineOrchestrator {
       uxResult: undefined,
       businessResult: undefined,
       assemblyResult: undefined,
+      verificationResult: undefined,
+      repairResult: undefined,
     };
 
     for (iterations = 1; iterations <= MAX_ITERATIONS; iterations++) {
@@ -364,6 +374,90 @@ export class PipelineOrchestrator {
 
     this.emit('compile', 'done', `Compilation complete — ${patches.length} patches`);
 
+    // ═══ Sprint B: Browser Verification ═════════════════════════
+    let verificationResult: VerificationResult | undefined;
+    let repairResult: RepairResult | undefined;
+
+    try {
+      this.emit('browser-verify', 'active', `Starting browser verification — launching Playwright...`);
+      const runtime = new RuntimeManager({ headless: true }, this.logFn);
+      await runtime.start();
+
+      const verifier = new BrowserVerifier(runtime, {
+        checkConsoleErrors: true,
+        checkBrokenAssets: true,
+        checkBrokenLinks: true,
+        checkAccessibility: true,
+        checkContentPresence: true,
+        checkPerformance: true,
+        maxBrokenLinks: 5,
+        maxConsoleErrors: 3,
+        maxJsErrors: 3,
+      }, this.logFn);
+
+      // Collect all page routes from the decision
+      const pageRoutes = decision.pages.map(p => p.route);
+      const verifyUrls = pageRoutes.map(r => `http://localhost:3000${r}`);
+      if (verifyUrls.length === 0) verifyUrls.push('http://localhost:3000');
+
+      this.emit('browser-verify', 'active', `Verifying ${verifyUrls.length} pages — console errors, broken assets, accessibility...`);
+      verificationResult = await verifier.verify(verifyUrls);
+
+      this.emit('browser-verify', 'active', `Verification score: ${verificationResult.score}/100 — ${verificationResult.summary.passed}/${verificationResult.summary.totalChecks} passed`);
+      for (const check of verificationResult.checks.slice(0, 10)) {
+        this.emit('browser-verify', 'active', `${check.passed ? '✓' : '✕'} ${check.name}: ${check.message}`);
+      }
+
+      await runtime.stop();
+      this.emit('browser-verify', 'done', `Browser verification complete — ${verificationResult.score}/100, ${verificationResult.summary.consoleErrors} console errors, ${verificationResult.summary.brokenAssets} broken assets, ${verificationResult.summary.brokenLinks} broken links`, {
+        score: verificationResult.score,
+        checks: verificationResult.summary.totalChecks,
+        passed: verificationResult.summary.passed,
+        failed: verificationResult.summary.failed,
+        consoleErrors: verificationResult.summary.consoleErrors,
+        brokenAssets: verificationResult.summary.brokenAssets,
+        brokenLinks: verificationResult.summary.brokenLinks,
+        jsErrors: verificationResult.summary.jsErrors,
+      });
+    } catch (err: any) {
+      this.emit('browser-verify', 'failed', `Browser verification failed: ${err.message}`);
+    }
+
+    // ═══ Sprint B: Repair Loop ═════════════════════════════════
+    if (verificationResult && verificationResult.score < 90) {
+      this.emit('repair', 'active', `Score ${verificationResult.score}/100 below threshold — starting repair loop...`);
+      try {
+        const repairLoop = new RepairLoop(this.workspaceRoot, this.llmConfig, {
+          maxIterations: 2,
+          fixThreshold: 90,
+          autoApply: true,
+        }, this.logFn);
+
+        repairResult = await repairLoop.repair(verificationResult, async (sectionType: string) => {
+          if (domainCtx) {
+            try {
+              return synthesizeDomainSection(sectionType, domainCtx);
+            } catch {}
+          }
+          return null;
+        });
+
+        this.emit('repair', 'active', `Repair complete — ${repairResult.issuesFixed}/${repairResult.issuesFound} issues fixed, score=${repairResult.finalScore}`);
+        this.emit('repair', 'done', `Repair loop complete — ${repairResult.iterations} iterations, ${repairResult.patches.length} patches, score ${verificationResult.score} → ${repairResult.finalScore}`, {
+          iterations: repairResult.iterations,
+          issuesFound: repairResult.issuesFound,
+          issuesFixed: repairResult.issuesFixed,
+          issuesRemaining: repairResult.issuesRemaining,
+          finalScore: repairResult.finalScore,
+          patches: repairResult.patches.length,
+        });
+      } catch (err: any) {
+        this.emit('repair', 'failed', `Repair loop failed: ${err.message}`);
+      }
+    } else if (verificationResult) {
+      this.emit('repair', 'done', `Score ${verificationResult.score}/100 — no repair needed`);
+    }
+
     this.emit('preview', 'active', `Rendering preview...`);
     this.emit('preview', 'done', `Preview ready`);
 
@@ -374,12 +468,14 @@ export class PipelineOrchestrator {
     this.buildState.filesWritten = ctx.assemblyResult?.filesWritten || [];
     this.flushState();
 
-    this.emit('complete', 'done', `Pipeline complete: ${iterations} iterations, ${patches.length} patches, ${(duration / 1000).toFixed(1)}s`, {
+    this.emit('complete', 'done', `Pipeline complete: ${iterations} iterations, ${patches.length} patches, verification=${verificationResult?.score || 'N/A'}, ${(duration / 1000).toFixed(1)}s`, {
       iterations,
       patches: patches.length,
       duration,
       scores: this.buildState.scores,
       filesWritten: this.buildState.filesWritten,
+      verification: verificationResult ? { score: verificationResult.score, checks: verificationResult.summary.totalChecks, passed: verificationResult.summary.passed } : undefined,
+      repair: repairResult ? { fixed: repairResult.issuesFixed, remaining: repairResult.issuesRemaining, finalScore: repairResult.finalScore } : undefined,
     });
 
     return {
@@ -393,6 +489,8 @@ export class PipelineOrchestrator {
       uxResult: ctx.uxResult!,
       businessResult: ctx.businessResult!,
       assemblyResult: ctx.assemblyResult!,
+      verificationResult,
+      repairResult,
       iterations,
       patches,
       buildState: this.buildState,
