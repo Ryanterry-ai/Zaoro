@@ -336,11 +336,14 @@ export default function WorkspacePage() {
       return "pending";
     };
 
-    // Count events per phase
+    // Count events per phase and extract progress data
     const eventCounts: Record<string, number> = {};
+    const phaseEvents: Record<string, any[]> = {};
     for (const ev of phases) {
       const phaseKey = ev.phase || ev.step || 'unknown';
       eventCounts[phaseKey] = (eventCounts[phaseKey] || 0) + 1;
+      if (!phaseEvents[phaseKey]) phaseEvents[phaseKey] = [];
+      phaseEvents[phaseKey].push(ev);
     }
 
     // Get latest message per phase
@@ -350,12 +353,26 @@ export default function WorkspacePage() {
       latestPerPhase[phaseKey] = ev.message;
     }
 
+    // Extract progress counters from events
+    const getPhaseProgress = (phaseId: string): { current: number; total: number } | null => {
+      const evts = phaseEvents[phaseId] || [];
+      for (let i = evts.length - 1; i >= 0; i--) {
+        const d = evts[i].data;
+        if (d && typeof d.index === 'number' && typeof d.total === 'number') {
+          return { current: d.index + 1, total: d.total };
+        }
+      }
+      return null;
+    };
+
     return (
       <div className="space-y-2">
         {CLONE_PHASES.map((phase, idx) => {
           const status = getPhaseStatus(phase.id, idx);
           const eventCount = eventCounts[phase.id] || 0;
           const latestMsg = latestPerPhase[phase.id] || "";
+          const progress = getPhaseProgress(phase.id);
+          const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
 
           return (
             <div key={phase.id} className={`rounded-xl text-sm transition-all overflow-hidden ${
@@ -384,9 +401,18 @@ export default function WorkspacePage() {
                     {eventCount > 0 && status !== "pending" && (
                       <span className="text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{eventCount}</span>
                     )}
+                    {progress && status === "active" && (
+                      <span className="text-[10px] text-accent font-mono">{progress.current}/{progress.total}</span>
+                    )}
                   </div>
+                  {/* Progress bar */}
+                  {progress && status === "active" && (
+                    <div className="w-full h-1 bg-surface-hover rounded-full mt-1.5 overflow-hidden">
+                      <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                    </div>
+                  )}
                   {status === "active" && latestMsg && (
-                    <div className="text-[11px] text-muted mt-0.5 truncate">{latestMsg}</div>
+                    <div className="text-[11px] text-muted mt-1 truncate">{latestMsg}</div>
                   )}
                   {status === "done" && (
                     <div className="text-[11px] text-green-400/70 mt-0.5">{phase.description}</div>
@@ -400,22 +426,30 @@ export default function WorkspacePage() {
           );
         })}
 
-        {/* Live event feed */}
+        {/* Live event feed — per-operation progress */}
         {phases.length > 0 && (
           <div className="mt-3 px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-2">Live Activity</div>
-            <div className="space-y-1 max-h-[200px] overflow-y-auto" ref={chatEndRef}>
-              {[...phases].reverse().slice(0, 20).map((ev, i) => (
-                <div key={i} className="flex items-start gap-2 text-[11px]">
-                  <span className={`flex-shrink-0 mt-0.5 ${
-                    ev.phaseStatus === 'done' ? 'text-green-400' :
-                    ev.phaseStatus === 'failed' ? 'text-red-400' : 'text-accent'
-                  }`}>
-                    {ev.phaseStatus === 'done' ? '●' : ev.phaseStatus === 'failed' ? '●' : '◉'}
-                  </span>
-                  <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted">Live Activity</span>
+              <span className="text-[10px] text-muted">{phases.length} events</span>
+            </div>
+            <div className="space-y-0.5 max-h-[300px] overflow-y-auto" ref={chatEndRef}>
+              {[...phases].reverse().slice(0, 50).map((ev, i) => {
+                const ts = new Date(ev.ts).toLocaleTimeString();
+                const phaseLabel = ev.phase || ev.step || '';
+                return (
+                  <div key={i} className="flex items-start gap-2 text-[11px] py-0.5">
+                    <span className="text-muted/50 font-mono flex-shrink-0 w-[60px]">{ts}</span>
+                    <span className={`flex-shrink-0 mt-0.5 ${
+                      ev.phaseStatus === 'done' ? 'text-green-400' :
+                      ev.phaseStatus === 'failed' ? 'text-red-400' : 'text-accent'
+                    }`}>
+                      {ev.phaseStatus === 'done' ? '●' : ev.phaseStatus === 'failed' ? '●' : '◉'}
+                    </span>
+                    <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -576,8 +610,6 @@ export default function WorkspacePage() {
     if (workspaceType !== "build") return null;
     if (steps.length === 0) return null;
 
-    // Check for new build state format
-    const buildState = (steps as any).buildState || null;
     const lastStep = steps[steps.length - 1];
     const lastMsg = lastStep?.message || "";
     const lastStepId = lastStep?.step || "";
@@ -603,11 +635,14 @@ export default function WorkspacePage() {
       { id: "complete", icon: "✅", label: "Complete", description: "Ready to download or deploy" },
     ];
 
-    // Count events per stage
+    // Count events per stage and extract progress data
     const eventCounts: Record<string, number> = {};
+    const stageEvents: Record<string, any[]> = {};
     for (const ev of steps) {
       const stage = ev.step || 'unknown';
       eventCounts[stage] = (eventCounts[stage] || 0) + 1;
+      if (!stageEvents[stage]) stageEvents[stage] = [];
+      stageEvents[stage].push(ev);
     }
 
     // Get latest message per stage
@@ -616,6 +651,18 @@ export default function WorkspacePage() {
       const stage = ev.step || 'unknown';
       latestPerStage[stage] = ev.message;
     }
+
+    // Extract progress counters from events
+    const getStageProgress = (stageId: string): { current: number; total: number } | null => {
+      const evts = stageEvents[stageId] || [];
+      for (let i = evts.length - 1; i >= 0; i--) {
+        const d = evts[i].data;
+        if (d && typeof d.index === 'number' && typeof d.total === 'number') {
+          return { current: d.index + 1, total: d.total };
+        }
+      }
+      return null;
+    };
 
     // Determine active stage
     const stageOrder = BUILD_PIPELINE.map(p => p.id);
@@ -635,6 +682,8 @@ export default function WorkspacePage() {
           const status = getStageStatus(phase.id, idx);
           const eventCount = eventCounts[phase.id] || 0;
           const latestMsg = latestPerStage[phase.id] || "";
+          const progress = getStageProgress(phase.id);
+          const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
 
           return (
             <div key={phase.id} className={`rounded-xl text-sm transition-all overflow-hidden ${
@@ -663,9 +712,18 @@ export default function WorkspacePage() {
                     {eventCount > 0 && status !== "pending" && (
                       <span className="text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{eventCount}</span>
                     )}
+                    {progress && status === "active" && (
+                      <span className="text-[10px] text-accent font-mono">{progress.current}/{progress.total}</span>
+                    )}
                   </div>
+                  {/* Progress bar */}
+                  {progress && status === "active" && (
+                    <div className="w-full h-1 bg-surface-hover rounded-full mt-1.5 overflow-hidden">
+                      <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                    </div>
+                  )}
                   {status === "active" && latestMsg && (
-                    <div className="text-[11px] text-muted mt-0.5 truncate">{latestMsg}</div>
+                    <div className="text-[11px] text-muted mt-1 truncate">{latestMsg}</div>
                   )}
                   {status === "done" && (
                     <div className="text-[11px] text-green-400/70 mt-0.5">{phase.description}</div>
@@ -679,22 +737,29 @@ export default function WorkspacePage() {
           );
         })}
 
-        {/* Live event feed */}
+        {/* Live event feed — per-operation progress */}
         {steps.length > 0 && (
           <div className="mt-3 px-3 py-2 rounded-xl bg-surface border border-border">
-            <div className="text-[10px] uppercase tracking-wider text-muted mb-2">Live Activity</div>
-            <div className="space-y-1 max-h-[200px] overflow-y-auto" ref={chatEndRef}>
-              {[...steps].reverse().slice(0, 20).map((ev, i) => (
-                <div key={i} className="flex items-start gap-2 text-[11px]">
-                  <span className={`flex-shrink-0 mt-0.5 ${
-                    ev.step === 'done' ? 'text-green-400' :
-                    ev.step === 'error' ? 'text-red-400' : 'text-accent'
-                  }`}>
-                    {ev.step === 'done' ? '●' : ev.step === 'error' ? '●' : '◉'}
-                  </span>
-                  <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted">Live Activity</span>
+              <span className="text-[10px] text-muted">{steps.length} events</span>
+            </div>
+            <div className="space-y-0.5 max-h-[300px] overflow-y-auto" ref={chatEndRef}>
+              {[...steps].reverse().slice(0, 50).map((ev, i) => {
+                const ts = new Date(ev.ts).toLocaleTimeString();
+                return (
+                  <div key={i} className="flex items-start gap-2 text-[11px] py-0.5">
+                    <span className="text-muted/50 font-mono flex-shrink-0 w-[60px]">{ts}</span>
+                    <span className={`flex-shrink-0 mt-0.5 ${
+                      ev.step === 'done' ? 'text-green-400' :
+                      ev.step === 'error' ? 'text-red-400' : 'text-accent'
+                    }`}>
+                      {ev.step === 'done' ? '●' : ev.step === 'error' ? '●' : '◉'}
+                    </span>
+                    <span className="text-foreground/70 leading-relaxed">{ev.message}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

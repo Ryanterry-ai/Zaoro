@@ -549,7 +549,7 @@ const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.string
 const cloneOrch = new CloneOrchestrator(wsDir, { provider: config.provider, apiKey: config.apiKey }, log, phaseEvent);
 try {
   log('clone', 'Starting deep website clone...');
-  const result = await cloneOrch.clone(${JSON.stringify(body.url)});
+  const result = await cloneOrch.clone(${JSON.stringify(body.url)}, { maxPages: ${JSON.stringify(body.options?.maxPages || 0)} });
   if (result.success) {
     log('done', 'Clone completed! ' + result.pages + ' pages, ' + result.assets + ' assets, ' + result.patches.length + ' files generated.');
   } else {

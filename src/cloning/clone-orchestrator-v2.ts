@@ -129,7 +129,7 @@ export class CloneOrchestrator {
 
   // ─── Main entry ───────────────────────────────────────────────
 
-  async clone(targetUrl: string): Promise<CloneResult> {
+  async clone(targetUrl: string, options?: { maxPages?: number }): Promise<CloneResult> {
     const startTime = Date.now();
     let url = targetUrl.trim();
     if (!url.match(/^https?:\/\//i)) url = `https://${url}`;
@@ -166,7 +166,16 @@ export class CloneOrchestrator {
       });
 
       this.progress.emit('analyze', 'active', `Robots.txt: ${analyzeResult.robotsTxt ? `${analyzeResult.robotsTxt.sitemaps.length} sitemaps, ${analyzeResult.robotsTxt.disallowPaths.length} disallowed paths` : 'not found'}`);
-      this.progress.emit('analyze', 'done', `Analysis complete — ${analyzeResult.pages.length} pages to clone`, { analyzeResult });
+
+      // Build category breakdown for the completion message
+      const categoryBreakdown = Object.entries(pageCategories).map(([cat, count]) => `${count} ${cat}`).join(', ');
+      this.progress.emit('analyze', 'done', `Analysis complete — ${analyzeResult.pages.length} pages found (${categoryBreakdown})`, {
+        analyzeResult,
+        exactPageCount: analyzeResult.pages.length,
+        sitemapEntryCount: analyzeResult.sitemapPages.length,
+        navItemCount: analyzeResult.navItems.length,
+        pageCategories,
+      });
       this.completePhase('analyze');
 
       // ═══════════════════════════════════════════════════════════
@@ -181,16 +190,24 @@ export class CloneOrchestrator {
       // Crawl pages with per-page progress
       const crawled: CrawledPage[] = [];
       const crawlResults: CrawlPageResult[] = [];
-      const pageLimit = 30;
-      const toCrawl = analyzeResult.pages.slice(0, pageLimit);
+      const maxPages = (options?.maxPages && options.maxPages > 0) ? options.maxPages : analyzeResult.pages.length;
+      const toCrawl = analyzeResult.pages.slice(0, maxPages);
 
-      if (analyzeResult.pages.length > pageLimit) {
-        this.progress.emit('crawl', 'active', `Capped at ${pageLimit} of ${analyzeResult.pages.length} pages`);
-      }
+      this.progress.emit('crawl', 'active', `Crawling ${toCrawl.length} of ${analyzeResult.pages.length} discovered pages...`);
+
+      // Dynamic timeouts based on page count
+      const PAGE_TIMEOUT_MS = 15_000;
+      const CRAWL_TIMEOUT_MS = Math.max(120_000, toCrawl.length * 8_000); // 8s per page minimum, 2min floor
+      const crawlStart = Date.now();
 
       // Parallel crawl: 5 at a time
       const BATCH_SIZE = 5;
       for (let i = 0; i < toCrawl.length; i += BATCH_SIZE) {
+        // Check crawl timeout
+        if (Date.now() - crawlStart > CRAWL_TIMEOUT_MS) {
+          this.progress.emit('crawl', 'active', `Crawl timeout after ${Math.round(CRAWL_TIMEOUT_MS / 1000)}s — stopping with ${crawled.length} pages`);
+          break;
+        }
         const batch = toCrawl.slice(i, i + BATCH_SIZE);
         const results = await Promise.allSettled(
           batch.map(async (ap) => {
