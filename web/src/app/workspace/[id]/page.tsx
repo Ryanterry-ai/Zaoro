@@ -25,55 +25,6 @@ interface ClonePhase {
   data?: Record<string, unknown> | null;
 }
 
-interface AnalysisData {
-  url: string;
-  title: string;
-  description: string;
-  technologies: string[];
-  pagesFound: Array<{ url: string; path: string; title: string; sections: number }>;
-  navigation: Array<{ label: string; href: string }>;
-  images: Array<{ src: string; alt: string; format: string; type: string }>;
-  videos: Array<{ src: string; format: string; type: string }>;
-  blockedPages: Array<{ url: string; reason: string }>;
-  designTokens: {
-    colors: string[];
-    fonts: string[];
-    fontSizes: string[];
-    borderRadii: string[];
-    gradients: string[];
-  };
-  links: { total: number; internal: number; external: number };
-  forms: Array<{ action: string; method: string; fields: Array<{ name: string; type: string }> }>;
-}
-
-interface AssetsData {
-  totalDiscovered: number;
-  downloaded: number;
-  failed: number;
-  assets: Array<{ url: string; localPath: string; size: number; status: string }>;
-  videosEmbedded: number;
-}
-
-interface GenerateData {
-  pagesTotal: number;
-  pagesDone: number;
-  currentPage: string;
-  pages: Array<{ path: string; componentName: string; status: string; patches: number }>;
-}
-
-interface LayoutData {
-  components: string[];
-  hasNav: boolean;
-  hasFooter: boolean;
-  patches: number;
-}
-
-interface ApplyData {
-  totalPatches: number;
-  appliedPatches: number;
-  filesWritten: string[];
-}
-
 const BUILD_PIPELINE = [
   { id: "bi", label: "BI" },
   { id: "research", label: "Research" },
@@ -100,6 +51,7 @@ const CLONE_PHASES = [
   { id: "assets", label: "Assets" },
   { id: "generate", label: "Generate" },
   { id: "self-contain", label: "Self-Contain" },
+  { id: "visual-diff", label: "Diff" },
   { id: "preview", label: "Preview" },
   { id: "complete", label: "Complete" },
 ];
@@ -114,6 +66,8 @@ const DEVICE_WIDTHS: Record<DeviceFrame, string> = {
 
 type StageStatus = "pending" | "active" | "done" | "error";
 
+type EngineStatus = "checking" | "online" | "offline" | "error";
+
 export default function WorkspacePage() {
   const params = useParams();
   const id = params.id as string;
@@ -126,15 +80,20 @@ export default function WorkspacePage() {
   const [rightTab, setRightTab] = useState<"preview" | "files">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
+  const [buildError, setBuildError] = useState<string | null>(null);
   const [workspaceType, setWorkspaceType] = useState<"build" | "clone">("build");
   const [followUp, setFollowUp] = useState("");
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [deviceFrame, setDeviceFrame] = useState<DeviceFrame>("desktop");
+  const [engineStatus, setEngineStatus] = useState<EngineStatus>("checking");
+  const [retryCount, setRetryCount] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const buildTriggered = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelledRef = useRef(false);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -155,13 +114,31 @@ export default function WorkspacePage() {
     } catch {}
   }, [id]);
 
+  const checkEngine = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/workspace/${id}/meta`, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        setEngineStatus("online");
+        return true;
+      }
+      setEngineStatus("error");
+      return false;
+    } catch {
+      setEngineStatus("offline");
+      return false;
+    }
+  }, [id]);
+
   const pollProgress = useCallback(async () => {
     try {
       const res = await fetch(`/api/workspace/${id}/progress`);
       if (!res.ok) {
-        console.warn(`[progress] HTTP ${res.status}`);
+        if (res.status === 502 || res.status === 503) {
+          setEngineStatus("offline");
+        }
         return;
       }
+      setEngineStatus("online");
       const data = await res.json();
       setSteps(data.steps || []);
       setPhases(data.phases || []);
@@ -170,6 +147,7 @@ export default function WorkspacePage() {
       if (lastStep?.step === "done") {
         setIsBuilding(false);
         setBuildDone(true);
+        setBuildError(null);
         loadFiles();
         loadPreview();
         if (pollRef.current) {
@@ -177,7 +155,9 @@ export default function WorkspacePage() {
           pollRef.current = null;
         }
       } else if (lastStep?.step === "error") {
+        const errorMsg = lastStep.message || "Build failed";
         setIsBuilding(false);
+        setBuildError(errorMsg);
         if (pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;
@@ -198,13 +178,46 @@ export default function WorkspacePage() {
     } catch {}
   }, [id]);
 
-  const triggerBuild = useCallback(async () => {
-    if (buildTriggered.current) return;
+  const triggerBuild = useCallback(async (isRetry = false) => {
+    if (buildTriggered.current && !isRetry) return;
     buildTriggered.current = true;
+    setBuildError(null);
     try {
-      await fetch(`/api/workspace/${id}/build`, { method: "POST" });
-    } catch {}
+      const res = await fetch(`/api/workspace/${id}/build`, {
+        method: "POST",
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (res.ok || data.status === "already_building") {
+        setEngineStatus("online");
+        setRetryCount(0);
+      } else if (res.status === 502 || res.status === 503) {
+        setEngineStatus("offline");
+        setBuildError("Engine unreachable. Retrying...");
+      } else if (data.error) {
+        setBuildError(data.error);
+      }
+    } catch (err: any) {
+      if (err.name === "AbortError" || err.message?.includes("fetch")) {
+        setEngineStatus("offline");
+        setBuildError("Engine unreachable. Retrying...");
+      }
+    }
   }, [id]);
+
+  const retryBuild = useCallback(async () => {
+    setRetryCount((c) => c + 1);
+    setBuildError(null);
+    setIsBuilding(true);
+    buildTriggered.current = false;
+    const online = await checkEngine();
+    if (online) {
+      await triggerBuild(true);
+    } else {
+      setBuildError("Engine still offline. Check that the engine is running.");
+      setIsBuilding(false);
+    }
+  }, [checkEngine, triggerBuild]);
 
   const handleFollowUp = async () => {
     if (!followUp.trim() || isBuilding) return;
@@ -217,6 +230,7 @@ export default function WorkspacePage() {
     buildTriggered.current = false;
     setIsBuilding(true);
     setBuildDone(false);
+    setBuildError(null);
     setPreviewHtml(null);
     try {
       await fetch(`/api/workspace/${id}/build`, {
@@ -237,29 +251,36 @@ export default function WorkspacePage() {
   const toggleFullscreen = () => setIsFullscreen((prev) => !prev);
 
   useEffect(() => {
-    let cancelled = false;
+    cancelledRef.current = false;
     async function initWorkspace() {
+      const online = await checkEngine();
+      if (cancelledRef.current) return;
+
       try {
         const metaRes = await fetch(`/api/workspace/${id}/meta`);
         const meta = await metaRes.json();
-        if (cancelled) return;
+        if (cancelledRef.current) return;
         const type = meta.type === "clone" ? "clone" : "build";
         setWorkspaceType(type);
         if (type === "clone") {
           setIsBuilding(true);
-          pollProgress();
           return;
         }
-        await triggerBuild();
+        if (online) {
+          await triggerBuild();
+        } else {
+          setBuildError("Engine offline. Click retry when ready.");
+          setIsBuilding(false);
+        }
       } catch {
-        if (!cancelled) await triggerBuild();
+        if (!cancelledRef.current && online) await triggerBuild();
       }
     }
     initWorkspace();
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, [id, pollProgress, triggerBuild]);
+  }, [id, checkEngine, triggerBuild]);
 
   useEffect(() => {
     if (!isBuilding) return;
@@ -272,6 +293,13 @@ export default function WorkspacePage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [steps, phases]);
+
+  useEffect(() => {
+    return () => {
+      if (retryRef.current) clearTimeout(retryRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const sourceFiles = files.filter(
     (f) =>
@@ -329,11 +357,9 @@ export default function WorkspacePage() {
     return "pending";
   };
 
-  const buildEventCounts: Record<string, number> = {};
   const buildStageEvents: Record<string, ProgressStep[]> = {};
   for (const ev of steps) {
     const stage = ev.step || "unknown";
-    buildEventCounts[stage] = (buildEventCounts[stage] || 0) + 1;
     if (!buildStageEvents[stage]) buildStageEvents[stage] = [];
     buildStageEvents[stage].push(ev);
   }
@@ -364,6 +390,9 @@ export default function WorkspacePage() {
     return "pending";
   };
 
+  const allEvents = workspaceType === "clone" ? phases : steps;
+  const eventCount = allEvents.length;
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface">
@@ -376,6 +405,10 @@ export default function WorkspacePage() {
           <span className="text-xs text-muted truncate max-w-[300px]">{id}</span>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className={`w-2 h-2 rounded-full ${engineStatus === "online" ? "bg-green-400" : engineStatus === "checking" ? "bg-yellow-400 animate-pulse" : "bg-red-400"}`} />
+            <span className="text-[10px] text-muted">{engineStatus === "online" ? "Engine online" : engineStatus === "checking" ? "Connecting..." : engineStatus === "offline" ? "Engine offline" : "Engine error"}</span>
+          </div>
           {isBuilding && (
             <div className="flex items-center gap-2 text-xs text-accent">
               <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
@@ -390,6 +423,12 @@ export default function WorkspacePage() {
               <div className="w-2 h-2 rounded-full bg-green-400" />
               {workspaceType === "clone" ? "Clone complete" : "Build complete"}
             </div>
+          )}
+          {buildError && !isBuilding && (
+            <button onClick={retryBuild} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-all">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+              Retry
+            </button>
           )}
           <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all">Share</button>
           <a href={`/api/workspace/${id}/download`} className="px-3 py-1.5 rounded-lg text-xs text-muted border border-border hover:bg-surface-hover transition-all flex items-center gap-1.5">
@@ -408,7 +447,6 @@ export default function WorkspacePage() {
                 {BUILD_PIPELINE.map((stage, idx) => {
                   const status = getBuildStageStatus(stage.id, idx);
                   const progress = getBuildStageProgress(stage.id);
-                  const pct = progress ? Math.round((progress.current / progress.total) * 100) : 0;
                   return (
                     <span key={stage.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] ${status === "done" ? "bg-green-500/10 text-green-400" : status === "active" ? "bg-accent/10 text-accent" : status === "error" ? "bg-red-500/10 text-red-400" : "text-muted/40"}`}>
                       {status === "done" ? "✓" : status === "active" ? <span className="animate-pulse">●</span> : status === "error" ? "✕" : "○"}
@@ -449,59 +487,72 @@ export default function WorkspacePage() {
             </div>
           )}
 
-          {!isBuilding && workspaceType === "clone" && phases.length === 0 && (
-            <div className="px-3 py-2 border-b border-border text-center text-muted text-xs">Initializing clone engine...</div>
-          )}
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <span className="text-[10px] uppercase tracking-wider text-muted font-medium">Live Activity</span>
+            <span className="text-[10px] text-muted">{eventCount} events</span>
+          </div>
 
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-3 py-2 flex items-center justify-between border-b border-border">
-              <span className="text-[10px] uppercase tracking-wider text-muted font-medium">Live Activity</span>
-              <span className="text-[10px] text-muted">{workspaceType === "clone" ? phases.length : steps.length} events</span>
-            </div>
-            <div className="flex-1 overflow-y-auto px-3 py-2" ref={chatEndRef}>
-              {workspaceType === "clone"
-                ? [...phases].reverse().map((ev, i) => {
-                    const ts = new Date(ev.ts).toLocaleTimeString();
-                    const isFile = ev.message?.startsWith("Wrote:");
-                    const isDone = ev.phaseStatus === "done";
-                    const isFailed = ev.phaseStatus === "failed";
-                    return (
-                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : ""}`}>
-                        <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
-                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : "text-accent/60"}`}>
-                          {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : "◉"}
-                        </span>
-                        <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : "text-foreground/60"}`}>
-                          {ev.message}
-                        </span>
-                      </div>
-                    );
-                  })
-                : [...steps].reverse().map((ev, i) => {
-                    const ts = new Date(ev.ts).toLocaleTimeString();
-                    const isFile = ev.message?.startsWith("Wrote:");
-                    const isDone = ev.step === "done";
-                    const isFailed = ev.step === "error";
-                    const isUser = ev.step === "user";
-                    return (
-                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : ""}`}>
-                        <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
-                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : isUser ? "text-accent" : "text-accent/60"}`}>
-                          {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : isUser ? "→" : "◉"}
-                        </span>
-                        <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : isUser ? "text-accent font-medium" : "text-foreground/60"}`}>
-                          {ev.message}
-                        </span>
-                      </div>
-                    );
-                  })}
-              {((workspaceType === "clone" && phases.length === 0) || (workspaceType === "build" && steps.length === 0)) && (
-                <div className="flex flex-col items-center justify-center h-full text-muted">
-                  <div className="animate-pulse text-lg mb-2 text-accent">●</div>
-                  <span className="text-xs">{workspaceType === "clone" ? "Waiting for clone events..." : "Waiting for build events..."}</span>
-                </div>
-              )}
-            </div>
+          <div className="flex-1 overflow-y-auto px-3 py-2 min-h-0" ref={chatEndRef}>
+            {allEvents.length > 0 ? (
+              [...allEvents].reverse().map((ev, i) => {
+                const ts = new Date(ev.ts).toLocaleTimeString();
+                const msg = ev.message || "";
+                const isFile = msg.startsWith("Wrote:");
+                const step = "step" in ev ? ev.step : "phase" in ev ? ev.phase : "";
+                const phaseStatus = "phaseStatus" in ev ? ev.phaseStatus : undefined;
+                const isDone = step === "done" || phaseStatus === "done";
+                const isFailed = step === "error" || phaseStatus === "failed";
+                const isUser = step === "user";
+                return (
+                  <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : ""}`}>
+                    <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
+                    <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : isUser ? "text-accent" : "text-accent/60"}`}>
+                      {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : isUser ? "→" : "◉"}
+                    </span>
+                    <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : isUser ? "text-accent font-medium" : "text-foreground/60"}`}>
+                      {msg}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted gap-3">
+                {engineStatus === "offline" || engineStatus === "error" ? (
+                  <>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400/60">
+                      <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <div className="text-center">
+                      <p className="text-xs font-medium text-red-400/80">Engine offline</p>
+                      <p className="text-[10px] text-muted mt-1">Start the engine and tunnel, then retry</p>
+                    </div>
+                    <button onClick={retryBuild} className="px-3 py-1.5 rounded-lg text-[11px] text-white bg-accent hover:bg-accent-hover transition-all flex items-center gap-1.5">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+                      Retry connection
+                    </button>
+                  </>
+                ) : buildError ? (
+                  <>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400/60">
+                      <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                    <div className="text-center">
+                      <p className="text-xs font-medium text-red-400/80">Build failed</p>
+                      <p className="text-[10px] text-muted mt-1 max-w-[250px] truncate">{buildError}</p>
+                    </div>
+                    <button onClick={retryBuild} className="px-3 py-1.5 rounded-lg text-[11px] text-white bg-accent hover:bg-accent-hover transition-all flex items-center gap-1.5">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+                      Retry build
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="animate-pulse text-lg text-accent">●</div>
+                    <span className="text-xs">{workspaceType === "clone" ? "Waiting for clone events..." : "Waiting for build events..."}</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="p-3 border-t border-border">
@@ -570,7 +621,7 @@ export default function WorkspacePage() {
                         <line x1="12" y1="17" x2="12" y2="21" />
                       </svg>
                     </div>
-                    <p className="text-sm text-zinc-500">No preview available</p>
+                    <p className="text-sm text-zinc-500">{buildError ? "Fix errors to see preview" : "No preview available"}</p>
                   </div>
                 </div>
               )}

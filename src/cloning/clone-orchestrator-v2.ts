@@ -678,11 +678,55 @@ export class CloneOrchestrator {
       this.completePhase('self-contain');
 
       // ═══════════════════════════════════════════════════════════
-      // PHASE 5: PREVIEW (ready)
+      // PHASE 5: VISUAL DIFF (compare against original)
       // ═══════════════════════════════════════════════════════════
       this.startPhase('preview', 1);
-      this.progress.emit('preview', 'active', `Preview ready — ${filesWrittenCount} files available`);
-      this.progress.emit('preview', 'done', `Clone complete! ${crawled.length} pages, ${assetsOk} assets, ${filesWrittenCount} files generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+      this.progress.emit('preview', 'active', `Running visual diff against original site...`);
+
+      let visualDiffReport = null;
+      let layoutComparison = null;
+
+      try {
+        const { VisualDiffEngine } = await import('../engine/visual-diff.js');
+        const { LayoutDetector } = await import('../engine/layout-detector.js');
+
+        const diffEngine = new VisualDiffEngine(this.workspaceRoot, {}, (step, msg) => {
+          this.progress.emit('preview', 'active', `[visual-diff] ${msg}`);
+        });
+        const layoutDetector = new LayoutDetector((step, msg) => {
+          this.progress.emit('preview', 'active', `[layout] ${msg}`);
+        });
+
+        // Run visual diff
+        visualDiffReport = await diffEngine.diff(url, url);
+
+        // Run layout detection on both
+        const origPage = await diffEngine['ensureBrowser']().then(b => b.newContext()).then(c => c.newPage());
+        const clonePage = await diffEngine['ensureBrowser']().then(b => b.newContext()).then(c => c.newPage());
+
+        const origSections = await layoutDetector.detectSections(origPage);
+        const cloneSections = await layoutDetector.detectSections(clonePage);
+        layoutComparison = layoutDetector.compare(origSections, cloneSections);
+
+        await origPage.close();
+        await clonePage.close();
+        await diffEngine.close();
+
+        const similarity = visualDiffReport.overallSimilarity.toFixed(1);
+        const structural = layoutComparison.structuralSimilarity.toFixed(1);
+        this.progress.emit('preview', 'active', `Visual diff: ${similarity}% pixel similarity, ${structural}% structural similarity`);
+
+        if (layoutComparison.issues.length > 0) {
+          this.progress.emit('preview', 'active', `Layout issues: ${layoutComparison.issues.slice(0, 3).join('; ')}`);
+        }
+      } catch (err) {
+        this.progress.emit('preview', 'active', `Visual diff skipped: ${(err as Error).message}`);
+      }
+
+      this.progress.emit('preview', 'done', `Preview ready — ${filesWrittenCount} files available`, {
+        visualDiffReport,
+        layoutComparison,
+      });
       this.completePhase('preview');
 
       // ═══════════════════════════════════════════════════════════

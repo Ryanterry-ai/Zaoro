@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { ArchitectAgent, ArchitectDecision } from './architect.js';
+import { ArchitectAgent, ArchitectDecision, PageDesign, ComponentDesign } from './architect.js';
 import { generateDesignSystem, DesignSystem } from './design-system-generator.js';
 import { ResearchAgent, ResearchResult } from './research-agent.js';
 import { ComponentSourcer, ComponentPlan } from './component-sourcer.js';
@@ -10,6 +10,8 @@ import { UXEvaluator, UXAuditResult } from './ux-evaluator.js';
 import { BusinessValidator, BusinessValidation } from './business-validator.js';
 import { AssemblyQA, AssemblyResult } from './assembly-qa.js';
 import { createDomainSynthesisAsync, synthesizeDomainSection, DomainSynthesisContext } from './domain-synthesizer.js';
+import { IntentDNAExtractor, IntentDNA } from './intent-dna.js';
+import { FeatureEnricher, EnrichedIntent } from './feature-enricher.js';
 import { LLMGateway } from '../core/llm-gateway.js';
 import { LLMConfig, ASTPatch } from '../types/index.js';
 import { BuildProgressEvent, BuildStage, createBuildState, BuildState } from '../engine/build-progress.js';
@@ -20,6 +22,8 @@ import { RepairLoop, RepairResult } from '../engine/repair-loop.js';
 
 export interface PipelineResult {
   success: boolean;
+  intent: IntentDNA;
+  enriched: EnrichedIntent;
   decision: ArchitectDecision;
   designSystem: DesignSystem;
   research: ResearchResult;
@@ -38,6 +42,8 @@ export interface PipelineResult {
 }
 
 interface PipelineContext {
+  intent: IntentDNA;
+  enriched: EnrichedIntent;
   decision: ArchitectDecision;
   designSystem: DesignSystem;
   research: ResearchResult;
@@ -136,24 +142,50 @@ export class PipelineOrchestrator {
     this.log(`Starting pipeline for: "${prompt.slice(0, 80)}..."`);
     this.emit('bi', 'active', `Starting pipeline: "${prompt.slice(0, 100)}..."`);
 
-    // ═══ Stage 1: Business Intelligence ═══════════════════════════
-    this.emit('bi', 'active', `Analyzing business requirements — detecting industry, features, competitors...`);
-    const architect = new ArchitectAgent();
-    const decision = architect.designArchitecture(prompt);
-    this.emit('bi', 'active', `Detected: ${decision.name} — ${decision.businessType}, ${decision.pages.length} pages, ${decision.components.length} components`);
-    this.emit('bi', 'done', `BI complete — ${decision.businessType} business, ${decision.pages.length} pages planned`, {
-      name: decision.name,
-      businessType: decision.businessType,
-      pages: decision.pages.map(p => ({ name: p.name, route: p.route, sections: p.sections.length })),
-      components: decision.components.length,
-      stateModel: decision.stateModel.length,
+    // ═══ Stage 1: IntentDNA Extraction ══════════════════════════
+    this.emit('bi', 'active', `Extracting structured intent from prompt — domain, features, entities, workflows...`);
+    const llm = new LLMGateway(this.llmConfig);
+    const intentExtractor = new IntentDNAExtractor(llm);
+    const intent = await intentExtractor.extract(prompt);
+    this.emit('bi', 'active', `Intent extracted: ${intent.business_domain} "${intent.app_name}" — ${intent.features.length} features, ${intent.entities.length} entities, confidence=${intent.confidence}`);
+    this.emit('bi', 'done', `IntentDNA complete — domain=${intent.business_domain}, features=[${intent.features.map(f => f.name).join(', ')}]`, {
+      intent: {
+        domain: intent.business_domain,
+        name: intent.app_name,
+        features: intent.features.map(f => f.name),
+        entities: intent.entities.map(e => e.name),
+        confidence: intent.confidence,
+      },
     });
 
     // ═══ Stage 2: Research Agent ═════════════════════════════════
     this.emit('research', 'active', `Researching competitors, market insights, and content strategy...`);
     const researcher = new ResearchAgent();
-    const domain = decision.pages[0] ? { industry: decision.businessType } : undefined;
-    const research = researcher.research(prompt, decision);
+    const domainContext = { industry: intent.business_domain };
+    const researchDecision: ArchitectDecision = {
+      name: intent.app_name,
+      description: `A ${intent.business_domain} application`,
+      businessType: intent.business_domain,
+      capabilities: intent.features.map(f => f.name),
+      pages: [{
+        name: 'home',
+        route: '/',
+        type: 'landing',
+        sections: intent.features.filter(f => f.type === 'ui_section').map(f => f.name),
+        layout: 'default',
+        description: 'Home page',
+      }],
+      components: intent.features.map(f => ({
+        name: f.name,
+        type: f.component_type || 'ui',
+        usedPrimitives: [],
+        props: [],
+        description: f.description,
+      })),
+      stateModel: [],
+      colorScheme: { primary: 'blue', secondary: 'gray', accent: 'indigo', gradient: 'from-blue-500 to-indigo-500', mood: 'professional' },
+    };
+    const research = researcher.research(prompt, researchDecision);
     this.emit('research', 'active', `Found ${research.competitors.length} competitors, ${research.recommendedFeatures.length} features`);
     if (research.competitors.length > 0) {
       this.emit('research', 'active', `Competitors: ${research.competitors.slice(0, 5).map(c => c.name).join(', ')}`);
@@ -164,18 +196,21 @@ export class PipelineOrchestrator {
       contentStrategy: { keyMessages: research.contentStrategy.keyMessages.length, tone: research.contentStrategy.toneOfVoice },
     });
 
-    // ═══ Stage 3: Architect ═══════════════════════════════════════
-    this.emit('architect', 'active', `Designing ${decision.pages.length} page architectures...`);
-    for (const page of decision.pages) {
-      this.emit('architect', 'active', `Page: ${page.name} — ${page.sections.length} sections: ${page.sections.join(', ')}`);
-    }
-    this.emit('architect', 'done', `Architecture complete — ${decision.pages.length} pages, ${decision.components.length} components, ${decision.stateModel.length} state models`, {
-      pages: decision.pages.map(p => ({ name: p.name, route: p.route, sections: p.sections })),
-      components: decision.components,
+    // ═══ Stage 3: Feature Enrichment ════════════════════════════
+    this.emit('architect', 'active', `Enriching features with component blueprints, props, state, and API specs...`);
+    const enricher = new FeatureEnricher(llm);
+    const enriched = await enricher.enrich(intent);
+    this.emit('architect', 'active', `Generated ${enriched.blueprints.length} blueprints, ${enriched.interaction_map.length} interactions, ${enriched.page_structure.length} pages`);
+    this.emit('architect', 'done', `Feature enrichment complete — ${enriched.blueprints.length} blueprints, global styles defined`, {
+      blueprints: enriched.blueprints.map(b => ({ feature: b.feature.name, components: b.components.length, state: b.state.length, api: b.api_endpoints.length })),
+      pages: enriched.page_structure.map(p => ({ page: p.page, route: p.route, sections: p.sections })),
+      interactions: enriched.interaction_map.length,
     });
 
-    // ═══ Stage 4: Design System ══════════════════════════════════
+    // ═══ Stage 4: Architect (legacy compat) ═════════════════════
     this.emit('design', 'active', `Generating design system — typography, colors, spacing, layout...`);
+    const architect = new ArchitectAgent();
+    const decision = architect.designArchitecture(prompt);
     const designSystem = generateDesignSystem(decision);
     this.emit('design', 'active', `Typography: ${Object.keys(designSystem.typography.scale).length} scales, ${designSystem.typography.fontFamily.heading}/${designSystem.typography.fontFamily.body}`);
     this.emit('design', 'active', `Colors: primary=${designSystem.colors.primary[500]}, accent=${designSystem.colors.accent[500]}`);
@@ -251,6 +286,8 @@ export class PipelineOrchestrator {
 
     // ═══ Self-Correction Loop ═════════════════════════════════════
     let ctx: PipelineContext = {
+      intent,
+      enriched,
       decision,
       designSystem,
       research,
@@ -479,6 +516,8 @@ export class PipelineOrchestrator {
 
     return {
       success: true,
+      intent,
+      enriched,
       decision,
       designSystem,
       research,

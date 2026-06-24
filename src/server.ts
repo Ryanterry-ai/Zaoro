@@ -103,6 +103,8 @@ const server = http.createServer(async (req, res) => {
         screenshots: 'POST /api/workspace/:id/screenshots',
         screenshots_get: 'GET /api/workspace/:id/screenshots',
         verify: 'POST /api/workspace/:id/verify',
+        visual_diff: 'POST /api/workspace/:id/visual-diff',
+        visual_diff_get: 'GET /api/workspace/:id/visual-diff',
         verification: 'GET /api/workspace/:id/verification',
       },
     });
@@ -741,6 +743,90 @@ try {
     const id = url.pathname.split('/')[3]!;
     const wsDir = path.join(WORKSPACE_BASE, id);
     const reportPath = path.join(wsDir, '.verification-report.json');
+    if (!fs.existsSync(reportPath)) return json(res, { status: 'none' });
+    try {
+      const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+      return json(res, { report, status: 'ready' });
+    } catch { return json(res, { status: 'error' }); }
+  }
+
+  // POST /api/workspace/:id/visual-diff — Run visual diff against original site
+  if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/visual-diff$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    try {
+      const body = JSON.parse(await readBody(req));
+      const originalUrl = body.originalUrl;
+      if (!originalUrl) return json(res, { error: 'originalUrl required' }, 400);
+
+      const serverLog = (step: string, msg: string, data?: Record<string, unknown>) => {
+        console.log(`[server:${step}] ${msg}`);
+      };
+
+      const { VisualDiffEngine } = await import('./engine/visual-diff.js');
+      const { LayoutDetector } = await import('./engine/layout-detector.js');
+
+      const diffEngine = new VisualDiffEngine(wsDir, {}, serverLog);
+      const layoutDetector = new LayoutDetector(serverLog);
+
+      // Start clone's dev server for comparison
+      const { BuildRunner } = await import('./engine/build-runner.js');
+      const buildRunner = new BuildRunner(wsDir, { port: 3456 }, serverLog);
+      const devResult = await buildRunner.startDevServer();
+
+      if (!devResult.running) {
+        return json(res, { error: 'Failed to start dev server for clone' }, 500);
+      }
+
+      const cloneUrl = `http://localhost:3456`;
+
+      // Run visual diff
+      const diffReport = await diffEngine.diff(originalUrl, cloneUrl);
+
+      // Run layout detection
+      const pw = await import('playwright');
+      const browser = await pw.chromium.launch({ headless: true });
+      const context = await browser.newContext();
+
+      const origPage = await context.newPage();
+      await origPage.goto(originalUrl, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => {});
+      const origSections = await layoutDetector.detectSections(origPage);
+      await origPage.close();
+
+      const clonePage = await context.newPage();
+      await clonePage.goto(cloneUrl, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => {});
+      const cloneSections = await layoutDetector.detectSections(clonePage);
+      await clonePage.close();
+
+      await context.close();
+      await browser.close();
+      await diffEngine.close();
+      await buildRunner.stopDevServer();
+
+      const layoutComparison = layoutDetector.compare(origSections, cloneSections);
+
+      // Save report
+      const reportPath = path.join(wsDir, '.visual-diff-report.json');
+      fs.writeFileSync(reportPath, JSON.stringify({ diffReport, layoutComparison }, null, 2), 'utf-8');
+
+      return json(res, {
+        success: true,
+        overallSimilarity: diffReport.overallSimilarity,
+        structuralSimilarity: layoutComparison.structuralSimilarity,
+        viewportResults: diffReport.viewportResults,
+        sectionComparison: layoutComparison,
+        issues: layoutComparison.issues,
+      });
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
+  // GET /api/workspace/:id/visual-diff — Get visual diff report
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/visual-diff$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    const reportPath = path.join(wsDir, '.visual-diff-report.json');
     if (!fs.existsSync(reportPath)) return json(res, { status: 'none' });
     try {
       const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));

@@ -393,6 +393,37 @@ The component must be self-contained with all data inline — no external API ca
     throw new Error('Raw code generation failed after retries');
   }
 
+  /**
+   * Generic text generation: sends a prompt and returns raw text response.
+   * Used by IntentDNA, FeatureEnricher, and other planning agents.
+   */
+  public async generateText(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new Error('No API key for text generation');
+    }
+
+    const systemPrompt = 'You are an expert AI assistant. Respond with valid JSON only. No markdown, no code fences — just the raw JSON object.';
+
+    for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+      try {
+        console.log(`[gateway] Text call: ${this.provider}/${this.model} (attempt ${attempt})`);
+        const content = await this.callProviderRaw(systemPrompt, prompt);
+        console.log(`[gateway] Received ${content.length} chars of text`);
+        return content;
+      } catch (err: any) {
+        const isTransient = this.isTransientError(err);
+        const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
+        if (attempt < RETRY_ATTEMPTS && isTransient) {
+          console.log(`[gateway] Transient error (${err.message}). Retrying in ${delay}ms...`);
+          await this.sleep(delay);
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error('Text generation failed after retries');
+  }
+
   private async callProviderRaw(systemPrompt: string, userPrompt: string): Promise<string> {
     switch (this.provider) {
       case 'gemini': return this.callGeminiRaw(systemPrompt, userPrompt);
