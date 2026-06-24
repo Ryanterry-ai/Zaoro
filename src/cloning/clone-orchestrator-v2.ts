@@ -267,8 +267,6 @@ export class CloneOrchestrator {
         );
       }
 
-      await browser.close();
-
       const crawledOk = crawlResults.filter(r => r.status === 'done').length;
       const crawledFailed = crawlResults.filter(r => r.status === 'failed').length;
       this.progress.emit('crawl', 'done', `Crawl complete — ${crawledOk} succeeded, ${crawledFailed} failed`, {
@@ -359,6 +357,7 @@ export class CloneOrchestrator {
       }
 
       await downloadCtx.close().catch(() => {});
+      await browser.close().catch(() => {});
 
       // Summary
       const assetsOk = allAssets.filter(a => a.status === 'ok').length;
@@ -538,10 +537,25 @@ export class CloneOrchestrator {
         }
       }
 
-      // Generate layout + zero-404 infrastructure
+      // Generate layout + zero-404 infrastructure (with retry for transient LLM errors)
       this.progress.emit('generate', 'active', `Generating layout, globals, and zero-404 infrastructure...`);
 
-      const layoutPatches = await this.generateLayout(crawled, assetMap);
+      let layoutPatches: ASTPatch[] = [];
+      for (let layoutAttempt = 1; layoutAttempt <= 3; layoutAttempt++) {
+        try {
+          layoutPatches = await this.generateLayout(crawled, assetMap);
+          break;
+        } catch (layoutErr: any) {
+          if (layoutAttempt < 3 && /503|UNAVAILABLE|overload|rate.?limit/i.test(layoutErr.message || '')) {
+            this.progress.emit('generate', 'active', `LLM busy (attempt ${layoutAttempt}/3), waiting 10s before retry...`);
+            await new Promise(r => setTimeout(r, 10000));
+          } else {
+            this.progress.emit('generate', 'active', `LLM unavailable — generating layout from templates`);
+            layoutPatches = this.generateLayoutFallback(crawled, assetMap);
+            break;
+          }
+        }
+      }
       patches.push(...layoutPatches);
       this.progress.emit('generate', 'active', `Layout + CSS generated — ${layoutPatches.length} files`);
 
@@ -1105,6 +1119,82 @@ Self-contained output.`;
     } else {
       patches.push({ action: 'insert', targetFile: 'src/app/layout.tsx', codeBlock: rawCode });
     }
+
+    return patches;
+  }
+
+  // ─── Layout fallback (no LLM) ───────────────────────────────────
+
+  private generateLayoutFallback(pages: CrawledPage[], assetMap: Map<string, string>): ASTPatch[] {
+    const patches: ASTPatch[] = [];
+    const home = pages.find(p => p.pagePath === '/') || pages[0]!;
+    const title = home?.title || 'Website Clone';
+
+    const navLinks = pages.map(p => {
+      const label = p.navItems.length > 0 ? p.navItems[0]!.label : p.pagePath === '/' ? 'Home' : p.pagePath.split('/').filter(Boolean).pop() || p.pagePath;
+      return { label, href: p.pagePath === '/' ? '/' : p.pagePath };
+    }).filter((v, i, a) => a.findIndex(x => x.href === v.href) === i).slice(0, 20);
+
+    const layout = `import type { Metadata } from 'next';
+import Link from 'next/link';
+import './globals.css';
+
+const siteTitle = ${JSON.stringify(title)};
+
+export const metadata: Metadata = {
+  title: siteTitle,
+  description: ${JSON.stringify(title + ' — cloned website')},
+};
+
+const nav = ${JSON.stringify(navLinks)};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', background: '#fff', color: '#111' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1rem 2rem', borderBottom: '1px solid #e5e7eb', background: '#fff', position: 'sticky', top: 0, zIndex: 50 }}>
+          <Link href="/" style={{ fontWeight: 700, fontSize: '1.25rem', textDecoration: 'none', color: '#111' }}>{siteTitle}</Link>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {nav.map((l) => (
+              <Link key={l.href} href={l.href} style={{ textDecoration: 'none', color: '#555', fontSize: '0.9rem' }}>{l.label}</Link>
+            ))}
+          </div>
+        </nav>
+        <main>{children}</main>
+        <footer style={{ borderTop: '1px solid #e5e7eb', padding: '2rem', textAlign: 'center', color: '#999', fontSize: '0.85rem' }}>
+          &copy; {new Date().getFullYear()} {siteTitle}. All rights reserved.
+        </footer>
+      </body>
+    </html>
+  );
+}
+`;
+    patches.push({ action: 'insert', targetFile: 'src/app/layout.tsx', codeBlock: layout });
+
+    const globals = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #111;
+  --background: #fff;
+  --primary: ${home?.designTokens.colors[0] || '#2563eb'};
+  --secondary: ${home?.designTokens.colors[1] || '#64748b'};
+}
+
+* { box-sizing: border-box; }
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  margin: 0;
+}
+
+a { color: inherit; text-decoration: none; }
+
+img { max-width: 100%; height: auto; }
+`;
+    patches.push({ action: 'insert', targetFile: 'src/app/globals.css', codeBlock: globals });
 
     return patches;
   }

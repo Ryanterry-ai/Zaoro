@@ -176,7 +176,7 @@ if (usePipeline) {
   } catch (err) { log('error', 'Build failed: ' + (err.message || err)); }
 }
 `;
-    const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.mts`);
+    const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.ts`);
     fs.writeFileSync(scriptPath, buildScript, 'utf-8');
 
     const { exec } = await import('child_process');
@@ -201,7 +201,7 @@ if (usePipeline) {
 
     const buildLogPath = path.join(wsDir, '.build-debug.log');
     child = exec(
-      `npx tsx .build-temp-${job.id}.mts`,
+      `npx tsx .build-temp-${job.id}.ts`,
       { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_NO_WARNINGS: '1' } }
     );
     job.pid = child.pid;

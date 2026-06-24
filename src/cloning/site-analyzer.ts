@@ -153,7 +153,9 @@ export class SiteAnalyzer {
 
   private parseSitemapXml(xml: string, origin: string): SitemapEntry[] {
     const entries: SitemapEntry[] = [];
-    const urlBlocks = xml.split('<url>').slice(1);
+    // Strip CDATA sections: <![CDATA[content]]> → content
+    const cleanXml = xml.replace(/<!\[CDATA\[(.*?)\]\]>/gs, '$1');
+    const urlBlocks = cleanXml.split('<url>').slice(1);
 
     for (const block of urlBlocks) {
       const loc = block.match(/<loc>(.*?)<\/loc>/)?.[1];
