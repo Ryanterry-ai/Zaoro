@@ -1,5 +1,7 @@
-import { BusinessType, ProjectBlueprint, BlueprintPage, BlueprintLayout, BlueprintComponent, BlueprintIntegration, DataModel, DesignTokens } from './types.js';
+import { BusinessType, type ProjectBlueprint, BlueprintPage, BlueprintLayout, BlueprintComponent, BlueprintIntegration, DataModel, DesignTokens } from './types.js';
 import { BusinessClassifier } from './business-classifier.js';
+
+export type { ProjectBlueprint };
 
 interface BlueprintTemplate {
   businessType: BusinessType;

@@ -12,6 +12,7 @@ import { AssemblyQA, AssemblyResult } from './assembly-qa.js';
 import { createDomainSynthesisAsync, synthesizeDomainSection, DomainSynthesisContext } from './domain-synthesizer.js';
 import { IntentDNAExtractor, IntentDNA } from './intent-dna.js';
 import { FeatureEnricher, EnrichedIntent } from './feature-enricher.js';
+import { ProjectBlueprintGenerator, ProjectBlueprint } from './project-blueprint.js';
 import { LLMGateway } from '../core/llm-gateway.js';
 import { LLMConfig, ASTPatch } from '../types/index.js';
 import { BuildProgressEvent, BuildStage, createBuildState, BuildState } from '../engine/build-progress.js';
@@ -24,6 +25,7 @@ export interface PipelineResult {
   success: boolean;
   intent: IntentDNA;
   enriched: EnrichedIntent;
+  blueprint: ProjectBlueprint;
   decision: ArchitectDecision;
   designSystem: DesignSystem;
   research: ResearchResult;
@@ -44,6 +46,7 @@ export interface PipelineResult {
 interface PipelineContext {
   intent: IntentDNA;
   enriched: EnrichedIntent;
+  blueprint: ProjectBlueprint;
   decision: ArchitectDecision;
   designSystem: DesignSystem;
   research: ResearchResult;
@@ -207,10 +210,22 @@ export class PipelineOrchestrator {
       interactions: enriched.interaction_map.length,
     });
 
-    // ═══ Stage 4: Architect (uses IntentDNA for informed decisions) ═══
+    // ═══ Stage 4: Project Blueprint (template-based structure) ═════
+    this.emit('architect', 'active', `Generating project blueprint — pages, layouts, components, database models...`);
+    const blueprintGen = new ProjectBlueprintGenerator();
+    const blueprint = blueprintGen.generateFromPrompt(prompt, intent.app_name);
+    this.emit('architect', 'active', `Blueprint: ${blueprint.pages.length} pages, ${blueprint.components.length} components, ${blueprint.layouts.length} layouts, ${blueprint.integrations.length} integrations`);
+    this.emit('architect', 'done', `Project blueprint complete — ${blueprint.businessType} type, ${blueprint.pages.length} pages`, {
+      businessType: blueprint.businessType,
+      pages: blueprint.pages.map(p => ({ name: p.name, route: p.route, type: p.type })),
+      components: blueprint.components.map(c => ({ name: c.name, type: c.type })),
+      integrations: blueprint.integrations.map(i => ({ name: i.name, type: i.type })),
+    });
+
+    // ═══ Stage 5: Architect (uses IntentDNA + Blueprint) ═════════════
     this.emit('design', 'active', `Generating design system — typography, colors, spacing, layout...`);
     const architect = new ArchitectAgent();
-    // Pass structured prompt incorporating IntentDNA so architect doesn't re-infer from raw text
+    // Pass structured prompt incorporating IntentDNA + Blueprint so architect doesn't re-infer from raw text
     const enrichedPrompt = [
       prompt,
       `App name: ${intent.app_name}`,
@@ -221,6 +236,9 @@ export class PipelineOrchestrator {
       `UI sections: ${intent.ui_sections.map(s => s.type).join(', ')}`,
       `Design style: ${intent.design_style}`,
       `Color palette: ${intent.color_palette.join(', ')}`,
+      `Blueprint pages: ${blueprint.pages.map(p => `${p.name}(${p.route})`).join(', ')}`,
+      `Blueprint components: ${blueprint.components.map(c => c.name).join(', ')}`,
+      `Blueprint layouts: ${blueprint.layouts.map(l => l.name).join(', ')}`,
     ].join('\n');
     const decision = architect.designArchitecture(enrichedPrompt);
     const designSystem = generateDesignSystem(decision);
@@ -300,6 +318,7 @@ export class PipelineOrchestrator {
     let ctx: PipelineContext = {
       intent,
       enriched,
+      blueprint,
       decision,
       designSystem,
       research,
@@ -422,6 +441,21 @@ export class PipelineOrchestrator {
 
     this.emit('compile', 'done', `Compilation complete — ${patches.length} patches`);
 
+    // ═══ Build Verification (runs `next build` to catch real errors) ═══
+    let buildReport: { success: boolean; buildErrors: string[]; buildDuration: number } | undefined;
+    try {
+      this.emit('compile', 'active', `Running next build to verify compilation...`);
+      const buildRunner = new BuildRunner(this.workspaceRoot, { port: 3456 }, this.logFn);
+      buildReport = await buildRunner.runBuild();
+      if (buildReport.success) {
+        this.emit('compile', 'active', `Build succeeded in ${(buildReport.buildDuration / 1000).toFixed(1)}s — ${buildReport.buildErrors.length} errors`);
+      } else {
+        this.emit('compile', 'active', `Build failed: ${buildReport.buildErrors.slice(0, 3).join('; ')}`);
+      }
+    } catch (err: any) {
+      this.emit('compile', 'active', `Build verification skipped: ${err.message}`);
+    }
+
     // ═══ Sprint B: Browser Verification ═════════════════════════
     let verificationResult: VerificationResult | undefined;
     let repairResult: RepairResult | undefined;
@@ -530,6 +564,7 @@ export class PipelineOrchestrator {
       success: true,
       intent,
       enriched,
+      blueprint,
       decision,
       designSystem,
       research,
