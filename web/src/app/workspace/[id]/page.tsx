@@ -28,8 +28,7 @@ interface ClonePhase {
 const BUILD_PIPELINE = [
   { id: "bi", label: "BI" },
   { id: "research", label: "Research" },
-  { id: "intent", label: "Intent" },
-  { id: "enrich", label: "Enrich" },
+  { id: "design-dna", label: "Design DNA" },
   { id: "architect", label: "Architect" },
   { id: "design", label: "Design" },
   { id: "components", label: "Components" },

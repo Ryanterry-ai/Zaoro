@@ -5,6 +5,7 @@ export type BuildStage =
   | 'bi'            // Business Intelligence
   | 'research'      // Research Agent
   | 'architect'     // Architect
+  | 'design-dna'    // Design DNA Generation
   | 'design'        // Design System
   | 'components'    // Component Sourcer
   | 'assets'        // Asset Intelligence
@@ -78,7 +79,7 @@ export interface BuildState {
 export function createBuildState(prompt: string): BuildState {
   const now = Date.now();
   const stageIds: BuildStage[] = [
-    'bi', 'research', 'architect', 'design', 'components', 'assets',
+    'bi', 'research', 'architect', 'design-dna', 'design', 'components', 'assets',
     'motion', 'synthesize', 'ux-eval', 'biz-eval', 'assembly',
     'correction', 'compile', 'browser-verify', 'repair', 'preview', 'complete',
   ];

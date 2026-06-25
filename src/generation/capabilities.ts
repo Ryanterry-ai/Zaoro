@@ -11,13 +11,13 @@ const CAPABILITY_REGISTRY: CapabilityDefinition[] = [
   {
     name: 'generate-app',
     description: 'Generate a complete Next.js application from a natural language prompt',
-    requiredModules: ['project-blueprint', 'business-classifier'],
+    requiredModules: ['business-classifier'],
     futureDependencies: ['llm-provider', 'template-engine'],
   },
   {
     name: 'generate-website',
     description: 'Generate a multi-page website from a natural language prompt',
-    requiredModules: ['project-blueprint', 'business-classifier'],
+    requiredModules: ['business-classifier'],
     futureDependencies: ['llm-provider', 'template-engine', 'cms-connector'],
   },
   {

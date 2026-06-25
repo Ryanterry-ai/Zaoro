@@ -134,7 +134,9 @@ export class PipelineOrchestrator {
   private flushState() {
     try {
       fs.writeFileSync(this.stateFile, JSON.stringify(this.buildState, null, 2), 'utf-8');
-    } catch {}
+    } catch (err: any) {
+      console.error(`[pipeline] Failed to flush build state to ${this.stateFile}:`, err.message);
+    }
   }
 
   async run(prompt: string): Promise<PipelineResult> {
@@ -162,11 +164,11 @@ export class PipelineOrchestrator {
     });
 
     // ═══ Stage 2: Design DNA Generation ═════════════════════════
-    this.emit('design', 'active', `Generating Design DNA — unified visual system from intent...`);
+    this.emit('design-dna', 'active', `Generating Design DNA — unified visual system from intent...`);
     const designDNA = generateDesignDNA(intent);
-    this.emit('design', 'active', `Design DNA: personality=${designDNA.brandPersonality}, style=${designDNA.designStyle}, palette=${designDNA.colors.paletteName}`);
-    this.emit('design', 'active', `Typography: ${designDNA.typography.heading.split(',')[0]} / ${designDNA.typography.body.split(',')[0]}, baseUnit=${designDNA.spacing.baseUnit}`);
-    this.emit('design', 'done', `Design DNA complete — 19 subsystems mapped (colors, typography, spacing, radius, shadows, motion, icons, photography, illustration, charts, tables, forms, buttons, cards, navigation, layout)`, {
+    this.emit('design-dna', 'active', `Design DNA: personality=${designDNA.brandPersonality}, style=${designDNA.designStyle}, palette=${designDNA.colors.paletteName}`);
+    this.emit('design-dna', 'active', `Typography: ${designDNA.typography.heading.split(',')[0]} / ${designDNA.typography.body.split(',')[0]}, baseUnit=${designDNA.spacing.baseUnit}`);
+    this.emit('design-dna', 'done', `Design DNA complete — 19 subsystems mapped (colors, typography, spacing, radius, shadows, motion, icons, photography, illustration, charts, tables, forms, buttons, cards, navigation, layout)`, {
       personality: designDNA.brandPersonality,
       style: designDNA.designStyle,
       palette: designDNA.colors.paletteName,

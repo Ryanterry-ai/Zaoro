@@ -135,16 +135,6 @@ if (usePipeline) {
     (step, msg) => log(step, msg),
   );
   try {
-    log('bi', 'Stage 1: Business Intelligence analysis...');
-    log('research', 'Stage 2: Researching competitors and market...');
-    log('architect', 'Stage 3: Designing application architecture...');
-    log('design', 'Stage 4: Generating design system...');
-    log('components', 'Stage 5: Sourcing production components...');
-    log('assets', 'Stage 6: Planning images and icons...');
-    log('motion', 'Stage 7: Planning animations and interactions...');
-    log('llm', 'Stage 8: Synthesizing sections with AI...');
-    log('eval', 'Stage 9-10: Evaluating UX and business impact...');
-    log('assembly', 'Stage 11: Assembling final output...');
     const result = await orch.run(payload.prompt);
     log('compile', 'Compiling and validating...');
     await new Promise(r => setTimeout(r, 100));
