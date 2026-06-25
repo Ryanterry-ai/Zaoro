@@ -3,6 +3,7 @@ import { DomainContext, detectDomain } from './domain-detector.js';
 import { DomainMockData, getDomainData, getSectionData } from './domain-data.js';
 import { resolveDomainImages, ResolvedImages, SVG_ICONS, resolveIconSvg, resolveDashboardMockup } from './image-resolver.js';
 import { WebResearcher, WebResearchData } from './web-researcher.js';
+import { DesignDNA } from './design-dna.js';
 
 function escapeJSX(s: string): string {
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -14,9 +15,10 @@ export interface DomainSynthesisContext {
   images: ResolvedImages;
   decision: ArchitectDecision;
   webResearch?: WebResearchData | undefined;
+  designDNA?: DesignDNA | undefined;
 }
 
-export async function createDomainSynthesisAsync(prompt: string, decision: ArchitectDecision): Promise<DomainSynthesisContext> {
+export async function createDomainSynthesisAsync(prompt: string, decision: ArchitectDecision, designDNA?: DesignDNA): Promise<DomainSynthesisContext> {
   const domain = detectDomain(prompt);
   const data = getDomainData(domain.industry, domain.subIndustry);
   const images = resolveDomainImages(
@@ -38,10 +40,10 @@ export async function createDomainSynthesisAsync(prompt: string, decision: Archi
     console.warn(`[domain-synth] Web research failed (using mock data): ${err.message}`);
   }
 
-  return { domain, data, images, decision, webResearch };
+  return { domain, data, images, decision, webResearch, designDNA };
 }
 
-export function createDomainSynthesis(prompt: string, decision: ArchitectDecision): DomainSynthesisContext {
+export function createDomainSynthesis(prompt: string, decision: ArchitectDecision, designDNA?: DesignDNA): DomainSynthesisContext {
   const domain = detectDomain(prompt);
   const data = getDomainData(domain.industry, domain.subIndustry);
   const images = resolveDomainImages(
@@ -53,7 +55,7 @@ export function createDomainSynthesis(prompt: string, decision: ArchitectDecisio
   console.log(`[domain-synth] Detected: ${domain.industry}/${domain.subIndustry || 'general'} mood=${domain.mood}`);
   console.log(`[domain-synth] Sections: ${domain.suggestedSections.join(', ')}`);
 
-  return { domain, data, images, decision };
+  return { domain, data, images, decision, designDNA };
 }
 
 export function synthesizeDomainHero(ctx: DomainSynthesisContext): string {

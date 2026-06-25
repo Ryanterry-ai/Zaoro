@@ -1,6 +1,7 @@
 import { ArchitectDecision } from './architect.js';
 import { DesignSystem } from './design-system-generator.js';
 import { ComponentPlan } from './component-sourcer.js';
+import { DesignDNA } from './design-dna.js';
 
 export interface MotionProfile {
   name: string;
@@ -158,14 +159,15 @@ export class MotionEngine {
     decision: ArchitectDecision,
     designSystem: DesignSystem,
     componentPlan: ComponentPlan,
+    designDNA?: DesignDNA,
   ): MotionPlan {
     const mood = designSystem.motion;
 
     console.log(`[motion-engine] Planning animations for ${decision.pages.length} pages`);
 
     const sectionAnimations = this.planSectionAnimations(decision);
-    const globalMotion = this.planGlobalMotion(mood);
-    const microInteractions = this.planMicroInteractions();
+    const globalMotion = this.planGlobalMotion(mood, designDNA);
+    const microInteractions = this.planMicroInteractions(designDNA);
 
     console.log(`[motion-engine] ${sectionAnimations.length} section animations, ${microInteractions.length} micro-interactions`);
 
@@ -196,16 +198,35 @@ export class MotionEngine {
     return sections;
   }
 
-  private planGlobalMotion(motion: DesignSystem['motion']): GlobalMotion {
+  private planGlobalMotion(motion: DesignSystem['motion'], designDNA?: DesignDNA): GlobalMotion {
+    // Use DesignDNA motion presets when available
+    const dnaMotion = designDNA?.motion;
+    const duration = dnaMotion ? `${dnaMotion.duration.normal}ms` : motion.transitionDuration;
+    const easing = dnaMotion?.easing.default || motion.transitionEasing;
+    const stagger = dnaMotion ? `${dnaMotion.stagger.children}ms` : motion.staggerDelay;
+
     return {
-      pageTransition: `transition-opacity ${motion.transitionDuration} ${motion.transitionEasing}`,
-      scrollReveal: `opacity-0 translate-y-4 → opacity-1 translate-y-0 (${motion.transitionDuration})`,
+      pageTransition: `transition-opacity ${duration} ${easing}`,
+      scrollReveal: `opacity-0 translate-y-4 → opacity-1 translate-y-0 (${duration})`,
       loadingState: `animate-pulse bg-zinc-800 rounded`,
-      staggerDefault: motion.staggerDelay,
+      staggerDefault: stagger,
     };
   }
 
-  private planMicroInteractions(): MicroInteraction[] {
+  private planMicroInteractions(designDNA?: DesignDNA): MicroInteraction[] {
+    // Override micro-interactions with DesignDNA gesture settings
+    const dnaGesture = designDNA?.motion.gesture;
+    if (dnaGesture) {
+      return MICRO_INTERACTIONS.map(mi => {
+        if (mi.interaction === 'hover' && mi.component === 'Button') {
+          return { ...mi, css: `hover:scale-[${dnaGesture.hover.scale}] hover:shadow-md transition-all duration-${dnaGesture.hover.duration}` };
+        }
+        if (mi.interaction === 'active' && mi.component === 'Button') {
+          return { ...mi, css: `active:scale-[${dnaGesture.tap.scale}] transition-transform duration-${dnaGesture.tap.duration}` };
+        }
+        return mi;
+      });
+    }
     return MICRO_INTERACTIONS;
   }
 

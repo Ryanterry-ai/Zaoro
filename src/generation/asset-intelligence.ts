@@ -2,6 +2,7 @@ import { ArchitectDecision } from './architect.js';
 import { DesignSystem } from './design-system-generator.js';
 import { ResearchResult } from './research-agent.js';
 import { DomainContext } from './domain-detector.js';
+import { DesignDNA } from './design-dna.js';
 
 export interface AssetPlan {
   images: ImageAsset[];
@@ -171,15 +172,16 @@ export class AssetIntelligence {
     designSystem: DesignSystem,
     research: ResearchResult,
     domain?: DomainContext,
+    designDNA?: DesignDNA,
   ): AssetPlan {
     const industry = domain?.industry || decision.businessType || 'saas';
-    const mood = decision.colorScheme.mood || 'premium';
+    const mood = designDNA?.brandPersonality || decision.colorScheme.mood || 'premium';
 
     console.log(`[asset-intelligence] Planning assets for ${industry} (${mood})`);
 
-    const images = this.planImages(industry, decision, domain);
-    const icons = this.planIcons(industry);
-    const illustrations = this.planIllustrations(mood);
+    const images = this.planImages(industry, decision, domain, designDNA);
+    const icons = this.planIcons(industry, designDNA);
+    const illustrations = this.planIllustrations(mood, designDNA);
 
     const totalSize = images.length * 200 + icons.length * 1 + illustrations.length * 0.5;
 
@@ -188,9 +190,13 @@ export class AssetIntelligence {
     return { images, icons, illustrations, totalEstimatedSize: totalSize };
   }
 
-  private planImages(industry: string, decision: ArchitectDecision, domain?: DomainContext): ImageAsset[] {
+  private planImages(industry: string, decision: ArchitectDecision, domain?: DomainContext, designDNA?: DesignDNA): ImageAsset[] {
+    // Use DesignDNA photography queries when available
+    const dnaQueries = designDNA?.photography.queryTemplates;
     const defaultQueries = { hero: ['business'], products: ['product'], team: ['team'], features: ['feature'] };
-    const queries = INDUSTRY_IMAGE_QUERIES[industry] || INDUSTRY_IMAGE_QUERIES.saas || defaultQueries;
+    const queries = dnaQueries
+      ? { hero: dnaQueries, products: dnaQueries, team: dnaQueries, features: dnaQueries }
+      : INDUSTRY_IMAGE_QUERIES[industry] || INDUSTRY_IMAGE_QUERIES.saas || defaultQueries;
     const images: ImageAsset[] = [];
 
     const hero0 = queries.hero[0] || 'business';
@@ -281,7 +287,19 @@ export class AssetIntelligence {
     return images;
   }
 
-  private planIcons(industry: string): IconAsset[] {
+  private planIcons(industry: string, designDNA?: DesignDNA): IconAsset[] {
+    // Use DesignDNA icon mapping when available
+    if (designDNA?.icons.mapping) {
+      const entries = Object.entries(designDNA.icons.mapping).slice(0, 8);
+      return entries.map(([category, name]) => ({
+        id: `icon-${category}`,
+        name,
+        category,
+        source: 'lucide' as const,
+        svg: undefined,
+        size: 'md',
+      }));
+    }
     const iconDefs = INDUSTRY_ICONS[industry] || INDUSTRY_ICONS.saas || [];
     return iconDefs.map(def => ({
       id: `icon-${def.name.toLowerCase()}`,
@@ -293,7 +311,18 @@ export class AssetIntelligence {
     }));
   }
 
-  private planIllustrations(mood: string): IllustrationAsset[] {
+  private planIllustrations(mood: string, designDNA?: DesignDNA): IllustrationAsset[] {
+    // Use DesignDNA illustration style when available
+    if (designDNA?.illustration) {
+      const ill = designDNA.illustration;
+      return [{
+        id: `dna-${ill.style}-1`,
+        purpose: 'hero background',
+        style: ill.style === 'abstract' ? 'abstract' : ill.style === 'line' ? 'pattern' : 'gradient',
+        colors: [designDNA.colors.primary, designDNA.colors.secondary],
+        css: `bg-gradient-to-br from-primary/20 via-transparent to-secondary/20`,
+      }];
+    }
     return MOOD_ILLUSTRATIONS[mood] || MOOD_ILLUSTRATIONS.premium || [];
   }
 

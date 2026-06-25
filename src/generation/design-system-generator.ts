@@ -1,5 +1,6 @@
 import { ArchitectDecision } from './architect.js';
 import { DomainContext } from './domain-detector.js';
+import { DesignDNA } from './design-dna.js';
 
 export interface DesignSystem {
   typography: TypographySystem;
@@ -263,10 +264,12 @@ const LAYOUT_PRESETS: Record<string, LayoutSystem> = {
 export function generateDesignSystem(
   decision: ArchitectDecision,
   domain?: DomainContext,
+  designDNA?: DesignDNA,
 ): DesignSystem {
-  const mood = decision.colorScheme.mood || 'premium';
+  const mood = designDNA?.brandPersonality || decision.colorScheme.mood || 'premium';
   const businessType = decision.businessType || 'saas';
 
+  // Use DesignDNA typography if available, otherwise fall back to presets
   const typographyPreset = MOODTypography[mood] || 'premium';
   const fontConfig = TYPOGRAPHY_PRESETS[typographyPreset] || TYPOGRAPHY_PRESETS.premium;
 
@@ -276,23 +279,43 @@ export function generateDesignSystem(
   const layout = LAYOUT_PRESETS[businessType] || LAYOUT_PRESETS.saas || defaultLayout;
   const motion = MOOD_MOTION[mood] || MOOD_MOTION.premium || defaultMotion;
 
+  // Override with DesignDNA values when available
   const typography: TypographySystem = {
     fontFamily: {
-      heading: fontConfig?.heading || 'Inter',
-      body: fontConfig?.body || 'Inter',
-      mono: fontConfig?.mono || 'Fira Code',
+      heading: designDNA?.typography.heading || fontConfig?.heading || 'Inter',
+      body: designDNA?.typography.body || fontConfig?.body || 'Inter',
+      mono: designDNA?.typography.mono || fontConfig?.mono || 'Fira Code',
     },
     scale: fontConfig?.scale || (TYPOGRAPHY_PRESETS.premium as NonNullable<typeof TYPOGRAPHY_PRESETS['premium']>).scale,
-    googleFontsUrl: buildGoogleFontsUrl(fontConfig?.heading || 'Inter', fontConfig?.body || 'Inter'),
+    googleFontsUrl: designDNA?.typography.googleFontsUrl || buildGoogleFontsUrl(fontConfig?.heading || 'Inter', fontConfig?.body || 'Inter'),
   };
 
   const colors = buildColorSystem(colorNames?.primary || '#7c3aed', colorNames?.secondary || '#2563eb', colorNames?.accent || '#06b6d4', mood);
 
-  const spacing = buildSpacingSystem(mood);
+  // Override spacing with DesignDNA values
+  const spacing = designDNA ? {
+    scale: designDNA.spacing.scale,
+    sectionPadding: designDNA.spacing.section.sm || 'py-16 sm:py-20',
+    containerMaxWidth: designDNA.spacing.container.maxWidth || 'max-w-7xl',
+    gridGap: designDNA.spacing.grid.gap || 'gap-6',
+    cardPadding: designDNA.spacing.card.padding || 'p-6',
+  } : buildSpacingSystem(mood);
 
-  const shadows = buildShadowSystem(mood);
+  // Override shadows with DesignDNA values
+  const shadows = designDNA ? {
+    card: designDNA.shadows.card,
+    elevated: designDNA.shadows.lg,
+    glow: designDNA.shadows.glow,
+    input: designDNA.shadows.input,
+  } : buildShadowSystem(mood);
 
-  const borders = buildBorderSystem(mood);
+  // Override borders with DesignDNA radius
+  const borders = designDNA ? {
+    card: designDNA.cards.border,
+    input: 'border border-border',
+    button: 'border',
+    radius: { sm: designDNA.radius.sm, md: designDNA.radius.md, lg: designDNA.radius.lg, xl: designDNA.radius.xl, full: designDNA.radius.full },
+  } : buildBorderSystem(mood);
 
   const breakpoints: BreakpointSystem = {
     sm: '640px',

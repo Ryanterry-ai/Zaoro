@@ -12,7 +12,7 @@ import { AssemblyQA, AssemblyResult } from './assembly-qa.js';
 import { createDomainSynthesisAsync, synthesizeDomainSection, DomainSynthesisContext } from './domain-synthesizer.js';
 import { IntentDNAExtractor, IntentDNA } from './intent-dna.js';
 import { FeatureEnricher, EnrichedIntent } from './feature-enricher.js';
-import { ProjectBlueprintGenerator, ProjectBlueprint } from './project-blueprint.js';
+import { generateDesignDNA, DesignDNA } from './design-dna.js';
 import { LLMGateway } from '../core/llm-gateway.js';
 import { LLMConfig, ASTPatch } from '../types/index.js';
 import { BuildProgressEvent, BuildStage, createBuildState, BuildState } from '../engine/build-progress.js';
@@ -24,8 +24,8 @@ import { RepairLoop, RepairResult } from '../engine/repair-loop.js';
 export interface PipelineResult {
   success: boolean;
   intent: IntentDNA;
+  designDNA: DesignDNA;
   enriched: EnrichedIntent;
-  blueprint: ProjectBlueprint;
   decision: ArchitectDecision;
   designSystem: DesignSystem;
   research: ResearchResult;
@@ -45,8 +45,8 @@ export interface PipelineResult {
 
 interface PipelineContext {
   intent: IntentDNA;
+  designDNA: DesignDNA;
   enriched: EnrichedIntent;
-  blueprint: ProjectBlueprint;
   decision: ArchitectDecision;
   designSystem: DesignSystem;
   research: ResearchResult;
@@ -161,7 +161,21 @@ export class PipelineOrchestrator {
       },
     });
 
-    // ═══ Stage 2: Research Agent ═════════════════════════════════
+    // ═══ Stage 2: Design DNA Generation ═════════════════════════
+    this.emit('design', 'active', `Generating Design DNA — unified visual system from intent...`);
+    const designDNA = generateDesignDNA(intent);
+    this.emit('design', 'active', `Design DNA: personality=${designDNA.brandPersonality}, style=${designDNA.designStyle}, palette=${designDNA.colors.paletteName}`);
+    this.emit('design', 'active', `Typography: ${designDNA.typography.heading.split(',')[0]} / ${designDNA.typography.body.split(',')[0]}, baseUnit=${designDNA.spacing.baseUnit}`);
+    this.emit('design', 'done', `Design DNA complete — 19 subsystems mapped (colors, typography, spacing, radius, shadows, motion, icons, photography, illustration, charts, tables, forms, buttons, cards, navigation, layout)`, {
+      personality: designDNA.brandPersonality,
+      style: designDNA.designStyle,
+      palette: designDNA.colors.paletteName,
+      typography: { heading: designDNA.typography.heading.split(',')[0], body: designDNA.typography.body.split(',')[0] },
+      spacing: designDNA.spacing.baseUnit,
+      layout: designDNA.layout.heroLayout,
+    });
+
+    // ═══ Stage 3: Research Agent ═════════════════════════════════
     this.emit('research', 'active', `Researching competitors, market insights, and content strategy...`);
     const researcher = new ResearchAgent();
     const domainContext = { industry: intent.business_domain };
@@ -210,22 +224,10 @@ export class PipelineOrchestrator {
       interactions: enriched.interaction_map.length,
     });
 
-    // ═══ Stage 4: Project Blueprint (template-based structure) ═════
-    this.emit('architect', 'active', `Generating project blueprint — pages, layouts, components, database models...`);
-    const blueprintGen = new ProjectBlueprintGenerator();
-    const blueprint = blueprintGen.generateFromPrompt(prompt, intent.app_name);
-    this.emit('architect', 'active', `Blueprint: ${blueprint.pages.length} pages, ${blueprint.components.length} components, ${blueprint.layouts.length} layouts, ${blueprint.integrations.length} integrations`);
-    this.emit('architect', 'done', `Project blueprint complete — ${blueprint.businessType} type, ${blueprint.pages.length} pages`, {
-      businessType: blueprint.businessType,
-      pages: blueprint.pages.map(p => ({ name: p.name, route: p.route, type: p.type })),
-      components: blueprint.components.map(c => ({ name: c.name, type: c.type })),
-      integrations: blueprint.integrations.map(i => ({ name: i.name, type: i.type })),
-    });
-
-    // ═══ Stage 5: Architect (uses IntentDNA + Blueprint) ═════════════
+    // ═══ Stage 5: Architect (uses IntentDNA + Design DNA for informed decisions) ═══
     this.emit('design', 'active', `Generating design system — typography, colors, spacing, layout...`);
     const architect = new ArchitectAgent();
-    // Pass structured prompt incorporating IntentDNA + Blueprint so architect doesn't re-infer from raw text
+    // Pass structured prompt incorporating IntentDNA and Design DNA so architect doesn't re-infer from raw text
     const enrichedPrompt = [
       prompt,
       `App name: ${intent.app_name}`,
@@ -236,12 +238,12 @@ export class PipelineOrchestrator {
       `UI sections: ${intent.ui_sections.map(s => s.type).join(', ')}`,
       `Design style: ${intent.design_style}`,
       `Color palette: ${intent.color_palette.join(', ')}`,
-      `Blueprint pages: ${blueprint.pages.map(p => `${p.name}(${p.route})`).join(', ')}`,
-      `Blueprint components: ${blueprint.components.map(c => c.name).join(', ')}`,
-      `Blueprint layouts: ${blueprint.layouts.map(l => l.name).join(', ')}`,
+      `Design DNA: personality=${designDNA.brandPersonality}, style=${designDNA.designStyle}, palette=${designDNA.colors.paletteName}`,
+      `Typography: heading=${designDNA.typography.heading.split(',')[0]}, body=${designDNA.typography.body.split(',')[0]}`,
+      `Layout: hero=${designDNA.layout.heroLayout}, density=${designDNA.layout.density}, nav=${designDNA.navigation.type}`,
     ].join('\n');
     const decision = architect.designArchitecture(enrichedPrompt);
-    const designSystem = generateDesignSystem(decision);
+    const designSystem = generateDesignSystem(decision, undefined, designDNA);
     this.emit('design', 'active', `Typography: ${Object.keys(designSystem.typography.scale).length} scales, ${designSystem.typography.fontFamily.heading}/${designSystem.typography.fontFamily.body}`);
     this.emit('design', 'active', `Colors: primary=${designSystem.colors.primary[500]}, accent=${designSystem.colors.accent[500]}`);
     this.emit('design', 'active', `Spacing: ${Object.keys(designSystem.spacing.scale).length} scales, container=${designSystem.layout.containerClass}`);
@@ -267,7 +269,7 @@ export class PipelineOrchestrator {
     // ═══ Stage 6: Asset Intelligence ═════════════════════════════
     this.emit('assets', 'active', `Planning images, icons, and media assets...`);
     const assetIntel = new AssetIntelligence();
-    const assetPlan = assetIntel.planAssets(decision, designSystem, research);
+    const assetPlan = assetIntel.planAssets(decision, designSystem, research, undefined, designDNA);
     this.emit('assets', 'active', `Planned ${assetPlan.images.length} images, ${assetPlan.icons.length} icons, ${assetPlan.illustrations.length} illustrations`);
     for (const img of assetPlan.images.slice(0, 5)) {
       this.emit('assets', 'active', `Image: ${img.query} (${img.purpose}, ${img.priority} priority)`);
@@ -281,7 +283,7 @@ export class PipelineOrchestrator {
     // ═══ Stage 7: Motion Engine ═══════════════════════════════════
     this.emit('motion', 'active', `Planning animations and micro-interactions...`);
     const motionEngine = new MotionEngine();
-    const motionPlan = motionEngine.planMotion(decision, designSystem, componentPlan);
+    const motionPlan = motionEngine.planMotion(decision, designSystem, componentPlan, designDNA);
     this.emit('motion', 'active', `Planned ${motionPlan.sectionAnimations.length} section animations, ${motionPlan.microInteractions.length} micro-interactions`);
     for (const anim of motionPlan.sectionAnimations.slice(0, 5)) {
       this.emit('motion', 'active', `Animation: ${anim.sectionType} → ${anim.enter.animation} + ${anim.hover?.animation || 'none'}`);
@@ -297,7 +299,7 @@ export class PipelineOrchestrator {
     let domainCtx: DomainSynthesisContext | undefined;
     try {
       this.emit('synthesize', 'active', `Creating domain synthesis context...`);
-      domainCtx = await createDomainSynthesisAsync(prompt, decision);
+      domainCtx = await createDomainSynthesisAsync(prompt, decision, designDNA);
       this.emit('synthesize', 'active', `Domain context ready — ${domainCtx.domain.industry}, mood=${domainCtx.domain.mood}`);
     } catch {
       this.emit('synthesize', 'active', `Domain synthesis unavailable — using primitives`);
@@ -317,8 +319,8 @@ export class PipelineOrchestrator {
     // ═══ Self-Correction Loop ═════════════════════════════════════
     let ctx: PipelineContext = {
       intent,
+      designDNA,
       enriched,
-      blueprint,
       decision,
       designSystem,
       research,
@@ -441,21 +443,6 @@ export class PipelineOrchestrator {
 
     this.emit('compile', 'done', `Compilation complete — ${patches.length} patches`);
 
-    // ═══ Build Verification (runs `next build` to catch real errors) ═══
-    let buildReport: { success: boolean; buildErrors: string[]; buildDuration: number } | undefined;
-    try {
-      this.emit('compile', 'active', `Running next build to verify compilation...`);
-      const buildRunner = new BuildRunner(this.workspaceRoot, { port: 3456 }, this.logFn);
-      buildReport = await buildRunner.runBuild();
-      if (buildReport.success) {
-        this.emit('compile', 'active', `Build succeeded in ${(buildReport.buildDuration / 1000).toFixed(1)}s — ${buildReport.buildErrors.length} errors`);
-      } else {
-        this.emit('compile', 'active', `Build failed: ${buildReport.buildErrors.slice(0, 3).join('; ')}`);
-      }
-    } catch (err: any) {
-      this.emit('compile', 'active', `Build verification skipped: ${err.message}`);
-    }
-
     // ═══ Sprint B: Browser Verification ═════════════════════════
     let verificationResult: VerificationResult | undefined;
     let repairResult: RepairResult | undefined;
@@ -563,8 +550,8 @@ export class PipelineOrchestrator {
     return {
       success: true,
       intent,
+      designDNA,
       enriched,
-      blueprint,
       decision,
       designSystem,
       research,
