@@ -97,6 +97,9 @@ export class RepairLoop {
 
       // Re-verify after repairs
       if (this.config.autoApply && reports.some(r => r.applied)) {
+        this.log('Writing patches to disk...');
+        await this.applyPatchesToDisk(allPatches);
+
         this.log('Re-verifying after repairs...');
         // Score recalculation based on fixes applied
         const fixedCount = reports.filter(r => r.applied).length;
@@ -252,7 +255,7 @@ Focus on the specific issue. Do not change unrelated code.`;
   private createPatchesFromFix(fix: string): ASTPatch[] {
     const patches: ASTPatch[] = [];
 
-    // Simple extraction of file paths from fix content
+    // Try to extract structured ASTPatch from LLM output
     const fileMatch = fix.match(/(?:targetFile|file)["']?\s*[:=]\s*["']([^"']+)["']/);
     if (fileMatch && fileMatch[1]) {
       patches.push({
@@ -263,5 +266,42 @@ Focus on the specific issue. Do not change unrelated code.`;
     }
 
     return patches;
+  }
+
+  // Write patches to disk so fixes are actually applied
+  async applyPatchesToDisk(patches: ASTPatch[]): Promise<number> {
+    let applied = 0;
+    for (const patch of patches) {
+      try {
+        const filePath = path.join(this.workspaceRoot, patch.targetFile);
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+
+        if (patch.action === 'insert') {
+          // For insert, append to file or create new file
+          if (fs.existsSync(filePath)) {
+            const existing = fs.readFileSync(filePath, 'utf-8');
+            // Only append if content not already present
+            if (!existing.includes(patch.codeBlock.slice(0, 80))) {
+              fs.writeFileSync(filePath, existing + '\n' + patch.codeBlock, 'utf-8');
+              applied++;
+            }
+          } else {
+            fs.writeFileSync(filePath, patch.codeBlock, 'utf-8');
+            applied++;
+          }
+        } else if (patch.action === 'update') {
+          // For update, overwrite file with new code
+          fs.writeFileSync(filePath, patch.codeBlock, 'utf-8');
+          applied++;
+        }
+      } catch (err) {
+        this.log(`Failed to write patch to ${patch.targetFile}: ${(err as Error).message}`);
+      }
+    }
+    this.log(`Applied ${applied}/${patches.length} patches to disk`);
+    return applied;
   }
 }

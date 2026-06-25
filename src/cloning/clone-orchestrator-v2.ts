@@ -697,27 +697,73 @@ export class CloneOrchestrator {
           this.progress.emit('preview', 'active', `[layout] ${msg}`);
         });
 
-        // Run visual diff
-        visualDiffReport = await diffEngine.diff(url, url);
+        // Start local server to serve the generated clone
+        let cloneServerUrl: string | undefined;
+        let cloneServer: { close: () => Promise<void> } | undefined;
+        try {
+          const http = await import('http');
+          const MIME: Record<string, string> = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.ico': 'image/x-icon', '.gif': 'image/gif', '.mp4': 'video/mp4', '.webm': 'video/webm' };
+          const staticRoot = this.workspaceRoot;
 
-        // Run layout detection on both
-        const origPage = await diffEngine['ensureBrowser']().then(b => b.newContext()).then(c => c.newPage());
-        const clonePage = await diffEngine['ensureBrowser']().then(b => b.newContext()).then(c => c.newPage());
+          const srv = http.createServer((req, res) => {
+            const urlPath = (req.url || '/').split('?')[0] || '/';
+            const filePath = path.join(staticRoot, urlPath === '/' ? 'index.html' : urlPath);
+            if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+              const ext = path.extname(filePath).toLowerCase();
+              const mime = MIME[ext] || 'application/octet-stream';
+              res.writeHead(200, { 'Content-Type': mime });
+              fs.createReadStream(filePath).pipe(res);
+            } else {
+              res.writeHead(404);
+              res.end('Not found');
+            }
+          });
 
-        const origSections = await layoutDetector.detectSections(origPage);
-        const cloneSections = await layoutDetector.detectSections(clonePage);
-        layoutComparison = layoutDetector.compare(origSections, cloneSections);
+          await new Promise<void>((resolve) => srv.listen(0, '127.0.0.1', resolve));
+          const port = (srv.address() as any).port;
+          cloneServerUrl = `http://127.0.0.1:${port}`;
+          cloneServer = { close: () => new Promise<void>((r) => srv.close(() => r())) };
+          this.progress.emit('preview', 'active', `Clone dev server started on ${cloneServerUrl}`);
+        } catch (err) {
+          this.progress.emit('preview', 'active', `Could not start clone server: ${(err as Error).message} — skipping visual diff`);
+        }
 
-        await origPage.close();
-        await clonePage.close();
+        // Run visual diff — original vs clone (NOT url vs url)
+        if (cloneServerUrl) {
+          visualDiffReport = await diffEngine.diff(this.state.url, cloneServerUrl);
+        }
+
+        // Run layout detection — navigate pages to actual URLs
+        if (cloneServerUrl) {
+          const origPage = await diffEngine['ensureBrowser']().then(b => b.newContext()).then(c => c.newPage());
+          const clonePage = await diffEngine['ensureBrowser']().then(b => b.newContext()).then(c => c.newPage());
+
+          await origPage.goto(this.state.url, { waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
+          await clonePage.goto(cloneServerUrl, { waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
+
+          const origSections = await layoutDetector.detectSections(origPage);
+          const cloneSections = await layoutDetector.detectSections(clonePage);
+          layoutComparison = layoutDetector.compare(origSections, cloneSections);
+
+          await origPage.close();
+          await clonePage.close();
+        }
+
         await diffEngine.close();
+        if (cloneServer) await cloneServer.close();
 
-        const similarity = visualDiffReport.overallSimilarity.toFixed(1);
-        const structural = layoutComparison.structuralSimilarity.toFixed(1);
-        this.progress.emit('preview', 'active', `Visual diff: ${similarity}% pixel similarity, ${structural}% structural similarity`);
+        if (visualDiffReport) {
+          const similarity = visualDiffReport.overallSimilarity.toFixed(1);
+          this.progress.emit('preview', 'active', `Visual diff: ${similarity}% pixel similarity`);
+        }
 
-        if (layoutComparison.issues.length > 0) {
-          this.progress.emit('preview', 'active', `Layout issues: ${layoutComparison.issues.slice(0, 3).join('; ')}`);
+        if (layoutComparison) {
+          const structural = layoutComparison.structuralSimilarity.toFixed(1);
+          this.progress.emit('preview', 'active', `Structural similarity: ${structural}%`);
+
+          if (layoutComparison.issues.length > 0) {
+            this.progress.emit('preview', 'active', `Layout issues: ${layoutComparison.issues.slice(0, 3).join('; ')}`);
+          }
         }
       } catch (err) {
         this.progress.emit('preview', 'active', `Visual diff skipped: ${(err as Error).message}`);

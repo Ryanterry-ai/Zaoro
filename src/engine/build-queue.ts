@@ -151,7 +151,7 @@ if (usePipeline) {
     log('preview', 'Rendering preview...');
     await new Promise(r => setTimeout(r, 100));
     log('done', 'Pipeline completed! UX: ' + result.uxResult.overall + '/100, Business: ' + result.businessResult.overall + '/100, Build: ' + result.assemblyResult.overallScore + '/100 (' + result.iterations + ' iterations)');
-  } catch (err) { log('error', 'Pipeline failed: ' + (err.message || err)); }
+  } catch (err) { log('error', 'Pipeline failed: ' + (err.message || err)); process.exit(1); }
 } else {
   const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
   const orch = new DeterministicOrchestratorV4(WS_BASE);
@@ -173,7 +173,7 @@ if (usePipeline) {
     log('preview', 'Rendering preview...');
     await new Promise(r => setTimeout(r, 100));
     log('done', 'Build completed! Your application is ready.');
-  } catch (err) { log('error', 'Build failed: ' + (err.message || err)); }
+  } catch (err) { log('error', 'Build failed: ' + (err.message || err)); process.exit(1); }
 }
 `;
     const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.ts`);

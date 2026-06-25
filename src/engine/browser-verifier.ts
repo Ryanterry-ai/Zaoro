@@ -160,6 +160,58 @@ export class BrowserVerifier {
         });
       }
 
+      // Check for blank screen (no visible content)
+      if (this.config.checkContentPresence) {
+        const blankCheck = await page.evaluate(() => {
+          const body = document.body;
+          const text = (body?.innerText || '').trim();
+          const visibleElements = body?.querySelectorAll('div, section, main, article, header, footer, nav, h1, h2, h3, p, span, a, button, img') || [];
+          const hasVisible = Array.from(visibleElements).some(el => {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          return {
+            isEmpty: text.length === 0 && !hasVisible,
+            textLength: text.length,
+            visibleCount: visibleElements.length,
+          };
+        });
+        checks.push({
+          name: `blank-screen-${url}`,
+          passed: !blankCheck.isEmpty,
+          severity: 'error',
+          message: blankCheck.isEmpty
+            ? `Blank screen detected — no visible content on ${url}`
+            : `Page has visible content (${blankCheck.textLength} chars, ${blankCheck.visibleCount} elements)`,
+          details: blankCheck.isEmpty ? [`Text length: ${blankCheck.textLength}, Visible elements: ${blankCheck.visibleCount}`] : [],
+        });
+      }
+
+      // Check for hydration failures (React/Next.js specific)
+      if (this.config.checkConsoleErrors) {
+        const hydrationErrors = result.consoleLogs.filter(l =>
+          l.type === 'error' && (
+            l.text.includes('hydrat') ||
+            l.text.includes('Hydration') ||
+            l.text.includes('server-rendered') ||
+            l.text.includes('client-side')
+          )
+        );
+        const hydrationJsErrors = result.errors.filter(e =>
+          e.includes('hydrat') || e.includes('Hydration') || e.includes('server-rendered')
+        );
+        const hasHydrationIssue = hydrationErrors.length > 0 || hydrationJsErrors.length > 0;
+        checks.push({
+          name: `hydration-${url}`,
+          passed: !hasHydrationIssue,
+          severity: 'error',
+          message: hasHydrationIssue
+            ? `Hydration failure detected on ${url}`
+            : `No hydration issues on ${url}`,
+          details: [...hydrationErrors.map(e => e.text), ...hydrationJsErrors].slice(0, 5),
+        });
+      }
+
       // Check accessibility basics
       if (this.config.checkAccessibility) {
         const a11yIssues = await this.checkAccessibility(page);

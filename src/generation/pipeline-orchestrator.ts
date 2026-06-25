@@ -207,10 +207,22 @@ export class PipelineOrchestrator {
       interactions: enriched.interaction_map.length,
     });
 
-    // ═══ Stage 4: Architect (legacy compat) ═════════════════════
+    // ═══ Stage 4: Architect (uses IntentDNA for informed decisions) ═══
     this.emit('design', 'active', `Generating design system — typography, colors, spacing, layout...`);
     const architect = new ArchitectAgent();
-    const decision = architect.designArchitecture(prompt);
+    // Pass structured prompt incorporating IntentDNA so architect doesn't re-infer from raw text
+    const enrichedPrompt = [
+      prompt,
+      `App name: ${intent.app_name}`,
+      `Business domain: ${intent.business_domain}`,
+      `Key features: ${intent.features.map(f => f.name).join(', ')}`,
+      `Entities: ${intent.entities.map(e => e.name).join(', ')}`,
+      `Workflows: ${intent.workflows.map(w => w.name).join(', ')}`,
+      `UI sections: ${intent.ui_sections.map(s => s.type).join(', ')}`,
+      `Design style: ${intent.design_style}`,
+      `Color palette: ${intent.color_palette.join(', ')}`,
+    ].join('\n');
+    const decision = architect.designArchitecture(enrichedPrompt);
     const designSystem = generateDesignSystem(decision);
     this.emit('design', 'active', `Typography: ${Object.keys(designSystem.typography.scale).length} scales, ${designSystem.typography.fontFamily.heading}/${designSystem.typography.fontFamily.body}`);
     this.emit('design', 'active', `Colors: primary=${designSystem.colors.primary[500]}, accent=${designSystem.colors.accent[500]}`);
