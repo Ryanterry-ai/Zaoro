@@ -47,17 +47,6 @@ const BUILD_PIPELINE = [
   { id: "error", label: "Error" },
 ];
 
-const CLONE_PHASES = [
-  { id: "analyze", label: "Analyze" },
-  { id: "crawl", label: "Crawl" },
-  { id: "assets", label: "Assets" },
-  { id: "generate", label: "Generate" },
-  { id: "self-contain", label: "Contain" },
-  { id: "visual-diff", label: "Diff" },
-  { id: "preview", label: "Preview" },
-  { id: "complete", label: "Done" },
-];
-
 type DeviceFrame = "desktop" | "tablet" | "mobile";
 
 const DEVICE_WIDTHS: Record<DeviceFrame, string> = {
@@ -66,7 +55,6 @@ const DEVICE_WIDTHS: Record<DeviceFrame, string> = {
   mobile: "375px",
 };
 
-type StageStatus = "pending" | "active" | "done" | "error";
 type EngineStatus = "checking" | "online" | "offline";
 
 const MAX_BUILD_RETRIES = 5;
@@ -333,55 +321,10 @@ export default function WorkspacePage() {
     );
   }
 
-  const buildStageOrder = BUILD_PIPELINE.map((p) => p.id);
   const lastBuildStep = steps[steps.length - 1];
   const lastBuildStepId = lastBuildStep?.step || "";
   const buildHasError = lastBuildStepId === "error" || !!buildError;
   const buildIsComplete = lastBuildStepId === "done" || buildDone;
-  const buildActiveIdx = buildIsComplete ? BUILD_PIPELINE.length - 1 : buildHasError ? buildStageOrder.indexOf(lastBuildStepId) : buildStageOrder.indexOf(lastBuildStepId);
-
-  const getBuildStageStatus = (stageId: string, idx: number): StageStatus => {
-    if (buildIsComplete) return "done";
-    if (buildHasError && idx === buildActiveIdx) return "error";
-    if (idx < buildActiveIdx) return "done";
-    if (stageId === lastBuildStepId && !buildIsComplete && !buildHasError) return "active";
-    return "pending";
-  };
-
-  const buildEventCounts: Record<string, number> = {};
-  const buildStageEvents: Record<string, ProgressStep[]> = {};
-  for (const ev of steps) {
-    const stage = ev.step || "unknown";
-    buildEventCounts[stage] = (buildEventCounts[stage] || 0) + 1;
-    if (!buildStageEvents[stage]) buildStageEvents[stage] = [];
-    buildStageEvents[stage].push(ev);
-  }
-
-  const getBuildStageProgress = (stageId: string): { current: number; total: number } | null => {
-    const evts = buildStageEvents[stageId] || [];
-    for (let i = evts.length - 1; i >= 0; i--) {
-      const d = evts[i].data;
-      if (d && typeof d.index === "number" && typeof d.total === "number") {
-        return { current: d.index + 1, total: d.total };
-      }
-    }
-    return null;
-  };
-
-  const lastClonePhase = phases.length > 0 ? (phases[phases.length - 1].phase || phases[phases.length - 1].step || "") : "";
-  const lastCloneStatus = phases.length > 0 ? phases[phases.length - 1].phaseStatus : "";
-  const cloneIsComplete = lastCloneStatus === "done" && lastClonePhase === "complete";
-  const cloneIsFailed = lastCloneStatus === "failed";
-  const clonePhaseOrder = CLONE_PHASES.map((p) => p.id);
-  const cloneActiveIdx = cloneIsComplete ? CLONE_PHASES.length - 1 : cloneIsFailed ? clonePhaseOrder.indexOf(lastClonePhase) : clonePhaseOrder.indexOf(lastClonePhase);
-
-  const getClonePhaseStatus = (phaseId: string, idx: number): StageStatus => {
-    if (cloneIsComplete) return "done";
-    if (cloneIsFailed && idx === cloneActiveIdx) return "error";
-    if (idx < cloneActiveIdx) return "done";
-    if (phaseId === lastClonePhase && !cloneIsComplete && !cloneIsFailed) return "active";
-    return "pending";
-  };
 
   const allEvents = workspaceType === "clone" ? phases : steps;
   const eventCount = allEvents.length;
@@ -435,56 +378,9 @@ export default function WorkspacePage() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* ─── Left Sidebar: Phase Chips + Live Activity ─── */}
+        {/* ─── Left Sidebar: Live Activity ─── */}
         <div className="flex flex-col w-[380px] border-r border-border bg-surface">
-          {/* Phase progress chips — always visible when building */}
-          {workspaceType === "build" && (
-            <div className="px-3 py-2 border-b border-border">
-              <div className="flex items-center gap-1 flex-wrap">
-                {BUILD_PIPELINE.filter((s) => s.id !== "error").map((stage, idx) => {
-                  const status = getBuildStageStatus(stage.id, idx);
-                  const progress = getBuildStageProgress(stage.id);
-                  return (
-                    <span key={stage.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] ${status === "done" ? "bg-green-500/10 text-green-400" : status === "active" ? "bg-accent/10 text-accent" : status === "error" ? "bg-red-500/10 text-red-400" : "text-muted/40"}`}>
-                      {status === "done" ? "✓" : status === "active" ? <span className="animate-pulse">●</span> : status === "error" ? "✕" : "○"}
-                      {stage.label}
-                      {progress && status === "active" && (
-                        <span className="font-mono text-[9px]">{progress.current}/{progress.total}</span>
-                      )}
-                    </span>
-                  );
-                })}
-              </div>
-              {(() => {
-                const activeProgress = getBuildStageProgress(lastBuildStepId);
-                if (!activeProgress || getBuildStageStatus(lastBuildStepId, buildActiveIdx) !== "active") return null;
-                const pct = Math.round((activeProgress.current / activeProgress.total) * 100);
-                return (
-                  <div className="w-full h-1 bg-surface-hover rounded-full mt-1.5 overflow-hidden">
-                    <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          {workspaceType === "clone" && (
-            <div className="px-3 py-2 border-b border-border">
-              <div className="flex items-center gap-1 flex-wrap">
-                {CLONE_PHASES.map((phase, idx) => {
-                  const status = getClonePhaseStatus(phase.id, idx);
-                  return (
-                    <span key={phase.id} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] ${status === "done" ? "bg-green-500/10 text-green-400" : status === "active" ? "bg-accent/10 text-accent" : status === "error" ? "bg-red-500/10 text-red-400" : "text-muted/40"}`}>
-                      {status === "done" ? "✓" : status === "active" ? <span className="animate-pulse">●</span> : status === "error" ? "✕" : "○"}
-                      {phase.label}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Live Activity — fills remaining sidebar space */}
+          {/* Live Activity — fills sidebar space */}
           <div className="flex-1 flex flex-col min-h-0">
             <div className="px-3 py-2 flex items-center justify-between border-b border-border">
               <span className="text-[10px] uppercase tracking-wider text-muted font-medium">Live Activity</span>
