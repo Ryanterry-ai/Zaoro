@@ -14,6 +14,7 @@ import { IntentDNAExtractor, IntentDNA } from './intent-dna.js';
 import { FeatureEnricher, EnrichedIntent } from './feature-enricher.js';
 import { generateDesignDNA, DesignDNA } from './design-dna.js';
 import { LLMGateway } from '../core/llm-gateway.js';
+import { generateSectionWithLLM, type LLMCodeGeneratorConfig } from './llm-code-generator.js';
 import { LLMConfig, ASTPatch } from '../types/index.js';
 import { BuildProgressEvent, BuildStage, createBuildState, BuildState } from '../engine/build-progress.js';
 import { RuntimeManager } from '../engine/runtime-manager.js';
@@ -305,7 +306,7 @@ export class PipelineOrchestrator {
       globalMotion: motionPlan.globalMotion,
     });
 
-    // ═══ Stage 8: Domain Synthesis + LLM Generation ══════════════
+    // ═══ Stage 8: Domain Synthesis + LLM Code Generation ══════════════
     this.emit('synthesize', 'active', `Generating domain-specific content...`);
     let domainCtx: DomainSynthesisContext | undefined;
     try {
@@ -317,8 +318,20 @@ export class PipelineOrchestrator {
       domainCtx = undefined;
     }
 
+    // LLM code generation config (shared across all section generation)
+    const llmCodeGenConfig: LLMCodeGeneratorConfig = {
+      llm,
+      intent,
+      designDNA,
+      domain: domainCtx!,
+      assetPlan,
+      motionPlan,
+      designSystem,
+      decision,
+    };
+
     this.emit('synthesize', 'active', `Generating sections...`);
-    const generatedSections = await this.generateSections(decision, designSystem, domainCtx);
+    const generatedSections = await this.generateSections(decision, designSystem, domainCtx, llmCodeGenConfig, llmAvailable);
     this.emit('synthesize', 'active', `Generated ${generatedSections.size} sections`);
     for (const [section] of generatedSections) {
       this.emit('synthesize', 'active', `Section: ${section}`);
@@ -586,30 +599,58 @@ export class PipelineOrchestrator {
     decision: ArchitectDecision,
     ds: DesignSystem,
     domain?: DomainSynthesisContext,
+    llmConfig?: LLMCodeGeneratorConfig,
+    llmAvailable?: boolean,
   ): Promise<Map<string, string>> {
     const sections = new Map<string, string>();
     const seen = new Set<string>();
+    let llmSections = 0;
+    let templateSections = 0;
 
     for (const page of decision.pages) {
       for (const sectionType of page.sections) {
         if (seen.has(sectionType)) continue;
         seen.add(sectionType);
 
-        // Try domain synthesis first (uses LLM + domain data)
+        // Try LLM code generation first (real content with DNA baked in)
+        if (llmAvailable && llmConfig) {
+          try {
+            this.emit('synthesize', 'active', `Generating "${sectionType}" with LLM...`);
+            const llmCode = await generateSectionWithLLM(sectionType, llmConfig);
+            if (llmCode) {
+              sections.set(sectionType, this.wrapWithMotion(llmCode, sectionType, ds));
+              llmSections++;
+              this.emit('synthesize', 'active', `✓ "${sectionType}" — LLM generated`);
+              continue;
+            }
+          } catch (err: any) {
+            this.emit('synthesize', 'active', `⚠ LLM failed for "${sectionType}": ${err.message} — using template`);
+          }
+        }
+
+        // Fallback: template synthesis
         if (domain) {
           try {
             const code = synthesizeDomainSection(sectionType, domain);
             if (code && !code.includes('Content for') && !code.includes('section')) {
               sections.set(sectionType, this.wrapWithMotion(code, sectionType, ds));
+              templateSections++;
               continue;
             }
           } catch {}
         }
 
-        // Fallback: generate from primitives
+        // Final fallback: generate from primitives
         const code = this.generateFromPrimitives(sectionType, decision, ds);
         sections.set(sectionType, code);
+        templateSections++;
       }
+    }
+
+    if (llmAvailable) {
+      this.emit('synthesize', 'active', `Sections: ${llmSections} LLM-generated, ${templateSections} template-based`);
+    } else {
+      this.emit('synthesize', 'active', `Sections: ${templateSections} template-based (no LLM)`);
     }
 
     return sections;

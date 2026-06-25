@@ -20,3 +20,4 @@ export { UXEvaluator, type UXAuditResult, type AuditCategory, type AuditIssue, t
 export { BusinessValidator, type BusinessValidation, type BusinessCheck, type RevenueModelAssessment, type UserFlowAssessment } from './business-validator.js';
 export { AssemblyQA, type AssemblyResult, type AssemblyCheck } from './assembly-qa.js';
 export { PipelineOrchestrator, type PipelineResult } from './pipeline-orchestrator.js';
+export { generateSectionWithLLM, generatePageWithLLM, type LLMCodeGeneratorConfig } from './llm-code-generator.js';
