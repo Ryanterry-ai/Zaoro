@@ -173,10 +173,17 @@ export class IntentDNAExtractor {
   async extract(prompt: string): Promise<IntentDNA> {
     console.log(`[intent-dna] Extracting intent from: "${prompt.substring(0, 80)}..."`);
 
-    const response = await this.llm.generateText(INTENT_EXTRACTION_PROMPT + '\n\nUser prompt: ' + prompt, {
-      temperature: 0.3,
-      maxTokens: 4000,
-    });
+    let response: string;
+    try {
+      response = await this.llm.generateText(INTENT_EXTRACTION_PROMPT + '\n\nUser prompt: ' + prompt, {
+        temperature: 0.3,
+        maxTokens: 4000,
+      });
+    } catch (err: any) {
+      console.error(`[intent-dna] LLM call failed: ${err.message} — using keyword fallback`);
+      const intent = this.fallbackExtract(prompt);
+      return this.validateAndFill(intent, prompt);
+    }
 
     let intent: IntentDNA;
     try {

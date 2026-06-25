@@ -135,6 +135,11 @@ if (usePipeline) {
     (step, msg) => log(step, msg),
   );
   try {
+    if (config.apiKey && config.apiKey.trim() !== '') {
+      log('bi', '✓ LLM API key found (' + config.provider + ') — generating real content with AI');
+    } else {
+      log('bi', '⚠ No LLM API key — using template-based synthesis. Output will be generic.');
+    }
     const result = await orch.run(payload.prompt);
     log('compile', 'Compiling and validating...');
     await new Promise(r => setTimeout(r, 100));

@@ -517,13 +517,16 @@ export default function WorkspacePage() {
                     const isUser = ev.step === "user";
                     const isRetry = ev.step === "retry";
                     const isInit = ev.step === "init";
+                    const isNoLLM = ev.message?.includes("⚠ No LLM") || ev.message?.includes("template-based");
+                    const isLLMActive = ev.message?.includes("✓ LLM") || ev.message?.includes("generating real content");
+                    const isFallback = ev.message?.includes("keyword fallback") || ev.message?.includes("blueprint fallback");
                     return (
-                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : ""}`}>
+                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : isNoLLM ? "bg-yellow-500/5" : isLLMActive ? "bg-green-500/5" : ""}`}>
                         <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
-                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : isUser ? "text-accent" : isRetry ? "text-yellow-400" : isInit ? "text-blue-400" : "text-accent/60"}`}>
-                          {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : isUser ? "→" : isRetry ? "↻" : isInit ? "◎" : "◉"}
+                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : isUser ? "text-accent" : isRetry ? "text-yellow-400" : isInit ? "text-blue-400" : isNoLLM ? "text-yellow-400" : isLLMActive ? "text-green-400" : isFallback ? "text-yellow-400/60" : "text-accent/60"}`}>
+                          {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : isUser ? "→" : isRetry ? "↻" : isInit ? "◎" : isNoLLM ? "⚠" : isLLMActive ? "✓" : isFallback ? "↺" : "◉"}
                         </span>
-                        <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : isUser ? "text-accent font-medium" : isRetry ? "text-yellow-400/80" : isInit ? "text-blue-400/80" : "text-foreground/60"}`}>
+                        <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : isUser ? "text-accent font-medium" : isRetry ? "text-yellow-400/80" : isInit ? "text-blue-400/80" : isNoLLM ? "text-yellow-400/80" : isLLMActive ? "text-green-400/80" : isFallback ? "text-yellow-400/60" : "text-foreground/60"}`}>
                           {ev.message}
                         </span>
                       </div>

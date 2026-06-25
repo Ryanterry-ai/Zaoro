@@ -147,12 +147,21 @@ export class PipelineOrchestrator {
     this.log(`Starting pipeline for: "${prompt.slice(0, 80)}..."`);
     this.emit('bi', 'active', `Starting pipeline: "${prompt.slice(0, 100)}..."`);
 
+    // ═══ LLM Pre-flight Check ═══════════════════════════════════
+    const llmAvailable = !!(this.llmConfig.apiKey && this.llmConfig.apiKey.trim() !== '');
+    if (!llmAvailable) {
+      this.emit('bi', 'active', `⚠ No LLM API key configured — using template-based synthesis. Output will be generic.`, { llmStatus: 'unavailable', reason: 'no-api-key' });
+    } else {
+      this.emit('bi', 'active', `✓ LLM available (${this.llmConfig.provider}) — generating real content`, { llmStatus: 'available', provider: this.llmConfig.provider });
+    }
+
     // ═══ Stage 1: IntentDNA Extraction ══════════════════════════
     this.emit('bi', 'active', `Extracting structured intent from prompt — domain, features, entities, workflows...`);
     const llm = new LLMGateway(this.llmConfig);
     const intentExtractor = new IntentDNAExtractor(llm);
     const intent = await intentExtractor.extract(prompt);
-    this.emit('bi', 'active', `Intent extracted: ${intent.business_domain} "${intent.app_name}" — ${intent.features.length} features, ${intent.entities.length} entities, confidence=${intent.confidence}`);
+    const intentSource = intent.confidence >= 0.7 ? 'LLM extraction' : 'keyword fallback (no LLM)';
+    this.emit('bi', 'active', `Intent extracted: ${intent.business_domain} "${intent.app_name}" — ${intent.features.length} features, confidence=${intent.confidence} [${intentSource}]`);
     this.emit('bi', 'done', `IntentDNA complete — domain=${intent.business_domain}, features=[${intent.features.map(f => f.name).join(', ')}]`, {
       intent: {
         domain: intent.business_domain,

@@ -145,10 +145,16 @@ export class FeatureEnricher {
 
     const prompt = ENRICHMENT_PROMPT + '\n\nIntentDNA:\n' + JSON.stringify(intent, null, 2);
 
-    const response = await this.llm.generateText(prompt, {
-      temperature: 0.3,
-      maxTokens: 6000,
-    });
+    let response: string;
+    try {
+      response = await this.llm.generateText(prompt, {
+        temperature: 0.3,
+        maxTokens: 6000,
+      });
+    } catch (err: any) {
+      console.error(`[feature-enricher] LLM call failed: ${err.message} — using blueprint fallback`);
+      return this.fallbackEnrich(intent);
+    }
 
     let enriched: EnrichedIntent;
     try {
