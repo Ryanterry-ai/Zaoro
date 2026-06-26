@@ -183,6 +183,19 @@ const INDUSTRY_RULES: IndustryRule[] = [
     defaultSections: ['hero', 'featured-vehicles', 'services', 'financing', 'testimonials', 'contact-info'],
     colorHint: 'slate',
   },
+  {
+    industry: 'luxury',
+    keywords: ['luxury', 'premium', 'high-end', 'exclusive', 'elegant', 'sophisticated', 'artisan', 'bespoke', 'timepiece', 'watch brand', 'jewelry', 'fine watch', 'chronograph', 'horology', 'swiss'],
+    subIndustries: {
+      watches: ['watch', 'timepiece', 'chronograph', 'horology', 'swiss', 'automatic', 'mechanical'],
+      jewelry: ['jewelry', 'jewellery', 'diamond', 'gold', 'silver', 'necklace', 'ring', 'bracelet'],
+      fashion: ['fashion', 'couture', 'designer', 'runway', 'collection', 'boutique'],
+      automotive: ['automobile', 'car brand', 'supercar', 'exotic', 'classic car'],
+      real_estate: ['villa', 'penthouse', 'estate', 'mansion', 'luxury property'],
+    },
+    defaultSections: ['hero', 'gallery', 'about', 'features', 'testimonials', 'cta'],
+    colorHint: 'amber',
+  },
 ];
 
 const MOOD_KEYWORDS: Record<string, string[]> = {
@@ -268,6 +281,7 @@ export function detectDomain(prompt: string): DomainContext {
     'agency': ['team meeting', 'creative brainstorm', 'office collaboration', 'strategy'],
     'nonprofit': ['community', 'volunteers', 'charity event', 'helping hands'],
     'event': ['event venue', 'conference stage', 'wedding decor', 'festival crowd'],
+    'luxury': ['luxury watch', 'premium product', 'elegant design', 'high-end brand', 'artisan craft', 'fine jewelry'],
   };
 
   return {

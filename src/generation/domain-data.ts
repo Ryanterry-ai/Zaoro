@@ -730,6 +730,54 @@ const DOMAIN_DATA: Record<string, DomainMockData> = {
     footer: { tagline: 'Caring for pets and their families since 2012.', links: [{ label: 'Services', href: '/services' }, { label: 'Providers', href: '/providers' }, { label: 'Boarding', href: '/boarding' }, { label: 'Contact', href: '/contact' }] },
     imageKeywords: ['veterinary clinic', 'pet grooming', 'dog cat', 'animal hospital', 'puppy'],
   },
+  'luxury': {
+    hero: {
+      badge: 'Since 1887',
+      headline: 'Timeless Mastery, Infinite Precision',
+      subtitle: 'Where centuries of Swiss horological tradition meet avant-garde innovation. Each timepiece is a legacy crafted for the extraordinary.',
+      cta: 'Explore Collection',
+      ctaSecondary: 'Book Private Viewing',
+    },
+    stats: [
+      { value: '137+', label: 'Years of Heritage' },
+      { value: '42', label: 'Master Artisans' },
+      { value: '847', label: 'Components Per Movement' },
+      { value: '#1', label: 'Swiss Excellence' },
+    ],
+    items: [
+      { name: 'Royal Chronograph', description: 'Hand-wound perpetual calendar with moonphase complication. 18K rose gold case with sapphire crystal.', price: 48500, tag: 'Iconic', rating: 5.0, reviews: 12, emoji: '⌚', details: ['18K Rose Gold', 'Perpetual Calendar', '72hr Power Reserve', 'Limited Edition'] },
+      { name: 'Nautical Automatic', description: 'Self-winding dive watch rated to 300m. Titanium case with ceramic bezel.', price: 22800, tag: 'Signature', rating: 4.9, reviews: 34, emoji: '🌊', details: ['Titanium', '300m Water Resist', 'Ceramic Bezel', 'Swiss Movement'] },
+      { name: 'Heritage Tourbillon', description: 'Flying tourbillon with 8-day power reserve. Platinum case hand-finished to mirror polish.', price: 125000, tag: 'Grand Complication', rating: 5.0, reviews: 6, emoji: '✨', details: ['Platinum 950', 'Flying Tourbillon', '8-Day Reserve', 'Hand-Finished'] },
+      { name: 'Dress Ultra-Thin', description: '7.2mm ultra-thin dress watch in white gold. Guilloché dial hand-engraved by master artisans.', price: 34200, tag: 'Elegant', rating: 4.9, reviews: 21, emoji: '👔', details: ['White Gold', '7.2mm Thin', 'Guilloché Dial', 'Alligator Strap'] },
+    ],
+    testimonials: [
+      { name: 'Richard Sterling', role: 'Collector', text: 'The Royal Chronograph is the finest timepiece in my collection of 200+ watches. The finishing is beyond compare — every surface catches light differently.', rating: 5 },
+      { name: 'Isabelle Laurent', role: 'Horologist', text: 'As someone who has spent 30 years studying watches, the Heritage Tourbillon represents the pinnacle of mechanical art. Museum-worthy craftsmanship.', rating: 5 },
+      { name: 'James Worthington III', role: 'Patron', text: 'Three generations of my family have worn this maison. The Heritage Tourbillon was passed to my son. It is not a watch — it is a legacy.', rating: 5 },
+    ],
+    features: [
+      { icon: '⚜️', title: 'Swiss Made', description: 'Every movement assembled by hand in our Geneva atelier. COSC-certified precision.', iconKeyword: 'award' },
+      { icon: '💎', title: 'Rare Materials', description: 'Sapphire crystal, platinum 950, 18K gold. Only the finest materials grace our cases.', iconKeyword: 'gem' },
+      { icon: '🔧', title: '847 Components', description: 'Each movement contains hundreds of hand-finished parts assembled over 600 hours.', iconKeyword: 'tool' },
+      { icon: '📜', title: 'Heritage Since 1887', description: 'Five generations of master watchmakers. Each timepiece carries 137 years of tradition.', iconKeyword: 'book' },
+      { icon: '🛡️', title: 'Lifetime Service', description: 'Complimentary servicing every 5 years. Our commitment to your timepiece is eternal.', iconKeyword: 'shield' },
+      { icon: '🏷️', title: 'Certificate of Origin', description: 'Each watch ships with blockchain-verified provenance and master artisan signature.', iconKeyword: 'tag' },
+    ],
+    services: [
+      { name: 'Bespoke Commissions', description: 'Design your unique timepiece with our master artisans.', icon: '⚜️' },
+      { name: 'Heritage Restoration', description: 'Restore vintage pieces to their original glory.', icon: '🔧' },
+      { name: 'Private Viewings', description: 'Exclusive appointments in our flagship salon.', icon: '🥂' },
+      { name: 'Concierge Service', description: 'White-glove delivery and personal consultation.', icon: '🎩' },
+    ],
+    team: [
+      { name: 'Master Artisan Philippe', role: 'Head Watchmaker', bio: '42 years of horological mastery. Trained under the greatest Swiss masters.', emoji: '⚜️' },
+      { name: 'Elena Beaumont', role: 'Creative Director', bio: 'Former Cartier designer. Brings modern elegance to heritage craftsmanship.', emoji: '🎨' },
+      { name: 'Thomas Müller', role: 'Master Engraver', bio: 'One of twelve living masters of hand-guilloché dial engraving.', emoji: '✨' },
+    ],
+    cta: { headline: 'Own a Piece of Eternity', subtitle: 'Schedule a private viewing at our Geneva atelier or flagship salon.', button: 'Request Private Viewing' },
+    footer: { tagline: 'Timeless craftsmanship since 1887.', links: [{ label: 'Collections', href: '/collections' }, { label: 'Heritage', href: '/heritage' }, { label: 'Atelier', href: '/atelier' }, { label: 'Contact', href: '/contact' }] },
+    imageKeywords: ['luxury watch', 'swiss movement', 'watch dial', 'premium timepiece', 'artisan workshop'],
+  },
 };
 
 const GENERAL_DATA: DomainMockData = {
