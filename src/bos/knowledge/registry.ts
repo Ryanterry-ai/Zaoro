@@ -6,16 +6,22 @@ import type { Journey } from '../schemas/knowledge/journey.schema.js';
 import type { CompliancePack } from '../schemas/knowledge/compliance-pack.schema.js';
 import { LUXURY_DARK_OPULENCE } from './design-profiles/luxury-dark-opulence.js';
 import { SAAS_MODERN } from './design-profiles/saas-modern.js';
+import { HEALTHCARE_CLEAN, ECOMMERCE_MODERN } from './design-profiles/healthcare-clean.js';
 import { LUXURY_WATCH_BRAND } from './patterns/luxury-watch-brand.js';
+import { ECOMMERCE_MARKETPLACE, SAAS_PLATFORM } from './patterns/ecommerce-marketplace.js';
 import { CAP_INVENTORY_LITE } from './skill-packs/cap-inventory-lite.js';
 
 export const DESIGN_PROFILES: DesignProfile[] = [
   LUXURY_DARK_OPULENCE,
   SAAS_MODERN,
+  HEALTHCARE_CLEAN,
+  ECOMMERCE_MODERN,
 ];
 
 export const PATTERNS: Pattern[] = [
   LUXURY_WATCH_BRAND,
+  ECOMMERCE_MARKETPLACE,
+  SAAS_PLATFORM,
 ];
 
 export const SKILL_PACKS: SkillPack[] = [

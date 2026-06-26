@@ -1,0 +1,112 @@
+import type { Pattern } from '../../schemas/knowledge/pattern.schema.js';
+
+export const ECOMMERCE_MARKETPLACE: Pattern = {
+  id: 'pattern.ecommerce.marketplace',
+  version: '1.3.0',
+  status: 'active',
+  createdAt: '2025-01-01T00:00:00+00:00',
+  updatedAt: '2025-01-01T00:00:00+00:00',
+  evidenceRefs: [],
+  kind: 'Pattern',
+  name: 'E-Commerce Marketplace',
+  description: 'Full marketplace pattern with product browsing, cart, checkout, and order management',
+  navigation: {
+    items: [
+      { label: 'Home', href: '/' },
+      { label: 'Shop', href: '/shop' },
+      { label: 'Categories', href: '/categories' },
+      { label: 'Deals', href: '/deals' },
+    ],
+    style: 'horizontal',
+    sticky: true,
+    logo: true,
+  },
+  pages: [
+    { path: '/', name: 'Home', type: 'home', sections: ['hero-banner', 'featured-products', 'categories', 'testimonials', 'cta'] },
+    { path: '/shop', name: 'Shop', type: 'listing', sections: ['product-grid', 'filters', 'sort-bar'] },
+    { path: '/product/:id', name: 'Product Detail', type: 'detail', sections: ['product-gallery', 'product-info', 'reviews', 'related-products'] },
+    { path: '/cart', name: 'Cart', type: 'page', sections: ['cart-items', 'order-summary', 'recommended'] },
+    { path: '/checkout', name: 'Checkout', type: 'auth', sections: ['checkout-form', 'payment', 'order-review'] },
+    { path: '/account', name: 'My Account', type: 'dashboard', sections: ['order-history', 'addresses', 'wishlist'] },
+    { path: '/account/orders/:id', name: 'Order Detail', type: 'detail', sections: ['order-status', 'items', 'tracking'] },
+  ],
+  components: [
+    'ProductCard',
+    'ProductGrid',
+    'CartDrawer',
+    'CheckoutForm',
+    'OrderTracker',
+    'FilterSidebar',
+  ],
+  relationships: [],
+  workflows: [
+    'Add to Cart',
+    'Checkout',
+    'Return Request',
+  ],
+  integrations: [
+    { type: 'payment', name: 'Stripe', config: {}, required: true },
+    { type: 'email', name: 'SendGrid', config: {}, required: false },
+    { type: 'analytics', name: 'PostHog', config: {}, required: false },
+  ],
+  design: {
+    restrictions: ['product-images-required', 'price-visible'],
+  },
+  generationRules: [],
+  compatibleIndustries: ['ecommerce', 'retail', 'fashion', 'beauty', 'electronics', 'marketplace'],
+  compatibleBusinessModels: ['direct-sales', 'marketplace', 'subscription'],
+};
+
+export const SAAS_PLATFORM: Pattern = {
+  id: 'pattern.saas.platform',
+  version: '1.3.0',
+  status: 'active',
+  createdAt: '2025-01-01T00:00:00+00:00',
+  updatedAt: '2025-01-01T00:00:00+00:00',
+  evidenceRefs: [],
+  kind: 'Pattern',
+  name: 'SaaS Platform',
+  description: 'Full SaaS pattern with auth, dashboard, settings, billing, and analytics',
+  navigation: {
+    items: [
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Analytics', href: '/analytics' },
+      { label: 'Settings', href: '/settings' },
+    ],
+    style: 'sidebar',
+    sticky: true,
+    logo: true,
+  },
+  pages: [
+    { path: '/', name: 'Landing', type: 'home', sections: ['hero', 'features', 'pricing', 'testimonials', 'cta'] },
+    { path: '/login', name: 'Login', type: 'auth', sections: ['login-form', 'social-auth'] },
+    { path: '/signup', name: 'Sign Up', type: 'auth', sections: ['signup-form', 'social-auth'] },
+    { path: '/dashboard', name: 'Dashboard', type: 'dashboard', sections: ['stats-cards', 'charts', 'activity-feed'] },
+    { path: '/analytics', name: 'Analytics', type: 'dashboard', sections: ['charts', 'data-table', 'filters'] },
+    { path: '/settings', name: 'Settings', type: 'dashboard', sections: ['profile', 'billing', 'notifications', 'team'] },
+    { path: '/settings/billing', name: 'Billing', type: 'dashboard', sections: ['plan-details', 'payment-method', 'invoices'] },
+    { path: '/pricing', name: 'Pricing', type: 'page', sections: ['pricing-table', 'feature-comparison', 'faq'] },
+  ],
+  components: [
+    'StatsCard',
+    'ActivityFeed',
+    'PricingTable',
+    'Sidebar',
+    'DataTable',
+  ],
+  relationships: [],
+  workflows: [
+    'Onboarding',
+    'Upgrade Plan',
+  ],
+  integrations: [
+    { type: 'payment', name: 'Stripe', config: {}, required: true },
+    { type: 'analytics', name: 'PostHog', config: {}, required: false },
+  ],
+  design: {
+    restrictions: ['sidebar-navigation', 'dashboard-layout'],
+  },
+  generationRules: [],
+  compatibleIndustries: ['saas', 'software', 'technology', 'developer-tools', 'productivity', 'ai'],
+  compatibleBusinessModels: ['subscription', 'freemium', 'direct-sales'],
+};
