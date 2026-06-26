@@ -69,7 +69,7 @@ export default function WorkspacePage() {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
-  const [rightTab, setRightTab] = useState<"preview" | "files">("preview");
+  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
@@ -493,6 +493,9 @@ export default function WorkspacePage() {
                 Files
                 {sourceFiles.length > 0 && <span className="ml-1.5 text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{sourceFiles.length}</span>}
               </button>
+              <button onClick={() => setRightTab("provenance")} className={`px-4 py-2.5 text-xs font-medium transition-all ${rightTab === "provenance" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
+                Provenance
+              </button>
             </div>
             {rightTab === "preview" && (
               <div className="flex items-center gap-1.5 pr-3">
@@ -543,7 +546,7 @@ export default function WorkspacePage() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : rightTab === "files" ? (
             <div className="flex-1 overflow-y-auto bg-surface">
               <div className="p-2">
                 {sourceFiles.length === 0 ? (
@@ -558,6 +561,84 @@ export default function WorkspacePage() {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto bg-surface">
+              <div className="p-4 space-y-4">
+                <div className="text-[10px] uppercase tracking-wider text-muted font-medium">BOS Provenance Chain</div>
+                {/* Extract BOS events from steps */}
+                {(() => {
+                  const bosEvents = steps.filter(s => s.step === "bos");
+                  if (bosEvents.length === 0) {
+                    return <div className="text-center text-muted text-xs py-8">No BOS data yet — build in progress</div>;
+                  }
+                  const rulesEvent = bosEvents.find(e => e.message.includes("Rules engine produced"));
+                  const constraintEvent = bosEvents.find(e => e.message.includes("Constraints:"));
+                  const profileEvent = bosEvents.find(e => e.message.includes("Selected profile:"));
+                  const blueprintEvent = bosEvents.find(e => e.message.includes("Blueprint compiled"));
+                  const decisionsMatch = rulesEvent?.message.match(/(\d+) decisions/);
+                  const violationsMatch = constraintEvent?.message.match(/\((\d+) violations?\)/);
+                  const profileMatch = profileEvent?.message.match(/Selected profile: (.+?) \((\d+\.?\d*)\), pattern: (.+)/);
+                  const pagesMatch = blueprintEvent?.message.match(/(\d+) pages, (\d+) entities, (\d+) workflows/);
+                  return (
+                    <>
+                      {/* Rules Engine */}
+                      <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-medium">
+                          <span className="w-2 h-2 rounded-full bg-accent" />
+                          Rules Engine
+                        </div>
+                        <div className="text-[11px] text-foreground/70">{decisionsMatch ? `${decisionsMatch[1]} decisions fired` : "Evaluating..."}</div>
+                      </div>
+                      {/* Constraint Solver */}
+                      <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-medium">
+                          <span className={`w-2 h-2 rounded-full ${violationsMatch && violationsMatch[1] === "0" ? "bg-green-400" : "bg-red-400"}`} />
+                          Constraint Solver
+                        </div>
+                        <div className="text-[11px] text-foreground/70">{constraintEvent?.message || "Solving..."}</div>
+                      </div>
+                      {/* Scorer */}
+                      {profileMatch && (
+                        <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-medium">
+                            <span className="w-2 h-2 rounded-full bg-blue-400" />
+                            Design Profile Scorer
+                          </div>
+                          <div className="text-[11px] text-foreground/70">
+                            <span className="font-medium text-foreground/90">{profileMatch[1]}</span>
+                            <span className="ml-2 px-1.5 py-0.5 rounded bg-accent/10 text-accent font-mono">{profileMatch[2]}</span>
+                          </div>
+                          <div className="text-[10px] text-muted">Pattern: {profileMatch[3]}</div>
+                        </div>
+                      )}
+                      {/* Blueprint */}
+                      {pagesMatch && (
+                        <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-medium">
+                            <span className="w-2 h-2 rounded-full bg-green-400" />
+                            Compiled Blueprint
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="rounded-lg bg-surface-hover p-2">
+                              <div className="text-lg font-bold text-foreground">{pagesMatch[1]}</div>
+                              <div className="text-[10px] text-muted">Pages</div>
+                            </div>
+                            <div className="rounded-lg bg-surface-hover p-2">
+                              <div className="text-lg font-bold text-foreground">{pagesMatch[2]}</div>
+                              <div className="text-[10px] text-muted">Entities</div>
+                            </div>
+                            <div className="rounded-lg bg-surface-hover p-2">
+                              <div className="text-lg font-bold text-foreground">{pagesMatch[3]}</div>
+                              <div className="text-[10px] text-muted">Workflows</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
