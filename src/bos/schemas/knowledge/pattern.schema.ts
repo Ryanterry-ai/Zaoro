@@ -32,7 +32,7 @@ export const PageSpecSchema = z.object({
 export type PageSpec = z.infer<typeof PageSpecSchema>;
 
 export const IntegrationSpecSchema = z.object({
-  type: z.enum(['database', 'auth', 'payment', 'email', 'analytics', 'cms', 'storage', 'maps', 'social', 'messaging', 'erp', 'crm']),
+  type: z.enum(['database', 'auth', 'payment', 'email', 'analytics', 'cms', 'storage', 'maps', 'social', 'messaging', 'erp', 'crm', 'booking', 'video']),
   name: z.string(),
   provider: z.string().optional(),
   config: z.record(z.string()).default({}),
