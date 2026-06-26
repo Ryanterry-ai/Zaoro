@@ -111,12 +111,19 @@ export class BuildQueue extends EventEmitter {
     const buildScript = `
 import * as fs from 'fs';
 import * as path from 'path';
-import { ProgressEmitter } from './src/core/progress-emitter.js';
 
 const WS_BASE = ${JSON.stringify(this.workspaceBase)};
 const wsDir = path.join(WS_BASE, ${JSON.stringify(job.workspaceId)});
+if (!fs.existsSync(wsDir)) fs.mkdirSync(wsDir, { recursive: true });
 
-const pe = new ProgressEmitter(wsDir);
+const PROGRESS_FILE = path.join(wsDir, '.progress');
+function writeProgress(step, type, message, metadata) {
+  let events = [];
+  try { if (fs.existsSync(PROGRESS_FILE)) events = JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf-8')); } catch {}
+  events.push({ step, type, message, ts: Date.now(), metadata: metadata || undefined });
+  fs.writeFileSync(PROGRESS_FILE, JSON.stringify(events), 'utf-8');
+}
+function emitLLM(step, type, llmDetail) { writeProgress(step, type, \`\${type}: \${llmDetail.provider}/\${llmDetail.model}\`, { llm: llmDetail }); }
 
 // Intercept console.log to capture gateway/orchestrator events
 const origLog = console.log;
@@ -127,57 +134,43 @@ function interceptConsole(prefix, type) {
   return function(...args) {
     const msg = args.join(' ');
     origLog.apply(console, args);
-    // Capture structured events from engine subsystems
     if (msg.includes('[gateway]')) {
       if (msg.includes('LLM call:') || msg.includes('Combined LLM call:')) {
         const match = msg.match(/(\\w[\\w-]+)\\/(\\S+)\\s*\\(attempt\\s*(\\d+)\\)/);
-        if (match) pe.emitLLM('llm', 'llm_request', { provider: match[1], model: match[2], attempt: parseInt(match[3]), maxAttempts: 5 });
+        if (match) emitLLM('llm', 'llm_request', { provider: match[1], model: match[2], attempt: parseInt(match[3]), maxAttempts: 5 });
       } else if (msg.includes('succeeded:') && msg.includes('patches')) {
         const match = msg.match(/(\\d+)\\s*patches/);
-        pe.emit('llm', 'success', msg, { patchCount: match ? parseInt(match[1]) : 0 });
+        writeProgress('llm', 'success', msg, { patchCount: match ? parseInt(match[1]) : 0 });
       } else if (msg.includes('Gemini fallback')) {
-        pe.emitLLM('llm', 'llm_fallback', { provider: 'gemini', model: 'gemini-2.5-flash', fallbackProvider: 'gemini' });
+        emitLLM('llm', 'llm_fallback', { provider: 'gemini', model: 'gemini-2.5-flash', fallbackProvider: 'gemini' });
       } else if (msg.includes('Transient error')) {
         const match = msg.match(/\\((.+?)\\)/);
-        pe.emit('llm', 'retrying', msg, { error: match ? match[1] : 'unknown' });
+        writeProgress('llm', 'retrying', msg, { error: match ? match[1] : 'unknown' });
       } else if (msg.includes('All LLM providers failed')) {
-        pe.emit('llm', 'warning', msg);
+        writeProgress('llm', 'warning', msg);
       } else if (msg.includes('Research context added')) {
-        pe.emit('research', 'success', msg);
+        writeProgress('research', 'success', msg);
       } else if (msg.includes('Generated') && msg.includes('domain fallback')) {
-        pe.emit('architect', 'info', msg);
+        writeProgress('architect', 'info', msg);
       }
     } else if (msg.includes('[content-research]')) {
       if (msg.includes('Crawling:')) {
         const url = msg.replace('[content-research] Crawling:', '').trim();
-        pe.emit('research', 'crawling', 'Crawling: ' + url, { url });
+        writeProgress('research', 'crawling', 'Crawling: ' + url, { url });
       } else if (msg.includes('Results:')) {
-        pe.emit('research', 'completed', msg);
-      } else if (msg.includes('Found')) {
-        pe.emit('research', 'info', msg);
+        writeProgress('research', 'completed', msg);
       }
     } else if (msg.includes('[orchestrator]')) {
-      if (msg.includes('Blueprint:')) {
-        pe.emit('architect', 'completed', msg);
-      } else if (msg.includes('BI analysis complete')) {
-        pe.emit('bi', 'completed', msg);
-      } else if (msg.includes('Content research:')) {
-        pe.emit('research', 'completed', msg);
-      } else if (msg.includes('Compiling page')) {
-        pe.emit('compile', 'info', msg);
-      } else if (msg.includes('compiled successfully')) {
-        pe.emit('compile', 'success', msg);
-      } else if (msg.includes('Build complete')) {
-        pe.emit('compile', 'completed', msg);
-      } else if (msg.includes('Combined LLM call failed')) {
-        pe.emit('llm', 'warning', msg);
-      }
+      if (msg.includes('Blueprint:')) writeProgress('architect', 'completed', msg);
+      else if (msg.includes('BI analysis complete')) writeProgress('bi', 'completed', msg);
+      else if (msg.includes('Content research:')) writeProgress('research', 'completed', msg);
+      else if (msg.includes('Compiling page')) writeProgress('compile', 'info', msg);
+      else if (msg.includes('compiled successfully')) writeProgress('compile', 'success', msg);
+      else if (msg.includes('Build complete')) writeProgress('compile', 'completed', msg);
     } else if (msg.includes('[domain-synth]')) {
-      if (msg.includes('Detected:') || msg.includes('Using resolved pattern:')) {
-        pe.emit('architect', 'info', msg);
-      }
+      if (msg.includes('Detected:') || msg.includes('Using resolved pattern:')) writeProgress('architect', 'info', msg);
     } else if (msg.includes('[bi-llm]')) {
-      pe.emit('bi', 'info', msg);
+      writeProgress('bi', 'info', msg);
     }
   };
 }
@@ -196,31 +189,30 @@ if (usePipeline) {
   const orch = new PipelineOrchestrator(
     WS_BASE,
     { provider: config.provider, apiKey: config.apiKey },
-    (step, msg) => pe.emit(step, 'info', msg),
-    (step, msg) => pe.emit(step, 'info', msg),
+    (step, msg) => writeProgress(step, 'info', msg),
+    (step, msg) => writeProgress(step, 'info', msg),
   );
   try {
     if (config.apiKey && config.apiKey.trim() !== '') {
-      pe.emit('init', 'started', 'Build started — using ' + config.provider + ' AI');
+      writeProgress('init', 'started', 'Build started — using ' + config.provider + ' AI');
     } else {
-      pe.emit('init', 'warning', 'No LLM API key — using template synthesis');
+      writeProgress('init', 'warning', 'No LLM API key — using template synthesis');
     }
     const t0 = Date.now();
     const result = await orch.run(payload.prompt);
-    pe.phaseEnd('done', 'Pipeline completed', t0);
-  } catch (err) { pe.emit('error', 'error', 'Pipeline failed: ' + (err.message || err)); process.exit(1); }
+    writeProgress('done', 'completed', 'Pipeline completed — UX: ' + result.uxResult.overall + ', Business: ' + result.businessResult.overall + ', Build: ' + result.assemblyResult.overallScore + ' (' + result.iterations + ' iterations)', { duration: Date.now() - t0 });
+  } catch (err) { writeProgress('error', 'error', 'Pipeline failed: ' + (err.message || err)); process.exit(1); }
 } else {
   const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
   const orch = new DeterministicOrchestratorV4(WS_BASE);
   try {
-    pe.emit('init', 'started', 'Build started — analyzing prompt');
-    const tBi = pe.phaseStart('bi', 'Analyzing business requirements...');
-    // The orchestrator emits its own events via console.log which we intercept
+    writeProgress('init', 'started', 'Build started — analyzing prompt');
+    const tBi = Date.now();
     await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
-    pe.phaseEnd('compile', 'Compiling and validating...', tBi);
-    pe.emit('preview', 'info', 'Rendering preview...');
-    pe.emit('done', 'completed', 'Build completed! Your application is ready.');
-  } catch (err) { pe.emit('error', 'error', 'Build failed: ' + (err.message || err)); process.exit(1); }
+    writeProgress('compile', 'info', 'Compiling and validating...', { duration: Date.now() - tBi });
+    writeProgress('preview', 'info', 'Rendering preview...');
+    writeProgress('done', 'completed', 'Build completed! Your application is ready.');
+  } catch (err) { writeProgress('error', 'error', 'Build failed: ' + (err.message || err)); process.exit(1); }
 }
 
 // Restore console

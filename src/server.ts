@@ -303,7 +303,15 @@ const server = http.createServer(async (req, res) => {
     if (!fs.existsSync(progressFile)) return json(res, { steps: [], pages: [], status: 'in_progress' });
     const rawSteps = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
     const PHASE_LABELS: Record<string, string> = { engine: 'Compiler', llm: 'LLM Gateway', done: 'Complete', error: 'Failed' };
-    const steps = rawSteps.map((s: any) => ({ step: s.step, label: PHASE_LABELS[s.step] || s.step, message: s.message, ts: s.ts, data: s.data || null }));
+    const steps = rawSteps.map((s: any) => ({
+      step: s.step,
+      type: s.type || s.step,
+      label: PHASE_LABELS[s.step] || s.step,
+      message: s.message,
+      ts: s.ts,
+      data: s.data || null,
+      metadata: s.metadata || null,
+    }));
     const pageEvents = steps.filter((s: any) => s.message.startsWith('Page ') || s.message.includes('page') || s.step === 'done' || s.step === 'error');
     const lastStep = steps[steps.length - 1];
     const status = lastStep?.step === 'done' ? 'complete' : lastStep?.step === 'error' ? 'failed' : 'in_progress';
