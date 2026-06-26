@@ -39,6 +39,7 @@ export class LLMGateway {
     switch (provider) {
       case 'anthropic': return 'claude-3-7-sonnet-20250219';
       case 'gemini': return 'gemini-2.5-flash';
+      case 'groq': return 'llama-3.3-70b-versatile';
       case 'openai':
       default: return 'gpt-4o';
     }
@@ -253,6 +254,7 @@ Active Attempt Loop: 0`;
     switch (this.provider) {
       case 'anthropic': return this.callAnthropic(systemPrompt, userPrompt);
       case 'gemini': return this.callGemini(systemPrompt, userPrompt);
+      case 'groq': return this.callGroq(systemPrompt, userPrompt);
       case 'openai':
       default: return this.callOpenAI(systemPrompt, userPrompt);
     }
@@ -396,6 +398,7 @@ The component must be self-contained with all data inline — no external API ca
   /**
    * Generic text generation: sends a prompt and returns raw text response.
    * Used by IntentDNA, FeatureEnricher, and other planning agents.
+   * Defaults to low temperature (0.3) for deterministic JSON output.
    */
   public async generateText(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
     if (!this.apiKey || this.apiKey.trim() === '') {
@@ -403,11 +406,13 @@ The component must be self-contained with all data inline — no external API ca
     }
 
     const systemPrompt = 'You are an expert AI assistant. Respond with valid JSON only. No markdown, no code fences — just the raw JSON object.';
+    const temperature = options?.temperature ?? 0.3;
+    const maxTokens = options?.maxTokens ?? 4096;
 
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
-        console.log(`[gateway] Text call: ${this.provider}/${this.model} (attempt ${attempt})`);
-        const content = await this.callProviderRaw(systemPrompt, prompt);
+        console.log(`[gateway] Text call: ${this.provider}/${this.model} (attempt ${attempt}, temp=${temperature})`);
+        const content = await this.callProviderRaw(systemPrompt, prompt, { temperature, maxTokens });
         console.log(`[gateway] Received ${content.length} chars of text`);
         return content;
       } catch (err: any) {
@@ -424,26 +429,31 @@ The component must be self-contained with all data inline — no external API ca
     throw new Error('Text generation failed after retries');
   }
 
-  private async callProviderRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+  private async callProviderRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
     switch (this.provider) {
-      case 'gemini': return this.callGeminiRaw(systemPrompt, userPrompt);
-      case 'openai': return this.callOpenAIRaw(systemPrompt, userPrompt);
-      case 'anthropic': return this.callAnthropicRaw(systemPrompt, userPrompt);
+      case 'gemini': return this.callGeminiRaw(systemPrompt, userPrompt, options);
+      case 'openai': return this.callOpenAIRaw(systemPrompt, userPrompt, options);
+      case 'anthropic': return this.callAnthropicRaw(systemPrompt, userPrompt, options);
+      case 'groq': return this.callGroqRaw(systemPrompt, userPrompt, options);
       default: throw new Error(`Unsupported provider: ${this.provider}`);
     }
   }
 
-  private async callGeminiRaw(systemPrompt: string, userPrompt: string): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+  private async callGeminiRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': this.apiKey,
+      },
       body: JSON.stringify({
         contents: [
           { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
         ],
         generationConfig: {
-          maxOutputTokens: 65536,
+          maxOutputTokens: options?.maxTokens || 65536,
+          temperature: options?.temperature,
           thinkingConfig: { thinkingBudget: 0 }
         }
       })
@@ -455,7 +465,6 @@ The component must be self-contained with all data inline — no external API ca
     const data = await response.json();
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) throw new Error('Empty response from Gemini');
-    // Strip markdown code fences if present
     let cleaned = content.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
@@ -463,7 +472,7 @@ The component must be self-contained with all data inline — no external API ca
     return cleaned;
   }
 
-  private async callOpenAIRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+  private async callOpenAIRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -472,6 +481,8 @@ The component must be self-contained with all data inline — no external API ca
       },
       body: JSON.stringify({
         model: this.model,
+        temperature: options?.temperature,
+        max_tokens: options?.maxTokens,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -489,7 +500,7 @@ The component must be self-contained with all data inline — no external API ca
     return cleaned;
   }
 
-  private async callAnthropicRaw(systemPrompt: string, userPrompt: string): Promise<string> {
+  private async callAnthropicRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -499,7 +510,8 @@ The component must be self-contained with all data inline — no external API ca
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 8000,
+        max_tokens: options?.maxTokens || 8000,
+        temperature: options?.temperature,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
       })
@@ -508,6 +520,64 @@ The component must be self-contained with all data inline — no external API ca
     const data = await response.json();
     const content = data.content?.[0]?.text;
     if (!content) throw new Error('Empty response from Anthropic');
+    let cleaned = content.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
+    }
+    return cleaned;
+  }
+
+  // ─── Groq Provider (OpenAI-compatible) ─────────────────────────
+
+  private async callGroq(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq HTTP Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Empty response from Groq');
+
+    return this.parseAndValidatePatches(content);
+  }
+
+  private async callGroqRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        temperature: options?.temperature ?? 0.3,
+        max_tokens: options?.maxTokens ?? 4096,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      })
+    });
+    if (!response.ok) throw new Error(`Groq HTTP Error: ${response.status}`);
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Empty response from Groq');
     let cleaned = content.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');

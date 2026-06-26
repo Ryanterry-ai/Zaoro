@@ -2,7 +2,9 @@
 // Full progress tracking for every operation during build pipeline
 
 export type BuildStage =
+  | 'memory'        // Build Memory Check
   | 'bi'            // Business Intelligence
+  | 'bos'           // BOS Registry Lookup
   | 'research'      // Research Agent
   | 'architect'     // Architect
   | 'design-dna'    // Design DNA Generation

@@ -9,6 +9,7 @@ import {
   createCloneState,
 } from './clone-progress.js';
 import { SiteAnalyzer } from './site-analyzer.js';
+import { ContentHarvester, type HarvestMode } from './content-harvester.js';
 
 const ASSET_EXT = /\.(png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|wav|mov|avi|css|json)$/i;
 const PAGE_EXT = /\.(html?|php|aspx|jsp|cfm|shtml|pdf|zip|xml|txt)$/i;
@@ -129,11 +130,17 @@ export class CloneOrchestrator {
 
   // ─── Main entry ───────────────────────────────────────────────
 
-  async clone(targetUrl: string, options?: { maxPages?: number }): Promise<CloneResult> {
+  async clone(targetUrl: string, options?: { maxPages?: number; mode?: HarvestMode }): Promise<CloneResult> {
     const startTime = Date.now();
     let url = targetUrl.trim();
     if (!url.match(/^https?:\/\//i)) url = `https://${url}`;
     this.state.url = url;
+
+    // If mode is specified and not 'full-clone', use ContentHarvester for specialized harvesting
+    const mode = options?.mode || 'full-clone';
+    if (mode !== 'full-clone') {
+      return this.runHarvestMode(url, mode, options);
+    }
 
     this.log(`Starting full clone of ${url}`);
 
@@ -806,6 +813,68 @@ export class CloneOrchestrator {
 
       this.progress.emit('complete', 'failed', `Clone failed: ${err.message}`, { error: err.message });
 
+      return {
+        success: false,
+        pages: 0,
+        patches: [],
+        assets: 0,
+        filesWritten: [],
+        duration: Date.now() - startTime,
+        state: this.state,
+        error: err.message,
+      };
+    }
+  }
+
+  // ─── Harvest mode handler ────────────────────────────────────────
+  // Delegates to ContentHarvester for structure-clone and content-harvest modes
+
+  private async runHarvestMode(
+    url: string,
+    mode: HarvestMode,
+    options?: { maxPages?: number }
+  ): Promise<CloneResult> {
+    const startTime = Date.now();
+    this.log(`Starting ${mode} of ${url}`);
+
+    try {
+      const harvester = new ContentHarvester({
+        baseUrl: url,
+        mode,
+        maxPages: options?.maxPages || 50,
+        outputDir: path.join(this.workspaceRoot, '.clone-output'),
+        downloadAssets: mode === 'full-clone',
+        extractFonts: true,
+        extractAnimations: mode === 'full-clone',
+      });
+
+      // Emit progress for harvest phases
+      this.progress.emit('analyze', 'active', `Discovering pages via sitemap/crawl...`);
+      
+      const result = await harvester.harvest();
+
+      this.progress.emit('analyze', 'done', `Harvest complete — ${result.pages.length} pages, ${result.assets.length} assets`);
+      this.progress.emit('crawl', 'done', `Content harvested from ${result.pages.length} pages`);
+      this.progress.emit('generate', 'done', `Assets: ${result.assets.length} files, ${result.fonts.length} fonts`);
+
+      // Write files to disk
+      for (const page of result.pages) {
+        const filePath = path.join(this.workspaceRoot, '.clone-output', new URL(page.url).pathname, 'index.html');
+        await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.promises.writeFile(filePath, page.html);
+      }
+
+      return {
+        success: result.errors.length === 0,
+        pages: result.pages.length,
+        patches: [],
+        assets: result.assets.length,
+        filesWritten: result.pages.map(p => p.url),
+        duration: Date.now() - startTime,
+        state: this.state,
+      };
+    } catch (err: any) {
+      this.progress.emit('analyze', 'failed', `Harvest failed: ${err.message}`);
       return {
         success: false,
         pages: 0,

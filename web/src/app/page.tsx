@@ -45,7 +45,7 @@ export default function Home() {
         const res = await fetch("/api/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: prompt.trim() }),
+          body: JSON.stringify({ prompt: prompt.trim(), pipeline: true }),
         });
         const data = await res.json();
         if (data.id) {

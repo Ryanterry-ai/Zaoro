@@ -23,3 +23,11 @@ fix-backticks.cjs
 tmp/
 
 .vercel
+cloudflared.exe
+start-tunnel.bat
+nutrabay-clone.zip
+*.log
+.build-memory/
+.cache/
+.clone-output/
+.blueprint.json

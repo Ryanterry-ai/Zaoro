@@ -14,16 +14,33 @@ import { IntentDNAExtractor, IntentDNA } from './intent-dna.js';
 import { FeatureEnricher, EnrichedIntent } from './feature-enricher.js';
 import { generateDesignDNA, DesignDNA } from './design-dna.js';
 import { LLMGateway } from '../core/llm-gateway.js';
-import { generateSectionWithLLM, type LLMCodeGeneratorConfig } from './llm-code-generator.js';
+import { generateSectionWithLLM, generatePageWithLLM, type LLMCodeGeneratorConfig } from './llm-code-generator.js';
 import { LLMConfig, ASTPatch } from '../types/index.js';
 import { BuildProgressEvent, BuildStage, createBuildState, BuildState } from '../engine/build-progress.js';
+import { BOSRegistry, loadAllEntries } from '../bos/registry.js';
+import { BuildMemory, MemorySearchResult } from './build-memory.js';
 import { RuntimeManager } from '../engine/runtime-manager.js';
 import { BuildRunner } from '../engine/build-runner.js';
 import { BrowserVerifier, VerificationResult } from '../engine/browser-verifier.js';
 import { RepairLoop, RepairResult } from '../engine/repair-loop.js';
 
+// New BOS three-layer architecture imports
+import { BOS } from '../bos/index.js';
+import type { Blueprint } from '../bos/reasoning/blueprint-compiler.js';
+import type { BusinessIntent } from '../bos/reasoning/engine.js';
+
 export interface PipelineResult {
   success: boolean;
+  // BOS Blueprint output (new three-layer architecture)
+  blueprint: Blueprint | undefined;
+  reasoning: {
+    matchedIndustry: string | undefined;
+    matchedCapabilities: string[];
+    appliedVocabulary: Record<string, string>;
+    derivedFeatures: string[];
+    confidence: number;
+  } | undefined;
+  // Existing outputs
   intent: IntentDNA;
   designDNA: DesignDNA;
   enriched: EnrichedIntent;
@@ -56,6 +73,7 @@ interface PipelineContext {
   motionPlan: MotionPlan;
   domain: DomainSynthesisContext | undefined;
   generatedSections: Map<string, string>;
+  llmPageCode: string | undefined;
   uxResult: UXAuditResult | undefined;
   businessResult: BusinessValidation | undefined;
   assemblyResult: AssemblyResult | undefined;
@@ -172,6 +190,93 @@ export class PipelineOrchestrator {
         confidence: intent.confidence,
       },
     });
+
+    // ═══ Stage 1.25: Build Memory Check ═════════════════════════
+    this.emit('memory', 'active', `Checking build memory for similar past builds...`);
+    let memoryContext = '';
+    let memoryResults: MemorySearchResult[] = [];
+    try {
+      const buildMemory = new BuildMemory(this.workspaceRoot);
+      memoryResults = await buildMemory.findRelevant(prompt, intent.business_domain, 3);
+      
+      if (memoryResults.length > 0) {
+        const firstResult = memoryResults[0];
+        if (firstResult) {
+          const topSimilarity = (firstResult.similarity * 100).toFixed(0);
+          this.emit('memory', 'active', `Found ${memoryResults.length} similar builds (top match: ${topSimilarity}% similar)`);
+          memoryContext = await buildMemory.generateContext(prompt, intent.business_domain);
+          this.emit('memory', 'done', `Build memory loaded — ${memoryResults.length} patterns available for reuse`, {
+            similarBuilds: memoryResults.map(r => ({
+              prompt: r.entry.prompt.substring(0, 50),
+              similarity: (r.similarity * 100).toFixed(0) + '%',
+              quality: r.entry.output_quality_score,
+            })),
+          });
+        }
+      } else {
+        this.emit('memory', 'done', `Build memory empty — first build for this domain`);
+      }
+    } catch (err: any) {
+      this.emit('memory', 'active', `Build memory unavailable: ${err.message}`);
+    }
+
+    // ═══ Stage 1.5: BOS Knowledge Lookup (NEW) ═══════════════════
+    // Uses the three-layer BOS: Evidence → Knowledge → Reasoning
+    // NO runtime scraping during generation — all knowledge is pre-validated
+    this.emit('bos', 'active', `Initializing Business Operating System for ${intent.business_domain}...`);
+    let blueprint: Blueprint | undefined;
+    let reasoning: { matchedIndustry: string | undefined; matchedCapabilities: string[]; appliedVocabulary: Record<string, string>; derivedFeatures: string[]; confidence: number } | undefined;
+    
+    try {
+      // Initialize BOS with knowledge graph
+      const bos = await BOS.initialize();
+      
+      // Convert IntentDNA to BusinessIntent for BOS reasoning
+      const businessIntent: BusinessIntent = {
+        industry: intent.business_domain,
+        appName: intent.app_name,
+        description: intent.app_tagline,
+        features: intent.features.map(f => f.name),
+        entities: intent.entities.map(e => e.name),
+        workflows: intent.workflows.map(w => w.name),
+        designStyle: intent.design_style,
+      };
+      
+      this.emit('bos', 'active', `Deriving blueprint from knowledge graph...`);
+      
+      // Derive blueprint using BOS Reasoning Engine
+      const result = await bos.deriveBlueprint(businessIntent);
+      blueprint = result.blueprint;
+      reasoning = result.reasoning;
+      
+      this.emit('bos', 'done', `Blueprint compiled — ${blueprint.pages.length} pages, ${blueprint.entities.length} entities`, {
+        blueprintId: blueprint.id,
+        industry: reasoning.matchedIndustry,
+        confidence: reasoning.confidence,
+        pages: blueprint.pages.map(p => p.name),
+        entities: blueprint.entities.map(e => e.name),
+        vocabulary: reasoning.appliedVocabulary,
+      });
+      
+      // Save blueprint to workspace for downstream consumers
+      const blueprintPath = path.join(this.workspaceRoot, '.blueprint.json');
+      fs.writeFileSync(blueprintPath, JSON.stringify(blueprint, null, 2));
+      this.log(`Blueprint saved to ${blueprintPath}`);
+      
+    } catch (err: any) {
+      this.emit('bos', 'active', `BOS initialization failed: ${err.message}, falling back to legacy lookup`);
+      
+      // Fallback to legacy BOS Registry lookup
+      try {
+        await loadAllEntries();
+        const bosResult = BOSRegistry.lookup(intent.business_domain, intent.app_name);
+        if (bosResult) {
+          this.emit('bos', 'active', `Legacy BOS match: ${bosResult.entry.id} (${bosResult.matchType})`);
+        }
+      } catch (legacyErr: any) {
+        this.emit('bos', 'active', `Legacy BOS also failed: ${legacyErr.message}`);
+      }
+    }
 
     // ═══ Stage 2: Design DNA Generation ═════════════════════════
     this.emit('design-dna', 'active', `Generating Design DNA — unified visual system from intent...`);
@@ -307,12 +412,17 @@ export class PipelineOrchestrator {
     });
 
     // ═══ Stage 8: Domain Synthesis + LLM Code Generation ══════════════
+    // Note: Runtime scraping removed — all knowledge comes from BOS Blueprint
     this.emit('synthesize', 'active', `Generating domain-specific content...`);
     let domainCtx: DomainSynthesisContext | undefined;
     try {
       this.emit('synthesize', 'active', `Creating domain synthesis context...`);
-      domainCtx = await createDomainSynthesisAsync(prompt, decision, designDNA);
+      // Pass null for scrapedContent — BOS Blueprint provides all knowledge
+      domainCtx = await createDomainSynthesisAsync(prompt, decision, designDNA, null);
       this.emit('synthesize', 'active', `Domain context ready — ${domainCtx.domain.industry}, mood=${domainCtx.domain.mood}`);
+      if (blueprint) {
+        this.emit('synthesize', 'active', `Using BOS Blueprint: ${blueprint.pages.length} pages, ${blueprint.entities.length} entities`);
+      }
     } catch {
       this.emit('synthesize', 'active', `Domain synthesis unavailable — using primitives`);
       domainCtx = undefined;
@@ -336,8 +446,13 @@ export class PipelineOrchestrator {
     for (const [section] of generatedSections) {
       this.emit('synthesize', 'active', `Section: ${section}`);
     }
-    this.emit('synthesize', 'done', `Code generation complete — ${generatedSections.size} sections`, {
+
+    // ═══ Stage 8b: Page-Level LLM Composition ══════════════════════
+    const llmPageCode = await this.composeFinalPage(generatedSections, llmCodeGenConfig, llmAvailable);
+
+    this.emit('synthesize', 'done', `Code generation complete — ${generatedSections.size} sections, page composition: ${llmPageCode ? 'LLM' : 'section assembly'}`, {
       sections: [...generatedSections.keys()],
+      pageComposition: llmPageCode ? 'llm' : 'section-assembly',
     });
 
     // ═══ Self-Correction Loop ═════════════════════════════════════
@@ -353,6 +468,7 @@ export class PipelineOrchestrator {
       motionPlan,
       domain: domainCtx,
       generatedSections,
+      llmPageCode,
       uxResult: undefined,
       businessResult: undefined,
       assemblyResult: undefined,
@@ -402,7 +518,7 @@ export class PipelineOrchestrator {
       });
       const assemblyResult = await assembler.assemble(
         decision, designSystem, componentPlan, assetPlan, motionPlan,
-        uxResult, businessResult, generatedSections,
+        uxResult, businessResult, generatedSections, ctx.llmPageCode,
       );
       ctx.assemblyResult = assemblyResult;
       this.emit('assembly', 'active', `Assembly Score: ${assemblyResult.overallScore}/100 — ${assemblyResult.filesWritten.length} files written`);
@@ -561,6 +677,45 @@ export class PipelineOrchestrator {
     this.buildState.filesWritten = ctx.assemblyResult?.filesWritten || [];
     this.flushState();
 
+    // ═══ Stage Final: Store in Build Memory ═════════════════════
+    this.emit('memory', 'active', `Storing build results in memory for future reuse...`);
+    try {
+      const buildMemory = new BuildMemory(this.workspaceRoot);
+      
+      // Collect generated files
+      const files = new Map<string, string>();
+      for (const patch of patches) {
+        files.set(patch.targetFile, patch.codeBlock);
+      }
+      
+      // Calculate quality score
+      const qualityScore = Math.min(100, 
+        (verificationResult?.score || 50) * 0.4 +
+        (ctx.uxResult?.overall || 50) * 0.3 +
+        (ctx.businessResult?.overall || 50) * 0.3
+      );
+      
+      await buildMemory.storeBuild(
+        prompt,
+        intent,
+        enriched,
+        files,
+        true,
+        qualityScore,
+        duration,
+        patches.length,
+        0 // tokens used
+      );
+      
+      this.emit('memory', 'done', `Build stored in memory — quality=${qualityScore.toFixed(0)}/100, ${patches.length} files`, {
+        qualityScore,
+        filesCount: patches.length,
+        duration,
+      });
+    } catch (err: any) {
+      this.emit('memory', 'active', `Build memory storage failed: ${err.message}`);
+    }
+
     this.emit('complete', 'done', `Pipeline complete: ${iterations} iterations, ${patches.length} patches, verification=${verificationResult?.score || 'N/A'}, ${(duration / 1000).toFixed(1)}s`, {
       iterations,
       patches: patches.length,
@@ -573,6 +728,8 @@ export class PipelineOrchestrator {
 
     return {
       success: true,
+      blueprint,
+      reasoning,
       intent,
       designDNA,
       enriched,
@@ -591,6 +748,65 @@ export class PipelineOrchestrator {
       patches,
       buildState: this.buildState,
     };
+  }
+
+  // ─── Page-Level LLM Composition ────────────────────────────────
+
+  private async composeFinalPage(
+    sections: Map<string, string>,
+    llmConfig: LLMCodeGeneratorConfig,
+    llmAvailable: boolean,
+  ): Promise<string | undefined> {
+    if (!llmAvailable) {
+      this.emit('synthesize', 'active', `LLM unavailable — composing page with template assembly`);
+      return undefined;
+    }
+
+    this.emit('synthesize', 'active', `Composing final page structure with LLM...`);
+
+    try {
+      const sectionNames = [...sections.keys()];
+      const pageCode = await generatePageWithLLM(sectionNames, sections, llmConfig);
+
+      if (pageCode) {
+        this.emit('synthesize', 'active', `✓ Page composed with LLM (Sections: ${sectionNames.length})`);
+        return pageCode;
+      }
+
+      this.emit('synthesize', 'active', `⚠ LLM page composition returned null — falling back to template assembly`);
+      return undefined;
+    } catch (error: any) {
+      console.error('[PipelineOrchestrator] LLM Page Composition failed:', error.message);
+      this.emit('synthesize', 'active', `⚠ LLM page composition failed: ${error.message} — falling back to template assembly`);
+      return undefined;
+    }
+  }
+
+  private assemblePageTemplate(
+    sections: Map<string, string>,
+    context: PipelineContext,
+  ): string {
+    const imports: string[] = [];
+    const bodyParts: string[] = [];
+
+    for (const [sectionType, code] of sections) {
+      const componentName = this.toPascalCase(sectionType);
+      imports.push(`// ${componentName} — inline section`);
+      bodyParts.push(`{/* ${sectionType} */}\n${code}`);
+    }
+
+    return `'use client';
+
+${imports.join('\n')}
+
+export default function ${this.toPascalCase(context.intent.app_name)}Page() {
+  return (
+    <div>
+${bodyParts.map(s => `      ${s}`).join('\n\n')}
+    </div>
+  );
+}
+`;
   }
 
   // ─── Section generation ─────────────────────────────────────────

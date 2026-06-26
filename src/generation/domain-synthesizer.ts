@@ -4,6 +4,8 @@ import { DomainMockData, getDomainData, getSectionData } from './domain-data.js'
 import { resolveDomainImages, ResolvedImages, SVG_ICONS, resolveIconSvg, resolveDashboardMockup } from './image-resolver.js';
 import { WebResearcher, WebResearchData } from './web-researcher.js';
 import { DesignDNA } from './design-dna.js';
+import { ScrapedContent } from '../bos/types.js';
+import { mergeScrapedContent } from './content-scraper.js';
 
 function escapeJSX(s: string): string {
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -18,9 +20,14 @@ export interface DomainSynthesisContext {
   designDNA?: DesignDNA | undefined;
 }
 
-export async function createDomainSynthesisAsync(prompt: string, decision: ArchitectDecision, designDNA?: DesignDNA): Promise<DomainSynthesisContext> {
+export async function createDomainSynthesisAsync(
+  prompt: string, 
+  decision: ArchitectDecision, 
+  designDNA?: DesignDNA,
+  scrapedContent?: ScrapedContent | null
+): Promise<DomainSynthesisContext> {
   const domain = detectDomain(prompt);
-  const data = getDomainData(domain.industry, domain.subIndustry);
+  let data = getDomainData(domain.industry, domain.subIndustry);
   const images = resolveDomainImages(
     domain.imageKeywords.length > 0 ? domain.imageKeywords : data.imageKeywords,
     data.items.length,
@@ -29,6 +36,12 @@ export async function createDomainSynthesisAsync(prompt: string, decision: Archi
 
   console.log(`[domain-synth] Detected: ${domain.industry}/${domain.subIndustry || 'general'} mood=${domain.mood}`);
   console.log(`[domain-synth] Sections: ${domain.suggestedSections.join(', ')}`);
+
+  // Merge scraped content with base domain data
+  if (scrapedContent) {
+    console.log(`[domain-synth] Merging scraped content from ${scrapedContent.sourceUrl}`);
+    data = mergeScrapedContent(data, scrapedContent);
+  }
 
   // Research real competitors in the domain
   let webResearch: WebResearchData | undefined;

@@ -43,6 +43,7 @@ export class AssemblyQA {
     uxResult: UXAuditResult,
     businessResult: BusinessValidation,
     generatedSections: Map<string, string>,
+    llmPageCode?: string,
   ): Promise<AssemblyResult> {
     const startTime = Date.now();
     const checks: AssemblyCheck[] = [];
@@ -74,12 +75,18 @@ export class AssemblyQA {
 
       // 4. Write page.tsx files — each one emits progress immediately
       for (const page of decision.pages) {
-        const pageCode = this.generatePage(page, designSystem, generatedSections);
+        let pageCode: string;
+        // Use LLM-composed page if available (full page with navbar/footer)
+        if (llmPageCode && page.route === '/') {
+          pageCode = llmPageCode;
+        } else {
+          pageCode = this.generatePage(page, designSystem, generatedSections);
+        }
         const routePath = page.route === '/' ? 'src/app/page.tsx' : `src/app${page.route}/page.tsx`;
         this.writeFile(routePath, pageCode);
         filesWritten.push(routePath);
         this.onFileWritten?.(routePath);
-        checks.push({ name: routePath, passed: true, detail: `Page "${page.name}" written` });
+        checks.push({ name: routePath, passed: true, detail: `Page "${page.name}" written${llmPageCode && page.route === '/' ? ' (LLM composed)' : ''}` });
       }
 
       // 5. Write shared components — each one emits progress immediately

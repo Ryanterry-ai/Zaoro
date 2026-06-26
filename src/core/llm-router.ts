@@ -18,11 +18,11 @@ interface TaskRoute {
 }
 
 const DEFAULT_ROUTES: TaskRoute[] = [
-  { task: 'code-generation', providers: ['anthropic', 'openai', 'gemini'] },
-  { task: 'reasoning', providers: ['anthropic', 'openai'] },
-  { task: 'analysis', providers: ['gemini', 'openai', 'anthropic'] },
-  { task: 'summarization', providers: ['gemini', 'openai'] },
-  { task: 'translation', providers: ['gemini', 'openai'] },
+  { task: 'code-generation', providers: ['groq', 'anthropic', 'openai', 'gemini'] },
+  { task: 'reasoning', providers: ['groq', 'anthropic', 'openai'] },
+  { task: 'analysis', providers: ['gemini', 'openai', 'anthropic', 'groq'] },
+  { task: 'summarization', providers: ['gemini', 'openai', 'groq'] },
+  { task: 'translation', providers: ['gemini', 'openai', 'groq'] },
   { task: 'image-generation', providers: ['gemini', 'openai'] },
 ];
 
@@ -115,17 +115,33 @@ export class LLMRouter {
 export function createRouterFromEnv(): LLMRouter {
   const configs: LLMProviderConfig[] = [];
 
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.LLM_API_KEY;
-  if (geminiKey && process.env.LLM_PROVIDER === 'gemini') {
+  // Groq (primary) - Fast inference, free tier, excellent code gen
+  const groqKey = process.env.GROQ_API_KEY || (process.env.LLM_PROVIDER === 'groq' ? process.env.LLM_API_KEY : undefined);
+  if (groqKey) {
+    configs.push({
+      provider: 'groq',
+      apiKey: groqKey,
+      model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
+      capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation'],
+      priority: 1,
+      temperature: 0.3,
+      maxTokens: 8192,
+    });
+  }
+
+  // Gemini (fallback) - Good for analysis when credits available
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
     configs.push({
       provider: 'gemini',
       apiKey: geminiKey,
       model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-      capabilities: ['analysis', 'summarization', 'translation', 'image-generation'],
-      priority: 1,
+      capabilities: ['analysis', 'summarization', 'translation', 'image-generation', 'code-generation'],
+      priority: 2,
     });
   }
 
+  // Anthropic (fallback) - Best reasoning but expensive
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) {
     configs.push({
@@ -133,10 +149,11 @@ export function createRouterFromEnv(): LLMRouter {
       apiKey: anthropicKey,
       model: process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-20250219',
       capabilities: ['code-generation', 'reasoning', 'analysis'],
-      priority: 2,
+      priority: 3,
     });
   }
 
+  // OpenAI (last resort)
   const openaiKey = process.env.OPENAI_API_KEY;
   if (openaiKey) {
     configs.push({
@@ -144,10 +161,11 @@ export function createRouterFromEnv(): LLMRouter {
       apiKey: openaiKey,
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       capabilities: ['code-generation', 'reasoning', 'analysis', 'image-generation'],
-      priority: 3,
+      priority: 4,
     });
   }
 
+  // Fallback: if only Gemini key exists without provider指定
   if (configs.length === 0 && geminiKey) {
     configs.push({
       provider: 'gemini',

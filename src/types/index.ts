@@ -26,7 +26,7 @@ export interface WorkspaceConfig {
   rootPath: string;
 }
 
-export type LLMProvider = 'openai' | 'anthropic' | 'gemini';
+export type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'groq';
 
 export interface LLMConfig {
   provider: LLMProvider;
