@@ -228,12 +228,11 @@ export class KnowledgeGraph {
       const node = this.nodes.get(nodeId);
       if (!node) continue;
 
-      // Apply node filter
-      if (query.nodeFilter && !query.nodeFilter.includes(node.type)) {
-        continue;
-      }
-
       if (depth > 0) {
+        // Apply node filter only to result candidates (not the start node)
+        if (query.nodeFilter && !query.nodeFilter.includes(node.type)) {
+          continue;
+        }
         result.push(node);
       }
 
