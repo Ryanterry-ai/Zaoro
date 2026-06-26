@@ -29,6 +29,12 @@ export interface ConstraintReport {
 export class ConstraintSolver {
   private constraints: Constraint[] = [];
 
+  constructor() {
+    for (const constraint of createDefaultConstraints()) {
+      this.register(constraint);
+    }
+  }
+
   register(constraint: Constraint): void {
     this.constraints.push(constraint);
   }

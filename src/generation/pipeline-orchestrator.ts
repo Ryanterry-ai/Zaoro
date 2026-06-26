@@ -37,6 +37,7 @@ import { BlueprintCompilerV2 } from '../bos/reasoning/blueprint-compiler-v2.js';
 import type { BREContext, RuleDecision } from '../bos/reasoning/rules-engine.js';
 import type { ConstraintReport } from '../bos/reasoning/constraint-solver.js';
 import type { ScoredOption } from '../bos/reasoning/scorer.js';
+import { DESIGN_PROFILES, PATTERNS } from '../bos/knowledge/registry.js';
 
 export interface PipelineResult {
   success: boolean;
@@ -266,7 +267,7 @@ export class PipelineOrchestrator {
       // Phase 3: Run Scorer — rank design profiles and patterns by fit
       this.emit('bos', 'active', `Scoring design profiles and patterns...`);
       const scorer = new Scorer();
-      const scoringCtx = { industry: intent.business_domain, businessModels: [] as string[], capabilities: intent.features.map(f => f.name), decisions: ruleDecisions, designProfiles: [] as any[], patterns: [] as any[] };
+      const scoringCtx = { industry: intent.business_domain, businessModels: [] as string[], capabilities: intent.features.map(f => f.name), decisions: ruleDecisions, designProfiles: DESIGN_PROFILES, patterns: PATTERNS };
       const scoredProfiles = scorer.scoreDesignProfiles(scoringCtx);
       const scoredPatterns = scorer.scorePatterns(scoringCtx);
       const selectedProfile = scoredProfiles[0];

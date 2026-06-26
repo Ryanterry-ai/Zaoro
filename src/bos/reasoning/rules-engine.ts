@@ -47,6 +47,12 @@ export interface RuleDecision {
 export class RulesEngine {
   private rules: Rule[] = [];
 
+  constructor() {
+    for (const rule of createDefaultRules()) {
+      this.register(rule);
+    }
+  }
+
   register(rule: Rule): void {
     this.rules.push(rule);
     this.rules.sort((a, b) => b.priority - a.priority);
