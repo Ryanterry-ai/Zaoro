@@ -114,6 +114,22 @@ export class LLMGateway {
       }
     }
 
+    // Hardcoded Gemini fallback if router didn't find alternatives
+    if (this.provider !== 'gemini') {
+      const geminiKey = process.env.GEMINI_API_KEY || '';
+      if (geminiKey) {
+        try {
+          console.log(`[gateway] Hardcoded Gemini fallback for patches`);
+          const geminiGateway = new LLMGateway({ provider: 'gemini', apiKey: geminiKey, model: 'gemini-2.5-flash' });
+          const llmPatches = await geminiGateway.callProvider(systemPrompt, userPrompt);
+          console.log(`[gateway] Gemini fallback succeeded: ${llmPatches.length} patches`);
+          return llmPatches;
+        } catch (err: any) {
+          console.log(`[gateway] Gemini fallback failed: ${err.message}`);
+        }
+      }
+    }
+
     console.log(`[gateway] All LLM providers failed. Using domain synthesis fallback.`);
     return domainPatches;
   }
@@ -272,6 +288,36 @@ Active Attempt Loop: 0`;
           this.router.reportFailure(fallback.provider, err);
           exclude.push(fallback.provider);
           fallback = this.router.selectProvider('code-generation', exclude);
+        }
+      }
+    }
+
+    // Hardcoded Gemini fallback if router didn't find alternatives
+    if (this.provider !== 'gemini') {
+      const geminiKey = process.env.GEMINI_API_KEY || '';
+      if (geminiKey) {
+        try {
+          console.log(`[gateway] Hardcoded Gemini fallback for patches`);
+          const geminiGateway = new LLMGateway({ provider: 'gemini', apiKey: geminiKey, model: 'gemini-2.5-flash' });
+          const allPatches = await geminiGateway.callProvider(systemPrompt, combinedUserPrompt);
+          console.log(`[gateway] Gemini fallback succeeded: ${allPatches.length} patches`);
+
+          const patchMap = new Map<string, ASTPatch[]>();
+          for (const patch of allPatches) {
+            const existing = patchMap.get(patch.targetFile) || [];
+            existing.push(patch);
+            patchMap.set(patch.targetFile, existing);
+          }
+          // Fill in missing pages from domain fallback
+          const llmTargetFiles = new Set(allPatches.map(p => p.targetFile));
+          for (const [file, patches] of fallbackMap) {
+            if (!llmTargetFiles.has(file)) {
+              patchMap.set(file, patches);
+            }
+          }
+          return patchMap;
+        } catch (err: any) {
+          console.log(`[gateway] Gemini fallback failed: ${err.message}`);
         }
       }
     }
