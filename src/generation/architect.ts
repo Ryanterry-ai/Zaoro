@@ -3,6 +3,7 @@ import { FullStackBlueprint, DataModel, APIRouteSpec, StateStoreSpec } from '../
 import { BusinessIntelligenceEngine, IntelligenceResult } from '../intelligence/business-intelligence-engine.js';
 import { CapabilityGraph, CapabilityNode } from '../intelligence/capability-graph.js';
 import { BusinessOperatingSystem, type BusinessOperatingSystemReport } from '../business-intelligence/business-operating-system.js';
+import type { Pattern } from '../bos/schemas/knowledge/pattern.schema.js';
 
 export interface ArchitectDecision {
   businessType: string;
@@ -67,6 +68,9 @@ const CAPABILITY_PAGES: Record<string, Array<{ route: string; name: string; type
   portfolio: [{ route: '/work', name: 'Work', type: 'listing', sections: ['project-grid', 'case-studies'], description: 'Portfolio showcase' }],
   agency: [{ route: '/work', name: 'Work', type: 'listing', sections: ['project-grid', 'case-studies'], description: 'Agency work' }],
   subscriptions: [{ route: '/pricing', name: 'Pricing', type: 'listing', sections: ['pricing-table'], description: 'Subscription plans' }],
+  luxury: [{ route: '/collections', name: 'Collections', type: 'listing', sections: ['collection-grid', 'product-detail'], description: 'Luxury collections' }],
+  watches: [{ route: '/collections', name: 'Collections', type: 'listing', sections: ['collection-grid', 'product-detail'], description: 'Watch collections' }],
+  jewelry: [{ route: '/collections', name: 'Collections', type: 'listing', sections: ['collection-grid', 'product-detail'], description: 'Jewelry collections' }],
 };
 
 // Capability → home page hero sections
@@ -90,6 +94,9 @@ const CAPABILITY_HERO_SECTIONS: Record<string, string[]> = {
   portfolio: ['featured-projects', 'services', 'skills', 'cta'],
   agency: ['services', 'case-studies', 'team', 'clients', 'cta'],
   subscriptions: ['features-grid', 'pricing-table', 'testimonials', 'faq'],
+  luxury: ['featured-collections', 'craftsmanship', 'heritage-story', 'testimonials', 'cta'],
+  watches: ['featured-collections', 'craftsmanship', 'heritage-story', 'testimonials', 'cta'],
+  jewelry: ['featured-collections', 'craftsmanship', 'heritage-story', 'testimonials', 'cta'],
 };
 
 // Capability → state stores
@@ -205,7 +212,7 @@ const SECTION_PROPS: Record<string, string[]> = {
 export class ArchitectAgent {
   private intelEngine = new BusinessIntelligenceEngine();
 
-  designArchitecture(prompt: string): ArchitectDecision {
+  designArchitecture(prompt: string, resolvedPattern?: Pattern | null): ArchitectDecision {
     // Run BOS first for business intelligence
     let biReport: BusinessOperatingSystemReport | undefined;
     try {
@@ -221,8 +228,18 @@ export class ArchitectAgent {
     const name = this.extractName(prompt);
     const colorScheme = this.inferColorScheme(prompt, capabilities);
 
-    // Use BOS blueprint pages if available, otherwise fallback to capability-based
-    const pages = biReport ? this.designPagesFromBlueprint(biReport, name) : this.designPages(prompt, capabilities);
+    // Use resolved BOS pattern pages if available (single source of truth)
+    // Otherwise use BOS blueprint, then capability graph fallback
+    let pages: PageDesign[];
+    if (resolvedPattern?.pages?.length) {
+      pages = this.designPagesFromPattern(resolvedPattern, name);
+      console.log(`[architect] Using resolved pattern: ${resolvedPattern.name} (${resolvedPattern.pages.length} pages)`);
+    } else if (biReport) {
+      pages = this.designPagesFromBlueprint(biReport, name);
+    } else {
+      pages = this.designPages(prompt, capabilities);
+    }
+
     const components = this.designComponents(pages);
     const stateModel = this.designStateModel(capabilities);
 
@@ -236,6 +253,27 @@ export class ArchitectAgent {
       name,
       description: `${name} — ${capabilities.join(', ')} application`,
     };
+  }
+
+  private designPagesFromPattern(pattern: Pattern, appName: string): PageDesign[] {
+    const pages: PageDesign[] = [];
+    const seenRoutes = new Set<string>();
+
+    for (const patternPage of pattern.pages) {
+      if (seenRoutes.has(patternPage.path)) continue;
+      seenRoutes.add(patternPage.path);
+
+      pages.push({
+        route: patternPage.path,
+        name: patternPage.name,
+        type: patternPage.type,
+        sections: patternPage.sections,
+        layout: patternPage.type === 'home' ? 'hero' : patternPage.type === 'auth' ? 'centered' : 'standard',
+        description: `${patternPage.name} page for ${appName}`,
+      });
+    }
+
+    return pages;
   }
 
   private designPagesFromBlueprint(report: BusinessOperatingSystemReport, appName: string): PageDesign[] {
@@ -432,8 +470,8 @@ export class ArchitectAgent {
       /for\s+([A-Z][A-Za-z0-9\s&'.-]+)/,
       // Match "Build a <Industry> landing page" — capture the industry word
       /(?:build|create|make)\s+(?:a\s+)?(\w+)\s+(?:landing|website|app|page|platform|dashboard|store|site)/i,
-      // Match "Build a <Industry> <Type>" — capture first meaningful word
-      /(?:build|create|make)\s+(?:a\s+)?([A-Z][A-Za-z0-9]+)/i,
+      // Match "Build a <Industry> <Type>" — capture first meaningful word (NO /i — require uppercase)
+      /(?:build|create|make)\s+(?:a\s+)?([A-Z][A-Za-z0-9]+)/,
     ];
 
     // Industry words that should NOT be used as app names — use keyword fallback instead
@@ -442,7 +480,12 @@ export class ArchitectAgent {
       'portfolio', 'agency', 'education', 'blog', 'news', 'law', 'legal',
       'travel', 'booking', 'hotel', 'cafe', 'food', 'dental', 'medical',
       'real estate', 'property', 'gym', 'yoga', 'store', 'shop', 'dashboard',
-      'analytics', 'crm', 'ecommerce',
+      'analytics', 'crm', 'ecommerce', 'luxury', 'premium', 'boutique', 'elite',
+      'deluxe', 'watch', 'watches', 'jewelry', 'jewellery', 'timepiece', 'horology',
+      'artisan', 'bespoke', 'haute', 'couture', 'fine', 'elegant', 'sophisticated',
+      'chronograph', 'swiss', 'heritage', 'collection', 'brand', 'company', 'agency',
+      'studio', 'firm', 'consulting', 'services', 'platform', 'solution', 'system',
+      'tool', 'app', 'website', 'site', 'web', 'digital', 'online',
     ]);
 
     for (const pat of patterns) {
@@ -472,6 +515,8 @@ export class ArchitectAgent {
       'blog': 'BlogEngine', 'news': 'NewsFlow',
       'law': 'LexFirm', 'legal': 'LexFirm', 'attorney': 'LexFirm',
       'travel': 'Wanderly', 'booking': 'BookEase', 'hotel': 'Hospita',
+      'luxury': 'Chronos', 'watch': 'Chronos', 'timepiece': 'Chronos', 'jewelry': 'Aurum',
+      'boutique': 'Atelier', 'premium': 'Apex', 'artisan': 'Atelier',
     };
     for (const [keyword, name] of Object.entries(nameMap)) {
       if (lower.includes(keyword)) return name;

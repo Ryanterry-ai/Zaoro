@@ -6,6 +6,30 @@ import { WebResearcher, WebResearchData } from './web-researcher.js';
 import { DesignDNA } from './design-dna.js';
 import { ScrapedContent } from '../bos/types.js';
 import { mergeScrapedContent } from './content-scraper.js';
+import type { Pattern } from '../bos/schemas/knowledge/pattern.schema.js';
+
+function inferMoodFromPattern(pattern: Pattern): DomainContext['mood'] {
+  const name = pattern.name.toLowerCase();
+  if (name.includes('luxury') || name.includes('premium') || name.includes('elegant')) return 'premium';
+  if (name.includes('bold') || name.includes('fitness') || name.includes('gym')) return 'bold';
+  if (name.includes('minimal') || name.includes('portfolio')) return 'minimal';
+  if (name.includes('warm') || name.includes('restaurant') || name.includes('travel')) return 'warm';
+  if (name.includes('dark') || name.includes('noir')) return 'dark';
+  return 'modern';
+}
+
+function inferColorHintFromPattern(pattern: Pattern): string {
+  const name = pattern.name.toLowerCase();
+  if (name.includes('luxury') || name.includes('watch') || name.includes('jewelry')) return 'amber';
+  if (name.includes('healthcare') || name.includes('dental') || name.includes('medical')) return 'cyan';
+  if (name.includes('fitness') || name.includes('gym')) return 'rose';
+  if (name.includes('restaurant') || name.includes('food') || name.includes('cafe')) return 'amber';
+  if (name.includes('saas') || name.includes('tech')) return 'violet';
+  if (name.includes('education') || name.includes('learn')) return 'blue';
+  if (name.includes('real estate') || name.includes('property')) return 'emerald';
+  if (name.includes('legal') || name.includes('law')) return 'slate';
+  return 'blue';
+}
 
 function escapeJSX(s: string): string {
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -24,17 +48,42 @@ export async function createDomainSynthesisAsync(
   prompt: string, 
   decision: ArchitectDecision, 
   designDNA?: DesignDNA,
-  scrapedContent?: ScrapedContent | null
+  scrapedContent?: ScrapedContent | null,
+  resolvedPattern?: Pattern | null,
 ): Promise<DomainSynthesisContext> {
-  const domain = detectDomain(prompt);
-  let data = getDomainData(domain.industry, domain.subIndustry);
+  // Use resolved BOS pattern as single source of truth when available
+  // Skip independent detectDomain() — it produces a third, disconnected guess
+  let domain: DomainContext;
+  let data: DomainMockData;
+  
+  if (resolvedPattern) {
+    // Derive domain context directly from the resolved pattern
+    const patternIndustry = resolvedPattern.compatibleIndustries[0] || 'general';
+    domain = {
+      industry: patternIndustry,
+      subIndustry: resolvedPattern.compatibleIndustries[1] || '',
+      mood: inferMoodFromPattern(resolvedPattern),
+      features: resolvedPattern.components,
+      contentKeywords: resolvedPattern.name.toLowerCase().split(/\s+/),
+      suggestedSections: resolvedPattern.pages.flatMap(p => p.sections).filter((s, i, a) => a.indexOf(s) === i),
+      colorHint: inferColorHintFromPattern(resolvedPattern),
+      imageKeywords: resolvedPattern.design?.restrictions?.map(r => r.replace(/-/g, ' ')) || [],
+    };
+    data = getDomainData(patternIndustry, domain.subIndustry);
+    console.log(`[domain-synth] Using resolved pattern: ${resolvedPattern.name} → industry=${patternIndustry}`);
+  } else {
+    // Fallback: independent domain detection (legacy path)
+    domain = detectDomain(prompt);
+    data = getDomainData(domain.industry, domain.subIndustry);
+    console.log(`[domain-synth] Detected: ${domain.industry}/${domain.subIndustry || 'general'} mood=${domain.mood}`);
+  }
+  
   const images = resolveDomainImages(
     domain.imageKeywords.length > 0 ? domain.imageKeywords : data.imageKeywords,
     data.items.length,
     data.team.length,
   );
 
-  console.log(`[domain-synth] Detected: ${domain.industry}/${domain.subIndustry || 'general'} mood=${domain.mood}`);
   console.log(`[domain-synth] Sections: ${domain.suggestedSections.join(', ')}`);
 
   // Merge scraped content with base domain data

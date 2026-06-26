@@ -38,6 +38,7 @@ import type { BREContext, RuleDecision } from '../bos/reasoning/rules-engine.js'
 import type { ConstraintReport } from '../bos/reasoning/constraint-solver.js';
 import type { ScoredOption } from '../bos/reasoning/scorer.js';
 import { DESIGN_PROFILES, PATTERNS } from '../bos/knowledge/registry.js';
+import type { Pattern } from '../bos/schemas/knowledge/pattern.schema.js';
 
 export interface PipelineResult {
   success: boolean;
@@ -237,6 +238,7 @@ export class PipelineOrchestrator {
     this.emit('bos', 'active', `Initializing Business Operating System for ${intent.business_domain}...`);
     let blueprint: Blueprint | undefined;
     let reasoning: { matchedIndustry: string | undefined; matchedCapabilities: string[]; appliedVocabulary: Record<string, string>; derivedFeatures: string[]; confidence: number } | undefined;
+    let resolvedPatternForArchitect: Pattern | null = null;
     
     try {
       // Convert IntentDNA to BREContext for deterministic reasoning
@@ -273,6 +275,11 @@ export class PipelineOrchestrator {
       const selectedProfile = scoredProfiles[0];
       const selectedPattern = scoredPatterns[0];
       this.emit('bos', 'active', `Selected profile: ${selectedProfile?.name ?? 'default'} (${(selectedProfile?.score ?? 0).toFixed(2)}), pattern: ${selectedPattern?.name ?? 'default'}`);
+      // Hoist pattern for architect (single source of truth for pages/sections)
+      // ScoredOption only has id/name/score — look up the full Pattern from registry
+      if (selectedPattern) {
+        resolvedPatternForArchitect = PATTERNS.find(p => p.id === selectedPattern.id) ?? null;
+      }
 
       // Phase 4: Compile ApplicationBlueprint from BRE outputs
       this.emit('bos', 'active', `Compiling application blueprint...`);
@@ -433,7 +440,8 @@ export class PipelineOrchestrator {
       `Typography: heading=${designDNA.typography.heading.split(',')[0]}, body=${designDNA.typography.body.split(',')[0]}`,
       `Layout: hero=${designDNA.layout.heroLayout}, density=${designDNA.layout.density}, nav=${designDNA.navigation.type}`,
     ].join('\n');
-    const decision = architect.designArchitecture(enrichedPrompt);
+    // Pass resolved BOS pattern as single source of truth for page/section design
+    const decision = architect.designArchitecture(enrichedPrompt, resolvedPatternForArchitect);
     const designSystem = generateDesignSystem(decision, undefined, designDNA);
     this.emit('design', 'active', `Typography: ${Object.keys(designSystem.typography.scale).length} scales, ${designSystem.typography.fontFamily.heading}/${designSystem.typography.fontFamily.body}`);
     this.emit('design', 'active', `Colors: primary=${designSystem.colors.primary[500]}, accent=${designSystem.colors.accent[500]}`);
@@ -492,7 +500,7 @@ export class PipelineOrchestrator {
     try {
       this.emit('synthesize', 'active', `Creating domain synthesis context...`);
       // Pass null for scrapedContent — BOS Blueprint provides all knowledge
-      domainCtx = await createDomainSynthesisAsync(prompt, decision, designDNA, null);
+      domainCtx = await createDomainSynthesisAsync(prompt, decision, designDNA, null, resolvedPatternForArchitect);
       this.emit('synthesize', 'active', `Domain context ready — ${domainCtx.domain.industry}, mood=${domainCtx.domain.mood}`);
       if (blueprint) {
         this.emit('synthesize', 'active', `Using BOS Blueprint: ${blueprint.pages.length} pages, ${blueprint.entities.length} entities`);
