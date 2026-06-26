@@ -24,6 +24,7 @@ import { TelemetryLayer } from '../core/telemetry.js';
 import { BusinessIntelligencePipeline } from '../business-intelligence/pipeline.js';
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
 import { SelfHealingEngine } from '../engine/self-healing-engine.js';
+import { ContentResearchAgent } from '../generation/content-research-agent.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -169,6 +170,16 @@ export class DeterministicOrchestratorV4 {
     }
 
     const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
+
+    // ═══ Stage 1.5: Content Research (browse web for real business data) ═══
+    try {
+      const researcher = new ContentResearchAgent();
+      const research = await researcher.research(prompt);
+      gateway.setResearch(research);
+      console.log(`[orchestrator] Content research: ${research.competitors.length} competitors, ${research.realContent.headlines.length} headlines, ${research.realContent.pricingData.length} pricing`);
+    } catch (err: any) {
+      console.warn(`[orchestrator] Content research failed (continuing without): ${err.message}`);
+    }
 
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
     const PER_PAGE_RETRIES = 3;

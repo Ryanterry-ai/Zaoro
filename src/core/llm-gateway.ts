@@ -4,6 +4,7 @@ import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext 
 import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
 import { LLMRouter, createRouterFromEnv, type LLMProviderConfig } from './llm-router.js';
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
+import { ContentResearchAgent, type ContentResearchResult } from '../generation/content-research-agent.js';
 
 const RETRY_ATTEMPTS = 5;
 const RETRY_BASE_DELAY_MS = 3000;
@@ -15,6 +16,7 @@ export class LLMGateway {
   private model: string;
   private architect: ArchitectAgent;
   private router?: LLMRouter;
+  private research?: ContentResearchResult;
 
   constructor(config: LLMConfig) {
     this.provider = config.provider;
@@ -35,6 +37,10 @@ export class LLMGateway {
     return gateway;
   }
 
+  setResearch(research: ContentResearchResult): void {
+    this.research = research;
+  }
+
   private defaultModel(provider: LLMProvider): string {
     switch (provider) {
       case 'anthropic': return 'claude-3-7-sonnet-20250219';
@@ -49,16 +55,16 @@ export class LLMGateway {
     const decision = this.architect.designArchitecture(context.prompt);
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
-    // Always generate domain-specific page patches as the primary UI
+    // Generate domain patches as FALLBACK ONLY — LLM output wins when available
     const domainPatches = this.synthesizeFallback(decision, context);
-    console.log(`[gateway] Generated ${domainPatches.length} domain-specific page patches`);
+    console.log(`[gateway] Generated ${domainPatches.length} domain fallback patches`);
 
     if (!this.apiKey || this.apiKey.trim() === '') {
       console.log(`[gateway] No API key. Using domain synthesis only.`);
       return domainPatches;
     }
 
-    const systemPrompt = this.buildSystemPrompt(architecturePrompt);
+    const systemPrompt = this.buildSystemPrompt(architecturePrompt, undefined, this.research);
     const userPrompt = this.buildUserPrompt(context);
 
     // Try primary provider
@@ -69,11 +75,9 @@ export class LLMGateway {
         console.log(`[gateway] Received ${llmPatches.length} LLM patches`);
         if (this.router) this.router.reportSuccess(this.provider);
 
-        // Merge: LLM patches for non-page files (API routes, components), domain patches for pages
-        const pageFiles = new Set(domainPatches.map(p => p.targetFile));
-        const nonPageLlmPatches = llmPatches.filter(p => !pageFiles.has(p.targetFile));
-        console.log(`[gateway] Merging: ${domainPatches.length} domain pages + ${nonPageLlmPatches.length} LLM backend patches`);
-        return [...domainPatches, ...nonPageLlmPatches];
+        // LLM output WINS for all files — this is the real output
+        console.log(`[gateway] Using ${llmPatches.length} LLM patches (pages + backend)`);
+        return llmPatches;
       } catch (err: any) {
         const isTransient = this.isTransientError(err);
         const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
@@ -100,9 +104,7 @@ export class LLMGateway {
           const llmPatches = await tempGateway.callProvider(systemPrompt, userPrompt);
           console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${llmPatches.length} patches`);
           this.router.reportSuccess(fallback.provider);
-          const pageFiles = new Set(domainPatches.map(p => p.targetFile));
-          const nonPageLlmPatches = llmPatches.filter(p => !pageFiles.has(p.targetFile));
-          return [...domainPatches, ...nonPageLlmPatches];
+          return llmPatches;
         } catch (err: any) {
           console.log(`[gateway] Fallback ${fallback.provider} failed: ${err.message}`);
           this.router.reportFailure(fallback.provider, err);
@@ -112,7 +114,7 @@ export class LLMGateway {
       }
     }
 
-    console.log(`[gateway] All LLM providers failed. Using domain synthesis only.`);
+    console.log(`[gateway] All LLM providers failed. Using domain synthesis fallback.`);
     return domainPatches;
   }
 
@@ -128,20 +130,20 @@ export class LLMGateway {
     const decision = this.architect.designArchitecture(prompt);
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
-    const patchMap = new Map<string, ASTPatch[]>();
-
-    // Always generate domain-specific page patches as the primary UI
+    // Domain patches are FALLBACK ONLY — LLM output wins when available
     const domainPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
+    console.log(`[gateway] Generated ${domainPatches.length} domain fallback patches`);
+
+    const fallbackMap = new Map<string, ASTPatch[]>();
     for (const patch of domainPatches) {
-      const existing = patchMap.get(patch.targetFile) || [];
+      const existing = fallbackMap.get(patch.targetFile) || [];
       existing.push(patch);
-      patchMap.set(patch.targetFile, existing);
+      fallbackMap.set(patch.targetFile, existing);
     }
-    console.log(`[gateway] Generated ${domainPatches.length} domain-specific page patches`);
 
     if (!this.apiKey || this.apiKey.trim() === '') {
       console.log(`[gateway] No API key. Using domain synthesis only.`);
-      return patchMap;
+      return fallbackMap;
     }
 
     // Build BI-enriched prompt if BI analysis succeeded
@@ -151,12 +153,24 @@ export class LLMGateway {
       console.log(`[gateway] BI context added: ${biContext.length} chars`);
     }
 
+    // Build research context if available
+    let researchContext = '';
+    if (this.research) {
+      researchContext = ContentResearchAgent.formatForPrompt(this.research);
+      console.log(`[gateway] Research context added: ${researchContext.length} chars`);
+    }
+
     const pageList = pagePrompts.map((pp, i) =>
       `Page ${i + 1}: ${pp.pagePath} → target: ${pp.targetFile}\n${pp.prompt}`
     ).join('\n\n');
 
     const combinedUserPrompt = `User Directive: "${prompt}"
 
+${researchContext ? `## Real Business Research (from web crawling)
+${researchContext}
+
+Use this REAL business data to generate authentic, domain-specific content. Match the quality and style of real competitor websites.
+` : ''}
 ${biContext ? `## Business Intelligence Analysis
 ${biContext}
 
@@ -175,11 +189,12 @@ IMPORTANT:
 - Each page component must be a complete, self-contained React component with Tailwind CSS
 - Do NOT include import statements in codeBlock
 - Every interactive element must have onClick/handlers
+- Use the REAL research data above for headlines, pricing, testimonials, features, CTAs
 - ${biResult ? 'Generate code that addresses the identified business problems and uses industry best practices' : 'Include realistic mock data that matches the business domain'}
 
 Active Attempt Loop: 0`;
 
-    const systemPrompt = this.buildSystemPrompt(architecturePrompt, biResult);
+    const systemPrompt = this.buildSystemPrompt(architecturePrompt, biResult, this.research);
 
     // Try primary provider
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
@@ -189,19 +204,25 @@ Active Attempt Loop: 0`;
         console.log(`[gateway] Received ${allPatches.length} total patches for ${pagePrompts.length} pages`);
 
         if (this.router) this.router.reportSuccess(this.provider);
-        // Merge: LLM patches for non-page files, domain patches for pages
-        const pageFiles = new Set(domainPatches.map(p => p.targetFile));
-        const nonPageLlmPatches = allPatches.filter(p => !pageFiles.has(p.targetFile));
-        const filteredPagePatches = allPatches.filter(p => pageFiles.has(p.targetFile));
-        console.log(`[gateway] LLM returned ${allPatches.length} total patches`);
-        console.log(`[gateway] Page files set: ${[...pageFiles].join(', ')}`);
-        console.log(`[gateway] Filtered out ${filteredPagePatches.length} LLM page patches: ${filteredPagePatches.map(p => p.targetFile).join(', ')}`);
-        console.log(`[gateway] Merging: ${domainPatches.length} domain pages + ${nonPageLlmPatches.length} LLM backend patches`);
-        for (const patch of nonPageLlmPatches) {
+
+        // LLM output WINS for ALL files — this is the real output
+        const patchMap = new Map<string, ASTPatch[]>();
+        for (const patch of allPatches) {
           const existing = patchMap.get(patch.targetFile) || [];
           existing.push(patch);
           patchMap.set(patch.targetFile, existing);
         }
+
+        // For any pages the LLM didn't generate, fall back to domain patches
+        const llmTargetFiles = new Set(allPatches.map(p => p.targetFile));
+        for (const [file, patches] of fallbackMap) {
+          if (!llmTargetFiles.has(file)) {
+            patchMap.set(file, patches);
+            console.log(`[gateway] Fallback domain patch for: ${file}`);
+          }
+        }
+
+        console.log(`[gateway] Final: ${allPatches.length} LLM + ${fallbackMap.size - patchMap.size} domain fallbacks`);
         return patchMap;
       } catch (err: any) {
         const isTransient = this.isTransientError(err);
@@ -229,13 +250,22 @@ Active Attempt Loop: 0`;
           const allPatches = await tempGateway.callProvider(systemPrompt, combinedUserPrompt);
           console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${allPatches.length} patches`);
           this.router.reportSuccess(fallback.provider);
-          const pageFiles = new Set(domainPatches.map(p => p.targetFile));
-          const nonPageLlmPatches = allPatches.filter(p => !pageFiles.has(p.targetFile));
-          for (const patch of nonPageLlmPatches) {
+
+          const patchMap = new Map<string, ASTPatch[]>();
+          for (const patch of allPatches) {
             const existing = patchMap.get(patch.targetFile) || [];
             existing.push(patch);
             patchMap.set(patch.targetFile, existing);
           }
+
+          // Fill in missing pages from domain fallback
+          const llmTargetFiles = new Set(allPatches.map(p => p.targetFile));
+          for (const [file, patches] of fallbackMap) {
+            if (!llmTargetFiles.has(file)) {
+              patchMap.set(file, patches);
+            }
+          }
+
           return patchMap;
         } catch (err: any) {
           console.log(`[gateway] Fallback ${fallback.provider} failed: ${err.message}`);
@@ -246,8 +276,8 @@ Active Attempt Loop: 0`;
       }
     }
 
-    console.log(`[gateway] All LLM providers failed. Using domain synthesis only.`);
-    return patchMap;
+    console.log(`[gateway] All LLM providers failed. Using domain synthesis fallback.`);
+    return fallbackMap;
   }
 
   private async callProvider(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
@@ -629,7 +659,7 @@ The component must be self-contained with all data inline — no external API ca
 
   // ─── Prompt Construction ───────────────────────────────────────
 
-  private buildSystemPrompt(architecturePrompt: string, biResult?: BIPipelineResult | null): string {
+  private buildSystemPrompt(architecturePrompt: string, biResult?: BIPipelineResult | null, research?: ContentResearchResult | null): string {
     const biSection = biResult ? `
 ## Business Intelligence Insights
 Industry: ${biResult.report.industry}
@@ -653,10 +683,12 @@ ${biResult.knowledge.customer_expectations.slice(0, 5).map(e => `- ${e}`).join('
 Use these insights to generate business-specific code that solves real problems and meets industry standards.
 ` : '';
 
+    const researchSection = research ? `\n${ContentResearchAgent.formatForPrompt(research)}\n` : '';
+
     return `You are build.same, an elite AI software architect and frontend engineer.
 You generate complete, production-quality Next.js App Router applications from atomic primitives.
 You NEVER use pre-built templates. You compose from atomic building blocks like LEGO.
-${biSection}
+${researchSection}${biSection}
 ## Your Architecture
 ${architecturePrompt}
 
