@@ -409,6 +409,7 @@ The component must be self-contained with all data inline — no external API ca
     const temperature = options?.temperature ?? 0.3;
     const maxTokens = options?.maxTokens ?? 4096;
 
+    // Try primary provider with retries
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
         console.log(`[gateway] Text call: ${this.provider}/${this.model} (attempt ${attempt}, temp=${temperature})`);
@@ -423,10 +424,51 @@ The component must be self-contained with all data inline — no external API ca
           await this.sleep(delay);
           continue;
         }
-        throw err;
+        // Non-transient or exhausted retries — break to try fallback
+        console.log(`[gateway] Primary provider ${this.provider} failed: ${err.message}`);
+        if (this.router) this.router.reportFailure(this.provider, err);
+        break;
       }
     }
-    throw new Error('Text generation failed after retries');
+
+    // Fallback: try other providers via router
+    if (this.router) {
+      const exclude = [this.provider];
+      let fallback = this.router.selectProvider('code-generation', exclude);
+      while (fallback) {
+        console.log(`[gateway] Text fallback: ${fallback.provider}/${fallback.model}`);
+        try {
+          const tempGateway = new LLMGateway({ provider: fallback.provider, apiKey: fallback.apiKey, model: fallback.model });
+          const content = await tempGateway.callProviderRaw(systemPrompt, prompt, { temperature, maxTokens });
+          console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${content.length} chars`);
+          this.router.reportSuccess(fallback.provider);
+          return content;
+        } catch (err: any) {
+          console.log(`[gateway] Fallback ${fallback.provider} failed: ${err.message}`);
+          this.router.reportFailure(fallback.provider, err);
+          exclude.push(fallback.provider);
+          fallback = this.router.selectProvider('code-generation', exclude);
+        }
+      }
+    }
+
+    // Hardcoded Gemini fallback if router didn't find alternatives
+    if (this.provider !== 'gemini') {
+      const geminiKey = process.env.GEMINI_API_KEY || '';
+      if (geminiKey) {
+        try {
+          console.log(`[gateway] Hardcoded Gemini fallback for text generation`);
+          const geminiGateway = new LLMGateway({ provider: 'gemini', apiKey: geminiKey, model: 'gemini-2.5-flash' });
+          const content = await geminiGateway.callProviderRaw(systemPrompt, prompt, { temperature, maxTokens });
+          console.log(`[gateway] Gemini fallback succeeded: ${content.length} chars`);
+          return content;
+        } catch (err: any) {
+          console.log(`[gateway] Gemini fallback failed: ${err.message}`);
+        }
+      }
+    }
+
+    throw new Error('Text generation failed — all providers exhausted');
   }
 
   private async callProviderRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {

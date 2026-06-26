@@ -207,14 +207,21 @@ export class IntentDNAExtractor {
   private fallbackExtract(prompt: string): IntentDNA {
     const lower = prompt.toLowerCase();
 
-    // Detect domain
+    // Detect domain — ordered by specificity
     let domain = 'other';
-    if (lower.includes('saas') || lower.includes('software') || lower.includes('platform')) domain = 'saas';
-    else if (lower.includes('ecommerce') || lower.includes('shop') || lower.includes('store')) domain = 'ecommerce';
-    else if (lower.includes('restaurant') || lower.includes('cafe') || lower.includes('food')) domain = 'restaurant';
-    else if (lower.includes('fitness') || lower.includes('gym') || lower.includes('workout')) domain = 'fitness';
-    else if (lower.includes('portfolio') || lower.includes('personal')) domain = 'portfolio';
-    else if (lower.includes('blog') || lower.includes('news')) domain = 'blog';
+    if (lower.includes('saas') || lower.includes('software') || lower.includes('platform') || lower.includes('dashboard') || lower.includes('admin')) domain = 'saas';
+    else if (lower.includes('ecommerce') || lower.includes('shop') || lower.includes('store') || lower.includes('marketplace') || lower.includes('product')) domain = 'ecommerce';
+    else if (lower.includes('restaurant') || lower.includes('cafe') || lower.includes('food') || lower.includes('menu') || lower.includes('dining')) domain = 'restaurant';
+    else if (lower.includes('healthcare') || lower.includes('medical') || lower.includes('clinic') || lower.includes('hospital') || lower.includes('doctor') || lower.includes('patient')) domain = 'healthcare';
+    else if (lower.includes('fitness') || lower.includes('gym') || lower.includes('workout') || lower.includes('exercise')) domain = 'fitness';
+    else if (lower.includes('real estate') || lower.includes('property') || lower.includes('realtor') || lower.includes('home listing')) domain = 'real_estate';
+    else if (lower.includes('luxury') || lower.includes('watch') || lower.includes('jewelry') || lower.includes('brand') || lower.includes('premium') || lower.includes('boutique')) domain = 'luxury';
+    else if (lower.includes('portfolio') || lower.includes('personal') || lower.includes('resume')) domain = 'portfolio';
+    else if (lower.includes('blog') || lower.includes('news') || lower.includes('article') || lower.includes('magazine')) domain = 'blog';
+    else if (lower.includes('education') || lower.includes('course') || lower.includes('learn') || lower.includes('school') || lower.includes('university')) domain = 'education';
+    else if (lower.includes('travel') || lower.includes('hotel') || lower.includes('booking') || lower.includes('reservation') || lower.includes('vacation')) domain = 'travel';
+    else if (lower.includes('law') || lower.includes('legal') || lower.includes('attorney') || lower.includes('lawyer')) domain = 'law';
+    else if (lower.includes('agency') || lower.includes('marketing') || lower.includes('creative')) domain = 'agency';
 
     // Detect features from prompt
     const features: FeatureSpec[] = [
@@ -230,7 +237,32 @@ export class IntentDNAExtractor {
       'cta': { type: 'ui_section', priority: 'must_have', description: 'Call to action section', interactive: false, component_type: 'static' },
       'contact': { type: 'functional', priority: 'should_have', description: 'Contact form', interactive: true, component_type: 'form' },
       'auth': { type: 'functional', priority: 'nice_to_have', description: 'Authentication', interactive: true, component_type: 'form' },
+      'login': { type: 'functional', priority: 'nice_to_have', description: 'Login form', interactive: true, component_type: 'form' },
+      'signup': { type: 'functional', priority: 'nice_to_have', description: 'Signup form', interactive: true, component_type: 'form' },
       'dashboard': { type: 'functional', priority: 'nice_to_have', description: 'User dashboard', interactive: true, component_type: 'dashboard' },
+      'gallery': { type: 'ui_section', priority: 'should_have', description: 'Image gallery', interactive: false, component_type: 'grid' },
+      'about': { type: 'ui_section', priority: 'should_have', description: 'About section', interactive: false, component_type: 'static' },
+      'team': { type: 'ui_section', priority: 'nice_to_have', description: 'Team section', interactive: false, component_type: 'grid' },
+      'faq': { type: 'ui_section', priority: 'should_have', description: 'FAQ section', interactive: false, component_type: 'list' },
+      'blog': { type: 'ui_section', priority: 'nice_to_have', description: 'Blog section', interactive: false, component_type: 'list' },
+      'newsletter': { type: 'functional', priority: 'nice_to_have', description: 'Newsletter signup', interactive: true, component_type: 'form' },
+      'cart': { type: 'functional', priority: 'must_have', description: 'Shopping cart', interactive: true, component_type: 'widget' },
+      'checkout': { type: 'functional', priority: 'must_have', description: 'Checkout flow', interactive: true, component_type: 'form' },
+      'booking': { type: 'functional', priority: 'should_have', description: 'Booking form', interactive: true, component_type: 'form' },
+      'calendar': { type: 'functional', priority: 'nice_to_have', description: 'Calendar view', interactive: true, component_type: 'widget' },
+      'map': { type: 'functional', priority: 'nice_to_have', description: 'Map integration', interactive: true, component_type: 'widget' },
+      'search': { type: 'functional', priority: 'should_have', description: 'Search functionality', interactive: true, component_type: 'form' },
+      'filter': { type: 'functional', priority: 'should_have', description: 'Filter/sort controls', interactive: true, component_type: 'form' },
+      'reviews': { type: 'ui_section', priority: 'should_have', description: 'Reviews section', interactive: false, component_type: 'list' },
+      'stats': { type: 'ui_section', priority: 'should_have', description: 'Statistics section', interactive: false, component_type: 'grid' },
+      'counter': { type: 'ui_section', priority: 'nice_to_have', description: 'Animated counters', interactive: false, component_type: 'widget' },
+      'timeline': { type: 'ui_section', priority: 'nice_to_have', description: 'Timeline section', interactive: false, component_type: 'list' },
+      'portfolio': { type: 'ui_section', priority: 'should_have', description: 'Portfolio grid', interactive: false, component_type: 'grid' },
+      'products': { type: 'ui_section', priority: 'must_have', description: 'Product listing', interactive: false, component_type: 'grid' },
+      'menu': { type: 'ui_section', priority: 'must_have', description: 'Menu/food items', interactive: false, component_type: 'list' },
+      'services': { type: 'ui_section', priority: 'should_have', description: 'Services listing', interactive: false, component_type: 'grid' },
+      'process': { type: 'ui_section', priority: 'nice_to_have', description: 'How it works', interactive: false, component_type: 'list' },
+      'pricing-table': { type: 'ui_section', priority: 'must_have', description: 'Pricing table', interactive: false, component_type: 'grid' },
     };
 
     for (const [key, spec] of Object.entries(featureMap)) {
@@ -249,15 +281,73 @@ export class IntentDNAExtractor {
       if (!names.includes('cta')) features.splice(5, 0, { name: 'cta', type: 'ui_section', priority: 'must_have', description: 'CTA section', interactive: false, component_type: 'static' });
     }
 
+    // Luxury: premium features
+    if (domain === 'luxury') {
+      const names = features.map(f => f.name);
+      if (!names.includes('hero')) features.splice(1, 0, { name: 'hero', type: 'ui_section', priority: 'must_have', description: 'Premium hero with large imagery', interactive: false, component_type: 'static' });
+      if (!names.includes('gallery')) features.splice(2, 0, { name: 'gallery', type: 'ui_section', priority: 'must_have', description: 'Product gallery', interactive: false, component_type: 'grid' });
+      if (!names.includes('about')) features.splice(3, 0, { name: 'about', type: 'ui_section', priority: 'should_have', description: 'Brand story section', interactive: false, component_type: 'static' });
+      if (!names.includes('testimonials')) features.splice(4, 0, { name: 'testimonials', type: 'ui_section', priority: 'should_have', description: 'Client testimonials', interactive: false, component_type: 'list' });
+      if (!names.includes('cta')) features.splice(5, 0, { name: 'cta', type: 'ui_section', priority: 'must_have', description: 'Call to action', interactive: false, component_type: 'static' });
+    }
+
+    // Ecommerce: shop features
+    if (domain === 'ecommerce') {
+      const names = features.map(f => f.name);
+      if (!names.includes('hero')) features.splice(1, 0, { name: 'hero', type: 'ui_section', priority: 'must_have', description: 'Hero with featured product', interactive: false, component_type: 'static' });
+      if (!names.includes('products')) features.splice(2, 0, { name: 'products', type: 'ui_section', priority: 'must_have', description: 'Product grid', interactive: false, component_type: 'grid' });
+      if (!names.includes('cart')) features.splice(3, 0, { name: 'cart', type: 'functional', priority: 'must_have', description: 'Shopping cart', interactive: true, component_type: 'widget' });
+      if (!names.includes('testimonials')) features.splice(4, 0, { name: 'testimonials', type: 'ui_section', priority: 'should_have', description: 'Reviews section', interactive: false, component_type: 'list' });
+    }
+
+    // Restaurant: menu & booking
+    if (domain === 'restaurant') {
+      const names = features.map(f => f.name);
+      if (!names.includes('hero')) features.splice(1, 0, { name: 'hero', type: 'ui_section', priority: 'must_have', description: 'Hero with food imagery', interactive: false, component_type: 'static' });
+      if (!names.includes('menu')) features.splice(2, 0, { name: 'menu', type: 'ui_section', priority: 'must_have', description: 'Menu display', interactive: false, component_type: 'list' });
+      if (!names.includes('booking')) features.splice(3, 0, { name: 'booking', type: 'functional', priority: 'must_have', description: 'Reservation form', interactive: true, component_type: 'form' });
+      if (!names.includes('about')) features.splice(4, 0, { name: 'about', type: 'ui_section', priority: 'should_have', description: 'About the restaurant', interactive: false, component_type: 'static' });
+    }
+
+    // Healthcare: trust features
+    if (domain === 'healthcare') {
+      const names = features.map(f => f.name);
+      if (!names.includes('hero')) features.splice(1, 0, { name: 'hero', type: 'ui_section', priority: 'must_have', description: 'Hero with trust signals', interactive: false, component_type: 'static' });
+      if (!names.includes('services')) features.splice(2, 0, { name: 'services', type: 'ui_section', priority: 'must_have', description: 'Services listing', interactive: false, component_type: 'grid' });
+      if (!names.includes('booking')) features.splice(3, 0, { name: 'booking', type: 'functional', priority: 'must_have', description: 'Appointment booking', interactive: true, component_type: 'form' });
+      if (!names.includes('team')) features.splice(4, 0, { name: 'team', type: 'ui_section', priority: 'should_have', description: 'Doctor/team profiles', interactive: false, component_type: 'grid' });
+      if (!names.includes('faq')) features.splice(5, 0, { name: 'faq', type: 'ui_section', priority: 'should_have', description: 'FAQ section', interactive: false, component_type: 'list' });
+    }
+
+    // Domain-specific design defaults
+    const domainDefaults: Record<string, { design_style: string; color_palette: string[]; app_name: string; entities: EntitySpec[] }> = {
+      luxury: { design_style: 'luxury', color_palette: ['#D4AF37', '#1A1A1A', '#0A0A0A', '#F5F5F5', '#C9B037'], app_name: 'Chronos', entities: [{ name: 'Product', fields: [{ name: 'name', type: 'string', required: true }, { name: 'price', type: 'number', required: true }, { name: 'description', type: 'string', required: false }, { name: 'image', type: 'string', required: true }], relationships: [] }] },
+      saas: { design_style: 'technical', color_palette: ['#6366f1', '#4f46e5', '#1e1b4b', '#f8fafc', '#18181b'], app_name: 'Nexus', entities: [{ name: 'User', fields: [{ name: 'email', type: 'string', required: true }, { name: 'name', type: 'string', required: true }], relationships: [] }] },
+      ecommerce: { design_style: 'modern', color_palette: ['#111827', '#6366F1', '#8B5CF6', '#F9FAFB', '#10B981'], app_name: 'ShopFlow', entities: [{ name: 'Product', fields: [{ name: 'name', type: 'string', required: true }, { name: 'price', type: 'number', required: true }, { name: 'image', type: 'string', required: true }, { name: 'stock', type: 'number', required: true }], relationships: [] }, { name: 'Order', fields: [{ name: 'items', type: 'string', required: true }, { name: 'total', type: 'number', required: true }, { name: 'status', type: 'string', required: true }], relationships: [] }] },
+      restaurant: { design_style: 'warm', color_palette: ['#92400e', '#78350f', '#FEF3C7', '#FDE68A', '#451A03'], app_name: 'Savora', entities: [{ name: 'MenuItem', fields: [{ name: 'name', type: 'string', required: true }, { name: 'price', type: 'number', required: true }, { name: 'description', type: 'string', required: false }, { name: 'category', type: 'string', required: true }], relationships: [] }, { name: 'Reservation', fields: [{ name: 'date', type: 'date', required: true }, { name: 'time', type: 'string', required: true }, { name: 'guests', type: 'number', required: true }, { name: 'name', type: 'string', required: true }], relationships: [] }] },
+      healthcare: { design_style: 'corporate', color_palette: ['#0077B6', '#00B4D8', '#48CAE4', '#FFFFFF', '#1A1A2E'], app_name: 'MedConnect', entities: [{ name: 'Patient', fields: [{ name: 'name', type: 'string', required: true }, { name: 'email', type: 'string', required: true }, { name: 'phone', type: 'string', required: true }], relationships: [] }, { name: 'Appointment', fields: [{ name: 'date', type: 'date', required: true }, { name: 'time', type: 'string', required: true }, { name: 'doctor', type: 'string', required: true }, { name: 'status', type: 'string', required: true }], relationships: [] }] },
+      fitness: { design_style: 'bold', color_palette: ['#DC2626', '#1F2937', '#F9FAFB', '#EF4444', '#111827'], app_name: 'FitForge', entities: [{ name: 'Workout', fields: [{ name: 'name', type: 'string', required: true }, { name: 'duration', type: 'number', required: true }, { name: 'calories', type: 'number', required: false }], relationships: [] }] },
+      portfolio: { design_style: 'minimal', color_palette: ['#18181b', '#71717a', '#fafafa', '#a1a1aa', '#27272a'], app_name: 'Studio', entities: [], },
+      blog: { design_style: 'minimal', color_palette: ['#18181b', '#fafafa', '#71717a', '#27272a', '#d4d4d8'], app_name: 'Inkwell', entities: [{ name: 'Post', fields: [{ name: 'title', type: 'string', required: true }, { name: 'content', type: 'string', required: true }, { name: 'publishedAt', type: 'date', required: false }], relationships: [] }] },
+      education: { design_style: 'corporate', color_palette: ['#1e40af', '#3b82f6', '#dbeafe', '#1e293b', '#f8fafc'], app_name: 'LearnHub', entities: [{ name: 'Course', fields: [{ name: 'title', type: 'string', required: true }, { name: 'description', type: 'string', required: false }, { name: 'price', type: 'number', required: false }], relationships: [] }] },
+      travel: { design_style: 'warm', color_palette: ['#0f766e', '#14b8a6', '#f0fdfa', '#134e4a', '#ccfbf1'], app_name: 'Wanderly', entities: [{ name: 'Destination', fields: [{ name: 'name', type: 'string', required: true }, { name: 'description', type: 'string', required: false }, { name: 'image', type: 'string', required: true }], relationships: [] }] },
+      real_estate: { design_style: 'corporate', color_palette: ['#1e3a5f', '#2563eb', '#dbeafe', '#0f172a', '#f8fafc'], app_name: 'HomeVista', entities: [{ name: 'Property', fields: [{ name: 'title', type: 'string', required: true }, { name: 'price', type: 'number', required: true }, { name: 'address', type: 'string', required: true }, { name: 'bedrooms', type: 'number', required: true }, { name: 'image', type: 'string', required: true }], relationships: [] }] },
+      law: { design_style: 'corporate', color_palette: ['#1c1917', '#78716c', '#fafaf9', '#292524', '#d6d3d1'], app_name: 'LexFirm', entities: [{ name: 'Case', fields: [{ name: 'title', type: 'string', required: true }, { name: 'status', type: 'string', required: true }, { name: 'client', type: 'string', required: true }], relationships: [] }] },
+      agency: { design_style: 'bold', color_palette: ['#7c3aed', '#a855f7', '#faf5ff', '#2e1065', '#f5f3ff'], app_name: 'PixelCraft', entities: [], },
+    };
+
+    const fallbackDefaults = domainDefaults.portfolio!;
+    const defaults = domainDefaults[domain] ?? fallbackDefaults;
+
     return {
       business_domain: domain,
-      app_name: 'Your Brand',
+      app_name: defaults.app_name,
       app_tagline: prompt.substring(0, 100),
       platform_target: 'web',
       framework: 'nextjs',
       styling: 'tailwind',
       features,
-      entities: [],
+      entities: defaults.entities,
       workflows: [],
       tables: [],
       ui_sections: features.filter(f => f.type === 'ui_section').map(f => ({
@@ -268,10 +358,10 @@ export class IntentDNAExtractor {
         content_strategy: 'static' as const,
         data_sources: [],
       })),
-      design_style: 'minimal',
-      color_palette: ['#6366f1', '#4f46e5', '#1e1b4b', '#f8fafc', '#18181b'],
+      design_style: defaults.design_style,
+      color_palette: defaults.color_palette,
       typography: 'sans-serif',
-      confidence: 0.4,
+      confidence: 0.6,
       missing_info: ['Extracted from keyword matching — LLM extraction failed'],
     };
   }
