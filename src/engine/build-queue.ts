@@ -118,18 +118,9 @@ if (!fs.existsSync(wsDir)) fs.mkdirSync(wsDir, { recursive: true });
 
 const PROGRESS_FILE = path.join(wsDir, '.progress');
 const _progressEvents = [];
-let _flushPending = false;
-function flushProgress() {
-  if (_flushPending) return;
-  _flushPending = true;
-  setTimeout(() => {
-    try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8'); } catch {}
-    _flushPending = false;
-  }, 200);
-}
 function writeProgress(step, type, message, metadata) {
   _progressEvents.push({ step, type, message, ts: Date.now(), metadata: metadata || undefined });
-  flushProgress();
+  try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8'); } catch {}
 }
 function emitLLM(step, type, llmDetail) { writeProgress(step, type, \`\${type}: \${llmDetail.provider}/\${llmDetail.model}\`, { llm: llmDetail }); }
 
