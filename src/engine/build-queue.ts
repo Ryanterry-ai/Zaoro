@@ -117,11 +117,19 @@ const wsDir = path.join(WS_BASE, ${JSON.stringify(job.workspaceId)});
 if (!fs.existsSync(wsDir)) fs.mkdirSync(wsDir, { recursive: true });
 
 const PROGRESS_FILE = path.join(wsDir, '.progress');
+const _progressEvents = [];
+let _flushPending = false;
+function flushProgress() {
+  if (_flushPending) return;
+  _flushPending = true;
+  setTimeout(() => {
+    try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8'); } catch {}
+    _flushPending = false;
+  }, 200);
+}
 function writeProgress(step, type, message, metadata) {
-  let events = [];
-  try { if (fs.existsSync(PROGRESS_FILE)) events = JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf-8')); } catch {}
-  events.push({ step, type, message, ts: Date.now(), metadata: metadata || undefined });
-  fs.writeFileSync(PROGRESS_FILE, JSON.stringify(events), 'utf-8');
+  _progressEvents.push({ step, type, message, ts: Date.now(), metadata: metadata || undefined });
+  flushProgress();
 }
 function emitLLM(step, type, llmDetail) { writeProgress(step, type, \`\${type}: \${llmDetail.provider}/\${llmDetail.model}\`, { llm: llmDetail }); }
 
@@ -187,7 +195,7 @@ const usePipeline = payload.type === 'pipeline' || payload.pipeline === true;
 if (usePipeline) {
   const { PipelineOrchestrator } = await import('./src/generation/pipeline-orchestrator.js');
   const orch = new PipelineOrchestrator(
-    WS_BASE,
+    wsDir,
     { provider: config.provider, apiKey: config.apiKey },
     (step, msg) => writeProgress(step, 'info', msg),
     (step, msg) => writeProgress(step, 'info', msg),
@@ -204,7 +212,7 @@ if (usePipeline) {
   } catch (err) { writeProgress('error', 'error', 'Pipeline failed: ' + (err.message || err)); process.exit(1); }
 } else {
   const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
-  const orch = new DeterministicOrchestratorV4(WS_BASE);
+  const orch = new DeterministicOrchestratorV4(wsDir);
   try {
     writeProgress('init', 'started', 'Build started — analyzing prompt');
     const tBi = Date.now();
@@ -219,6 +227,9 @@ if (usePipeline) {
 console.log = origLog;
 console.warn = origWarn;
 console.error = origError;
+
+// Final flush — ensure all events are written before exit
+try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8'); } catch {}
 `;
     const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.ts`);
     fs.writeFileSync(scriptPath, buildScript, 'utf-8');
