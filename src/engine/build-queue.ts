@@ -31,7 +31,7 @@ export interface BuildQueueConfig {
 
 const DEFAULT_CONFIG: BuildQueueConfig = {
   maxConcurrent: 2,
-  jobTimeoutMs: 5 * 60 * 1000, // 5 minutes
+    jobTimeoutMs: 15 * 60 * 1000, // 15 minutes (LLM retries need room)
   memoryLimitMb: 512,
   maxRetries: 2,
   cleanupIntervalMs: 30 * 1000, // 30 seconds

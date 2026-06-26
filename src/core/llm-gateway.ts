@@ -6,8 +6,8 @@ import { LLMRouter, createRouterFromEnv, type LLMProviderConfig } from './llm-ro
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
 import { ContentResearchAgent, type ContentResearchResult } from '../generation/content-research-agent.js';
 
-const RETRY_ATTEMPTS = 5;
-const RETRY_BASE_DELAY_MS = 3000;
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1000;
 const TRANSIENT_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
 export class LLMGateway {
