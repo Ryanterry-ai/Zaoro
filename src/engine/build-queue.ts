@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
 import type { ChildProcess } from 'child_process';
+import type { ProgressEvent } from '../core/progress-emitter.js';
 
 export interface BuildJob {
   id: string;
@@ -110,17 +111,81 @@ export class BuildQueue extends EventEmitter {
     const buildScript = `
 import * as fs from 'fs';
 import * as path from 'path';
+import { ProgressEmitter } from './src/core/progress-emitter.js';
+
 const WS_BASE = ${JSON.stringify(this.workspaceBase)};
 const wsDir = path.join(WS_BASE, ${JSON.stringify(job.workspaceId)});
-let progressInitialized = false;
-function log(step, msg) {
-  if (!progressInitialized) { if (!fs.existsSync(wsDir)) return; progressInitialized = true; }
-  const f = path.join(wsDir, '.progress');
-  let s = [];
-  try { if (fs.existsSync(f)) s = JSON.parse(fs.readFileSync(f, 'utf-8')); } catch {}
-  s.push({ step, message: msg, ts: Date.now() });
-  fs.writeFileSync(f, JSON.stringify(s), 'utf-8');
+
+const pe = new ProgressEmitter(wsDir);
+
+// Intercept console.log to capture gateway/orchestrator events
+const origLog = console.log;
+const origWarn = console.warn;
+const origError = console.error;
+
+function interceptConsole(prefix, type) {
+  return function(...args) {
+    const msg = args.join(' ');
+    origLog.apply(console, args);
+    // Capture structured events from engine subsystems
+    if (msg.includes('[gateway]')) {
+      if (msg.includes('LLM call:') || msg.includes('Combined LLM call:')) {
+        const match = msg.match(/(\\w[\\w-]+)\\/(\\S+)\\s*\\(attempt\\s*(\\d+)\\)/);
+        if (match) pe.emitLLM('llm', 'llm_request', { provider: match[1], model: match[2], attempt: parseInt(match[3]), maxAttempts: 5 });
+      } else if (msg.includes('succeeded:') && msg.includes('patches')) {
+        const match = msg.match(/(\\d+)\\s*patches/);
+        pe.emit('llm', 'success', msg, { patchCount: match ? parseInt(match[1]) : 0 });
+      } else if (msg.includes('Gemini fallback')) {
+        pe.emitLLM('llm', 'llm_fallback', { provider: 'gemini', model: 'gemini-2.5-flash', fallbackProvider: 'gemini' });
+      } else if (msg.includes('Transient error')) {
+        const match = msg.match(/\\((.+?)\\)/);
+        pe.emit('llm', 'retrying', msg, { error: match ? match[1] : 'unknown' });
+      } else if (msg.includes('All LLM providers failed')) {
+        pe.emit('llm', 'warning', msg);
+      } else if (msg.includes('Research context added')) {
+        pe.emit('research', 'success', msg);
+      } else if (msg.includes('Generated') && msg.includes('domain fallback')) {
+        pe.emit('architect', 'info', msg);
+      }
+    } else if (msg.includes('[content-research]')) {
+      if (msg.includes('Crawling:')) {
+        const url = msg.replace('[content-research] Crawling:', '').trim();
+        pe.emit('research', 'crawling', 'Crawling: ' + url, { url });
+      } else if (msg.includes('Results:')) {
+        pe.emit('research', 'completed', msg);
+      } else if (msg.includes('Found')) {
+        pe.emit('research', 'info', msg);
+      }
+    } else if (msg.includes('[orchestrator]')) {
+      if (msg.includes('Blueprint:')) {
+        pe.emit('architect', 'completed', msg);
+      } else if (msg.includes('BI analysis complete')) {
+        pe.emit('bi', 'completed', msg);
+      } else if (msg.includes('Content research:')) {
+        pe.emit('research', 'completed', msg);
+      } else if (msg.includes('Compiling page')) {
+        pe.emit('compile', 'info', msg);
+      } else if (msg.includes('compiled successfully')) {
+        pe.emit('compile', 'success', msg);
+      } else if (msg.includes('Build complete')) {
+        pe.emit('compile', 'completed', msg);
+      } else if (msg.includes('Combined LLM call failed')) {
+        pe.emit('llm', 'warning', msg);
+      }
+    } else if (msg.includes('[domain-synth]')) {
+      if (msg.includes('Detected:') || msg.includes('Using resolved pattern:')) {
+        pe.emit('architect', 'info', msg);
+      }
+    } else if (msg.includes('[bi-llm]')) {
+      pe.emit('bi', 'info', msg);
+    }
+  };
 }
+
+console.log = interceptConsole('', 'info');
+console.warn = interceptConsole('', 'warning');
+console.error = interceptConsole('', 'error');
+
 const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${job.id}.json`)}), 'utf-8'));
 const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-prompt-${job.id}.json`)}), 'utf-8'));
 
@@ -131,45 +196,37 @@ if (usePipeline) {
   const orch = new PipelineOrchestrator(
     WS_BASE,
     { provider: config.provider, apiKey: config.apiKey },
-    (step, msg) => log(step, msg),
-    (step, msg) => log(step, msg),
+    (step, msg) => pe.emit(step, 'info', msg),
+    (step, msg) => pe.emit(step, 'info', msg),
   );
   try {
     if (config.apiKey && config.apiKey.trim() !== '') {
-      log('bi', '✓ LLM API key found (' + config.provider + ') — generating real content with AI');
+      pe.emit('init', 'started', 'Build started — using ' + config.provider + ' AI');
     } else {
-      log('bi', '⚠ No LLM API key — using template-based synthesis. Output will be generic.');
+      pe.emit('init', 'warning', 'No LLM API key — using template synthesis');
     }
+    const t0 = Date.now();
     const result = await orch.run(payload.prompt);
-    log('compile', 'Compiling and validating...');
-    await new Promise(r => setTimeout(r, 100));
-    log('preview', 'Rendering preview...');
-    await new Promise(r => setTimeout(r, 100));
-    log('done', 'Pipeline completed! UX: ' + result.uxResult.overall + '/100, Business: ' + result.businessResult.overall + '/100, Build: ' + result.assemblyResult.overallScore + '/100 (' + result.iterations + ' iterations)');
-  } catch (err) { log('error', 'Pipeline failed: ' + (err.message || err)); process.exit(1); }
+    pe.phaseEnd('done', 'Pipeline completed', t0);
+  } catch (err) { pe.emit('error', 'error', 'Pipeline failed: ' + (err.message || err)); process.exit(1); }
 } else {
   const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
   const orch = new DeterministicOrchestratorV4(WS_BASE);
   try {
-    log('bi', 'Analyzing business requirements...');
-    await new Promise(r => setTimeout(r, 100));
-    log('architect', 'Designing application architecture...');
-    await new Promise(r => setTimeout(r, 100));
-    log('structure', 'Creating project structure...');
-    await new Promise(r => setTimeout(r, 100));
-    if (config.apiKey && config.apiKey.trim() !== '') {
-      log('llm', 'Generating code with ' + config.provider + ' AI...');
-    } else {
-      log('llm', 'Generating code with JIT synthesis...');
-    }
+    pe.emit('init', 'started', 'Build started — analyzing prompt');
+    const tBi = pe.phaseStart('bi', 'Analyzing business requirements...');
+    // The orchestrator emits its own events via console.log which we intercept
     await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
-    log('compile', 'Compiling and validating...');
-    await new Promise(r => setTimeout(r, 100));
-    log('preview', 'Rendering preview...');
-    await new Promise(r => setTimeout(r, 100));
-    log('done', 'Build completed! Your application is ready.');
-  } catch (err) { log('error', 'Build failed: ' + (err.message || err)); process.exit(1); }
+    pe.phaseEnd('compile', 'Compiling and validating...', tBi);
+    pe.emit('preview', 'info', 'Rendering preview...');
+    pe.emit('done', 'completed', 'Build completed! Your application is ready.');
+  } catch (err) { pe.emit('error', 'error', 'Build failed: ' + (err.message || err)); process.exit(1); }
 }
+
+// Restore console
+console.log = origLog;
+console.warn = origWarn;
+console.error = origError;
 `;
     const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.ts`);
     fs.writeFileSync(scriptPath, buildScript, 'utf-8');

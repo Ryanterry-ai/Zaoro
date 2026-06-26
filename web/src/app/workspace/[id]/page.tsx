@@ -5,9 +5,32 @@ import { useParams } from "next/navigation";
 
 interface ProgressStep {
   step: string;
+  type?: string;
   message: string;
   ts: number;
+  duration?: number;
   data?: Record<string, unknown> | null;
+  metadata?: {
+    llm?: {
+      model?: string;
+      provider?: string;
+      tokensIn?: number;
+      tokensOut?: number;
+      duration?: number;
+      retryCount?: number;
+      fallbackUsed?: boolean;
+      cacheHit?: boolean;
+      attempt?: number;
+      maxAttempts?: number;
+      httpStatus?: number;
+    };
+    filePath?: string;
+    action?: string;
+    patchCount?: number;
+    duration?: number;
+    url?: string;
+    [key: string]: unknown;
+  } | null;
 }
 
 interface FileEntry {
@@ -407,24 +430,68 @@ export default function WorkspacePage() {
                   })
                 : [...steps].reverse().map((ev, i) => {
                     const ts = new Date(ev.ts).toLocaleTimeString();
-                    const isFile = ev.message?.startsWith("Wrote:");
-                    const isDone = ev.step === "done";
-                    const isFailed = ev.step === "error";
-                    const isUser = ev.step === "user";
-                    const isRetry = ev.step === "retry";
-                    const isInit = ev.step === "init";
-                    const isNoLLM = ev.message?.includes("⚠ No LLM") || ev.message?.includes("template-based");
-                    const isLLMActive = ev.message?.includes("✓ LLM") || ev.message?.includes("generating real content");
-                    const isFallback = ev.message?.includes("keyword fallback") || ev.message?.includes("blueprint fallback");
+                    const type = (ev as any).type || ev.step;
+                    const meta = (ev as any).metadata;
+                    const llm = meta?.llm;
+
+                    // Event type styling
+                    const typeConfig: Record<string, { icon: string; color: string; bg: string }> = {
+                      info:         { icon: "◉", color: "text-foreground/60", bg: "" },
+                      success:      { icon: "✓", color: "text-green-400", bg: "bg-green-500/5" },
+                      warning:      { icon: "⚠", color: "text-yellow-400", bg: "bg-yellow-500/5" },
+                      error:        { icon: "●", color: "text-red-400", bg: "bg-red-500/5" },
+                      started:      { icon: "▶", color: "text-blue-400", bg: "bg-blue-500/5" },
+                      completed:    { icon: "●", color: "text-green-400", bg: "bg-green-500/5" },
+                      skipped:      { icon: "○", color: "text-muted", bg: "" },
+                      waiting:      { icon: "◎", color: "text-yellow-400/60", bg: "" },
+                      retrying:     { icon: "↻", color: "text-yellow-400", bg: "bg-yellow-500/5" },
+                      cached:       { icon: "⚡", color: "text-cyan-400", bg: "bg-cyan-500/5" },
+                      generated:    { icon: "✦", color: "text-purple-400", bg: "bg-purple-500/5" },
+                      validated:    { icon: "✓", color: "text-green-400", bg: "" },
+                      downloaded:   { icon: "↓", color: "text-cyan-400", bg: "" },
+                      compiling:    { icon: "⚙", color: "text-amber-400", bg: "bg-amber-500/5" },
+                      testing:      { icon: "⚡", color: "text-blue-400", bg: "" },
+                      verifying:    { icon: "✓", color: "text-green-400", bg: "" },
+                      llm_request:  { icon: "→", color: "text-violet-400", bg: "bg-violet-500/5" },
+                      llm_response: { icon: "←", color: "text-green-400", bg: "bg-green-500/5" },
+                      llm_fallback: { icon: "↻", color: "text-amber-400", bg: "bg-amber-500/5" },
+                      research:     { icon: "🔍", color: "text-cyan-400", bg: "bg-cyan-500/5" },
+                      crawling:     { icon: "🌐", color: "text-cyan-400/80", bg: "" },
+                      extracting:   { icon: "📋", color: "text-cyan-400/60", bg: "" },
+                      file_written: { icon: "📄", color: "text-green-400", bg: "bg-green-500/5" },
+                      patch_applied:{ icon: "🔧", color: "text-green-400", bg: "" },
+                    };
+
+                    // Legacy step fallbacks
+                    const stepConfig: Record<string, { icon: string; color: string; bg: string }> = {
+                      done:   { icon: "●", color: "text-green-400", bg: "bg-green-500/5" },
+                      error:  { icon: "●", color: "text-red-400", bg: "bg-red-500/5" },
+                      retry:  { icon: "↻", color: "text-yellow-400", bg: "bg-yellow-500/5" },
+                      init:   { icon: "◎", color: "text-blue-400", bg: "bg-blue-500/5" },
+                      user:   { icon: "→", color: "text-accent", bg: "" },
+                    };
+
+                    const cfg = typeConfig[type] || stepConfig[ev.step] || typeConfig.info;
+                    const isLlmDetail = !!llm;
+
                     return (
-                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${isFile ? "bg-green-500/5" : isNoLLM ? "bg-yellow-500/5" : isLLMActive ? "bg-green-500/5" : ""}`}>
+                      <div key={i} className={`flex items-start gap-2 text-[11px] py-[3px] border-b border-border/30 last:border-0 ${cfg.bg}`}>
                         <span className="text-muted/40 font-mono flex-shrink-0 w-[52px] text-[10px]">{ts}</span>
-                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${isDone ? "text-green-400" : isFailed ? "text-red-400" : isFile ? "text-green-400" : isUser ? "text-accent" : isRetry ? "text-yellow-400" : isInit ? "text-blue-400" : isNoLLM ? "text-yellow-400" : isLLMActive ? "text-green-400" : isFallback ? "text-yellow-400/60" : "text-accent/60"}`}>
-                          {isDone ? "●" : isFailed ? "●" : isFile ? "📄" : isUser ? "→" : isRetry ? "↻" : isInit ? "◎" : isNoLLM ? "⚠" : isLLMActive ? "✓" : isFallback ? "↺" : "◉"}
-                        </span>
-                        <span className={`leading-relaxed flex-1 min-w-0 ${isFile ? "text-green-400/80" : isFailed ? "text-red-400/80" : isUser ? "text-accent font-medium" : isRetry ? "text-yellow-400/80" : isInit ? "text-blue-400/80" : isNoLLM ? "text-yellow-400/80" : isLLMActive ? "text-green-400/80" : isFallback ? "text-yellow-400/60" : "text-foreground/60"}`}>
-                          {ev.message}
-                        </span>
+                        <span className={`flex-shrink-0 mt-0.5 text-[8px] ${cfg.color}`}>{cfg.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className={`leading-relaxed ${cfg.color}`}>{ev.message}</span>
+                          {isLlmDetail && (
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-[9px] text-muted/60">
+                              <span>Model: {llm.provider}/{llm.model}</span>
+                              {llm.duration && <span>{llm.duration}ms</span>}
+                              {llm.tokensIn && <span>In: {llm.tokensIn}</span>}
+                              {llm.tokensOut && <span>Out: {llm.tokensOut}</span>}
+                              {llm.attempt && llm.maxAttempts && <span>Attempt {llm.attempt}/{llm.maxAttempts}</span>}
+                              {llm.httpStatus && <span className="text-red-400">HTTP {llm.httpStatus}</span>}
+                              {llm.fallbackUsed && <span className="text-amber-400">Fallback</span>}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
