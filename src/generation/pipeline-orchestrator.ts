@@ -29,6 +29,15 @@ import { BOS } from '../bos/index.js';
 import type { Blueprint } from '../bos/reasoning/blueprint-compiler.js';
 import type { BusinessIntent } from '../bos/reasoning/engine.js';
 
+// BOS v2 BRE imports (deterministic reasoning: rules + constraints + scoring)
+import { RulesEngine } from '../bos/reasoning/rules-engine.js';
+import { ConstraintSolver } from '../bos/reasoning/constraint-solver.js';
+import { Scorer } from '../bos/reasoning/scorer.js';
+import { BlueprintCompilerV2 } from '../bos/reasoning/blueprint-compiler-v2.js';
+import type { BREContext, RuleDecision } from '../bos/reasoning/rules-engine.js';
+import type { ConstraintReport } from '../bos/reasoning/constraint-solver.js';
+import type { ScoredOption } from '../bos/reasoning/scorer.js';
+
 export interface PipelineResult {
   success: boolean;
   // BOS Blueprint output (new three-layer architecture)
@@ -220,51 +229,115 @@ export class PipelineOrchestrator {
       this.emit('memory', 'active', `Build memory unavailable: ${err.message}`);
     }
 
-    // ═══ Stage 1.5: BOS Knowledge Lookup (NEW) ═══════════════════
-    // Uses the three-layer BOS: Evidence → Knowledge → Reasoning
+    // ═══ Stage 1.5: BOS Knowledge Lookup (NEW — BRE v2) ═══════════════════
+    // Uses the four-layer BOS: Evidence → Knowledge → Business Reasoning → Generation
+    // BRE v2: RulesEngine + ConstraintSolver + Scorer → BlueprintCompilerV2
     // NO runtime scraping during generation — all knowledge is pre-validated
     this.emit('bos', 'active', `Initializing Business Operating System for ${intent.business_domain}...`);
     let blueprint: Blueprint | undefined;
     let reasoning: { matchedIndustry: string | undefined; matchedCapabilities: string[]; appliedVocabulary: Record<string, string>; derivedFeatures: string[]; confidence: number } | undefined;
     
     try {
-      // Initialize BOS with knowledge graph
-      const bos = await BOS.initialize();
-      
-      // Convert IntentDNA to BusinessIntent for BOS reasoning
-      const businessIntent: BusinessIntent = {
+      // Convert IntentDNA to BREContext for deterministic reasoning
+      const breContext: BREContext = {
         industry: intent.business_domain,
+        businessModels: [],
+        compliancePacks: [],
+        capabilities: intent.features.map(f => f.name),
+        journeys: [],
+        entities: intent.entities.map(e => e.name),
+        designStyle: intent.design_style,
         appName: intent.app_name,
         description: intent.app_tagline,
-        features: intent.features.map(f => f.name),
-        entities: intent.entities.map(e => e.name),
-        workflows: intent.workflows.map(w => w.name),
-        designStyle: intent.design_style,
+      };
+
+      // Phase 1: Run RulesEngine — generates deterministic RuleDecisions
+      this.emit('bos', 'active', `Running rules engine for ${breContext.industry}...`);
+      const rulesEngine = new RulesEngine();
+      const ruleDecisions: RuleDecision[] = rulesEngine.evaluate(breContext);
+      this.emit('bos', 'active', `Rules engine produced ${ruleDecisions.length} decisions`);
+
+      // Phase 2: Run ConstraintSolver — validates decisions against constraints
+      this.emit('bos', 'active', `Solving constraints for ${ruleDecisions.length} decisions...`);
+      const constraintSolver = new ConstraintSolver();
+      const constraintReport: ConstraintReport = constraintSolver.evaluate(breContext, ruleDecisions);
+      this.emit('bos', 'active', `Constraints: ${constraintReport.violated === 0 ? 'SATISFIED' : 'UNSATISFIED'} (${constraintReport.violated} violations)`);
+
+      // Phase 3: Run Scorer — rank design profiles and patterns by fit
+      this.emit('bos', 'active', `Scoring design profiles and patterns...`);
+      const scorer = new Scorer();
+      const scoringCtx = { industry: intent.business_domain, businessModels: [] as string[], capabilities: intent.features.map(f => f.name), decisions: ruleDecisions, designProfiles: [] as any[], patterns: [] as any[] };
+      const scoredProfiles = scorer.scoreDesignProfiles(scoringCtx);
+      const scoredPatterns = scorer.scorePatterns(scoringCtx);
+      const selectedProfile = scoredProfiles[0];
+      const selectedPattern = scoredPatterns[0];
+      this.emit('bos', 'active', `Selected profile: ${selectedProfile?.name ?? 'default'} (${(selectedProfile?.score ?? 0).toFixed(2)}), pattern: ${selectedPattern?.name ?? 'default'}`);
+
+      // Phase 4: Compile ApplicationBlueprint from BRE outputs
+      this.emit('bos', 'active', `Compiling application blueprint...`);
+      const blueprintCompiler = new BlueprintCompilerV2();
+      const appBlueprint = blueprintCompiler.compile({
+        context: breContext,
+        decisions: ruleDecisions,
+        constraintReport,
+        selectedDesignProfile: selectedProfile,
+        selectedPattern,
+        vocabulary: {},
+        knowledgeRefs: [],
+      });
+
+      // Convert new ApplicationBlueprint to legacy Blueprint format for pipeline compatibility
+      blueprint = {
+        id: appBlueprint.version,
+        industry: breContext.industry,
+        entities: appBlueprint.entities.map(e => ({
+          name: e.name,
+          fields: e.fields.map(f => ({ name: f.name, type: f.type, required: f.required })),
+          relationships: [],
+        })),
+        pages: appBlueprint.pages.map(p => ({
+          name: p.name,
+          route: p.path,
+          sections: p.sections,
+          requiresAuth: p.permissions.length > 0,
+        })),
+        workflows: appBlueprint.workflows.map(w => ({ name: w.name, trigger: w.trigger, steps: w.steps.map(s => s.name) })),
+        features: appBlueprint.pages.map(p => p.name),
+        vocabulary: {},
+        designSystem: {
+          colorPalette: (appBlueprint.designTokens as any)?.colors?.primary ?? '#7C3AED',
+          typography: (appBlueprint.designTokens as any)?.typography?.heading ?? 'Inter',
+          components: [],
+        },
+        integrations: appBlueprint.integrations.map(i => ({ name: i.name, type: i.type, config: i.config })),
+      } as unknown as Blueprint;
+
+      reasoning = {
+        matchedIndustry: breContext.industry,
+        matchedCapabilities: ruleDecisions.filter(d => d.action.type === 'add_skill_pack').map(d => (d.action as any).packId ?? 'unknown'),
+        appliedVocabulary: {},
+        derivedFeatures: appBlueprint.pages.map(p => p.name),
+        confidence: ruleDecisions.length > 0 ? ruleDecisions.reduce((sum, d) => sum + d.confidence, 0) / ruleDecisions.length : 0,
       };
       
-      this.emit('bos', 'active', `Deriving blueprint from knowledge graph...`);
-      
-      // Derive blueprint using BOS Reasoning Engine
-      const result = await bos.deriveBlueprint(businessIntent);
-      blueprint = result.blueprint;
-      reasoning = result.reasoning;
-      
-      this.emit('bos', 'done', `Blueprint compiled — ${blueprint.pages.length} pages, ${blueprint.entities.length} entities`, {
-        blueprintId: blueprint.id,
-        industry: reasoning.matchedIndustry,
+      this.emit('bos', 'done', `Blueprint compiled — ${appBlueprint.pages.length} pages, ${appBlueprint.entities.length} entities, ${appBlueprint.workflows.length} workflows`, {
+        industry: breContext.industry,
         confidence: reasoning.confidence,
-        pages: blueprint.pages.map(p => p.name),
-        entities: blueprint.entities.map(e => e.name),
-        vocabulary: reasoning.appliedVocabulary,
+        pages: appBlueprint.pages.map(p => p.name),
+        entities: appBlueprint.entities.map(e => e.name),
+        profileScore: selectedProfile?.score,
+        patternScore: selectedPattern?.score,
+        constraintViolations: constraintReport.violated,
+        decisions: ruleDecisions.length,
       });
       
       // Save blueprint to workspace for downstream consumers
       const blueprintPath = path.join(this.workspaceRoot, '.blueprint.json');
-      fs.writeFileSync(blueprintPath, JSON.stringify(blueprint, null, 2));
+      fs.writeFileSync(blueprintPath, JSON.stringify(appBlueprint, null, 2));
       this.log(`Blueprint saved to ${blueprintPath}`);
       
     } catch (err: any) {
-      this.emit('bos', 'active', `BOS initialization failed: ${err.message}, falling back to legacy lookup`);
+      this.emit('bos', 'active', `BRE v2 failed: ${err.message}, falling back to legacy BOS`);
       
       // Fallback to legacy BOS Registry lookup
       try {

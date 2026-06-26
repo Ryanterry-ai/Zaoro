@@ -25,8 +25,8 @@ export interface BlueprintCompilerInput {
   context: BREContext;
   decisions: RuleDecision[];
   constraintReport: ConstraintReport;
-  selectedDesignProfile?: ScoredOption;
-  selectedPattern?: ScoredOption;
+  selectedDesignProfile?: ScoredOption | undefined;
+  selectedPattern?: ScoredOption | undefined;
   vocabulary: Record<string, string>;
   knowledgeRefs: Array<{ id: string; version: string }>;
 }
