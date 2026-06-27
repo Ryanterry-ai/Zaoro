@@ -20,6 +20,7 @@ export type BuildStage =
   | 'compile'       // Compile & Validate
   | 'browser-verify'// Browser Verification (Sprint B)
   | 'repair'        // Repair Loop (Sprint B)
+  | 'quality-gate'  // Bucket A Quality Gates (content-validator, dependency-checker, quality-gate)
   | 'preview'       // Render Preview
   | 'complete';     // Done
 

@@ -23,6 +23,14 @@ import { RuntimeManager } from '../engine/runtime-manager.js';
 import { BuildRunner } from '../engine/build-runner.js';
 import { BrowserVerifier, VerificationResult } from '../engine/browser-verifier.js';
 import { RepairLoop, RepairResult } from '../engine/repair-loop.js';
+import { SkillIntegrator } from './skill-integrator.js';
+import { ReferenceScraper, type ScrapedReference } from './reference-scraper.js';
+
+// Bucket A tools — deterministic quality gates (zero LLM)
+import { runAllGates, type GateResult } from '../engine/tools-runner.js';
+
+// Skills loader — reads SKILL.md manifests
+import { loadAllSkills, type SkillsManifest } from '../engine/skills-loader.js';
 
 // New BOS three-layer architecture imports
 import { BOS } from '../bos/index.js';
@@ -69,6 +77,12 @@ export interface PipelineResult {
   iterations: number;
   patches: ASTPatch[];
   buildState: BuildState;
+  // NEW: Scraped reference data for enhanced generation
+  scrapedReference: ScrapedReference | undefined;
+  // Bucket A quality gate results
+  gateResult: GateResult | undefined;
+  // Skills manifest
+  skillsManifest: SkillsManifest | undefined;
   error?: string;
 }
 
@@ -90,6 +104,7 @@ interface PipelineContext {
   assemblyResult: AssemblyResult | undefined;
   verificationResult: VerificationResult | undefined;
   repairResult: RepairResult | undefined;
+  scrapedReference: ScrapedReference | undefined;
 }
 
 const MAX_ITERATIONS = 3;
@@ -177,6 +192,15 @@ export class PipelineOrchestrator {
     this.log(`Starting pipeline for: "${prompt.slice(0, 80)}..."`);
     this.emit('bi', 'active', `Starting pipeline: "${prompt.slice(0, 100)}..."`);
 
+    // ═══ Load Skills Manifest ═══════════════════════════════════
+    let skillsManifest: SkillsManifest | undefined;
+    try {
+      skillsManifest = loadAllSkills();
+      this.emit('bi', 'active', `Skills loaded: ${skillsManifest.total} agents (${skillsManifest.pipeline.length} pipeline, ${skillsManifest.businessReasoning.length} business-reasoning)`);
+    } catch (err: any) {
+      this.emit('bi', 'active', `Skills loading failed: ${err.message}`);
+    }
+
     // ═══ LLM Pre-flight Check ═══════════════════════════════════
     const llmAvailable = !!(this.llmConfig.apiKey && this.llmConfig.apiKey.trim() !== '');
     if (!llmAvailable) {
@@ -199,6 +223,20 @@ export class PipelineOrchestrator {
         features: intent.features.map(f => f.name),
         entities: intent.entities.map(e => e.name),
         confidence: intent.confidence,
+      },
+    });
+
+    // ═══ Stage 1.1: UI/UX Pro Max Skill Integration ══════════════════
+    this.emit('bi', 'active', `Loading UI/UX Pro Max design recommendations for ${intent.business_domain}...`);
+    const skillIntegrator = new SkillIntegrator();
+    const skillRecommendations = skillIntegrator.getDesignRecommendations(intent.business_domain, intent.business_domain);
+    llm.setSkillRecommendations(skillRecommendations);
+    this.emit('bi', 'done', `UI/UX Pro Max loaded — ${skillRecommendations.colors.reasoning}, ${skillRecommendations.typography.reasoning}`, {
+      skillRecommendations: {
+        colors: skillRecommendations.colors.palette,
+        headingFont: skillRecommendations.typography.headingFont,
+        bodyFont: skillRecommendations.typography.bodyFont,
+        animationLibrary: skillRecommendations.animation.library,
       },
     });
 
@@ -411,6 +449,30 @@ export class PipelineOrchestrator {
       contentStrategy: { keyMessages: research.contentStrategy.keyMessages.length, tone: research.contentStrategy.toneOfVoice },
     });
 
+    // ═══ Stage 3.1: Reference Website Scraping ══════════════════════
+    this.emit('research', 'active', `Scraping reference website for design patterns, data models, and animations...`);
+    let scrapedReference: ScrapedReference | undefined;
+    try {
+      const referenceScraper = new ReferenceScraper();
+      // Scrape the first competitor as reference (if available)
+      if (research.competitors.length > 0 && research.competitors[0]?.url) {
+        scrapedReference = await referenceScraper.scrapeReference(research.competitors[0].url, this.workspaceRoot);
+        this.emit('research', 'done', `Reference scraped: ${scrapedReference.dataModels.length} data models, ${scrapedReference.animations.length} animations, ${scrapedReference.componentStructure.length} components`, {
+          reference: {
+            businessName: scrapedReference.businessName,
+            industry: scrapedReference.industry,
+            dataModels: scrapedReference.dataModels.length,
+            animations: scrapedReference.animations.length,
+            components: scrapedReference.componentStructure.length,
+          },
+        });
+      } else {
+        this.emit('research', 'active', `No competitor URLs available — skipping reference scraping`);
+      }
+    } catch (err: any) {
+      this.emit('research', 'active', `Reference scraping failed: ${err.message} — continuing without reference data`);
+    }
+
     // ═══ Stage 3: Feature Enrichment ════════════════════════════
     this.emit('architect', 'active', `Enriching features with component blueprints, props, state, and API specs...`);
     const enricher = new FeatureEnricher(llm);
@@ -538,6 +600,7 @@ export class PipelineOrchestrator {
     });
 
     // ═══ Self-Correction Loop ═════════════════════════════════════
+    let gateResult: GateResult | undefined;
     let ctx: PipelineContext = {
       intent,
       designDNA,
@@ -556,6 +619,7 @@ export class PipelineOrchestrator {
       assemblyResult: undefined,
       verificationResult: undefined,
       repairResult: undefined,
+      scrapedReference,
     };
 
     for (iterations = 1; iterations <= MAX_ITERATIONS; iterations++) {
@@ -609,6 +673,30 @@ export class PipelineOrchestrator {
         filesWritten: assemblyResult.filesWritten,
         checks: assemblyResult.checks.map(c => ({ name: c.name, passed: c.passed })),
       });
+
+      // ═══ Stage 11.5: Bucket A Quality Gates ════════════════════
+      this.emit('quality-gate', 'active', `Running deterministic quality gates — content-validator, dependency-checker, quality-gate...`);
+      try {
+        gateResult = runAllGates(this.workspaceRoot, intent.business_domain);
+        const gateStatus = gateResult.pass ? 'PASS' : 'FAIL';
+        this.emit('quality-gate', gateResult.pass ? 'done' : 'failed',
+          `Quality gates ${gateStatus} in ${gateResult.duration}ms — ${gateResult.tools.map(t => `${t.tool}:${t.pass ? 'pass' : 'fail'}`).join(', ')}`,
+          {
+            pass: gateResult.pass,
+            duration: gateResult.duration,
+            tools: gateResult.tools.map(t => ({ tool: t.tool, pass: t.pass, duration: t.duration })),
+          },
+        );
+        // Log individual tool results
+        for (const tool of gateResult.tools) {
+          this.emit('quality-gate', tool.pass ? 'done' : 'failed',
+            `${tool.tool}: ${tool.pass ? 'PASS' : 'FAIL'} (${tool.duration}ms)`,
+            { tool: tool.tool, pass: tool.pass, output: tool.output.slice(0, 500) },
+          );
+        }
+      } catch (err: any) {
+        this.emit('quality-gate', 'failed', `Quality gates crashed: ${err.message}`);
+      }
 
       // ═══ Self-Correction Check ══════════════════════════════
       const uxScore = uxResult.overall;
@@ -829,6 +917,9 @@ export class PipelineOrchestrator {
       iterations,
       patches,
       buildState: this.buildState,
+      scrapedReference,
+      gateResult,
+      skillsManifest,
     };
   }
 

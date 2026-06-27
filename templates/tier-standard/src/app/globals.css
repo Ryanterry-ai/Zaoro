@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #0f172a;
+  --color-secondary: #1e293b;
+  --color-accent: #3b82f6;
+  --color-background: #ffffff;
+  --color-surface: #f8fafc;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+/* Content files provide structured data — components import and render */
+/* No hardcoded content in component code */
