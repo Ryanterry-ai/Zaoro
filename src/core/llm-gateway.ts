@@ -5,6 +5,7 @@ import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
 import { LLMRouter, createRouterFromEnv, type LLMProviderConfig } from './llm-router.js';
 import type { BIPipelineResult } from '../business-intelligence/types/index.js';
 import { ContentResearchAgent, type ContentResearchResult } from '../generation/content-research-agent.js';
+import { SkillIntegrator, type DesignRecommendation } from '../generation/skill-integrator.js';
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 1000;
@@ -17,6 +18,7 @@ export class LLMGateway {
   private architect: ArchitectAgent;
   private router?: LLMRouter;
   private research?: ContentResearchResult;
+  private skillRecommendations?: DesignRecommendation;
 
   constructor(config: LLMConfig) {
     this.provider = config.provider;
@@ -39,6 +41,10 @@ export class LLMGateway {
 
   setResearch(research: ContentResearchResult): void {
     this.research = research;
+  }
+
+  setSkillRecommendations(recommendations: DesignRecommendation): void {
+    this.skillRecommendations = recommendations;
   }
 
   private defaultModel(provider: LLMProvider): string {
@@ -730,11 +736,12 @@ Use these insights to generate business-specific code that solves real problems 
 ` : '';
 
     const researchSection = research ? `\n${ContentResearchAgent.formatForPrompt(research)}\n` : '';
+    const skillSection = this.skillRecommendations ? `\n${SkillIntegrator.formatForPrompt(this.skillRecommendations)}\n` : '';
 
     return `You are build.same, an elite AI software architect and frontend engineer.
 You generate complete, production-quality Next.js App Router applications from atomic primitives.
 You NEVER use pre-built templates. You compose from atomic building blocks like LEGO.
-${researchSection}${biSection}
+${researchSection}${skillSection}${biSection}
 ## Your Architecture
 ${architecturePrompt}
 

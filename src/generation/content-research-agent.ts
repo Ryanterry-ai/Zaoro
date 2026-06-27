@@ -32,6 +32,36 @@ export interface ContentResearchResult {
     teamRoles: string[];
     industryKeywords: string[];
   };
+  // NEW: Scraped data models for typed data generation
+  dataModels: Array<{
+    name: string;
+    typeName: string;
+    fields: Array<{ name: string; type: string; required: boolean }>;
+    sampleData: Record<string, any>[];
+  }>;
+  // NEW: Component structures for reference
+  componentStructures: Array<{
+    name: string;
+    type: string;
+    props: string[];
+    hasState: boolean;
+    hasAnimation: boolean;
+    complexity: 'simple' | 'medium' | 'complex';
+  }>;
+  // NEW: Animation patterns for reference
+  animationPatterns: Array<{
+    type: 'framer-motion' | 'css' | 'gsap';
+    trigger: 'mount' | 'hover' | 'click' | 'scroll' | 'stagger' | 'loop';
+    code: string;
+    description: string;
+  }>;
+  // NEW: Design system extracted from reference
+  designSystem: {
+    colors: Record<string, string>;
+    typography: { fonts: string[]; fontSizes: string[] };
+    spacing: string[];
+    borderRadius: string[];
+  };
   rawSnippets: string[];
 }
 
@@ -80,6 +110,15 @@ export class ContentResearchAgent {
         teamRoles: [],
         industryKeywords: [],
       },
+      dataModels: [],
+      componentStructures: [],
+      animationPatterns: [],
+      designSystem: {
+        colors: {},
+        typography: { fonts: [], fontSizes: [] },
+        spacing: [],
+        borderRadius: [],
+      },
       rawSnippets: [],
     };
 
@@ -117,8 +156,17 @@ export class ContentResearchAgent {
         industry
       );
 
+      // NEW: Extract data models, component structures, and animation patterns
+      const allText = result.rawSnippets.join('\n');
+      const allHtml = result.rawSnippets.join('\n'); // In real implementation, this would be the crawled HTML
+      result.dataModels = this.extractDataModels(allText, allHtml);
+      result.componentStructures = this.extractComponentStructures(allHtml, allText);
+      result.animationPatterns = this.extractAnimationPatterns(allHtml);
+      result.designSystem = this.extractDesignSystem(allHtml, allText);
+
       console.log(`[content-research] Results: ${result.competitors.length} competitors crawled`);
       console.log(`[content-research] Real content: ${result.realContent.headlines.length} headlines, ${result.realContent.pricingData.length} pricing, ${result.realContent.testimonialQuotes.length} testimonials`);
+      console.log(`[content-research] NEW: ${result.dataModels.length} data models, ${result.componentStructures.length} components, ${result.animationPatterns.length} animations`);
 
     } catch (err: any) {
       console.warn(`[content-research] Research failed: ${err.message} — returning empty research`);
@@ -444,8 +492,276 @@ export class ContentResearchAgent {
       sections.push('');
     }
 
+    // NEW: Data Models for typed data generation
+    if (research.dataModels.length > 0) {
+      sections.push('### Data Models (generate typed data.ts with these interfaces)');
+      for (const model of research.dataModels.slice(0, 5)) {
+        sections.push(`**${model.typeName}**:`);
+        for (const field of model.fields) {
+          sections.push(`  - ${field.name}: ${field.type}${field.required ? ' (required)' : ' (optional)'}`);
+        }
+      }
+      sections.push('');
+    }
+
+    // NEW: Component Structures for reference
+    if (research.componentStructures.length > 0) {
+      sections.push('### Component Structures (reference for generation)');
+      for (const comp of research.componentStructures.slice(0, 8)) {
+        sections.push(`- **${comp.name}** (${comp.type}): ${comp.props.length > 0 ? 'Props: ' + comp.props.join(', ') : 'No props'}${comp.hasState ? ' [has state]' : ''}${comp.hasAnimation ? ' [has animation]' : ''}`);
+      }
+      sections.push('');
+    }
+
+    // NEW: Animation Patterns for reference
+    if (research.animationPatterns.length > 0) {
+      sections.push('### Animation Patterns (use Framer Motion for React)');
+      for (const anim of research.animationPatterns.slice(0, 8)) {
+        sections.push(`- ${anim.type} ${anim.trigger}: ${anim.description}`);
+      }
+      sections.push('');
+    }
+
+    // NEW: Design System extracted from reference
+    if (Object.keys(research.designSystem.colors).length > 0) {
+      sections.push('### Design System (from reference)');
+      sections.push(`Colors: ${Object.keys(research.designSystem.colors).slice(0, 10).join(', ')}`);
+      if (research.designSystem.typography.fonts.length > 0) {
+        sections.push(`Fonts: ${research.designSystem.typography.fonts.join(', ')}`);
+      }
+      sections.push('');
+    }
+
     sections.push('**IMPORTANT**: Use this real research as INSPIRATION. Generate original content that is similar in style and quality but do NOT copy text verbatim. Adapt the content to match the user\'s specific business.');
 
     return sections.join('\n');
+  }
+
+  // ─── NEW: Data Model Extraction ──────────────────────────────────
+
+  /**
+   * Extract typed data models from crawled content.
+   * Looks for TypeScript interfaces, type definitions, and inferred structures.
+   */
+  extractDataModels(text: string, html: string): ContentResearchResult['dataModels'] {
+    const models: ContentResearchResult['dataModels'] = [];
+
+    // Extract TypeScript interfaces from HTML
+    const interfacePattern = /(?:interface|type)\s+(\w+)\s*(?:=\s*)?\{([^}]+)\}/g;
+    let match;
+    while ((match = interfacePattern.exec(html)) !== null) {
+      const name = match[1];
+      const body = match[2];
+      if (name && body && !['Props', 'State', 'Context', 'Ref'].includes(name)) {
+        const fields = this.parseInterfaceFields(body);
+        models.push({ name, typeName: name, fields, sampleData: [] });
+      }
+    }
+
+    // Infer data models from content patterns
+    if (text.match(/product|item|collection|catalog/i)) {
+      models.push({
+        name: 'Product',
+        typeName: 'Product',
+        fields: [
+          { name: 'id', type: 'string', required: true },
+          { name: 'name', type: 'string', required: true },
+          { name: 'description', type: 'string', required: true },
+          { name: 'price', type: 'number', required: true },
+          { name: 'image', type: 'string', required: true },
+          { name: 'category', type: 'string', required: false },
+          { name: 'features', type: 'string[]', required: false },
+        ],
+        sampleData: [],
+      });
+    }
+
+    if (text.match(/testimonial|review|feedback/i)) {
+      models.push({
+        name: 'Testimonial',
+        typeName: 'Testimonial',
+        fields: [
+          { name: 'id', type: 'string', required: true },
+          { name: 'name', type: 'string', required: true },
+          { name: 'role', type: 'string', required: true },
+          { name: 'quote', type: 'string', required: true },
+          { name: 'rating', type: 'number', required: false },
+          { name: 'avatar', type: 'string', required: false },
+        ],
+        sampleData: [],
+      });
+    }
+
+    if (text.match(/team|member|ambassador|expert/i)) {
+      models.push({
+        name: 'TeamMember',
+        typeName: 'TeamMember',
+        fields: [
+          { name: 'id', type: 'string', required: true },
+          { name: 'name', type: 'string', required: true },
+          { name: 'role', type: 'string', required: true },
+          { name: 'bio', type: 'string', required: false },
+          { name: 'image', type: 'string', required: true },
+        ],
+        sampleData: [],
+      });
+    }
+
+    if (text.match(/pricing|plan|tier|subscription/i)) {
+      models.push({
+        name: 'PricingTier',
+        typeName: 'PricingTier',
+        fields: [
+          { name: 'id', type: 'string', required: true },
+          { name: 'name', type: 'string', required: true },
+          { name: 'price', type: 'string', required: true },
+          { name: 'interval', type: 'string', required: true },
+          { name: 'features', type: 'string[]', required: true },
+          { name: 'highlighted', type: 'boolean', required: false },
+        ],
+        sampleData: [],
+      });
+    }
+
+    return models;
+  }
+
+  private parseInterfaceFields(body: string): Array<{ name: string; type: string; required: boolean }> {
+    const fields: Array<{ name: string; type: string; required: boolean }> = [];
+    const lines = body.split('\n');
+    for (const line of lines) {
+      const fieldMatch = line.match(/^\s*(\w+)\s*(\?)?\s*:\s*([^;]+)/);
+      if (fieldMatch?.[1]) {
+        const fieldType = fieldMatch[3]?.trim();
+        fields.push({
+          name: fieldMatch[1],
+          type: fieldType ? String(fieldType) : 'string',
+          required: !fieldMatch[2],
+        });
+      }
+    }
+    return fields;
+  }
+
+  // ─── NEW: Component Structure Extraction ─────────────────────────
+
+  extractComponentStructures(html: string, text: string): ContentResearchResult['componentStructures'] {
+    const components: ContentResearchResult['componentStructures'] = [];
+
+    const sectionPatterns = [
+      { pattern: /<(?:section|div)[^>]*id=["']hero["'][^>]*>/gi, type: 'hero' },
+      { pattern: /<(?:section|div)[^>]*id=["']collections?["'][^>]*>/gi, type: 'collections' },
+      { pattern: /<(?:section|div)[^>]*id=["']customizer["'][^>]*>/gi, type: 'customizer' },
+      { pattern: /<(?:section|div)[^>]*id=["']story["'][^>]*>/gi, type: 'story' },
+      { pattern: /<(?:section|div)[^>]*id=["']craftsmanship["'][^>]*>/gi, type: 'craftsmanship' },
+      { pattern: /<(?:section|div)[^>]*id=["']dealers?["'][^>]*>/gi, type: 'dealers' },
+      { pattern: /<(?:section|div)[^>]*id=["']testimonials?["'][^>]*>/gi, type: 'testimonials' },
+      { pattern: /<(?:section|div)[^>]*id=["']contact["'][^>]*>/gi, type: 'contact' },
+    ];
+
+    for (const { pattern, type } of sectionPatterns) {
+      if (html.match(pattern)) {
+        components.push({
+          name: type.charAt(0).toUpperCase() + type.slice(1),
+          type,
+          props: this.inferComponentProps(type),
+          hasState: html.includes('useState'),
+          hasAnimation: html.includes('motion.'),
+          complexity: (type === 'customizer' || type === 'dealers') ? 'complex' : 'medium',
+        });
+      }
+    }
+
+    return components;
+  }
+
+  private inferComponentProps(type: string): string[] {
+    const propsMap: Record<string, string[]> = {
+      hero: ['onExplore', 'onCustomize'],
+      collections: ['onSelectWatchForInquiry', 'onNavigateToCustomizer'],
+      customizer: ['onReserveCustomBuild'],
+      dealers: ['onBookAtBoutique'],
+      contact: ['prefilledWatch', 'prefilledBoutique'],
+    };
+    return propsMap[type] || [];
+  }
+
+  // ─── NEW: Animation Pattern Extraction ───────────────────────────
+
+  extractAnimationPatterns(html: string): ContentResearchResult['animationPatterns'] {
+    const patterns: ContentResearchResult['animationPatterns'] = [];
+
+    // Extract Framer Motion patterns
+    const motionMatches = html.match(/motion\.\w+\([^)]*\)/gi) || [];
+    for (const motion of motionMatches.slice(0, 10)) {
+      const componentMatch = motion.match(/motion\.(\w+)/i);
+      patterns.push({
+        type: 'framer-motion',
+        trigger: motion.includes('whileHover') ? 'hover' : motion.includes('whileInView') ? 'scroll' : 'mount',
+        code: motion.substring(0, 200),
+        description: `Framer Motion ${componentMatch?.[1] || 'animation'}`,
+      });
+    }
+
+    // Extract CSS animations
+    const cssAnimations = html.match(/animation:\s*[^;]+/gi) || [];
+    for (const anim of cssAnimations.slice(0, 5)) {
+      patterns.push({
+        type: 'css',
+        trigger: 'mount',
+        code: anim,
+        description: 'CSS animation',
+      });
+    }
+
+    return patterns;
+  }
+
+  // ─── NEW: Design System Extraction ───────────────────────────────
+
+  extractDesignSystem(html: string, text: string): ContentResearchResult['designSystem'] {
+    const colors: Record<string, string> = {};
+
+    // Extract hex colors
+    const hexColors = html.match(/#[0-9a-fA-F]{6}/g) || [];
+    for (const hex of hexColors.slice(0, 20)) {
+      colors[hex] = hex;
+    }
+
+    // Extract Tailwind color classes
+    const colorClasses = html.match(/(?:bg|text|border|from|to|via)-(red|blue|green|purple|amber|emerald|violet|indigo|cyan|orange|pink|rose|teal|sky|slate|zinc|gray|stone|gold)-\d+/g) || [];
+    for (const cls of colorClasses.slice(0, 20)) {
+      colors[cls] = cls;
+    }
+
+    // Extract fonts
+    const fonts: string[] = [];
+    const fontFamilies = html.match(/font-(?:family|sans|serif|mono)[^"]*["']([^"']+)["']/gi) || [];
+    for (const ff of fontFamilies) {
+      const match = ff.match(/["']([^"']+)["']/);
+      if (match?.[1]) fonts.push(match[1]);
+    }
+
+    // Extract font sizes
+    const fontSizes: string[] = [];
+    const fontSizeClasses = html.match(/text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl)/gi) || [];
+    fontSizes.push(...fontSizeClasses);
+
+    // Extract spacing
+    const spacing: string[] = [];
+    const spacingClasses = html.match(/(?:p|m|px|py|gap|space)-(0|1|2|3|4|5|6|8|10|12|16|20|24)/gi) || [];
+    spacing.push(...spacingClasses);
+
+    // Extract border radius
+    const borderRadius: string[] = [];
+    const radiusClasses = html.match(/rounded-(sm|md|lg|xl|2xl|full)/gi) || [];
+    borderRadius.push(...radiusClasses);
+
+    return {
+      colors,
+      typography: { fonts: [...new Set(fonts)], fontSizes: [...new Set(fontSizes)] },
+      spacing: [...new Set(spacing)],
+      borderRadius: [...new Set(borderRadius)],
+    };
   }
 }

@@ -42,6 +42,52 @@ export interface Blueprint {
   compositionPrimitives: string[];
   confidence: number;
   warnings: string[];
+
+  // NEW: Scraped reference data for enhanced generation
+  scrapedReference?: ScrapedReferenceData;
+}
+
+// NEW: Scraped reference data from competitor websites
+export interface ScrapedReferenceData {
+  // Typed data models for data.ts generation
+  dataModels: Array<{
+    name: string;
+    typeName: string;
+    fields: Array<{ name: string; type: string; required: boolean }>;
+    sampleData: Record<string, any>[];
+  }>;
+  // Component structures for reference
+  componentStructures: Array<{
+    name: string;
+    type: string;
+    props: string[];
+    hasState: boolean;
+    hasAnimation: boolean;
+    complexity: 'simple' | 'medium' | 'complex';
+  }>;
+  // Animation patterns for Framer Motion generation
+  animationPatterns: Array<{
+    type: 'framer-motion' | 'css' | 'gsap';
+    trigger: 'mount' | 'hover' | 'click' | 'scroll' | 'stagger' | 'loop';
+    code: string;
+    description: string;
+  }>;
+  // Design system extracted from reference
+  designSystem: {
+    colors: Record<string, string>;
+    typography: { fonts: string[]; fontSizes: string[] };
+    spacing: string[];
+    borderRadius: string[];
+  };
+  // Real content for generation
+  realContent: {
+    headlines: string[];
+    taglines: string[];
+    descriptions: string[];
+    testimonials: string[];
+    features: string[];
+    pricing: string[];
+  };
 }
 
 export interface BlueprintPage {
