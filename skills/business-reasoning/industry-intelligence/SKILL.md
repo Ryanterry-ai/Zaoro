@@ -1,66 +1,71 @@
 ---
 name: industry-intelligence
-description: Use this skill whenever you need deep structural knowledge of a specific industry — its typical departments, roles, regulations, common software, KPIs, integrations, and workflows. Always run this right after business-research, and consult it again any time another Business OS agent (workflow-research, compliance, integrations, dashboard-generator, database-generator) needs industry-specific ground truth instead of guessing generically. Covers healthcare, retail, restaurants, education, manufacturing, construction, agriculture, automotive, hospitality, fitness, real estate, legal, finance, insurance, travel, beauty/salon, pharmacy, gyms, NGOs, government, logistics, ecommerce, wholesale/distribution, and hundreds more.
+description: Look up or seed the industry knowledge base. Cache-first: check knowledge-base/industries/{slug}.json before calling adapter. One KNOWLEDGE_BASE_SEED call only when industry is new; subsequent builds for same industry read the cached JSON (Bucket A lookup).
+bucket: B
+reason: One LLM call per NEW industry only; cached lookups are Bucket A
+feeds_into: business-problems, compliance, integrations, reporting, dashboard-generator
+consumes: business-research (industry, sub_industry fields)
 ---
 
 # Industry Intelligence Agent
 
 ## Role
 
-You are the encyclopedia. Given an industry + sub-industry (from
-business-research), you produce the canonical structural model of how
-businesses in that space actually operate — so every later agent
-(workflows, compliance, dashboards, schema) is working from real industry
-knowledge, not invented generic SaaS boilerplate.
+The encyclopedia. Produces the canonical structural model for an industry: org structure, departments, processes, roles, regulations, common software, KPIs, integrations, and canonical workflows.
 
-## Process
+## Process (Cache-First)
 
-For the given industry/sub-industry, research and/or reason through:
+1. **Check cache**: Read `knowledge-base/industries/{industry-slug}.json`.
+   - Slug = `industry.toLowerCase().replace(/[^a-z0-9]+/g, '-')`.
+   - If file exists and is valid JSON → return it immediately (Bucket A lookup, zero LLM cost).
+2. **Seed cache** (only if file is missing): Make ONE adapter call with taskType `structured-extraction`:
+   - Input: `{industry, sub_industry}` from business-research.
+   - Output: Full industry model (see schema below).
+   - Write result to `knowledge-base/industries/{slug}.json`.
+3. **All subsequent builds** for this industry read the cached file — no LLM call.
 
-1. **Business structure** — typical org chart at this business's scale
-   (a 1-location gym ≠ a 50-location gym chain).
-2. **Departments** — e.g. Sales, Ops, Front Desk, Warehouse, Kitchen,
-   Compliance, HR, Marketing — only the ones that actually exist at this
-   scale.
-3. **Processes** — the recurring operational sequences (onboarding a
-   customer, fulfilling an order, scheduling a service, billing a member).
-4. **Roles** — job titles, what each role touches, who they report to.
-5. **Regulations** — the bodies and frameworks that apply (see also the
-   `compliance` agent, which goes deeper on this).
-6. **Common software** — what businesses like this already use today
-   (POS, EHR, PMS, booking tools, accounting) — this tells you what an
-   "upgrade" needs to beat or integrate with.
-7. **Common KPIs** — the numbers an owner/manager in this industry
-   actually watches.
-8. **Integrations** — payment rails, shipping carriers, messaging,
-   government/tax APIs typically required in this geography + industry.
-9. **Typical workflows** — name 3–5 canonical workflows (handed off in
-   detail to workflow-research).
-10. **If web search is available**, validate against current real
-    examples (e.g. search "gym management software India 2026",
-    "FSSAI compliance supplement retailer") rather than relying purely on
-    memory, since software ecosystems and regulations shift.
+## LLM Call Specification (only on cache miss)
 
-## Output
+Exactly **one** call with taskType `structured-extraction` via the adapter.
 
+### Input to LLM
+```json
+{
+  "industry": "",
+  "sub_industry": ""
+}
+```
+
+### Output from LLM (JSON) — written to cache
 ```json
 {
   "industry": "",
   "sub_industry": "",
-  "org_structure": {"departments": [""], "roles": [{"title": "", "department": "", "reports_to": ""}]},
-  "core_processes": [""],
-  "regulations": [{"name": "", "applies_when": "", "geography": ""}],
-  "common_software": [{"category": "", "examples": [""]}],
-  "common_kpis": [""],
+  "departments": [
+    {
+      "name": "",
+      "typical_roles": [""],
+      "key_processes": [""],
+      "common_software": [""],
+      "kpis": [""]
+    }
+  ],
+  "regulations": [""],
   "common_integrations": [""],
-  "canonical_workflows": [""],
-  "notes_and_caveats": [""]
+  "canonical_workflows": [
+    {
+      "name": "",
+      "steps": [""],
+      "cross_department": false
+    }
+  ],
+  "typical_tech_stack": [""],
+  "seasonality_notes": "",
+  "competitive_dynamics": ""
 }
 ```
 
-## Handoff
-
-Feed this into **business-problems** (to find the gap between this
-canonical model and the user's actual business), **compliance**, and
-**integrations**. Also feed `common_kpis` to **reporting** and `roles`
-to **dashboard-generator** (one dashboard per role).
+## Rules
+- The cache file is the source of truth once written.
+- Never re-seed an existing cache file — if it exists, use it.
+- If the adapter call fails, fall back to a minimal stub (empty departments, note "cache seed failed") so the pipeline doesn't block.

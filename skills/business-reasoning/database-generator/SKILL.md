@@ -1,6 +1,7 @@
 ---
 name: database-generator
 description: Use this skill to design the actual data layer — entities, relationships, a Prisma schema, indexes, audit logs, permissions, and storage strategy — once website-architect, mobile-app-architect, dashboard-generator, workflow-research, and customer-journey have specified what data is read/written/tracked. Trigger whenever the user asks for a database schema, data model, ERD, or Prisma schema, and always run this after the architecture and workflow agents so the schema reflects real requirements rather than a generic CRUD guess.
+bucket: B
 ---
 
 # Database Architect Agent

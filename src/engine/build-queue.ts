@@ -93,10 +93,6 @@ export class BuildQueue extends EventEmitter {
 
   private async executeBuild(job: BuildJob): Promise<void> {
     const wsDir = path.join(this.workspaceBase, job.workspaceId);
-    fs.mkdirSync(wsDir, { recursive: true });
-
-    const progressFile = path.join(wsDir, '.progress');
-    fs.writeFileSync(progressFile, JSON.stringify([]), 'utf-8');
 
     const engineRoot = path.resolve(this.workspaceBase, '..');
 
@@ -115,6 +111,7 @@ import * as path from 'path';
 const WS_BASE = ${JSON.stringify(this.workspaceBase)};
 const wsDir = path.join(WS_BASE, ${JSON.stringify(job.workspaceId)});
 if (!fs.existsSync(wsDir)) fs.mkdirSync(wsDir, { recursive: true });
+fs.writeFileSync(path.join(wsDir, '.build-script-debug.log'), 'BUILD SCRIPT START: wsDir=' + wsDir + ', exists=' + fs.existsSync(wsDir) + '\\n', 'utf-8');
 
 const PROGRESS_FILE = path.join(wsDir, '.progress');
 const _progressEvents = [];
@@ -181,38 +178,33 @@ console.error = interceptConsole('', 'error');
 const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-config-${job.id}.json`)}), 'utf-8'));
 const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.stringify(`.build-prompt-${job.id}.json`)}), 'utf-8'));
 
-const usePipeline = payload.type === 'pipeline' || payload.pipeline === true;
+// Always use DeterministicOrchestratorV4 (canonical orchestrator)
+(async () => {
+const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
+const orch = new DeterministicOrchestratorV4(wsDir);
+try {
+  writeProgress('init', 'started', 'Build started — analyzing prompt');
+  const tBi = Date.now();
+  await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
+  writeProgress('compile', 'info', 'Compiling and validating...', { duration: Date.now() - tBi });
 
-if (usePipeline) {
-  const { PipelineOrchestrator } = await import('./src/generation/pipeline-orchestrator.js');
-  const orch = new PipelineOrchestrator(
-    wsDir,
-    { provider: config.provider, apiKey: config.apiKey },
-    (step, msg) => writeProgress(step, 'info', msg),
-    (step, msg) => writeProgress(step, 'info', msg),
-  );
+  // Run quality gate (lint + typecheck + tests + build)
+  const { execSync } = await import('child_process');
+  const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
   try {
-    if (config.apiKey && config.apiKey.trim() !== '') {
-      writeProgress('init', 'started', 'Build started — using ' + config.provider + ' AI');
-    } else {
-      writeProgress('init', 'warning', 'No LLM API key — using template synthesis');
-    }
-    const t0 = Date.now();
-    const result = await orch.run(payload.prompt);
-    writeProgress('done', 'completed', 'Pipeline completed — UX: ' + result.uxResult.overall + ', Business: ' + result.businessResult.overall + ', Build: ' + result.assemblyResult.overallScore + ' (' + result.iterations + ' iterations)', { duration: Date.now() - t0 });
-  } catch (err) { writeProgress('error', 'error', 'Pipeline failed: ' + (err.message || err)); process.exit(1); }
-} else {
-  const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
-  const orch = new DeterministicOrchestratorV4(wsDir);
-  try {
-    writeProgress('init', 'started', 'Build started — analyzing prompt');
-    const tBi = Date.now();
-    await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
-    writeProgress('compile', 'info', 'Compiling and validating...', { duration: Date.now() - tBi });
-    writeProgress('preview', 'info', 'Rendering preview...');
-    writeProgress('done', 'completed', 'Build completed! Your application is ready.');
-  } catch (err) { writeProgress('error', 'error', 'Build failed: ' + (err.message || err)); process.exit(1); }
-}
+    writeProgress('gate', 'started', 'Running quality gate...');
+    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 180000, stdio: 'pipe' });
+    writeProgress('gate', 'passed', 'Quality gate passed');
+  } catch (gateErr) {
+    const output = (gateErr.stdout && gateErr.stdout.toString()) || (gateErr.stderr && gateErr.stderr.toString()) || gateErr.message;
+    writeProgress('gate', 'failed', 'Quality gate failed: ' + output.slice(0, 500));
+    throw new Error('Quality gate failed: ' + output.slice(0, 200));
+  }
+
+  writeProgress('preview', 'info', 'Rendering preview...');
+  writeProgress('done', 'completed', 'Build completed! Your application is ready.');
+} catch (err) { writeProgress('error', 'error', 'Build failed: ' + (err.message || err)); process.exit(1); }
+})();
 
 // Restore console
 console.log = origLog;

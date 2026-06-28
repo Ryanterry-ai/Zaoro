@@ -1,5 +1,5 @@
 // tools/quality-gate/index.js
-// Bucket A — pure script. Runs lint, typecheck, build.
+// Bucket A — pure script. Runs typecheck, tests (if vitest), build.
 // Usage: node tools/quality-gate/index.js <project-dir>
 // Exit 0 = pass, Exit 1 = fail (with specific errors)
 
@@ -39,7 +39,21 @@ function gate(projectDir) {
     }
   }
 
-  // 2. Build
+  // 2. Tests (skip if vitest not configured)
+  const hasVitest = hasPackageJson && (() => {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf-8'));
+      return !!(pkg.devDependencies?.vitest || pkg.dependencies?.vitest);
+    } catch { return false; }
+  })();
+  if (hasVitest) {
+    const testResult = run('npx vitest run', projectDir);
+    if (!testResult.success) {
+      failures.push({ gate: 'tests', errors: testResult.output });
+    }
+  }
+
+  // 3. Build
   const buildResult = run('npm run build', projectDir);
   if (!buildResult.success) {
     failures.push({ gate: 'build', errors: buildResult.output });

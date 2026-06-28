@@ -1,6 +1,7 @@
 ---
 name: website-architect
 description: Use this skill to design the full website architecture — sitemap, page list (homepage, PLP, PDP, cart, checkout, about, contact, FAQ, blog, policy pages, auth, search, wishlist, brands, categories, landing pages), and per-page content/component blocks — for a specific business. Always run this after business-research, customer-journey, and design-research have run, and only when solution-generator has actually recommended a website. Trigger whenever the user asks for a sitemap, website structure, or page-by-page plan.
+bucket: B
 ---
 
 # Website Architect Agent

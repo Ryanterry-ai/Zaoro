@@ -1,6 +1,7 @@
 ---
 name: design-research
 description: Use this skill to synthesize ui-research and ux-research findings, plus knowledge of design systems (Material, Apple HIG, Ant Design, Tailwind UI, shadcn, 21st.dev, Aceternity, Magic UI, Origin UI) and current design trends (dashboard trends, landing pages, commerce UX, forms, tables, charts, animation, dark mode, accessibility) into one coherent, opinionated design language for this specific business. This is the agent that decides component library, page layouts, interaction patterns, spacing, color, typography, animation, dark mode, and responsive behavior — always run it after ui-research and ux-research, and always before website-architect, mobile-app-architect, or dashboard-generator start producing layouts.
+bucket: B
 ---
 
 # Design Research Agent

@@ -19,5 +19,3 @@ export { MotionEngine, type MotionPlan, type MotionProfile, type SectionMotion, 
 export { UXEvaluator, type UXAuditResult, type AuditCategory, type AuditIssue, type UXScore } from './ux-evaluator.js';
 export { BusinessValidator, type BusinessValidation, type BusinessCheck, type RevenueModelAssessment, type UserFlowAssessment } from './business-validator.js';
 export { AssemblyQA, type AssemblyResult, type AssemblyCheck } from './assembly-qa.js';
-export { PipelineOrchestrator, type PipelineResult } from './pipeline-orchestrator.js';
-export { generateSectionWithLLM, generatePageWithLLM, type LLMCodeGeneratorConfig } from './llm-code-generator.js';

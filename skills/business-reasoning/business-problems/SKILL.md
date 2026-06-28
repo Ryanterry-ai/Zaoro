@@ -1,49 +1,26 @@
 ---
 name: business-problems
-description: Use this skill to discover concrete, specific operational problems in a business BEFORE generating any website, app, or system — Business OS never jumps straight to a solution. Trigger this whenever the user wants a digital ecosystem, software, or "what should we build" recommendation; whenever they describe symptoms like manual processes, spreadsheets, missed leads, no tracking, or inefficiency; or any time solution-generator is about to run without this agent having run first.
+description: Derive business problems from structured facts via BRE v2 rules engine. No LLM call — pure deterministic rule output parameterized by business-research facts + industry-intelligence lookup.
+bucket: A
+reason: Pure BRE v2 rule output; no LLM required
 ---
 
-# Business Problems Agent (Problem Discovery)
+# Business Problems Agent
 
 ## Role
 
-You exist to stop premature solutioning. Before anyone designs a website,
-app, or dashboard, you find out what's actually broken. A solution that
-doesn't map to a named problem doesn't get built.
+Identify concrete operational problems by diffing the business against the canonical industry model from knowledge-base. This is a deterministic BRE v2 rule output — no LLM call.
 
-## Inputs
+## Process (BRE v2 Rules)
 
-- business-research output (business profile)
-- industry-intelligence output (canonical structure/processes for this
-  industry)
-- Anything the user has said about current frustrations
-
-## Process
-
-1. **Diff the business against the canonical model.** Where does this
-   specific business's reality (or the user's description of it) fall
-   short of industry-intelligence's canonical_workflows / common_software?
-   That gap is where problems live.
-2. **Walk every department/process** named by industry-intelligence and
-   ask: is this manual, untracked, error-prone, slow, or invisible to
-   management here?
-3. **Categorize every problem found** into: Operational, Sales,
-   Marketing, Inventory, HR, Finance, Customer, Technology, Compliance.
-4. **Rank by severity** — revenue-blocking > customer-experience-damaging
-   > efficiency-draining > nice-to-have.
-5. **Be concrete, never generic.** Bad: "no CRM." Good: "no member
-   tracking — front desk has no record of who's behind on payment or
-   which members haven't shown up in 14 days (churn risk goes
-   undetected)."
-
-## Worked example (Gym, from the source brief)
-
-- Operational: No member tracking, manual attendance, no trainer schedule
-- Sales: Walk-in leads aren't logged, no follow-up on trial-pass expirers
-- Finance: Manual payment collection, no auto-billing for renewals
-- Customer: No diet/workout tracking, no member-facing app
-- Technology: No CRM, no centralized data — everything lives in notebooks
-  or someone's WhatsApp
+1. Look up the industry model from `knowledge-base/industries/{slug}.json` (via industry-intelligence cache).
+2. Compare the business's stated facts (from business-research) against the industry model's standard departments, processes, and roles.
+3. For each department/process in the industry model:
+   - If the business has no mention of it → flag as "potentially missing"
+   - If the business mentions it but with manual/unsupported tooling → flag as "manual/error-prone"
+   - If the business has it automated → mark as "covered"
+4. Categorize problems: Operational, Sales, Marketing, Inventory, HR, Finance, Customer, Technology, Compliance.
+5. Rank by severity: revenue-blocking > customer-experience-damaging > efficiency-draining > nice-to-have.
 
 ## Output
 
@@ -51,19 +28,18 @@ doesn't map to a named problem doesn't get built.
 {
   "problems": [
     {
-      "category": "Operational | Sales | Marketing | Inventory | HR | Finance | Customer | Technology | Compliance",
-      "problem": "",
-      "evidence_or_reasoning": "",
-      "severity": "critical | high | medium | low",
-      "who_it_affects": [""]
+      "category": "",
+      "department": "",
+      "description": "",
+      "severity": "revenue-blocking | customer-experience-damaging | efficiency-draining | nice-to-have",
+      "evidence": "why this was flagged (which rule triggered)"
     }
   ],
-  "top_3_priorities": [""]
+  "missing_capabilities": [""],
+  "covered_well": [""]
 }
 ```
 
 ## Handoff
 
-Pass directly to **solution-generator** — every solution it proposes must
-trace back to a problem ID here. Also feed customer-facing problems to
-**customer-journey** and operational ones to **workflow-research**.
+Feeds `solution-generator` (BRE v2 ConstraintSolver), `customer-journey`, `workflow-research`.

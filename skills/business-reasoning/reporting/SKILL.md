@@ -1,6 +1,7 @@
 ---
 name: reporting
 description: Use this skill to define the KPIs and the scheduled/exportable reports a business needs — beyond live dashboards — including who receives each report, on what cadence, in what format, and how each KPI is calculated from the underlying data model. Trigger whenever the user asks about KPIs, metrics, periodic reports, board/investor reporting, or "how do we know if this is working," and run this after industry-intelligence, revenue-model, dashboard-generator, and database-generator have run.
+bucket: B
 ---
 
 # Reporting & KPI Agent

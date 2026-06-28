@@ -1,6 +1,7 @@
 ---
 name: integrations
 description: Use this skill to determine which external services and APIs a business's digital ecosystem actually needs to connect to — payments (Stripe, Razorpay, PhonePe), maps (Google Maps), messaging (WhatsApp, Twilio, SendGrid), auth/infra (Firebase), CRM/marketing (Zoho, HubSpot), logistics (Shiprocket, Delhivery, BlueDart), tax/gov (GST APIs), accounting, and team comms (Slack) — based on geography, industry, and the workflows/journeys already mapped. Trigger whenever the user asks what integrations or third-party tools are needed, and run this after workflow-research, customer-journey, and database-generator.
+bucket: B
 ---
 
 # Integration Agent

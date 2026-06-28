@@ -31,3 +31,28 @@ nutrabay-clone.zip
 .cache/
 .clone-output/
 .blueprint.json
+
+# Next.js build output
+.next/
+**/.next/
+
+# Logs
+logs/
+engine.log
+engine-err.log
+*.log
+
+# Build artifacts
+coverage/
+out/
+build/
+
+# Generated screenshots
+test-*.png
+screenshots-*/
+
+# Tunnel
+tunnel-url.txt
+
+# Runtime cache
+.cache/

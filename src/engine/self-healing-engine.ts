@@ -93,6 +93,34 @@ export class SelfHealingEngine {
 
       // Step 3: Deduplicate errors by file (fix one file at a time)
       const fileGroups = this.groupErrorsByFile(errorsWithContext);
+      let fixesApplied = 0;
+
+      // Step 3.5: Try deterministic pattern fixes before LLM
+      const deterministicFixes = this.tryDeterministicFixes(workspacePath, errorsWithContext);
+      if (deterministicFixes.length > 0) {
+        console.log(`[self-heal] Deterministic fixes: ${deterministicFixes.length} patches`);
+        for (const patch of deterministicFixes) {
+          try {
+            this.patcher.applyPatch(workspacePath, patch);
+            fixesApplied++;
+          } catch {}
+        }
+        // Re-capture errors after deterministic fixes
+        const postDetErrors = this.captureErrors(workspacePath);
+        if (postDetErrors.length === 0) {
+          log.push({ iteration, errorsBefore: errors.length, filesAffected: [...fileGroups.keys()], fixApplied: true, durationMs: Date.now() - iterStart });
+          break;
+        }
+        // Update error set for LLM pass
+        errorsWithContext.length = 0;
+        errorsWithContext.push(...this.readErrorContext(workspacePath, postDetErrors));
+        fileGroups.clear();
+        for (const ewc of errorsWithContext) {
+          const file = ewc.error.file;
+          if (!fileGroups.has(file)) fileGroups.set(file, []);
+          fileGroups.get(file)!.push(ewc);
+        }
+      }
 
       // Step 4: Generate fixes via LLM (batch by file)
       onProgress?.(iteration, errors.length, 'Generating fixes via LLM...');
@@ -107,7 +135,6 @@ export class SelfHealingEngine {
 
       // Step 5: Apply fixes
       onProgress?.(iteration, errors.length, `Applying ${fixes.length} fixes...`);
-      let fixesApplied = 0;
       for (const patch of fixes) {
         try {
           this.patcher.applyPatch(workspacePath, patch);
@@ -219,6 +246,54 @@ export class SelfHealingEngine {
       groups.get(file)!.push(ewc);
     }
     return groups;
+  }
+
+  /**
+   * Try deterministic pattern fixes for common TypeScript errors.
+   * Returns patches that can be applied without LLM.
+   */
+  private tryDeterministicFixes(workspacePath: string, errors: ErrorWithContext[]): ASTPatch[] {
+    const patches: ASTPatch[] = [];
+
+    for (const ewc of errors) {
+      const filePath = path.join(workspacePath, ewc.error.file);
+      if (!fs.existsSync(filePath)) continue;
+
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const lines = content.split('\n');
+      const lineIdx = ewc.error.line - 1;
+      if (lineIdx < 0 || lineIdx >= lines.length) continue;
+
+      const line = lines[lineIdx];
+      if (!line) continue;
+
+      // Pattern 1: Unused import — remove the import line
+      if (ewc.error.code === 'TS6133' && line.trimStart().startsWith('import ')) {
+        lines.splice(lineIdx, 1);
+        patches.push({ targetFile: ewc.error.file, action: 'update', codeBlock: lines.join('\n') });
+        continue;
+      }
+
+      // Pattern 2: Unused variable — prefix with underscore
+      if (ewc.error.code === 'TS6133') {
+        const varMatch = line.match(/(?:const|let|var)\s+(\w+)/);
+        const varName = varMatch?.[1];
+        if (varName && !varName.startsWith('_')) {
+          lines[lineIdx] = line.replace(varName, `_${varName}`);
+          patches.push({ targetFile: ewc.error.file, action: 'update', codeBlock: lines.join('\n') });
+          continue;
+        }
+      }
+
+      // Pattern 3: Missing return type on function — add ": void"
+      if (ewc.error.code === 'TS7006' && line.includes('function ') && !line.includes(':')) {
+        lines[lineIdx] = line.replace(/\)\s*{/, '): void {');
+        patches.push({ targetFile: ewc.error.file, action: 'update', codeBlock: lines.join('\n') });
+        continue;
+      }
+    }
+
+    return patches;
   }
 
   /**

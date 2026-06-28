@@ -1,6 +1,7 @@
 ---
 name: compliance
 description: Use this skill to identify every regulatory and compliance requirement a business's digital ecosystem must satisfy — e.g. HIPAA for healthcare, GST/FSSAI for retail and food in India, ISO standards for manufacturing, RBI/PCI-DSS for finance and payments, data-privacy law (GDPR/DPDP/CCPA) for any business handling personal data — and what that means concretely for the systems being built (data fields, retention, consent flows, audit logs, access controls). Trigger whenever the user asks about legal/regulatory requirements, data privacy, or industry certifications, and run this after industry-intelligence and database-generator so requirements attach to real entities, not abstractions.
+bucket: B
 ---
 
 # Compliance Agent

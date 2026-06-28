@@ -1,84 +1,48 @@
 ---
-name: component-spec-writer
-description: Produces locked component specs one page at a time from extracted tokens and page structure
+name: Component Spec Writer
 bucket: B
-reason: Requires LLM to interpret visual structure and decide component boundaries
 ---
 
-# Component Spec Writer
+# Component Spec Writer Skill
 
-## Role
-For each page, analyze the extracted tokens, the page layout, and the data requirements, then produce a locked spec that `parallel-builder` consumes. This is the bridge between raw extraction and code generation.
-
-## Process
-1. Read `crawl-map.json` to get the page list.
-2. Read `tokens.json` for design tokens.
-3. Read `scraped/{path}/index.html` for the page structure.
-4. For each page, make **one** LLM call to produce the component spec.
-5. Write to `specs/{pageName}.json`.
-
-## LLM Call Scope
-The LLM receives:
-- The page's HTML structure (simplified to semantic regions).
-- The extracted tokens.
-- The VisualDNA register.
-- Instructions: "Identify component boundaries. For each section, specify: id, type, props, data bindings, animation hints."
-
-The LLM must NOT:
-- See other pages' specs.
-- See component code from other pages.
-- Make architectural decisions beyond this page.
+## Purpose
+Decide component boundaries and write structured specs per component. LLM-required (Bucket B) — ONE call per page.
 
 ## Input
-- `crawl-map.json` — page list.
-- `tokens.json` — extracted design tokens.
-- `visual-dna.json` — register and visual world.
-- `scraped/{path}/index.html` — page HTML.
-- `content/{datatype}.json` — available data files.
+- Page's design tokens (from token-extractor)
+- Page's DOM inventory (from token-extractor)
+- Page URL and title
 
 ## Output
-`specs/{pageName}.json`:
+`docs/research/component-specs/<page-name>.json`:
 ```json
 {
-  "page": "home",
-  "path": "/",
-  "sections": [
+  "page": "Homepage",
+  "url": "/",
+  "components": [
     {
-      "id": "hero",
-      "type": "Hero",
-      "layout": "full-width",
-      "props": {
-        "title": "string → hero.title",
-        "subtitle": "string → hero.subtitle",
-        "ctaText": "string → hero.cta",
-        "ctaHref": "string → /products",
-        "backgroundImage": "string → hero.image"
-      },
-      "dataBinding": "hero",
-      "animation": {
-        "entrance": "fade-up",
-        "delay": 0,
-        "scrollTrigger": false
-      },
+      "name": "Hero",
+      "type": "section",
+      "props": [
+        { "name": "title", "type": "string", "required": true },
+        { "name": "subtitle", "type": "string", "required": false },
+        { "name": "ctaText", "type": "string", "required": true },
+        { "name": "ctaLink", "type": "string", "required": true },
+        { "name": "backgroundImage", "type": "string", "required": false }
+      ],
+      "contentSlots": ["title", "subtitle", "cta"],
       "responsive": {
-        "mobile": "stacked",
-        "desktop": "split"
+        "mobile": "stacked layout",
+        "desktop": "two-column with image"
       }
     }
-  ],
-  "layout": {
-    "maxWidth": "1280px",
-    "padding": "0 24px",
-    "sections": ["hero", "features", "testimonials", "cta", "footer"]
-  }
+  ]
 }
 ```
 
 ## Rules
-1. One LLM call per page. Never combine pages.
-2. Each section must have a unique `id` within the page.
-3. Props must map to content data via `→` notation or be literal values.
-4. Every section must declare a `dataBinding` that maps to a key in `content/pages/{page}.json`.
-5. The spec is locked after this step. `parallel-builder` must not modify it.
-6. Component boundaries must respect the visual regions in the source HTML. Do not split a single visual region into multiple components.
-7. If a section has no data, it must still declare empty props — never skip it.
+- ONE LLM call per page (never combine pages)
+- Input must include only that page's tokens and DOM inventory
+- Output must be valid JSON matching the schema above
+- Each component must have clear, non-overlapping responsibilities
+- Use the model adapter layer for the LLM call

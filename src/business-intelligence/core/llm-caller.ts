@@ -3,6 +3,11 @@ import type { LLMProvider } from '../../types/index.js';
 const RETRY_ATTEMPTS = 5;
 const RETRY_BASE_DELAY_MS = 3000;
 
+/**
+ * BILLMCaller — thin wrapper around skills/_adapter/index.js.
+ * All LLM calls go through the adapter. This class exists for backward
+ * compatibility with the 10 BI core modules that import it.
+ */
 export class BILLMCaller {
   private provider: LLMProvider;
   private apiKey: string;
@@ -27,7 +32,7 @@ export class BILLMCaller {
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
         console.log(`[bi-llm] ${this.provider}/${this.model} (attempt ${attempt})`);
-        const content = await this.callProvider(systemPrompt, userPrompt);
+        const content = await this.callAdapter('structured-extraction', systemPrompt, userPrompt);
         return this.parseJSON<T>(content);
       } catch (err: any) {
         const isQuota = /429|quota/i.test(err.message || '');
@@ -51,82 +56,20 @@ export class BILLMCaller {
   }
 
   async callRaw(systemPrompt: string, userPrompt: string): Promise<string> {
-    return this.callProvider(systemPrompt, userPrompt);
+    return this.callAdapter('structured-extraction', systemPrompt, userPrompt);
   }
 
-  private async callProvider(systemPrompt: string, userPrompt: string): Promise<string> {
-    switch (this.provider) {
-      case 'gemini': return this.callGemini(systemPrompt, userPrompt);
-      case 'openai': return this.callOpenAI(systemPrompt, userPrompt);
-      case 'anthropic': return this.callAnthropic(systemPrompt, userPrompt);
-      default: throw new Error(`Unsupported provider: ${this.provider}`);
-    }
-  }
-
-  private async callGemini(systemPrompt: string, userPrompt: string): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 65536,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
-      })
+  private async callAdapter(taskType: string, systemPrompt: string, userPrompt: string): Promise<string> {
+    // Delegate to skills/_adapter/index.js callModel()
+    const path = await import('path');
+    const adapterPath = path.resolve(process.cwd(), 'skills', '_adapter', 'index.js');
+    const adapter = await import(adapterPath);
+    const result = await adapter.callModel({
+      taskType,
+      prompt: userPrompt,
+      context: systemPrompt,
     });
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => '');
-      throw new Error(`Gemini HTTP ${response.status}: ${errBody.substring(0, 200)}`);
-    }
-    const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) throw new Error('Empty Gemini response');
-    return content;
-  }
-
-  private async callOpenAI(systemPrompt: string, userPrompt: string): Promise<string> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 16000
-      })
-    });
-    if (!response.ok) throw new Error(`OpenAI HTTP ${response.status}`);
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
-
-  private async callAnthropic(systemPrompt: string, userPrompt: string): Promise<string> {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: 16000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    });
-    if (!response.ok) throw new Error(`Anthropic HTTP ${response.status}`);
-    const data = await response.json();
-    return data.content?.[0]?.text || '';
+    return result.content;
   }
 
   private parseJSON<T>(content: string): T {

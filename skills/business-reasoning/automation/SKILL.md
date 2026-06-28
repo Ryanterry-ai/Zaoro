@@ -1,6 +1,7 @@
 ---
 name: automation
 description: Use this skill to design specific automated workflows and AI agent opportunities — renewal reminders, abandoned-cart recovery, lead follow-up sequences, low-stock reordering, churn-risk flagging, AI chat/voice agents for support or sales — that remove manual work identified by business-problems and workflow-research. Trigger whenever the user asks about automation, "what can AI do for this business," workflow triggers, or reducing manual work, and run this after workflow-research, customer-journey, revenue-model, dashboard-generator (alerts), and integrations have all run.
+bucket: B
 ---
 
 # Automation Agent

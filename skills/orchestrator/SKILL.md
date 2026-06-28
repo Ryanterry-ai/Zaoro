@@ -5,64 +5,58 @@ bucket: A
 reason: Deterministic routing logic; no LLM calls
 ---
 
-# Orchestrator
+# Orchestrator Skill
 
-## Role
-Single entry point for every build request. Reads the user input, selects the pipeline variant (clone, generative, or hybrid), and sequences every downstream skill in the correct order. Nothing else starts until Orchestrator emits a step plan.
+## Purpose
+Entry point that routes user input to the correct pipeline.
 
-## Process
-1. Parse user input. Classify as:
-   - **Clone** — input contains a URL, no business description.
-   - **Generative** — input contains a business description, no URL.
-   - **Hybrid** — input contains both URL and business description.
-2. Emit `PipelinePlan` JSON listing every step, its skill name, bucket assignment, and dependency list.
-3. Execute steps in dependency order. Steps with no inter-dependencies run in parallel.
-4. Gate every transition: the previous step's output must exist on disk and pass schema validation before the next step starts.
-5. On any step failure, halt the pipeline and report the failing step name and error.
+## Implementation
+Canonical implementation: `src/agents/deterministic-orchestrator-v4.ts`
 
-## Pipeline Steps — Clone Path
-1. `crawl-site` — discover URL graph from source.
-2. `extract-design-tokens` — headless CSS extraction per page.
-3. `localize-assets` — download and rename all media.
-4. `data-model-extractor` — structured data extraction from scraped content.
-5. `moodboard-director` — visual world definition from extracted tokens.
-6. `skill-integrator` — map sections to component libraries.
-7. `component-spec-writer` — produce locked spec per page.
-8. `parallel-builder` — generate component code, one per invocation.
-9. `state-weaver` — generate App.tsx with shared state.
-10. `content-generator` — produce real page copy (if source text cannot be reused).
-11. `build-orchestrator` — assembly + quality gates.
-12. `deploy-target-selector` — tier selection.
+## Pipeline Selection (DETERMINISTIC — no LLM)
 
-## Pipeline Steps — Generative Path
-1. `business-reasoning/orchestration` — run 19 business-reasoning agents in sequence.
-2. `moodboard-director` — visual world definition from business brief.
-3. `skill-integrator` — map sections to component libraries.
-4. `component-spec-writer` — produce locked spec per page.
-5. `parallel-builder` — generate component code.
-6. `state-weaver` — generate App.tsx with shared state.
-7. `content-generator` — generate page copy from structured briefs.
-8. `build-orchestrator` — assembly + quality gates.
-9. `deploy-target-selector` — tier selection.
+```
+INPUT_ANALYSIS:
+  has_url = input contains a URL (regex: https?://\S+)
+  has_business = input contains a business description (non-URL text, >50 chars)
 
-## Pipeline Steps — Hybrid Path
-1. `crawl-site` → `extract-design-tokens` → `localize-assets` — clone pipeline for design/structure inspiration only.
-2. `business-reasoning/orchestration` — generative pipeline for business logic and content.
-3. `moodboard-director` — merge clone-derived tokens with generative brief.
-4. Continue as generative path from step 3 onward.
-5. **Never** copy competitor text, prices, or proprietary content verbatim.
+  if has_url AND NOT has_business:
+    → CLONE PIPELINE (Section 5 of AGENTS.md)
+  if has_business AND NOT has_url:
+    → GENERATIVE PIPELINE (Section 6 of AGENTS.md)
+  if has_url AND has_business:
+    → HYBRID: clone pipeline for design tokens/structure ONLY
+              generative pipeline for all business logic and content
+              (never copy competitor text/prices verbatim)
+```
 
-## Input
-- `userRequest`: raw user message containing URL, business description, or both.
-- `projectDir`: working directory for the build.
+## Clone Pipeline Steps
+1. `tools/crawler` → discover page graph
+2. `tools/asset-downloader` → download images, fonts, videos
+3. `tools/token-extractor` → extract design tokens from DOM
+4. `skills/component-spec-writer` → one LLM call per page (component breakdown)
+5. `skills/parallel-builder` → one LLM call per component (code generation)
+6. `tools/screenshot-diff` → pixel diff against source
+7. `tools/dependency-checker` → verify zero external URLs
+8. `tools/quality-gate` → lint + typecheck + build
+
+## Generative Pipeline Steps
+1. `skills/business-reasoning/orchestration` → run the 19-agent chain
+2. `skills/deploy-target-selector` → pick tier (DETERMINISTIC)
+3. `skills/content-generator` → one LLM call per page (copy writing)
+4. `skills/parallel-builder` → one LLM call per component (code generation)
+5. `tools/dependency-checker` → verify zero external URLs + copy-bleed detection
+6. `tools/quality-gate` → lint + typecheck + build
+
+## Hybrid Pipeline Steps (URL + description)
+1. Clone phase: `tools/crawler` + `tools/token-extractor` → design tokens/structure only
+2. Generative phase: all business logic and content (never copy competitor text)
+3. `tools/dependency-checker --source-text` → n-gram overlap detection (copy-bleed)
+4. `tools/quality-gate` → lint + typecheck + build
 
 ## Output
-- `pipeline.json` — the ordered step plan with statuses.
-- Directory scaffold under `projectDir` with subdirectories: `src/`, `content/`, `assets/`, `specs/`.
-
-## Rules
-1. No step may be skipped. The pipeline is a fixed DAG; only the entry conditions change.
-2. Bucket A skills are run by the orchestrator directly. Bucket B skills are invoked one-component-at-a-time.
-3. The orchestrator never writes component code. It delegates to `parallel-builder`.
-4. A step's output schema is validated against `schemas/` before any downstream step runs.
-5. If a step fails, the pipeline halts. No partial builds are shipped.
+Both pipelines produce:
+- A complete project in `projects/<project-name>/`
+- `DEPLOY.md` with platform-specific deploy instructions
+- `content/` directory with all editable content as JSON
+- `docs/research/` with recon output (clone) or reasoning output (generative)

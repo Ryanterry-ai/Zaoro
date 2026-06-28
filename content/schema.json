@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Content Page Schema",
+  "description": "Schema for content/<page-name>.json files produced by content-generator skill.",
+  "type": "object",
+  "required": ["page", "sections", "meta"],
+  "properties": {
+    "page": {
+      "type": "string",
+      "description": "Page name (e.g. 'Homepage', 'About')"
+    },
+    "sections": {
+      "type": "object",
+      "description": "Section-keyed content. Each key is a section slug from the blueprint.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "subtitle": { "type": "string" },
+          "description": { "type": "string" },
+          "cta": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "image": { "$ref": "#/$defs/assetReference" },
+                "link": { "type": "string" }
+              },
+              "required": ["title", "description"]
+            }
+          },
+          "image": { "$ref": "#/$defs/assetReference" },
+          "video": { "$ref": "#/$defs/assetReference" }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["title", "description"],
+      "properties": {
+        "title": { "type": "string", "description": "Page <title> tag" },
+        "description": { "type": "string", "description": "Meta description" },
+        "ogImage": { "type": "string", "description": "Open Graph image path" },
+        "canonical": { "type": "string", "description": "Canonical URL" }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "description": "Assets referenced by this page content",
+      "items": { "$ref": "#/$defs/contentAsset" }
+    }
+  },
+  "$defs": {
+    "assetReference": {
+      "type": "object",
+      "description": "Reference to an image or media asset",
+      "properties": {
+        "src": { "type": "string", "description": "Local path (e.g. /assets/hero.jpg)" },
+        "alt": { "type": "string" },
+        "width": { "type": "number" },
+        "height": { "type": "number" },
+        "needsClientReview": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if asset was AI-generated or no source image existed; requires client approval before publishing"
+        }
+      },
+      "required": ["src"]
+    },
+    "contentAsset": {
+      "type": "object",
+      "properties": {
+        "originalUrl": { "type": "string" },
+        "localPath": { "type": "string" },
+        "type": { "type": "string", "enum": ["image", "font", "video", "svg", "other"] },
+        "reviewRequired": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if asset needs client review (AI-generated, no source, or license unclear)"
+        }
+      },
+      "required": ["localPath", "type", "reviewRequired"]
+    },
+    "assetManifest": {
+      "type": "object",
+      "description": "Top-level asset-manifest.json schema",
+      "properties": {
+        "sourceUrl": { "type": "string" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "originalUrl": { "type": "string" },
+              "localPath": { "type": "string" },
+              "type": { "type": "string", "enum": ["image", "font", "video", "svg", "other"] },
+              "reviewRequired": {
+                "type": "boolean",
+                "default": false,
+                "description": "True if asset needs client review before deployment"
+              },
+              "reviewReason": {
+                "type": "string",
+                "description": "Explanation of why review is required"
+              }
+            },
+            "required": ["originalUrl", "localPath", "reviewRequired"]
+          }
+        }
+      },
+      "required": ["sourceUrl", "assets"]
+    }
+  }
+}

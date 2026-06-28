@@ -21,8 +21,6 @@ import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
 import { DBCompiler } from '../core/db-compiler.js';
 import { APICompiler } from '../core/api-compiler.js';
 import { TelemetryLayer } from '../core/telemetry.js';
-import { BusinessIntelligencePipeline } from '../business-intelligence/pipeline.js';
-import type { BIPipelineResult } from '../business-intelligence/types/index.js';
 import { SelfHealingEngine } from '../engine/self-healing-engine.js';
 import { ContentResearchAgent } from '../generation/content-research-agent.js';
 import * as fs from 'fs';
@@ -68,6 +66,13 @@ export class DeterministicOrchestratorV4 {
     TelemetryLayer.init();
 
     try {
+      // Auto-detect hybrid: both URL and business description present
+      if (intent.targetUrl && intent.prompt && intent.prompt.length > 50 &&
+          (intent.type === 'build-website' || intent.type === 'clone-website')) {
+        console.log(`[orchestrator] Hybrid detected: URL + description. Using hybrid pipeline.`);
+        return await this.handleHybridIntent(workspaceId, { ...intent, type: 'hybrid' }, llmConfig, startTime);
+      }
+
       switch (intent.type) {
         case 'build-app':
         case 'build-website':
@@ -75,6 +80,9 @@ export class DeterministicOrchestratorV4 {
 
         case 'clone-website':
           return await this.handleCloneIntent(workspaceId, intent, llmConfig, startTime);
+
+        case 'hybrid':
+          return await this.handleHybridIntent(workspaceId, intent, llmConfig, startTime);
 
         case 'analyze-domain':
           return await this.handleAnalyzeIntent(intent, startTime);
@@ -152,22 +160,18 @@ export class DeterministicOrchestratorV4 {
 
     TelemetryLayer.reportBuildStart(workspaceId, prompt);
 
-    // Run Business Intelligence analysis to get business-specific insights
-    let biResult: BIPipelineResult | null = null;
+    // Load industry knowledge from cache (deterministic — no LLM)
+    let industryModel: Record<string, unknown> | null = null;
     try {
-      console.log(`[orchestrator] Running Business Intelligence analysis...`);
-      const biPipeline = new BusinessIntelligencePipeline(
-        llmConfig?.provider || 'gemini',
-        llmConfig?.apiKey || process.env.LLM_API_KEY || '',
-        llmConfig?.model
-      );
-      biResult = await biPipeline.run(prompt, (phase, detail) => {
-        console.log(`[orchestrator] BI: ${phase} - ${detail}`);
-      });
-      console.log(`[orchestrator] BI analysis complete: ${biResult.report.industry}, ${biResult.problems.length} problems identified, ${biResult.solution.components.length} solution components`);
-    } catch (err: any) {
-      console.warn(`[orchestrator] BI analysis failed (continuing without): ${err.message}`);
-    }
+      const slug = prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
+      const cachePath = path.join(process.cwd(), 'knowledge-base', 'industries', `${slug}.json`);
+      if (fs.existsSync(cachePath)) {
+        industryModel = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+        console.log(`[orchestrator] Loaded industry model from cache: ${slug}`);
+      } else {
+        console.log(`[orchestrator] No cached industry model for "${slug}" — industry-intelligence will seed on first run`);
+      }
+    } catch {}
 
     const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
 
@@ -193,19 +197,15 @@ export class DeterministicOrchestratorV4 {
       return { pagePath: page.path, targetFile, funcName, prompt: pagePrompt };
     });
 
-    // Single combined LLM call for ALL pages with BI insights
-    let patchMap: Map<string, ASTPatch[]>;
-    try {
-      patchMap = await gateway.generateAllPatchesCombined(prompt, pagePromptData, biResult);
-    } catch (err: any) {
-      console.error(`[orchestrator] Combined LLM call failed: ${err.message}. Falling back to per-page calls.`);
-      patchMap = new Map();
-      // Fallback: per-page calls
-      for (const pp of pagePromptData) {
-        try {
-          const patches = await gateway.generatePatches({ prompt: pp.prompt, attempt: 0, changedFiles: [], errors: [] });
-          patchMap.set(pp.targetFile, patches);
-        } catch {}
+    // Per-page LLM calls (one call per page — never combine pages)
+    const patchMap: Map<string, ASTPatch[]> = new Map();
+    for (const pp of pagePromptData) {
+      try {
+        const patches = await gateway.generatePatches({ prompt: pp.prompt, attempt: 0, changedFiles: [], errors: [] });
+        patchMap.set(pp.targetFile, patches);
+        console.log(`[orchestrator] Page ${pp.pagePath}: ${patches.length} patches`);
+      } catch (err: any) {
+        console.warn(`[orchestrator] Page ${pp.pagePath} LLM call failed: ${err.message}`);
       }
     }
 
@@ -405,7 +405,7 @@ Rules:
     FullStackCompilerPipeline.compile(workspace, blueprint);
 
     // Import and run clone orchestrator
-    const { CloneOrchestrator } = await import('../cloning/clone-orchestrator.js');
+    const { CloneOrchestrator } = await import('../cloning/clone-orchestrator-v2.js');
     const config = llmConfig || { provider: 'openai' as any, apiKey: '' };
     const cloneOrch = new CloneOrchestrator(workspace.rootPath, config, undefined, undefined);
 
@@ -436,6 +436,124 @@ Rules:
     }
 
     return result;
+  }
+
+  private async handleHybridIntent(
+    workspaceId: string,
+    intent: GenerationIntent,
+    llmConfig: LLMConfig | undefined,
+    startTime: number
+  ): Promise<GenerationResult> {
+    const targetUrl = intent.targetUrl || '';
+    const prompt = intent.prompt || '';
+    console.log(`[hybrid] URL: ${targetUrl}, prompt: ${prompt.slice(0, 80)}...`);
+
+    // Step 1: Clone for design tokens/structure inspiration only
+    const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
+    const blueprint = FullStackArchitect.design(prompt);
+    FullStackCompilerPipeline.compile(workspace, blueprint);
+
+    let sourceTextPath: string | undefined;
+    try {
+      const { CloneOrchestrator } = await import('../cloning/clone-orchestrator-v2.js');
+      const config = llmConfig || { provider: 'openai' as any, apiKey: '' };
+      const cloneOrch = new CloneOrchestrator(workspace.rootPath, config, undefined, undefined);
+      const cloneResult = await cloneOrch.clone(targetUrl);
+      console.log(`[hybrid] Clone complete: ${cloneResult.pages} pages, design tokens extracted`);
+
+      // Extract source text for copy-bleed detection via crawler
+      sourceTextPath = path.join(workspace.rootPath, '.source-text.txt');
+      try {
+        const { execSync } = await import('child_process');
+        const crawlerPath = path.resolve(this.workspaceBaseDir, '..', 'tools', 'crawler', 'index.cjs');
+        const crawlOutput = execSync('node "' + crawlerPath + '" "' + targetUrl + '" --extract-text', {
+          cwd: path.resolve(this.workspaceBaseDir, '..'), timeout: 60000, stdio: 'pipe',
+        }).toString();
+        const crawlData = JSON.parse(crawlOutput);
+        if (crawlData.text && crawlData.text.length > 0) {
+          fs.writeFileSync(sourceTextPath, crawlData.text, 'utf-8');
+        }
+      } catch {}
+    } catch (err: any) {
+      console.warn(`[hybrid] Clone phase failed (continuing with generative): ${err.message}`);
+    }
+
+    // Step 2: Generative pipeline for business logic and all content
+    // (never copy competitor text/prices verbatim)
+    console.log(`[hybrid] Running generative pipeline for business content...`);
+    const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
+
+    // Content research
+    try {
+      const researcher = new ContentResearchAgent();
+      const research = await researcher.research(prompt);
+      gateway.setResearch(research);
+    } catch {}
+
+    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
+    const PER_PAGE_RETRIES = 3;
+
+    const pagePromptData = blueprint.pages.map((page) => {
+      const funcName = DeterministicOrchestratorV4.ROUTE_FUNC_MAP[page.path]
+        || page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
+      const targetFile = page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`;
+      const pagePrompt = this.buildPagePrompt(page, funcName, blueprint);
+      return { pagePath: page.path, targetFile, funcName, prompt: pagePrompt };
+    });
+
+    // Per-page LLM calls
+    const patchMap: Map<string, ASTPatch[]> = new Map();
+    for (const pp of pagePromptData) {
+      try {
+        const patches = await gateway.generatePatches({ prompt: pp.prompt, attempt: 0, changedFiles: [], errors: [] });
+        patchMap.set(pp.targetFile, patches);
+      } catch {}
+    }
+
+    // Apply patches
+    for (const [i, page] of blueprint.pages.entries()) {
+      const pp = pagePromptData[i];
+      if (!pp) continue;
+      try {
+        await this.runCompilationFlow(
+          workspaceId, pp.prompt,
+          async () => {
+            const allPagePatches = (patchMap.get(pp.targetFile) || []).filter(p => p.targetFile === pp.targetFile);
+            const pagePatch = allPagePatches.find(p => p.codeBlock.includes('function ')) || allPagePatches[0];
+            const componentPatches = (patchMap.get(pp.targetFile) || []).filter(p => p.targetFile.startsWith('src/components/'));
+            return [pagePatch, ...componentPatches].filter(Boolean) as ASTPatch[];
+          },
+          PER_PAGE_RETRIES, true, i * (PER_PAGE_RETRIES + 1)
+        );
+        pageResults.push({ path: page.path, succeeded: true });
+      } catch (err: any) {
+        pageResults.push({ path: page.path, succeeded: false, lastError: err.message });
+      }
+    }
+
+    this.snapshot.clearSnapshots(workspace.rootPath);
+
+    // Step 3: Run copy-bleed detection via dependency-checker
+    if (sourceTextPath && fs.existsSync(sourceTextPath)) {
+      try {
+        const { execSync } = await import('child_process');
+        const depChecker = path.resolve(this.workspaceBaseDir, '..', 'tools', 'dependency-checker', 'index.cjs');
+        execSync(`node "${depChecker}" "${workspace.rootPath}" --source-text "${sourceTextPath}" --overlap-threshold 0.3`, {
+          cwd: path.resolve(this.workspaceBaseDir, '..'), timeout: 60000, stdio: 'pipe',
+        });
+        console.log(`[hybrid] Copy-bleed check passed`);
+      } catch (err: any) {
+        console.warn(`[hybrid] Copy-bleed check found issues: ${err.stdout?.toString()?.slice(0, 200) || err.message}`);
+      }
+      try { fs.unlinkSync(sourceTextPath); } catch {}
+    }
+
+    const succeeded = pageResults.filter(r => r.succeeded).length;
+    return {
+      success: pageResults.every(r => r.succeeded),
+      intent, workspaceId, blueprint, pageResults,
+      duration: Date.now() - startTime,
+    };
   }
 
   private async handleAnalyzeIntent(

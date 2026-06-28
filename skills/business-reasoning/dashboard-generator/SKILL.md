@@ -1,6 +1,7 @@
 ---
 name: dashboard-generator
 description: Use this skill to design role-specific dashboards (Owner, Sales, HR, Finance, Warehouse, Support, Marketing, Manager, or whichever roles industry-intelligence identified) with the widgets, charts, KPIs, reports, and alerts each role actually needs. Always run after industry-intelligence (for roles), revenue-model and workflow-research (for what's worth tracking), and design-research (for visual treatment). Trigger whenever the user asks for an admin panel, internal dashboard, or "what should the owner/manager see."
+bucket: B
 ---
 
 # Dashboard Generator Agent

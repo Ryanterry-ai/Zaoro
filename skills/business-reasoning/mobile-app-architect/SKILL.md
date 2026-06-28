@@ -1,6 +1,7 @@
 ---
 name: mobile-app-architect
 description: Use this skill to design the full mobile app architecture — screen list (splash, login, home, search, categories, orders, wishlist, profile, notifications, settings) and per-screen flow/components — for a specific business's customer-facing or internal mobile app. Always run this after business-research, customer-journey, and design-research have run, and only when solution-generator has recommended a mobile app. Trigger whenever the user asks for an app structure, screen flow, or app feature list.
+bucket: B
 ---
 
 # Mobile App Architect Agent

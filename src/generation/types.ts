@@ -24,6 +24,7 @@ export type GenerationIntent =
   | { type: 'build-app'; prompt: string }
   | { type: 'build-website'; prompt: string }
   | { type: 'clone-website'; targetUrl: string }
+  | { type: 'hybrid'; prompt: string; targetUrl: string }
   | { type: 'analyze-domain'; domain: string }
   | { type: 'extract-components'; domain: string }
   | { type: 'extract-design-system'; domain: string };

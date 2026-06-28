@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
 import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
@@ -11,6 +12,12 @@ const RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 const TRANSIENT_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
+/**
+ * LLMGateway — thin orchestration wrapper around skills/_adapter/index.js.
+ * All HTTP calls to LLM providers go through the adapter.
+ * This class handles: retries, fallback routing, prompt construction, response parsing,
+ * and the deterministic synthesis fallback. It NEVER calls fetch() directly.
+ */
 export class LLMGateway {
   private provider: LLMProvider;
   private apiKey: string;
@@ -57,17 +64,58 @@ export class LLMGateway {
     }
   }
 
+  // ─── Adapter Delegation ────────────────────────────────────────
+  // ALL LLM HTTP calls go through this single method.
+  // It delegates to skills/_adapter/index.js callModel().
+
+  private async callAdapter(
+    taskType: string,
+    systemPrompt: string,
+    userPrompt: string,
+    options?: { temperature?: number; maxTokens?: number; responseFormat?: 'json' | 'text' }
+  ): Promise<string> {
+    // Temporarily set adapter env vars for this provider
+    const prevProvider = process.env.BUILD_ENGINE_PROVIDER;
+    const prevApiKey = process.env.BUILD_ENGINE_API_KEY;
+    const prevModel = process.env.BUILD_ENGINE_MODEL;
+    try {
+      // Map gateway provider name to adapter provider name
+      const adapterProvider = this.provider === 'gemini' ? 'google' : this.provider;
+      process.env.BUILD_ENGINE_PROVIDER = adapterProvider;
+      process.env.BUILD_ENGINE_API_KEY = this.apiKey;
+      process.env.BUILD_ENGINE_MODEL = this.model;
+
+      const adapterPath = path.resolve(process.cwd(), 'skills', '_adapter', 'index.js');
+      const adapter = await import(adapterPath);
+      const result = await adapter.callModel({
+        taskType,
+        prompt: userPrompt,
+        context: systemPrompt,
+        temperature: options?.temperature,
+        maxTokens: options?.maxTokens,
+        responseFormat: options?.responseFormat,
+      });
+      return result.content;
+    } finally {
+      // Restore env vars
+      if (prevProvider !== undefined) process.env.BUILD_ENGINE_PROVIDER = prevProvider;
+      else delete process.env.BUILD_ENGINE_PROVIDER;
+      if (prevApiKey !== undefined) process.env.BUILD_ENGINE_API_KEY = prevApiKey;
+      else delete process.env.BUILD_ENGINE_API_KEY;
+      if (prevModel !== undefined) process.env.BUILD_ENGINE_MODEL = prevModel;
+      else delete process.env.BUILD_ENGINE_MODEL;
+    }
+  }
+
+  // ─── Public API ────────────────────────────────────────────────
+
   public async generatePatches(context: LLMContext): Promise<ASTPatch[]> {
     const decision = this.architect.designArchitecture(context.prompt);
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
-    // Generate domain patches as FALLBACK ONLY — LLM output wins when available
-    const domainPatches = this.synthesizeFallback(decision, context);
-    console.log(`[gateway] Generated ${domainPatches.length} domain fallback patches`);
-
     if (!this.apiKey || this.apiKey.trim() === '') {
       console.log(`[gateway] No API key. Using domain synthesis only.`);
-      return domainPatches;
+      return this.synthesizeFallback(decision, context);
     }
 
     const systemPrompt = this.buildSystemPrompt(architecturePrompt, undefined, this.research);
@@ -77,11 +125,10 @@ export class LLMGateway {
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
         console.log(`[gateway] LLM call: ${this.provider}/${this.model} (attempt ${attempt})`);
-        const llmPatches = await this.callProvider(systemPrompt, userPrompt);
+        const content = await this.callAdapter('code-generation', systemPrompt, userPrompt, { responseFormat: 'json' });
+        const llmPatches = this.parseAndValidatePatches(content);
         console.log(`[gateway] Received ${llmPatches.length} LLM patches`);
         if (this.router) this.router.reportSuccess(this.provider);
-
-        // LLM output WINS for all files — this is the real output
         console.log(`[gateway] Using ${llmPatches.length} LLM patches (pages + backend)`);
         return llmPatches;
       } catch (err: any) {
@@ -107,7 +154,8 @@ export class LLMGateway {
         console.log(`[gateway] Trying fallback provider: ${fallback.provider}/${fallback.model}`);
         try {
           const tempGateway = new LLMGateway({ provider: fallback.provider, apiKey: fallback.apiKey, model: fallback.model });
-          const llmPatches = await tempGateway.callProvider(systemPrompt, userPrompt);
+          const content = await tempGateway.callAdapter('code-generation', systemPrompt, userPrompt, { responseFormat: 'json' });
+          const llmPatches = tempGateway.parseAndValidatePatches(content);
           console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${llmPatches.length} patches`);
           this.router.reportSuccess(fallback.provider);
           return llmPatches;
@@ -127,7 +175,8 @@ export class LLMGateway {
         try {
           console.log(`[gateway] Hardcoded Gemini fallback for patches`);
           const geminiGateway = new LLMGateway({ provider: 'gemini', apiKey: geminiKey, model: 'gemini-2.5-flash' });
-          const llmPatches = await geminiGateway.callProvider(systemPrompt, userPrompt);
+          const content = await geminiGateway.callAdapter('code-generation', systemPrompt, userPrompt, { responseFormat: 'json' });
+          const llmPatches = geminiGateway.parseAndValidatePatches(content);
           console.log(`[gateway] Gemini fallback succeeded: ${llmPatches.length} patches`);
           return llmPatches;
         } catch (err: any) {
@@ -137,310 +186,7 @@ export class LLMGateway {
     }
 
     console.log(`[gateway] All LLM providers failed. Using domain synthesis fallback.`);
-    return domainPatches;
-  }
-
-  /**
-   * Single-call optimization: generates ALL patches for ALL pages in one LLM call.
-   * Returns a Map keyed by target file path for efficient per-page splitting.
-   */
-  public async generateAllPatchesCombined(
-    prompt: string,
-    pagePrompts: Array<{ pagePath: string; targetFile: string; prompt: string }>,
-    biResult?: BIPipelineResult | null
-  ): Promise<Map<string, ASTPatch[]>> {
-    const decision = this.architect.designArchitecture(prompt);
-    const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
-
-    // Domain patches are FALLBACK ONLY — LLM output wins when available
-    const domainPatches = this.synthesizeFallback(decision, { prompt, attempt: 0, changedFiles: [], errors: [] });
-    console.log(`[gateway] Generated ${domainPatches.length} domain fallback patches`);
-
-    const fallbackMap = new Map<string, ASTPatch[]>();
-    for (const patch of domainPatches) {
-      const existing = fallbackMap.get(patch.targetFile) || [];
-      existing.push(patch);
-      fallbackMap.set(patch.targetFile, existing);
-    }
-
-    if (!this.apiKey || this.apiKey.trim() === '') {
-      console.log(`[gateway] No API key. Using domain synthesis only.`);
-      return fallbackMap;
-    }
-
-    // Build BI-enriched prompt if BI analysis succeeded
-    let biContext = '';
-    if (biResult) {
-      biContext = this.buildBIContext(biResult);
-      console.log(`[gateway] BI context added: ${biContext.length} chars`);
-    }
-
-    // Build research context if available
-    let researchContext = '';
-    if (this.research) {
-      researchContext = ContentResearchAgent.formatForPrompt(this.research);
-      console.log(`[gateway] Research context added: ${researchContext.length} chars`);
-    }
-
-    const pageList = pagePrompts.map((pp, i) =>
-      `Page ${i + 1}: ${pp.pagePath} → target: ${pp.targetFile}\n${pp.prompt}`
-    ).join('\n\n');
-
-    const combinedUserPrompt = `User Directive: "${prompt}"
-
-${researchContext ? `## Real Business Research (from web crawling)
-${researchContext}
-
-Use this REAL business data to generate authentic, domain-specific content. Match the quality and style of real competitor websites.
-` : ''}
-${biContext ? `## Business Intelligence Analysis
-${biContext}
-
-Use these insights to generate business-specific code that solves the identified problems and meets customer expectations.
-` : ''}
-Generate COMPLETE ASTPatch arrays for ALL of the following pages in a SINGLE JSON array.
-Each patch must have the correct targetFile path for its page.
-
-Pages to generate:
-${pageList}
-
-IMPORTANT:
-- Return ONE JSON array containing patches for ALL pages
-- Each page's patches must target the correct targetFile
-- Include component patches (src/components/*.tsx) as separate entries
-- Each page component must be a complete, self-contained React component with Tailwind CSS
-- Do NOT include import statements in codeBlock
-- Every interactive element must have onClick/handlers
-- Use the REAL research data above for headlines, pricing, testimonials, features, CTAs
-- ${biResult ? 'Generate code that addresses the identified business problems and uses industry best practices' : 'Include realistic mock data that matches the business domain'}
-
-Active Attempt Loop: 0`;
-
-    const systemPrompt = this.buildSystemPrompt(architecturePrompt, biResult, this.research);
-
-    // Try primary provider
-    for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
-      try {
-        console.log(`[gateway] Combined LLM call: ${this.provider}/${this.model} (attempt ${attempt}) — ${pagePrompts.length} pages`);
-        const allPatches = await this.callProvider(systemPrompt, combinedUserPrompt);
-        console.log(`[gateway] Received ${allPatches.length} total patches for ${pagePrompts.length} pages`);
-
-        if (this.router) this.router.reportSuccess(this.provider);
-
-        // LLM output WINS for ALL files — this is the real output
-        const patchMap = new Map<string, ASTPatch[]>();
-        for (const patch of allPatches) {
-          const existing = patchMap.get(patch.targetFile) || [];
-          existing.push(patch);
-          patchMap.set(patch.targetFile, existing);
-        }
-
-        // For any pages the LLM didn't generate, fall back to domain patches
-        const llmTargetFiles = new Set(allPatches.map(p => p.targetFile));
-        for (const [file, patches] of fallbackMap) {
-          if (!llmTargetFiles.has(file)) {
-            patchMap.set(file, patches);
-            console.log(`[gateway] Fallback domain patch for: ${file}`);
-          }
-        }
-
-        console.log(`[gateway] Final: ${allPatches.length} LLM + ${fallbackMap.size - patchMap.size} domain fallbacks`);
-        return patchMap;
-      } catch (err: any) {
-        const isTransient = this.isTransientError(err);
-        const delay = isTransient ? RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1) : 0;
-
-        if (attempt < RETRY_ATTEMPTS && isTransient) {
-          console.log(`[gateway] Transient error (${err.message}). Retrying in ${delay}ms...`);
-          await this.sleep(delay);
-          continue;
-        }
-
-        if (this.router) this.router.reportFailure(this.provider, err);
-        break;
-      }
-    }
-
-    // Try fallback providers
-    if (this.router) {
-      const exclude = [this.provider];
-      let fallback = this.router.selectProvider('code-generation', exclude);
-      while (fallback) {
-        console.log(`[gateway] Trying fallback: ${fallback.provider}/${fallback.model}`);
-        try {
-          const tempGateway = new LLMGateway({ provider: fallback.provider, apiKey: fallback.apiKey, model: fallback.model });
-          const allPatches = await tempGateway.callProvider(systemPrompt, combinedUserPrompt);
-          console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${allPatches.length} patches`);
-          this.router.reportSuccess(fallback.provider);
-
-          const patchMap = new Map<string, ASTPatch[]>();
-          for (const patch of allPatches) {
-            const existing = patchMap.get(patch.targetFile) || [];
-            existing.push(patch);
-            patchMap.set(patch.targetFile, existing);
-          }
-
-          // Fill in missing pages from domain fallback
-          const llmTargetFiles = new Set(allPatches.map(p => p.targetFile));
-          for (const [file, patches] of fallbackMap) {
-            if (!llmTargetFiles.has(file)) {
-              patchMap.set(file, patches);
-            }
-          }
-
-          return patchMap;
-        } catch (err: any) {
-          console.log(`[gateway] Fallback ${fallback.provider} failed: ${err.message}`);
-          this.router.reportFailure(fallback.provider, err);
-          exclude.push(fallback.provider);
-          fallback = this.router.selectProvider('code-generation', exclude);
-        }
-      }
-    }
-
-    // Hardcoded Gemini fallback if router didn't find alternatives
-    if (this.provider !== 'gemini') {
-      const geminiKey = process.env.GEMINI_API_KEY || '';
-      if (geminiKey) {
-        try {
-          console.log(`[gateway] Hardcoded Gemini fallback for patches`);
-          const geminiGateway = new LLMGateway({ provider: 'gemini', apiKey: geminiKey, model: 'gemini-2.5-flash' });
-          const allPatches = await geminiGateway.callProvider(systemPrompt, combinedUserPrompt);
-          console.log(`[gateway] Gemini fallback succeeded: ${allPatches.length} patches`);
-
-          const patchMap = new Map<string, ASTPatch[]>();
-          for (const patch of allPatches) {
-            const existing = patchMap.get(patch.targetFile) || [];
-            existing.push(patch);
-            patchMap.set(patch.targetFile, existing);
-          }
-          // Fill in missing pages from domain fallback
-          const llmTargetFiles = new Set(allPatches.map(p => p.targetFile));
-          for (const [file, patches] of fallbackMap) {
-            if (!llmTargetFiles.has(file)) {
-              patchMap.set(file, patches);
-            }
-          }
-          return patchMap;
-        } catch (err: any) {
-          console.log(`[gateway] Gemini fallback failed: ${err.message}`);
-        }
-      }
-    }
-
-    console.log(`[gateway] All LLM providers failed. Using domain synthesis fallback.`);
-    return fallbackMap;
-  }
-
-  private async callProvider(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
-    switch (this.provider) {
-      case 'anthropic': return this.callAnthropic(systemPrompt, userPrompt);
-      case 'gemini': return this.callGemini(systemPrompt, userPrompt);
-      case 'groq': return this.callGroq(systemPrompt, userPrompt);
-      case 'openai':
-      default: return this.callOpenAI(systemPrompt, userPrompt);
-    }
-  }
-
-  private isTransientError(err: any): boolean {
-    const status = this.extractStatus(err);
-    if (status && TRANSIENT_STATUS_CODES.has(status)) return true;
-    if (err.message?.includes('ETIMEDOUT') || err.message?.includes('ECONNRESET')) return true;
-    return false;
-  }
-
-  private extractStatus(err: any): number | null {
-    const match = err.message?.match(/(?:HTTP Error|status)[\s:=]+(\d{3})/);
-    return match ? parseInt(match[1], 10) : null;
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  // ─── Provider Implementations ──────────────────────────────────
-
-  private async callOpenAI(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI HTTP Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error('Empty response from OpenAI');
-
-    return this.parseAndValidatePatches(content);
-  }
-
-  private async callAnthropic(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Anthropic HTTP Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.content?.[0]?.text;
-    if (!content) throw new Error('Empty response from Anthropic');
-
-    return this.parseAndValidatePatches(content);
-  }
-
-  private async callGemini(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 65536,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini HTTP Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) throw new Error('Empty response from Gemini');
-
-    return this.parseAndValidatePatches(content);
+    return this.synthesizeFallback(decision, context);
   }
 
   /**
@@ -460,7 +206,7 @@ The component must be self-contained with all data inline — no external API ca
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
         console.log(`[gateway] Raw code call: ${this.provider}/${this.model} (attempt ${attempt})`);
-        const content = await this.callProviderRaw(systemPrompt, prompt);
+        const content = await this.callAdapter('code-generation', systemPrompt, prompt);
         console.log(`[gateway] Received ${content.length} chars of raw code`);
         return content;
       } catch (err: any) {
@@ -495,7 +241,7 @@ The component must be self-contained with all data inline — no external API ca
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
         console.log(`[gateway] Text call: ${this.provider}/${this.model} (attempt ${attempt}, temp=${temperature})`);
-        const content = await this.callProviderRaw(systemPrompt, prompt, { temperature, maxTokens });
+        const content = await this.callAdapter('structured-extraction', systemPrompt, prompt, { temperature, maxTokens });
         console.log(`[gateway] Received ${content.length} chars of text`);
         return content;
       } catch (err: any) {
@@ -506,7 +252,6 @@ The component must be self-contained with all data inline — no external API ca
           await this.sleep(delay);
           continue;
         }
-        // Non-transient or exhausted retries — break to try fallback
         console.log(`[gateway] Primary provider ${this.provider} failed: ${err.message}`);
         if (this.router) this.router.reportFailure(this.provider, err);
         break;
@@ -521,7 +266,7 @@ The component must be self-contained with all data inline — no external API ca
         console.log(`[gateway] Text fallback: ${fallback.provider}/${fallback.model}`);
         try {
           const tempGateway = new LLMGateway({ provider: fallback.provider, apiKey: fallback.apiKey, model: fallback.model });
-          const content = await tempGateway.callProviderRaw(systemPrompt, prompt, { temperature, maxTokens });
+          const content = await tempGateway.callAdapter('structured-extraction', systemPrompt, prompt, { temperature, maxTokens });
           console.log(`[gateway] Fallback ${fallback.provider} succeeded: ${content.length} chars`);
           this.router.reportSuccess(fallback.provider);
           return content;
@@ -541,7 +286,7 @@ The component must be self-contained with all data inline — no external API ca
         try {
           console.log(`[gateway] Hardcoded Gemini fallback for text generation`);
           const geminiGateway = new LLMGateway({ provider: 'gemini', apiKey: geminiKey, model: 'gemini-2.5-flash' });
-          const content = await geminiGateway.callProviderRaw(systemPrompt, prompt, { temperature, maxTokens });
+          const content = await geminiGateway.callAdapter('structured-extraction', systemPrompt, prompt, { temperature, maxTokens });
           console.log(`[gateway] Gemini fallback succeeded: ${content.length} chars`);
           return content;
         } catch (err: any) {
@@ -553,160 +298,20 @@ The component must be self-contained with all data inline — no external API ca
     throw new Error('Text generation failed — all providers exhausted');
   }
 
-  private async callProviderRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
-    switch (this.provider) {
-      case 'gemini': return this.callGeminiRaw(systemPrompt, userPrompt, options);
-      case 'openai': return this.callOpenAIRaw(systemPrompt, userPrompt, options);
-      case 'anthropic': return this.callAnthropicRaw(systemPrompt, userPrompt, options);
-      case 'groq': return this.callGroqRaw(systemPrompt, userPrompt, options);
-      default: throw new Error(`Unsupported provider: ${this.provider}`);
-    }
+  private isTransientError(err: any): boolean {
+    const status = this.extractStatus(err);
+    if (status && TRANSIENT_STATUS_CODES.has(status)) return true;
+    if (err.message?.includes('ETIMEDOUT') || err.message?.includes('ECONNRESET')) return true;
+    return false;
   }
 
-  private async callGeminiRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': this.apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
-        ],
-        generationConfig: {
-          maxOutputTokens: options?.maxTokens || 65536,
-          temperature: options?.temperature,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
-      })
-    });
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => '');
-      throw new Error(`Gemini HTTP Error: ${response.status} ${errBody}`);
-    }
-    const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) throw new Error('Empty response from Gemini');
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
-    }
-    return cleaned;
+  private extractStatus(err: any): number | null {
+    const match = err.message?.match(/(?:HTTP Error|status)[\s:=]+(\d{3})/);
+    return match ? parseInt(match[1], 10) : null;
   }
 
-  private async callOpenAIRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        temperature: options?.temperature,
-        max_tokens: options?.maxTokens,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ]
-      })
-    });
-    if (!response.ok) throw new Error(`OpenAI HTTP Error: ${response.status}`);
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error('Empty response from OpenAI');
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
-    }
-    return cleaned;
-  }
-
-  private async callAnthropicRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: options?.maxTokens || 8000,
-        temperature: options?.temperature,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    });
-    if (!response.ok) throw new Error(`Anthropic HTTP Error: ${response.status}`);
-    const data = await response.json();
-    const content = data.content?.[0]?.text;
-    if (!content) throw new Error('Empty response from Anthropic');
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
-    }
-    return cleaned;
-  }
-
-  // ─── Groq Provider (OpenAI-compatible) ─────────────────────────
-
-  private async callGroq(systemPrompt: string, userPrompt: string): Promise<ASTPatch[]> {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Groq HTTP Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error('Empty response from Groq');
-
-    return this.parseAndValidatePatches(content);
-  }
-
-  private async callGroqRaw(systemPrompt: string, userPrompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        temperature: options?.temperature ?? 0.3,
-        max_tokens: options?.maxTokens ?? 4096,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ]
-      })
-    });
-    if (!response.ok) throw new Error(`Groq HTTP Error: ${response.status}`);
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error('Empty response from Groq');
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:tsx?|jsx?|javascript|typescript)?\n?/i, '').replace(/\n?```$/i, '');
-    }
-    return cleaned;
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // ─── Prompt Construction ───────────────────────────────────────

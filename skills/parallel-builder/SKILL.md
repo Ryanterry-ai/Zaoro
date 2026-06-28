@@ -1,62 +1,36 @@
 ---
-name: parallel-builder
-description: Generates ONE component per invocation from a locked spec — never sees other components' code
+name: Parallel Builder
 bucket: B
-reason: Requires LLM for code generation; isolated to enforce single-component focus
 ---
 
-# Parallel Builder
+# Parallel Builder Skill
 
-## Role
-Take a single locked component spec, the design tokens, the data binding, and the animation spec, then generate one complete React component file. Each invocation is fully isolated — it never sees code from other components.
+## Purpose
+Write code for ONE component from ONE locked spec. LLM-required (Bucket B) — ONE invocation per component.
 
-## Process
-1. Receive a single section spec from the ComponentManifest.
-2. Receive the VisualDNA tokens and the data file for this section.
-3. Receive the animation spec (if any) for this section.
-4. Generate the component file using the assigned library.
-5. Write to `src/components/{library}/{ComponentName}.tsx`.
-6. Write the co-located CSS module or Tailwind classes.
-
-## Input (per invocation)
-```json
-{
-  "section": {
-    "id": "hero",
-    "type": "Hero",
-    "component": "HeroParallax",
-    "library": "magicui",
-    "importPath": "@/components/magicui/hero-parallax",
-    "props": { "title": "string", "subtitle": "string" },
-    "dataBinding": "heroContent"
-  },
-  "tokens": { "/* VisualDNA */" },
-  "data": { "/* content/hero.json */" },
-  "animation": {
-    "entrance": "fade-up",
-    "stagger": 100,
-    "scrollTrigger": true
-  }
-}
-```
+## Input
+- One component spec (from component-spec-writer or website-architect)
+- Page's design tokens
+- Framework/stack configuration
 
 ## Output
-- `src/components/magicui/hero-parallax.tsx` — complete, working component.
-- `src/components/magicui/hero-parallax.module.css` — co-located styles (if not pure Tailwind).
+Component file at the correct path:
+- Next.js: `src/components/<ComponentName>.tsx`
+- Astro: `src/components/<ComponentName>.astro`
+- Plain: `components/<ComponentName>.html`
 
-## Component Generation Rules
-1. **One component per call.** The prompt must not reference any other component's code or imports.
-2. Use only the library specified in `section.library`. Do not import from other libraries.
-3. All text content comes from the `data` parameter, never hardcoded.
-4. All colors, fonts, spacing come from `tokens`, never hardcoded.
-5. Component must be a named export matching `section.component`.
-6. Component must accept props matching `section.props` exactly.
-7. Use TypeScript with explicit prop types. No `any`.
-8. Animation must use the library's built-in animation primitives, not raw CSS animations.
-9. Component must be self-contained. No side effects beyond what the library requires.
-10. Component must render without errors in isolation.
+## Rules
+- **ONE component per invocation** — never build multiple components in one call
+- The call must receive ONLY that component's spec, not other components' specs
+- All content must come from the structured content files (content/*.json), not inline strings
+- Component must import content from `@/content/<page>.json` or equivalent
+- Must match the design tokens exactly (colors, spacing, fonts from tokens)
+- Must handle responsive behavior as specified
+- Must include proper TypeScript types
+- Use the model adapter layer for the LLM call
 
-## Error Handling
-- If the spec is invalid, log the error and skip. Do not generate a partial component.
-- If the library import fails, fall back to a plain div with Tailwind classes matching the spec.
-- Never generate placeholder or "coming soon" components.
+## Code Quality
+- Follow the framework's conventions
+- Use existing component patterns from the template
+- No external dependencies beyond what's in package.json
+- No hardcoded URLs or external asset references

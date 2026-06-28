@@ -1,6 +1,7 @@
 ---
 name: ui-research
 description: Use this skill to research how best-in-class products in or adjacent to the target industry actually look and behave — navigation, layout, cards, spacing, motion, interactions, typography — by examining real reference products (e.g. Amazon, Shopify, Stripe, Airbnb, Linear, Notion, or category leaders in the specific industry). Trigger whenever the user wants visual inspiration, a "make it look like X" reference, or before design-research synthesizes a design language, and always before website-architect/mobile-app-architect/dashboard-generator finalize visual treatment.
+bucket: B
 ---
 
 # UI Research Agent

@@ -126,35 +126,23 @@ const server = http.createServer(async (req, res) => {
       const apiKey = process.env.LLM_API_KEY || '';
       if (!apiKey) return json(res, { error: 'LLM_API_KEY not configured' }, 500);
 
-      const { BusinessIntelligencePipeline } = await import('./business-intelligence/pipeline.js');
-      const pipeline = new BusinessIntelligencePipeline(provider, apiKey);
-      const result = await pipeline.run(body.prompt);
-      return json(res, { success: true, result });
+      // DEPRECATED: BusinessIntelligencePipeline removed. Use /api/create instead.
+      return json(res, { error: 'Deprecated — use POST /api/create with a prompt instead' }, 410);
     } catch (err: any) {
-      console.error('[bi] Pipeline error:', err.message);
+      console.error('[bi] Error:', err.message);
       return json(res, { error: err.message }, 500);
     }
   }
 
-  // POST /api/pipeline — Full 13-stage pipeline with self-correction loop
+  // POST /api/pipeline — DEPRECATED, use /api/create
   if (method === 'POST' && url.pathname === '/api/pipeline') {
     try {
       const body = JSON.parse(await readBody(req));
       if (!body.prompt || typeof body.prompt !== 'string') {
         return json(res, { error: 'prompt is required' }, 400);
       }
-      const provider = (process.env.LLM_PROVIDER || 'gemini') as any;
-      const apiKey = process.env.LLM_API_KEY || '';
-      const model = process.env.LLM_MODEL || undefined;
-
-      const { PipelineOrchestrator } = await import('./generation/pipeline-orchestrator.js');
-      const wsBase = path.join(ENGINE_ROOT, 'sandbox_workspaces', `pipeline-${Date.now()}`);
-      const orchestrator = new PipelineOrchestrator(wsBase, { provider, apiKey, model: model || 'gemini-2.5-flash' },
-        (step, msg) => console.log(`[pipeline:${step}] ${msg}`),
-        (step, msg) => console.log(`[pipeline:phase] ${step}: ${msg}`),
-      );
-      const result = await orchestrator.run(body.prompt);
-      return json(res, { success: true, result });
+      // DEPRECATED: PipelineOrchestrator removed. Use /api/create instead.
+      return json(res, { error: 'Deprecated — use POST /api/create instead' }, 410);
     } catch (err: any) {
       console.error('[pipeline] Error:', err.message);
       return json(res, { error: err.message }, 500);
@@ -942,7 +930,7 @@ try {
   json(res, { error: 'Not found' }, 404);
 });
 
-server.listen(PORT, () => {
-  console.log(`Engine server running on http://localhost:${PORT}`);
+server.listen(PORT, '::', () => {
+  console.log(`Engine server running on http://[::]:${PORT} (IPv4+IPv6)`);
   console.log(`Workspace base: ${WORKSPACE_BASE}`);
 });

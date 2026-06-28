@@ -1,6 +1,7 @@
 ---
 name: ux-research
 description: Use this skill to determine how usable, accessible, and frictionless a proposed digital experience will be for this specific business's actual customers and staff — not generic UX heuristics, but ones grounded in customer-journey drop-off points and the real-world context of use (e.g. a warehouse worker on a scanner, an elderly patient on a phone, a busy front-desk staffer mid-conversation). Trigger before website-architect, mobile-app-architect, and dashboard-generator finalize flows, and whenever the user asks about usability, accessibility, conversion friction, or "will people actually be able to use this."
+bucket: B
 ---
 
 # UX Research Agent

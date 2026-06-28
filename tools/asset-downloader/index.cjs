@@ -67,8 +67,13 @@ async function downloadAssets(url, outputDir) {
         await downloadFile(fullUrl, destPath);
       }
 
+      const ext = path.extname(fileName).toLowerCase().replace('.', '');
+      const type = /^(png|jpe?g|gif|svg|webp|avif|ico)$/.test(ext) ? 'image'
+        : /^(woff2?|ttf|otf|eot)$/.test(ext) ? 'font'
+        : /^(mp4|webm)$/.test(ext) ? 'video'
+        : ext === 'svg' ? 'svg' : 'other';
       const localPath = `/assets/${fileName}`;
-      downloaded.push({ originalUrl: fullUrl, localPath, fileName });
+      downloaded.push({ originalUrl: fullUrl, localPath, fileName, type, reviewRequired: false });
       console.log(`Downloaded: ${fileName}`);
     } catch (err) {
       console.warn(`Failed: ${assetUrl} — ${err.message}`);
@@ -77,7 +82,7 @@ async function downloadAssets(url, outputDir) {
 
   await browser.close();
 
-  const manifest = { sourceUrl: url, assets: downloaded };
+  const manifest = { sourceUrl: url, generatedAt: new Date().toISOString(), assets: downloaded };
   fs.writeFileSync(path.join(outputDir, 'asset-manifest.json'), JSON.stringify(manifest, null, 2));
 
   console.log(`Downloaded ${downloaded.length} assets to ${publicDir}`);

@@ -1,48 +1,22 @@
 ---
 name: workflow-research
-description: Use this skill to map every internal operational workflow of a business — supplier to delivery, kitchen to table, lead to invoice, whatever applies — as ordered step-by-step sequences with the systems and roles involved at each step. Trigger whenever the user asks about operations, internal processes, fulfillment, supply chain, back-office flow, or "how does work actually move through the business," and always before database-generator or automation run (workflows define what entities, states, and automations are needed).
+description: Map internal operational workflows from structured facts via BRE v2 rules. No LLM call — deterministic output parameterized by business-research + industry model.
+bucket: A
+reason: Pure BRE v2 rule output; no LLM required
 ---
 
-# Business Workflow Agent (Operations Research)
+# Workflow Agent
 
 ## Role
 
-You map the internal machinery — the workflows that happen behind the
-customer's view, department to department, system to system.
+Map every internal operational workflow as ordered step-by-step sequences. Deterministic BRE v2 rule output — no LLM call.
 
-## Process
+## Process (BRE v2 Rules)
 
-1. Pull `canonical_workflows` from industry-intelligence as a starting
-   list, then adapt to this specific business's actual operation.
-2. For each workflow, write it as a linear (or branching) sequence of
-   steps, e.g.:
-
-   ```
-   Supplier → Purchase Order → Warehouse → Inventory → Product Listing
-     → Customer Order → Payment → Packing → Shipping → Delivery
-     → Support → Return → Refund
-   ```
-
-3. For each step capture:
-   - **Trigger** — what causes this step to start
-   - **Actor** — role/department responsible
-   - **System used today** — spreadsheet, paper, app, none
-   - **System state change** — what record/status updates
-   - **Exceptions** — what happens when this step fails (e.g. stock-out,
-     payment failure, no-show)
-4. Mark every step flagged as broken/manual in business-problems output.
-5. Note **handoff points** between departments — these are where most
-   operational friction and data loss happens, and are prime automation
-   targets.
-
-## Worked examples (from the source brief)
-
-**Supplement Store:** Supplier → Purchase Order → Warehouse → Inventory →
-Product Listing → Customer Order → Payment → Packing → Shipping →
-Delivery → Support → Return → Refund
-
-**Restaurant:** Customer → Reservation → Kitchen → Cooking → Serving →
-Payment → Feedback
+1. Load the industry model's standard workflows from `knowledge-base/industries/{slug}.json`.
+2. Adapt workflows based on business_type and stated Constraints.
+3. For each step: trigger, actor, system used today, state change, exceptions, whether broken.
+4. Note cross-department handoff points.
 
 ## Output
 
@@ -59,7 +33,7 @@ Payment → Feedback
           "system_used_today": "",
           "state_change": "",
           "exceptions": [""],
-          "is_broken": true
+          "broken": false
         }
       ],
       "cross_department_handoffs": [""]
@@ -70,6 +44,4 @@ Payment → Feedback
 
 ## Handoff
 
-Feed `state_change` events to **database-generator** (these become
-entities/status fields), exceptions and handoffs to **automation**, and
-`actor`/role lists to **dashboard-generator**.
+Feeds `database-generator`, `automation`, `dashboard-generator`.

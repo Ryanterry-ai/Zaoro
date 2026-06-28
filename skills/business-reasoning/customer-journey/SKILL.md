@@ -1,67 +1,42 @@
 ---
 name: customer-journey
-description: Use this skill to map how customers move through discovery, research, inquiry, lead, quotation, purchase, payment, delivery, support, review, referral, and repeat purchase for a specific business and industry — every industry's journey looks different, so never reuse a generic funnel. Trigger whenever the user asks about customer acquisition, conversion, retention, funnels, touchpoints, or "how do customers find/buy from us," and always before website-architect or mobile-app-architect run (the journey determines the page/screen flow).
+description: Map customer journey from structured facts via BRE v2 rules. No LLM call — deterministic output parameterized by business-research + industry model.
+bucket: A
+reason: Pure BRE v2 rule output; no LLM required
 ---
 
 # Customer Journey Agent
 
 ## Role
 
-You map the full arc a customer travels, end to end, specific to this
-business's industry and model. This is one of the most important agents
-in the system because website/app architecture, CRM stages, and
-automation triggers all derive from this map.
+Map the end-to-end customer journey for this business type. Deterministic BRE v2 rule output — no LLM call.
 
-## Process
+## Process (BRE v2 Rules)
 
-1. Start from the canonical stages:
-   Discovery → Research → Inquiry → Lead → Quotation → Purchase →
-   Payment → Delivery → Support → Review → Referral → Repeat Purchase.
-2. **Adapt the stage list to the business.** Not every business has a
-   "Quotation" stage (retail usually doesn't; B2B/services usually do).
-   Some need extra stages (e.g. "Trial," "Onboarding," "Renewal,"
-   "Cancellation/Win-back"). Name the actual stages for this business.
-3. For each stage, specify:
-   - **Customer action** — what they do
-   - **Business touchpoint** — channel/system involved (website, app,
-     WhatsApp, in-store, sales call, email)
-   - **Data created** — what gets recorded (or should be) at this stage
-   - **Drop-off risk** — where customers commonly abandon, and why
-   - **Owning team/role** — who in the business is responsible
-4. **Segment by customer type** if the business serves more than one
-   distinct segment (e.g. retail customer vs. wholesale buyer) — they
-   often have different journeys.
-5. Identify where the journey is currently broken or invisible, using
-   business-problems output, and tag those stages.
+1. Load the industry model's standard customer journey stages from `knowledge-base/industries/{slug}.json`.
+2. Adapt stages based on business_type (product/service/hybrid/marketplace/saas).
+3. For each stage: customer action, business touchpoint, data created, drop-off risk, owning role.
+4. Flag stages that are broken based on business-problems output.
 
 ## Output
 
 ```json
 {
-  "segments": [
+  "journey_stages": [
     {
-      "segment": "",
-      "stages": [
-        {
-          "stage": "",
-          "customer_action": "",
-          "touchpoint": "",
-          "data_created": [""],
-          "drop_off_risk": "",
-          "owning_role": "",
-          "currently_broken": true
-        }
-      ]
+      "stage": "",
+      "customer_action": "",
+      "business_touchpoint": "",
+      "data_created": "",
+      "drop_off_risk": "low | medium | high",
+      "currently_broken": false,
+      "owning_role": ""
     }
   ],
-  "key_moments_of_truth": [""],
-  "automation_opportunities": [""]
+  "segments": [""]
 }
 ```
 
 ## Handoff
 
-Feed `stages` and `touchpoint`s to **website-architect** and
-**mobile-app-architect** (page/screen flow should mirror journey stages),
-`data_created` to **database-generator**, and
-`automation_opportunities` to **automation**.
+Feeds `website-architect`, `mobile-app-architect`, `database-generator`, `automation`.
