@@ -1,8 +1,5 @@
 {
-  "experimentalServices": {
-    "build-same-engine": {
-      "type": "web",
-      "routePrefix": "/"
-    }
-  }
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs"
 }

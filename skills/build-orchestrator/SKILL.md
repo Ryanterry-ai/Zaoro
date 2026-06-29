@@ -26,7 +26,7 @@ cd projects/<name> && npm install
 
 ### 3. Run Quality Gates (sequential, stop at first failure)
 ```
-node tools/quality-gate/index.js --project-dir ./projects/<name>
+node tools/quality-gate/index.cjs --project-dir ./projects/<name>
 ```
 - Lint
 - TypeCheck
@@ -35,13 +35,13 @@ node tools/quality-gate/index.js --project-dir ./projects/<name>
 
 ### 4. Run Dependency Check
 ```
-node tools/dependency-checker/index.js --project-dir ./projects/<name>
+node tools/dependency-checker/index.cjs --project-dir ./projects/<name>
 ```
 Asserts zero external URLs in output.
 
 ### 5. Run Screenshot Diff (clone pipeline only)
 ```
-node tools/screenshot-diff/index.js <source> <generated> --threshold 0.85
+node tools/screenshot-diff/index.cjs <source> <generated> --threshold 0.85
 ```
 
 ### 6. Triage Failures

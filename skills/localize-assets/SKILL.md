@@ -10,7 +10,7 @@ Download and localize all external assets (images, fonts, videos) into the proje
 
 ## Usage
 ```
-node tools/asset-downloader/index.js <crawl-graph.json> [design-tokens.json] --output ./projects/<name>/public
+node tools/asset-downloader/index.cjs <crawl-graph.json> [design-tokens.json] --output ./projects/<name>/public
 ```
 
 ## Output

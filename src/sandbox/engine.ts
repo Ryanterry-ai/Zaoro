@@ -11,14 +11,9 @@ export class SandboxEngine {
     // to avoid double-nesting (e.g. sandbox_workspaces/ws-xxx/ws-xxx)
     const alreadyNested = workspaceBase.endsWith(path.sep + id) || workspaceBase.endsWith('/' + id);
     const rootPath = alreadyNested ? path.resolve(workspaceBase) : path.resolve(path.join(workspaceBase, id));
-    console.log(`[Sandbox] createWorkspace: workspaceBase=${workspaceBase}, id=${id}, alreadyNested=${alreadyNested}, rootPath=${rootPath}, exists=${fs.existsSync(rootPath)}`);
     if (!fs.existsSync(rootPath)) {
       fs.mkdirSync(rootPath, { recursive: true });
-      console.log(`[Sandbox] Created directory: ${rootPath}`);
       this.scaffoldWorkspace(rootPath);
-      console.log(`[Sandbox] Scaffolded workspace`);
-    } else {
-      console.log(`[Sandbox] Directory already exists, skipping scaffold`);
     }
     return { workspaceId: id, rootPath };
   }

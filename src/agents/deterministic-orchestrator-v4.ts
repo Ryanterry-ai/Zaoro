@@ -16,13 +16,16 @@ import { RegressionPredictor } from '../intelligence/regression-predictor.js';
 
 import { ASTPatch, CompilationError, WorkspaceConfig, LLMContext, LLMConfig, GenerationIntent, GenerationResult, FullStackBlueprint } from '../types/index.js';
 import { LLMGateway } from '../core/llm-gateway.js';
-import { FullStackArchitect } from '../generation/architect.js';
 import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
 import { DBCompiler } from '../core/db-compiler.js';
 import { APICompiler } from '../core/api-compiler.js';
 import { TelemetryLayer } from '../core/telemetry.js';
 import { SelfHealingEngine } from '../engine/self-healing-engine.js';
 import { ContentResearchAgent } from '../generation/content-research-agent.js';
+import { runBREV2Pipeline } from '../bos/bre-v2-pipeline.js';
+import { mapBlueprintToFullStack } from '../bos/blueprint-mapper.js';
+import { buildBREContext } from '../bos/intake-parser.js';
+import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -137,10 +140,17 @@ export class DeterministicOrchestratorV4 {
     const prompt = intent.prompt || '';
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
 
-    const blueprint = FullStackArchitect.design(prompt);
-    console.log(`[orchestrator] Blueprint: ${blueprint.appName}, ${blueprint.pages.length} pages, ${blueprint.dataModels.length} models`);
+    // BRE v2: deterministic business reasoning (zero LLM calls)
+    const breContext = buildBREContext(prompt);
+    const breResult = runBREV2Pipeline(breContext);
+    const appBlueprint = breResult.blueprint;
+    const blueprint = mapBlueprintToFullStack(appBlueprint);
 
-    FullStackCompilerPipeline.compile(workspace, blueprint);
+    console.log(`[orchestrator] BRE v2 blueprint: ${blueprint.appName}, confidence=${breResult.confidence.toFixed(2)}, ${blueprint.pages.length} pages, ${blueprint.dataModels.length} models`);
+    console.log(`[orchestrator] Rules fired: ${breResult.decisions.length}, constraints violated: ${breResult.constraintReport.violated}`);
+
+    // Use rich compiler when BRE v2 produces full ApplicationBlueprint
+    FullStackCompilerPipeline.compileRich(workspace, appBlueprint);
 
     if (blueprint.dataModels && blueprint.dataModels.length > 0) {
       const pkgPath = path.join(workspace.rootPath, 'package.json');
@@ -399,10 +409,15 @@ Rules:
     console.log(`[clone] Clone target: ${targetUrl}`);
 
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
-    const blueprint = FullStackArchitect.design(prompt);
+
+    // BRE v2: deterministic blueprint for clone scaffold
+    const breContext = buildBREContext(prompt);
+    const breResult = runBREV2Pipeline(breContext);
+    const appBlueprint = breResult.blueprint;
+    const blueprint = mapBlueprintToFullStack(appBlueprint);
 
     // Scaffold the workspace structure
-    FullStackCompilerPipeline.compile(workspace, blueprint);
+    FullStackCompilerPipeline.compileRich(workspace, appBlueprint);
 
     // Import and run clone orchestrator
     const { CloneOrchestrator } = await import('../cloning/clone-orchestrator-v2.js');
@@ -450,8 +465,13 @@ Rules:
 
     // Step 1: Clone for design tokens/structure inspiration only
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
-    const blueprint = FullStackArchitect.design(prompt);
-    FullStackCompilerPipeline.compile(workspace, blueprint);
+
+    // BRE v2: deterministic blueprint for hybrid scaffold
+    const breContext = buildBREContext(prompt);
+    const breResult = runBREV2Pipeline(breContext);
+    const appBlueprint = breResult.blueprint;
+    const blueprint = mapBlueprintToFullStack(appBlueprint);
+    FullStackCompilerPipeline.compileRich(workspace, appBlueprint);
 
     let sourceTextPath: string | undefined;
     try {

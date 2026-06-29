@@ -110,8 +110,6 @@ import * as path from 'path';
 
 const WS_BASE = ${JSON.stringify(this.workspaceBase)};
 const wsDir = path.join(WS_BASE, ${JSON.stringify(job.workspaceId)});
-if (!fs.existsSync(wsDir)) fs.mkdirSync(wsDir, { recursive: true });
-fs.writeFileSync(path.join(wsDir, '.build-script-debug.log'), 'BUILD SCRIPT START: wsDir=' + wsDir + ', exists=' + fs.existsSync(wsDir) + '\\n', 'utf-8');
 
 const PROGRESS_FILE = path.join(wsDir, '.progress');
 const _progressEvents = [];

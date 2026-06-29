@@ -13,6 +13,7 @@ import {
   checkDatabaseConnection, isPersistenceAvailable,
 } from './core/persistence.js';
 import { CloneOrchestrator } from './cloning/clone-orchestrator-v2.js';
+import { debugLog } from './core/debug-logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = path.resolve(__dirname, '..');
@@ -106,6 +107,10 @@ const server = http.createServer(async (req, res) => {
         visual_diff: 'POST /api/workspace/:id/visual-diff',
         visual_diff_get: 'GET /api/workspace/:id/visual-diff',
         verification: 'GET /api/workspace/:id/verification',
+        debug_logs: 'GET /api/debug/logs',
+        debug_logs_ws: 'GET /api/debug/logs/:workspaceId',
+        debug_enable: 'POST /api/debug/enable',
+        debug_disable: 'POST /api/debug/disable',
       },
     });
   }
@@ -113,6 +118,71 @@ const server = http.createServer(async (req, res) => {
   // GET /api/health
   if (method === 'GET' && url.pathname === '/api/health') {
     return json(res, { status: 'ok', uptime: process.uptime() });
+  }
+
+  // GET /api/debug/logs — Get debug logs from the pipeline
+  if (method === 'GET' && url.pathname === '/api/debug/logs') {
+    const entries = debugLog.getEntries();
+    const format = url.searchParams.get('format') ?? 'json';
+
+    if (format === 'text') {
+      res.writeHead(200, {
+        'Content-Type': 'text/plain',
+        'Access-Control-Allow-Origin': '*',
+      });
+      return res.end(debugLog.getFormattedLogs());
+    }
+
+    return json(res, {
+      entries,
+      count: entries.length,
+      stages: [...new Set(entries.map(e => e.stage))],
+    });
+  }
+
+  // GET /api/debug/logs/:workspaceId — Get debug logs for a specific workspace
+  if (method === 'GET' && url.pathname.match(/^\/api\/debug\/logs\/[^/]+$/)) {
+    const id = url.pathname.split('/')[4]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    const logFile = path.join(wsDir, '.debug-log.json');
+
+    if (!fs.existsSync(logFile)) {
+      return json(res, { entries: [], count: 0, message: 'No debug logs found' });
+    }
+
+    try {
+      const entries = JSON.parse(fs.readFileSync(logFile, 'utf-8'));
+      return json(res, {
+        entries,
+        count: entries.length,
+        stages: [...new Set(entries.map((e: any) => e.stage))],
+      });
+    } catch {
+      return json(res, { entries: [], count: 0, error: 'Failed to parse debug logs' });
+    }
+  }
+
+  // POST /api/debug/enable — Enable debug logging
+  if (method === 'POST' && url.pathname === '/api/debug/enable') {
+    process.env.DEBUG = 'true';
+    const body = await readBody(req).catch(() => '{}');
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed.stages) {
+        process.env.DEBUG_STAGES = Array.isArray(parsed.stages) ? parsed.stages.join(',') : parsed.stages;
+      }
+    } catch {}
+    return json(res, {
+      enabled: true,
+      stages: process.env.DEBUG_STAGES || 'all',
+      message: 'Debug logging enabled. Restart server to apply to all components.',
+    });
+  }
+
+  // POST /api/debug/disable — Disable debug logging
+  if (method === 'POST' && url.pathname === '/api/debug/disable') {
+    process.env.DEBUG = 'false';
+    return json(res, { enabled: false, message: 'Debug logging disabled.' });
   }
 
   // POST /api/bi/run — Business Intelligence Pipeline

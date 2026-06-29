@@ -4,6 +4,9 @@
  * All model-specific glue lives here. No skill may call a model directly.
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 const TASK_PRESETS = {
   'structured-extraction': { temperature: 0.0, jsonMode: true, maxTokens: 4096 },
   'component-breakdown':   { temperature: 0.1, jsonMode: true, maxTokens: 4096 },
@@ -233,4 +236,4 @@ function validateJson(raw) {
   }
 }
 
-module.exports = { callModel, validateJson, TASK_PRESETS, PROVIDERS, getConfig };
+export { callModel, validateJson, TASK_PRESETS, PROVIDERS, getConfig };

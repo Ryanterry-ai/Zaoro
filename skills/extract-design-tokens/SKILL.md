@@ -10,7 +10,7 @@ Extract computed styles, color palette, type scale, spacing, breakpoints, and co
 
 ## Usage
 ```
-node tools/token-extractor/index.js <crawl-graph.json> --output ./docs/research
+node tools/token-extractor/index.cjs <crawl-graph.json> --output ./docs/research
 ```
 
 ## Output

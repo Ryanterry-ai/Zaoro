@@ -10,7 +10,7 @@ Discover a website's page graph. Deterministic (Bucket A) — no LLM.
 
 ## Usage
 ```
-node tools/crawler/index.js <url> --depth 3 --output ./docs/research
+node tools/crawler/index.cjs <url> --depth 3 --output ./docs/research
 ```
 
 ## Output
