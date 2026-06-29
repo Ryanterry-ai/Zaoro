@@ -71,6 +71,10 @@ export class FullStackCompilerPipeline {
 
     for (const model of blueprint.dataModels) {
       schemaContent += `model ${model.name} {\n`;
+      const hasId = model.fields.some(f => f.isId);
+      if (!hasId) {
+        schemaContent += `  id String @id @default(uuid())\n`;
+      }
       for (const field of model.fields) {
         let fieldLine = `  ${field.name} ${field.type}`;
         if (field.isId) {
@@ -142,7 +146,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;`;
       fs.mkdirSync(targetDir, { recursive: true });
 
       const routeCode = `import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db.js';
+import { prisma } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   try {
@@ -345,6 +349,10 @@ ${sections}
 
     for (const entity of blueprint.entities) {
       schemaContent += `model ${entity.name} {\n`;
+      const hasId = entity.fields.some(f => f.name === 'id');
+      if (!hasId) {
+        schemaContent += `  id String @id @default(uuid())\n`;
+      }
       for (const field of entity.fields) {
         const typeMap: Record<string, string> = {
           string: 'String',

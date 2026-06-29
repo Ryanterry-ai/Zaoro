@@ -13,7 +13,7 @@ export class APICompiler {
       const hasId = fieldNames.includes('id');
 
       const routeCode = `import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../lib/db.js';
+import { prisma } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   try {

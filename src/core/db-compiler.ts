@@ -17,6 +17,13 @@ generator client {
 
     for (const model of models) {
       schema += `model ${model.name} {\n`;
+
+      // Ensure every model has an id field
+      const hasId = model.fields.some(f => f.isId);
+      if (!hasId) {
+        schema += `  id String @id @default(uuid())\n`;
+      }
+
       for (const field of model.fields) {
         let typeStr = 'String';
         if (field.type === 'number') typeStr = 'Int';

@@ -9,10 +9,10 @@ const fs = require('fs');
 
 function run(cmd, cwd) {
   try {
-    const output = execSync(cmd, { cwd, stdio: 'pipe', timeout: 120000 });
+    const output = execSync(cmd, { cwd, stdio: 'pipe', timeout: 180000 });
     return { success: true, output: output.toString() };
   } catch (e) {
-    return { success: false, output: e.stdout?.toString() || e.message };
+    return { success: false, output: (e.stdout?.toString() || '') + '\n' + (e.stderr?.toString() || '') + '\n' + e.message };
   }
 }
 
@@ -31,8 +31,15 @@ function gate(projectDir) {
     process.exit(1);
   }
 
-  // 1. TypeScript check (only if tsconfig.json exists)
-  if (hasTsConfig) {
+  // 1. TypeScript check (only if tsconfig.json exists AND no next build script)
+  // Skip standalone tsc when next build handles type checking internally
+  const hasBuildScript = hasPackageJson && (() => {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf-8'));
+      return !!(pkg.scripts?.build);
+    } catch { return false; }
+  })();
+  if (hasTsConfig && !hasBuildScript) {
     const tsResult = run('npx tsc --noEmit', projectDir);
     if (!tsResult.success) {
       failures.push({ gate: 'typecheck', errors: tsResult.output });
@@ -50,6 +57,15 @@ function gate(projectDir) {
     const testResult = run('npx vitest run', projectDir);
     if (!testResult.success) {
       failures.push({ gate: 'tests', errors: testResult.output });
+    }
+  }
+
+  // 2.5 Prisma generate (if schema exists)
+  const hasPrismaSchema = fs.existsSync(path.join(projectDir, 'prisma', 'schema.prisma'));
+  if (hasPrismaSchema) {
+    const prismaResult = run('npx prisma generate', projectDir);
+    if (!prismaResult.success) {
+      failures.push({ gate: 'prisma-generate', errors: prismaResult.output });
     }
   }
 

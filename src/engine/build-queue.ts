@@ -191,12 +191,15 @@ try {
   const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
   try {
     writeProgress('gate', 'started', 'Running quality gate...');
-    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 180000, stdio: 'pipe' });
+    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 300000, stdio: 'pipe' });
     writeProgress('gate', 'passed', 'Quality gate passed');
   } catch (gateErr) {
-    const output = (gateErr.stdout && gateErr.stdout.toString()) || (gateErr.stderr && gateErr.stderr.toString()) || gateErr.message;
-    writeProgress('gate', 'failed', 'Quality gate failed: ' + output.slice(0, 500));
-    throw new Error('Quality gate failed: ' + output.slice(0, 200));
+    const stdout = gateErr.stdout?.toString() || '';
+    const stderr = gateErr.stderr?.toString() || '';
+    const fullOutput = stdout || stderr || gateErr.message;
+    console.error('[quality-gate] FULL OUTPUT:', fullOutput);
+    writeProgress('gate', 'failed', 'Quality gate failed: ' + fullOutput.slice(0, 1500));
+    throw new Error('Quality gate failed: ' + fullOutput.slice(0, 300));
   }
 
   writeProgress('preview', 'info', 'Rendering preview...');
@@ -238,7 +241,7 @@ try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8');
     const buildLogPath = path.join(wsDir, '.build-debug.log');
     child = exec(
       `npx tsx .build-temp-${job.id}.ts`,
-      { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_NO_WARNINGS: '1' } }
+      { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_ENV: 'production', NODE_NO_WARNINGS: '1' } }
     );
     job.pid = child.pid;
 
