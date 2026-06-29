@@ -128,43 +128,61 @@ function interceptConsole(prefix, type) {
   return function(...args) {
     const msg = args.join(' ');
     origLog.apply(console, args);
-    if (msg.includes('[gateway]')) {
-      if (msg.includes('LLM call:') || msg.includes('Combined LLM call:')) {
-        const match = msg.match(/(\\w[\\w-]+)\\/(\\S+)\\s*\\(attempt\\s*(\\d+)\\)/);
+    // Strip [STDERR] prefix from forwarded stderr
+    const clean = msg.replace(/^\[STDERR\]\s*/, '');
+    if (clean.includes('[gateway]')) {
+      if (clean.includes('LLM call:') || clean.includes('Combined LLM call:')) {
+        const match = clean.match(/(\\w[\\w-]+)\\/(\\S+)\\s*\\(attempt\\s*(\\d+)\\)/);
         if (match) emitLLM('llm', 'llm_request', { provider: match[1], model: match[2], attempt: parseInt(match[3]), maxAttempts: 5 });
-      } else if (msg.includes('succeeded:') && msg.includes('patches')) {
-        const match = msg.match(/(\\d+)\\s*patches/);
-        writeProgress('llm', 'success', msg, { patchCount: match ? parseInt(match[1]) : 0 });
-      } else if (msg.includes('Gemini fallback')) {
+      } else if (clean.includes('succeeded:') && clean.includes('patches')) {
+        const match = clean.match(/(\\d+)\\s*patches/);
+        writeProgress('llm', 'success', clean, { patchCount: match ? parseInt(match[1]) : 0 });
+      } else if (clean.includes('Gemini fallback')) {
         emitLLM('llm', 'llm_fallback', { provider: 'gemini', model: 'gemini-2.5-flash', fallbackProvider: 'gemini' });
-      } else if (msg.includes('Transient error')) {
-        const match = msg.match(/\\((.+?)\\)/);
-        writeProgress('llm', 'retrying', msg, { error: match ? match[1] : 'unknown' });
-      } else if (msg.includes('All LLM providers failed')) {
-        writeProgress('llm', 'warning', msg);
-      } else if (msg.includes('Research context added')) {
-        writeProgress('research', 'success', msg);
-      } else if (msg.includes('Generated') && msg.includes('domain fallback')) {
-        writeProgress('architect', 'info', msg);
+      } else if (clean.includes('Transient error')) {
+        const match = clean.match(/\\((.+?)\\)/);
+        writeProgress('llm', 'retrying', clean, { error: match ? match[1] : 'unknown' });
+      } else if (clean.includes('All LLM providers failed')) {
+        writeProgress('llm', 'warning', clean);
+      } else if (clean.includes('Research context added')) {
+        writeProgress('research', 'success', clean);
+      } else if (clean.includes('Generated') && clean.includes('domain fallback')) {
+        writeProgress('architect', 'info', clean);
+      } else if (clean.includes('Self-evaluation')) {
+        writeProgress('llm', 'eval', clean);
       }
-    } else if (msg.includes('[content-research]')) {
-      if (msg.includes('Crawling:')) {
-        const url = msg.replace('[content-research] Crawling:', '').trim();
+    } else if (clean.includes('[content-research]')) {
+      if (clean.includes('Crawling:')) {
+        const url = clean.replace('[content-research] Crawling:', '').trim();
         writeProgress('research', 'crawling', 'Crawling: ' + url, { url });
-      } else if (msg.includes('Results:')) {
-        writeProgress('research', 'completed', msg);
+      } else if (clean.includes('Results:')) {
+        writeProgress('research', 'completed', clean);
       }
-    } else if (msg.includes('[orchestrator]')) {
-      if (msg.includes('Blueprint:')) writeProgress('architect', 'completed', msg);
-      else if (msg.includes('BI analysis complete')) writeProgress('bi', 'completed', msg);
-      else if (msg.includes('Content research:')) writeProgress('research', 'completed', msg);
-      else if (msg.includes('Compiling page')) writeProgress('compile', 'info', msg);
-      else if (msg.includes('compiled successfully')) writeProgress('compile', 'success', msg);
-      else if (msg.includes('Build complete')) writeProgress('compile', 'completed', msg);
-    } else if (msg.includes('[domain-synth]')) {
-      if (msg.includes('Detected:') || msg.includes('Using resolved pattern:')) writeProgress('architect', 'info', msg);
-    } else if (msg.includes('[bi-llm]')) {
-      writeProgress('bi', 'info', msg);
+    } else if (clean.includes('[orchestrator]')) {
+      if (clean.includes('BRE v2 blueprint:')) writeProgress('architect', 'completed', clean);
+      else if (clean.includes('Blueprint:')) writeProgress('architect', 'completed', clean);
+      else if (clean.includes('BI analysis complete')) writeProgress('bi', 'completed', clean);
+      else if (clean.includes('Content research:')) writeProgress('research', 'completed', clean);
+      else if (clean.includes('Compiling page')) writeProgress('compile', 'info', clean);
+      else if (clean.includes('compiled successfully')) writeProgress('compile', 'success', clean);
+      else if (clean.includes('Page ') && clean.includes(' patches')) writeProgress('compile', 'patching', clean);
+      else if (clean.includes('Page ') && clean.includes('failed')) writeProgress('compile', 'failed', clean);
+      else if (clean.includes('Build partial') || clean.includes('Build complete')) writeProgress('compile', 'completed', clean);
+      else if (clean.includes('Selected patch:')) writeProgress('compile', 'applying', clean);
+      else if (clean.includes('Loaded industry model')) writeProgress('research', 'cached', clean);
+    } else if (clean.includes('[domain-synth]')) {
+      if (clean.includes('Detected:') || clean.includes('Using resolved pattern:')) writeProgress('architect', 'info', clean);
+      else writeProgress('architect', 'info', clean);
+    } else if (clean.includes('[bi-llm]')) {
+      writeProgress('bi', 'info', clean);
+    } else if (clean.includes('[BOS]') || clean.includes('[bre-v2]')) {
+      writeProgress('architect', 'info', clean);
+    } else if (clean.includes('[self-heal]') || clean.includes('[ast-patch]')) {
+      writeProgress('compile', 'healing', clean);
+    } else if (clean.includes('[domain]') && clean.includes('hasFunction')) {
+      // Skip noisy per-file domain checks — only log summary
+    } else if (clean.includes('Error') || clean.includes('error')) {
+      writeProgress('error', 'warning', clean.slice(0, 200));
     }
   };
 }
@@ -182,15 +200,16 @@ const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic
 const orch = new DeterministicOrchestratorV4(wsDir);
 try {
   writeProgress('init', 'started', 'Build started — analyzing prompt');
+  writeProgress('init', 'info', 'Loading orchestrator and dependencies...');
   const tBi = Date.now();
   await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
-  writeProgress('compile', 'info', 'Compiling and validating...', { duration: Date.now() - tBi });
+  writeProgress('compile', 'info', 'Compilation finished', { duration: Date.now() - tBi });
 
-  // Run quality gate (lint + typecheck + tests + build)
+  // Run quality gate (prisma generate + next build)
   const { execSync } = await import('child_process');
   const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
   try {
-    writeProgress('gate', 'started', 'Running quality gate...');
+    writeProgress('gate', 'started', 'Running quality gate (prisma generate + next build)...');
     execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 300000, stdio: 'pipe' });
     writeProgress('gate', 'passed', 'Quality gate passed');
   } catch (gateErr) {

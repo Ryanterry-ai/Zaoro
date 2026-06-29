@@ -345,7 +345,9 @@ ${sections}
     const prismaDir = path.join(rootPath, 'prisma');
     fs.mkdirSync(prismaDir, { recursive: true });
 
-    let schemaContent = `datasource db {\n  provider = "${blueprint.database.engine === 'mongodb' ? 'mongodb' : 'postgresql'}"\n  url      = env("DATABASE_URL")\n}\n\ngenerator client {\n  provider = "prisma-client-js"\n}\n\n`;
+    const dbProvider = blueprint.database.engine === 'mongodb' ? 'mongodb' : 'postgresql';
+    const dbUrl = dbProvider === 'mongodb' ? 'env("DATABASE_URL")' : 'env("DATABASE_URL")';
+    let schemaContent = `datasource db {\n  provider = "${dbProvider}"\n  url      = ${dbUrl}\n}\n\ngenerator client {\n  provider = "prisma-client-js"\n}\n\n`;
 
     for (const entity of blueprint.entities) {
       schemaContent += `model ${entity.name} {\n`;

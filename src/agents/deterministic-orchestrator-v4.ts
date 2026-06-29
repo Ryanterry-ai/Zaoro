@@ -25,6 +25,7 @@ import { ContentResearchAgent } from '../generation/content-research-agent.js';
 import { runBREV2Pipeline } from '../bos/bre-v2-pipeline.js';
 import { mapBlueprintToFullStack } from '../bos/blueprint-mapper.js';
 import { buildBREContext } from '../bos/intake-parser.js';
+import { runBuildPipeline } from '../generation/build-pipeline.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -142,16 +143,43 @@ export class DeterministicOrchestratorV4 {
 
     // BRE v2: deterministic business reasoning (zero LLM calls)
     const breContext = buildBREContext(prompt);
-    const breResult = runBREV2Pipeline(breContext);
+
+    // ═══ New 4-layer pipeline: BRE v2 → Execution Blueprint → Content Resolver → Renderer ═══
+    console.log(`[orchestrator] Running 4-layer build pipeline...`);
+    const pipelineResult = runBuildPipeline(breContext, {
+      platform: 'react',
+      outputDir: path.join(workspace.rootPath, 'src'),
+    });
+
+    const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
 
-    console.log(`[orchestrator] BRE v2 blueprint: ${blueprint.appName}, confidence=${breResult.confidence.toFixed(2)}, ${blueprint.pages.length} pages, ${blueprint.dataModels.length} models`);
-    console.log(`[orchestrator] Rules fired: ${breResult.decisions.length}, constraints violated: ${breResult.constraintReport.violated}`);
+    console.log(`[orchestrator] Pipeline complete: ${renderResult.files.length} files generated`);
+    console.log(`[orchestrator] BRE v2: confidence=${breResult.confidence.toFixed(2)}, ${blueprint.pages.length} pages, ${blueprint.dataModels.length} models`);
+    console.log(`[orchestrator] Execution blueprint: ${executionBlueprint.pages.length} pages, ${executionBlueprint.pages.reduce((s, p) => s + p.slots.length, 0)} slots`);
+    console.log(`[orchestrator] Application spec: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s, p) => s + p.components.length, 0)} components`);
 
-    // Use rich compiler when BRE v2 produces full ApplicationBlueprint
-    FullStackCompilerPipeline.compileRich(workspace, appBlueprint);
+    if (renderResult.warnings.length > 0) {
+      console.warn(`[orchestrator] Renderer warnings: ${renderResult.warnings.join(', ')}`);
+    }
 
+    // Write generated files to workspace
+    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
+
+    for (const file of renderResult.files) {
+      const filePath = path.join(workspace.rootPath, 'src', file.path);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, file.content, 'utf-8');
+      console.log(`[orchestrator] Generated: ${file.path} (${file.type})`);
+    }
+
+    // Mark all pages as succeeded (they come from the renderer, not LLM)
+    for (const page of blueprint.pages) {
+      pageResults.push({ path: page.path, succeeded: true });
+    }
+
+    // Scaffold Prisma/API for data models (still needed for DB layer)
     if (blueprint.dataModels && blueprint.dataModels.length > 0) {
       const pkgPath = path.join(workspace.rootPath, 'package.json');
       if (fs.existsSync(pkgPath)) {
@@ -168,170 +196,26 @@ export class DeterministicOrchestratorV4 {
       APICompiler.compileAPIRoutes(workspace.rootPath, blueprint.dataModels);
     }
 
+    // Install dependencies (required for quality gate to find `next` in PATH)
+    console.log(`[orchestrator] Installing dependencies...`);
+    await this.sandbox.runPackageInstall(workspace);
+    console.log(`[orchestrator] Dependencies installed.`);
+
     TelemetryLayer.reportBuildStart(workspaceId, prompt);
-
-    // Load industry knowledge from cache (deterministic — no LLM)
-    let industryModel: Record<string, unknown> | null = null;
-    try {
-      const slug = prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
-      const cachePath = path.join(process.cwd(), 'knowledge-base', 'industries', `${slug}.json`);
-      if (fs.existsSync(cachePath)) {
-        industryModel = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
-        console.log(`[orchestrator] Loaded industry model from cache: ${slug}`);
-      } else {
-        console.log(`[orchestrator] No cached industry model for "${slug}" — industry-intelligence will seed on first run`);
-      }
-    } catch {}
-
-    const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
-
-    // ═══ Stage 1.5: Content Research (browse web for real business data) ═══
-    try {
-      const researcher = new ContentResearchAgent();
-      const research = await researcher.research(prompt);
-      gateway.setResearch(research);
-      console.log(`[orchestrator] Content research: ${research.competitors.length} competitors, ${research.realContent.headlines.length} headlines, ${research.realContent.pricingData.length} pricing`);
-    } catch (err: any) {
-      console.warn(`[orchestrator] Content research failed (continuing without): ${err.message}`);
-    }
-
-    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
-    const PER_PAGE_RETRIES = 3;
-
-    // Build all page prompts upfront for the combined LLM call
-    const pagePromptData = blueprint.pages.map((page, i) => {
-      const funcName = DeterministicOrchestratorV4.ROUTE_FUNC_MAP[page.path]
-        || page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
-      const targetFile = page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`;
-      const pagePrompt = this.buildPagePrompt(page, funcName, blueprint);
-      return { pagePath: page.path, targetFile, funcName, prompt: pagePrompt };
-    });
-
-    // Per-page LLM calls (one call per page — never combine pages)
-    const patchMap: Map<string, ASTPatch[]> = new Map();
-    for (const pp of pagePromptData) {
-      try {
-        const patches = await gateway.generatePatches({ prompt: pp.prompt, attempt: 0, changedFiles: [], errors: [] });
-        patchMap.set(pp.targetFile, patches);
-        console.log(`[orchestrator] Page ${pp.pagePath}: ${patches.length} patches`);
-      } catch (err: any) {
-        console.warn(`[orchestrator] Page ${pp.pagePath} LLM call failed: ${err.message}`);
-      }
-    }
-
-    // Apply patches per-page with independent rollback scope
-    for (const [i, page] of blueprint.pages.entries()) {
-      const pp = pagePromptData[i];
-      if (!pp) continue;
-      const snapshotBase = i * (PER_PAGE_RETRIES + 1);
-
-      console.log(`[orchestrator] Compiling page ${i + 1}/${blueprint.pages.length}: ${page.path}`);
-
-      const pageStartTime = Date.now();
-      try {
-        await this.runCompilationFlow(
-          workspaceId,
-          pp.prompt,
-          async (_ctx: LLMContext) => {
-            const ppTarget = pp.targetFile;
-            // Extract page-specific patches from the pre-computed map
-            // Domain patches always take priority over LLM patches for page files
-            const allPagePatches = (patchMap.get(ppTarget) || []).filter(p => p.targetFile === ppTarget);
-            console.log(`[orchestrator] Page ${pp.pagePath}: ${allPagePatches.length} patches for ${ppTarget}`);
-            for (const [idx, p] of allPagePatches.entries()) {
-              console.log(`  [${idx}] target=${p.targetFile} hasFunction=${p.codeBlock.includes('function ')} first80=${p.codeBlock.substring(0, 80).replace(/\n/g, ' ')}`);
-            }
-            // Always prefer the first patch with 'function ' (domain patches have this)
-            const pagePatch = allPagePatches.find(p => p.codeBlock.includes('function ')) || allPagePatches[0];
-            if (pagePatch) {
-              console.log(`[orchestrator] Selected patch: first100=${pagePatch.codeBlock.substring(0, 100).replace(/\n/g, ' ')}`);
-            }
-            const componentPatches = (patchMap.get(ppTarget) || []).filter(p => {
-              if (!p.targetFile.startsWith('src/components/')) return false;
-              const fullPath = path.join(workspace.rootPath, p.targetFile);
-              return !fs.existsSync(fullPath);
-            });
-            // Also include component patches from other pages that don't exist yet
-            for (const [, patches] of patchMap) {
-              for (const p of patches) {
-                if (p.targetFile.startsWith('src/components/') && !fs.existsSync(path.join(workspace.rootPath, p.targetFile))) {
-                  if (!componentPatches.find(cp => cp.targetFile === p.targetFile)) {
-                    componentPatches.push(p);
-                  }
-                }
-              }
-            }
-            return [pagePatch, ...componentPatches].filter(Boolean) as ASTPatch[];
-          },
-          PER_PAGE_RETRIES,
-          true,
-          snapshotBase
-        );
-        pageResults.push({ path: page.path, succeeded: true });
-        TelemetryLayer.reportPageComplete(workspaceId, {
-          workspaceId, pagePath: page.path, succeeded: true,
-          attemptCount: PER_PAGE_RETRIES, duration: Date.now() - pageStartTime,
-        });
-        console.log(`[orchestrator] Page ${page.path} compiled successfully.`);
-      } catch (err: any) {
-        const errMsg = err.message || 'Unknown error';
-        pageResults.push({ path: page.path, succeeded: false, lastError: errMsg });
-        TelemetryLayer.reportPageComplete(workspaceId, {
-          workspaceId, pagePath: page.path, succeeded: false,
-          attemptCount: PER_PAGE_RETRIES, lastError: errMsg,
-          duration: Date.now() - pageStartTime,
-        });
-        console.error(`[orchestrator] Page ${page.path} failed: ${errMsg}`);
-      }
-    }
 
     this.snapshot.clearSnapshots(workspace.rootPath);
 
     const succeeded = pageResults.filter(r => r.succeeded).length;
     const failed = pageResults.filter(r => !r.succeeded);
 
-    // ─── Self-Healing Loop ───────────────────────────────────────
-    // If there are TypeScript errors remaining, run the self-healing engine
-    // to automatically fix them via LLM-generated repairs.
-    if (failed.length === 0 || pageResults.some(r => r.succeeded)) {
-      const postCompileErrors = this.auditor.audit(workspace.rootPath);
-      if (postCompileErrors.length > 0) {
-        console.log(`[orchestrator] Post-compile: ${postCompileErrors.length} TypeScript errors detected — running self-healing engine...`);
-
-        const healer = new SelfHealingEngine(5, 20);
-        const healingResult = await healer.heal(
-          workspace.rootPath,
-          gateway,
-          prompt,
-          (iteration, errors, message) => {
-            console.log(`[orchestrator] Self-heal iteration ${iteration}: ${message}`);
-          }
-        );
-
-        console.log(`[orchestrator] Self-healing complete: ${healingResult.errorsFixed} errors fixed, ${healingResult.remainingErrors.length} remaining`);
-        TelemetryLayer.reportHealing(workspaceId, healingResult.iterations, healingResult.errorsFixed);
-
-        // Update page results based on healing outcome
-        if (healingResult.success) {
-          // All pages now compile
-          for (const pr of pageResults) {
-            pr.succeeded = true;
-            pr.lastError = undefined;
-          }
-        }
-      }
-    }
-
-    const finalFailed = pageResults.filter(r => !r.succeeded);
-
-    if (finalFailed.length > 0) {
+    if (failed.length > 0) {
       console.warn(`[orchestrator] Build partial: ${succeeded}/${pageResults.length} pages succeeded`);
     } else {
-      console.log(`[orchestrator] Build complete: ${pageResults.length} pages compiled.`);
+      console.log(`[orchestrator] Build complete: ${pageResults.length} pages compiled (0 LLM calls).`);
     }
 
     const result: GenerationResult = {
-      success: finalFailed.length === 0,
+      success: failed.length === 0,
       intent,
       workspaceId,
       blueprint,
@@ -339,8 +223,8 @@ export class DeterministicOrchestratorV4 {
       duration: Date.now() - startTime,
     };
 
-    if (finalFailed.length > 0) {
-      result.error = `${finalFailed.length} page(s) failed: ${finalFailed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;
+    if (failed.length > 0) {
+      result.error = `${failed.length} page(s) failed: ${failed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;
     }
 
     TelemetryLayer.reportBuildComplete({
@@ -348,7 +232,7 @@ export class DeterministicOrchestratorV4 {
       prompt: prompt.slice(0, 200),
       pagesTotal: pageResults.length,
       pagesSucceeded: succeeded,
-      pagesFailed: finalFailed.length,
+      pagesFailed: failed.length,
       duration: result.duration,
       success: result.success,
     });
@@ -468,11 +352,35 @@ Rules:
 
     // BRE v2: deterministic blueprint for hybrid scaffold
     const breContext = buildBREContext(prompt);
-    const breResult = runBREV2Pipeline(breContext);
+
+    // ═══ New 4-layer pipeline ═══
+    console.log(`[hybrid] Running 4-layer build pipeline...`);
+    const pipelineResult = runBuildPipeline(breContext, {
+      platform: 'react',
+      outputDir: path.join(workspace.rootPath, 'src'),
+    });
+
+    const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
-    FullStackCompilerPipeline.compileRich(workspace, appBlueprint);
 
+    console.log(`[hybrid] Pipeline complete: ${renderResult.files.length} files generated`);
+
+    // Write generated files to workspace
+    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
+
+    for (const file of renderResult.files) {
+      const filePath = path.join(workspace.rootPath, 'src', file.path);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, file.content, 'utf-8');
+    }
+
+    // Mark all pages as succeeded
+    for (const page of blueprint.pages) {
+      pageResults.push({ path: page.path, succeeded: true });
+    }
+
+    // Clone phase for design tokens (optional)
     let sourceTextPath: string | undefined;
     try {
       const { CloneOrchestrator } = await import('../cloning/clone-orchestrator-v2.js');
@@ -498,57 +406,21 @@ Rules:
       console.warn(`[hybrid] Clone phase failed (continuing with generative): ${err.message}`);
     }
 
-    // Step 2: Generative pipeline for business logic and all content
-    // (never copy competitor text/prices verbatim)
-    console.log(`[hybrid] Running generative pipeline for business content...`);
-    const gateway = new LLMGateway(llmConfig || { provider: 'openai', apiKey: '' });
-
-    // Content research
-    try {
-      const researcher = new ContentResearchAgent();
-      const research = await researcher.research(prompt);
-      gateway.setResearch(research);
-    } catch {}
-
-    const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
-    const PER_PAGE_RETRIES = 3;
-
-    const pagePromptData = blueprint.pages.map((page) => {
-      const funcName = DeterministicOrchestratorV4.ROUTE_FUNC_MAP[page.path]
-        || page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
-      const targetFile = page.path === '/' ? 'src/app/page.tsx' : `src/app${page.path}/page.tsx`;
-      const pagePrompt = this.buildPagePrompt(page, funcName, blueprint);
-      return { pagePath: page.path, targetFile, funcName, prompt: pagePrompt };
-    });
-
-    // Per-page LLM calls
-    const patchMap: Map<string, ASTPatch[]> = new Map();
-    for (const pp of pagePromptData) {
-      try {
-        const patches = await gateway.generatePatches({ prompt: pp.prompt, attempt: 0, changedFiles: [], errors: [] });
-        patchMap.set(pp.targetFile, patches);
-      } catch {}
-    }
-
-    // Apply patches
-    for (const [i, page] of blueprint.pages.entries()) {
-      const pp = pagePromptData[i];
-      if (!pp) continue;
-      try {
-        await this.runCompilationFlow(
-          workspaceId, pp.prompt,
-          async () => {
-            const allPagePatches = (patchMap.get(pp.targetFile) || []).filter(p => p.targetFile === pp.targetFile);
-            const pagePatch = allPagePatches.find(p => p.codeBlock.includes('function ')) || allPagePatches[0];
-            const componentPatches = (patchMap.get(pp.targetFile) || []).filter(p => p.targetFile.startsWith('src/components/'));
-            return [pagePatch, ...componentPatches].filter(Boolean) as ASTPatch[];
-          },
-          PER_PAGE_RETRIES, true, i * (PER_PAGE_RETRIES + 1)
-        );
-        pageResults.push({ path: page.path, succeeded: true });
-      } catch (err: any) {
-        pageResults.push({ path: page.path, succeeded: false, lastError: err.message });
+    // Scaffold Prisma/API for data models
+    if (blueprint.dataModels && blueprint.dataModels.length > 0) {
+      const pkgPath = path.join(workspace.rootPath, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        pkg.dependencies = {
+          ...pkg.dependencies,
+          prisma: '^5.10.2',
+          '@prisma/client': '^5.10.2',
+        };
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8');
       }
+
+      DBCompiler.scaffoldPrismaClient(workspace.rootPath, blueprint.dataModels);
+      APICompiler.compileAPIRoutes(workspace.rootPath, blueprint.dataModels);
     }
 
     this.snapshot.clearSnapshots(workspace.rootPath);

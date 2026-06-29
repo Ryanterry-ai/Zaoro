@@ -43,7 +43,10 @@ export class ReactRenderer implements Renderer {
   renderPage(spec: PageSpec, context: RenderContext): RenderedFile[] {
     const files: RenderedFile[] = [];
     const pageName = spec.path === '/' ? 'Home' : this.toPascalCase(spec.path);
-    const componentImports = spec.components.map(c => `import { ${c.type} } from '@/components/${c.type}';`).join('\n');
+
+    // Deduplicate components by type (same component can appear multiple times in a page)
+    const uniqueComponents = [...new Map(spec.components.map(c => [c.type, c])).values()];
+    const componentImports = uniqueComponents.map(c => `import ${c.type} from '@/components/${c.type}';`).join('\n');
     const componentRenders = spec.components.map(c => `      <${c.type} />`).join('\n');
 
     const seo = spec.seo ?? {};
@@ -57,7 +60,7 @@ ${componentImports}
 
 export default function ${pageName}Page() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-zinc-950 text-zinc-50 font-sans">
 ${componentRenders}
     </div>
   );
@@ -148,7 +151,7 @@ import React from 'react';
 
 ${propsInterface}
 
-export function ${componentName}(${this.hasProps(spec) ? `props: ${componentName}Props` : ''}) {
+export default function ${componentName}(${this.hasProps(spec) ? `props: ${componentName}Props` : ''}) {
 ${body}
 }
 `;
@@ -259,16 +262,16 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="relative py-24 lg:py-32 overflow-hidden">`,
-      `      <div className="max-w-7xl mx-auto px-6 text-center">`,
-      badge ? `        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border border-white/10 bg-white/5 mb-8">` : '',
-      badge ? `          <span>${badge}</span>` : '',
+      `    <section className="relative pt-32 pb-20 px-6 overflow-hidden">`,
+      `      <div className="max-w-4xl mx-auto text-center space-y-6">`,
+      badge ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">` : '',
+      badge ? `          <span>{badge}</span>` : '',
       badge ? `        </div>` : '',
-      `        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">`,
-      `          ${title}`,
+      `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-zinc-50">`,
+      `          {title}`,
       `        </h1>`,
-      `        <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">`,
-      `          ${subtitle}`,
+      `        <p className="text-zinc-400 text-lg max-w-xl mx-auto">`,
+      `          {subtitle}`,
       `        </p>`,
       ...this.generateActionButtons(spec),
       `      </div>`,
@@ -283,20 +286,20 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-24">`,
-      `      <div className="max-w-7xl mx-auto px-6">`,
-      `        <div className="text-center mb-16">`,
-      `          <h2 className="text-3xl font-bold mb-4">${title}</h2>`,
-      `          <p className="text-muted-foreground">${subtitle}</p>`,
+      `    <section className="px-6 pb-20">`,
+      `      <div className="max-w-6xl mx-auto">`,
+      `        <div className="text-center mb-12">`,
+      `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
+      `          <p className="text-zinc-400">{subtitle}</p>`,
       `        </div>`,
-      `        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">`,
+      `        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">`,
       `          {items?.map((feature, i) => (`,
-      `            <div key={i} className="p-6 rounded-xl border bg-card">`,
-      `              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">`,
-      `                <span className="text-primary text-xl">{feature.icon}</span>`,
+      `            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">`,
+      `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 font-bold text-lg">`,
+      `                <span>{feature.icon}</span>`,
       `              </div>`,
-      `              <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>`,
-      `              <p className="text-muted-foreground text-sm">{feature.description}</p>`,
+      `              <h3 className="font-bold text-lg text-zinc-50 mb-2">{feature.title}</h3>`,
+      `              <p className="text-sm text-zinc-400">{feature.description}</p>`,
       `            </div>`,
       `          ))}`,
       `        </div>`,
@@ -312,29 +315,29 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-24">`,
-      `      <div className="max-w-6xl mx-auto px-6">`,
-      `        <div className="text-center mb-16">`,
-      `          <h2 className="text-3xl font-bold mb-4">${title}</h2>`,
-      `          <p className="text-muted-foreground">${subtitle}</p>`,
+      `    <section className="px-6 pb-20">`,
+      `      <div className="max-w-6xl mx-auto">`,
+      `        <div className="text-center mb-12">`,
+      `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
+      `          <p className="text-zinc-400">{subtitle}</p>`,
       `        </div>`,
-      `        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">`,
+      `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {tiers?.map((tier, i) => (`,
-      `            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-card'}\`}>`,
-      `              <h3 className="text-xl font-bold mb-2">{tier.name}</h3>`,
+      `            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-emerald-500 bg-emerald-500/5' : 'bg-zinc-900 border-zinc-800'}\`}>`,
+      `              <h3 className="text-xl font-black text-zinc-50 mb-2">{tier.name}</h3>`,
       `              <div className="mb-6">`,
-      `                <span className="text-4xl font-bold">{tier.price}</span>`,
-      `                <span className="text-muted-foreground">{tier.period}</span>`,
+      `                <span className="text-4xl font-black text-zinc-50">{tier.price}</span>`,
+      `                <span className="text-zinc-400 text-sm">{tier.period}</span>`,
       `              </div>`,
       `              <ul className="space-y-3 mb-8">`,
       `                {tier.features?.map((feature, j) => (`,
-      `                  <li key={j} className="flex items-center gap-2 text-sm">`,
-      `                    <span className="text-primary">✓</span>`,
+      `                  <li key={j} className="flex items-center gap-2 text-sm text-zinc-400">`,
+      `                    <span className="text-emerald-400">✓</span>`,
       `                    {feature}`,
       `                  </li>`,
       `                ))}`,
       `              </ul>`,
-      `              <button className={\`w-full py-3 rounded-lg font-medium \${tier.highlighted ? 'bg-primary text-primary-foreground' : 'border bg-background hover:bg-muted'}\`}>`,
+      `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'}\`}>`,
       `                Get Started`,
       `              </button>`,
       `            </div>`,
@@ -352,19 +355,20 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-24 bg-muted/50">`,
-      `      <div className="max-w-7xl mx-auto px-6">`,
-      `        <div className="text-center mb-16">`,
-      `          <h2 className="text-3xl font-bold mb-4">${title}</h2>`,
-      `          <p className="text-muted-foreground">${subtitle}</p>`,
+      `    <section className="px-6 pb-20 bg-zinc-900/50">`,
+      `      <div className="max-w-5xl mx-auto">`,
+      `        <div className="text-center mb-12">`,
+      `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
+      `          <p className="text-zinc-400">{subtitle}</p>`,
       `        </div>`,
-      `        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">`,
+      `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {items?.map((testimonial, i) => (`,
-      `            <div key={i} className="p-6 rounded-2xl border bg-card">`,
-      `              <p className="text-muted-foreground mb-4">"{testimonial.metadata?.quote}"</p>`,
+      `            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `              <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
+      `              <p className="text-sm text-zinc-400 mb-4">"{testimonial.metadata?.quote}"</p>`,
       `              <div>`,
-      `                <div className="font-semibold">{testimonial.title}</div>`,
-      `                <div className="text-sm text-muted-foreground">{testimonial.description}</div>`,
+      `                <div className="font-bold text-zinc-50">{testimonial.title}</div>`,
+      `                <div className="text-sm text-zinc-500">{testimonial.description}</div>`,
       `              </div>`,
       `            </div>`,
       `          ))}`,
@@ -381,10 +385,10 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-24">`,
-      `      <div className="max-w-4xl mx-auto px-6 text-center">`,
-      `        <h2 className="text-3xl font-bold mb-4">${title}</h2>`,
-      `        <p className="text-lg text-muted-foreground mb-8">${subtitle}</p>`,
+      `    <section className="px-6 pb-20">`,
+      `      <div className="max-w-xl mx-auto text-center p-8 bg-zinc-900 border border-zinc-800 rounded-2xl">`,
+      `        <h2 className="text-xl font-black text-zinc-50 mb-3">{title}</h2>`,
+      `        <p className="text-sm text-zinc-500 mb-6">{subtitle}</p>`,
       ...this.generateActionButtons(spec),
       `      </div>`,
       `    </section>`,
@@ -397,14 +401,14 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-24">`,
-      `      <div className="max-w-3xl mx-auto px-6">`,
-      `        <h2 className="text-3xl font-bold text-center mb-12">${title}</h2>`,
+      `    <section className="px-6 pb-20">`,
+      `      <div className="max-w-3xl mx-auto">`,
+      `        <h2 className="text-3xl font-black text-zinc-50 text-center mb-12">{title}</h2>`,
       `        <div className="space-y-4">`,
       `          {items?.map((faq, i) => (`,
-      `            <div key={i} className="p-6 rounded-xl border bg-card">`,
-      `              <h3 className="font-semibold mb-2">{faq.title}</h3>`,
-      `              <p className="text-muted-foreground text-sm">{faq.description}</p>`,
+      `            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `              <h3 className="font-bold text-zinc-50 mb-2">{faq.title}</h3>`,
+      `              <p className="text-sm text-zinc-400">{faq.description}</p>`,
       `            </div>`,
       `          ))}`,
       `        </div>`,
@@ -417,14 +421,11 @@ ${body}
   private generateStatsCardsBody(_spec: ComponentSpec): string[] {
     return [
       `  return (`,
-      `    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">`,
+      `    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">`,
       `      {stats?.map((stat, i) => (`,
-      `        <div key={i} className="p-6 rounded-xl border bg-card">`,
-      `          <div className="text-sm text-muted-foreground mb-1">{stat.label}</div>`,
-      `          <div className="text-3xl font-bold">{stat.value}</div>`,
-      `          {stat.change && (`,
-      `            <div className="text-sm text-primary mt-1">{stat.change}</div>`,
-      `          )}`,
+      `        <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">`,
+      `          <div className="text-2xl font-black text-emerald-400 mb-1">{stat.value}</div>`,
+      `          <div className="text-xs text-zinc-500">{stat.label}</div>`,
       `        </div>`,
       `      ))}`,
       `    </div>`,
@@ -438,16 +439,16 @@ ${body}
 
     return [
       `  return (`,
-      `    <div className="min-h-screen flex items-center justify-center px-6">`,
+      `    <div className="min-h-screen flex items-center justify-center px-6 bg-zinc-950">`,
       `      <div className="w-full max-w-sm">`,
-      `        <h1 className="text-2xl font-bold text-center mb-2">${title}</h1>`,
-      `        <p className="text-muted-foreground text-center mb-8">${subtitle}</p>`,
-      `        <form className="space-y-4">`,
+      `        <h1 className="text-2xl font-black text-zinc-50 text-center mb-2">{title}</h1>`,
+      `        <p className="text-zinc-400 text-center mb-8">{subtitle}</p>`,
+      `        <form className="space-y-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
       ...(spec.fields ?? []).map(f => `          <div>
-            <label className="text-sm font-medium mb-1 block">${f.label}</label>
-            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-lg border bg-background" />
+            <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
+            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition" />
           </div>`),
-      `          <button type="submit" className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium">`,
+      `          <button type="submit" className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">`,
       `            ${spec.actions?.[0]?.label ?? 'Submit'}`,
       `          </button>`,
       `        </form>`,
@@ -463,21 +464,21 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-24">`,
-      `      <div className="max-w-2xl mx-auto px-6">`,
-      `        <h2 className="text-3xl font-bold text-center mb-4">${title}</h2>`,
-      `        <p className="text-muted-foreground text-center mb-8">${subtitle}</p>`,
-      `        <form className="space-y-4">`,
+      `    <section className="px-6 pb-16">`,
+      `      <div className="max-w-2xl mx-auto">`,
+      `        <h2 className="text-3xl font-black text-zinc-50 text-center mb-3">{title}</h2>`,
+      `        <p className="text-zinc-400 text-center mb-8">{subtitle}</p>`,
+      `        <form className="space-y-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
       ...(spec.fields ?? []).map(f => f.type === 'textarea'
         ? `          <div>
-            <label className="text-sm font-medium mb-1 block">${f.label}</label>
-            <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={4} className="w-full px-4 py-3 rounded-lg border bg-background resize-none" />
+            <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
+            <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={4} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition resize-none" />
           </div>`
         : `          <div>
-            <label className="text-sm font-medium mb-1 block">${f.label}</label>
-            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-lg border bg-background" />
+            <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
+            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition" />
           </div>`),
-      `          <button type="submit" className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium">`,
+      `          <button type="submit" className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">`,
       `            ${spec.actions?.[0]?.label ?? 'Send Message'}`,
       `          </button>`,
       `        </form>`,
@@ -492,10 +493,10 @@ ${body}
 
     return [
       `  return (`,
-      `    <div className="rounded-xl border bg-card overflow-hidden">`,
+      `    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">`,
       `      <table className="w-full text-sm">`,
       `        <thead>`,
-      `          <tr className="border-b bg-muted/50">`,
+      `          <tr className="border-b border-zinc-800 text-zinc-400">`,
       ...(spec.columns ?? []).map(c => `            <th className="px-4 py-3 text-left font-medium">${c.label}</th>`),
       `          </tr>`,
       `        </thead>`,
@@ -513,15 +514,8 @@ ${body}
 
     return [
       `  return (`,
-      `    <footer className="border-t py-12">`,
-      `      <div className="max-w-7xl mx-auto px-6">`,
-      `        <div className="flex flex-col md:flex-row justify-between items-center gap-6">`,
-      `          <div className="font-semibold">${companyName}</div>`,
-      `          <nav className="flex gap-6 text-sm text-muted-foreground">`,
-      ...(spec.items ?? []).map(i => `            <a href="${(i.metadata as Record<string, string>)?.href ?? '#'}" className="hover:text-foreground transition-colors">${i.title}</a>`),
-      `          </nav>`,
-      `        </div>`,
-      `      </div>`,
+      `    <footer className="border-t border-zinc-800 py-12 px-6 text-center text-sm text-zinc-600">`,
+      `      <p>© 2024 {${companyName}}. All rights reserved.</p>`,
       `    </footer>`,
       `  );`,
     ];
@@ -579,12 +573,12 @@ ${body}
 
     const buttons = (spec.actions ?? []).map(action => {
       const styleClass = action.style === 'primary'
-        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
         : action.style === 'ghost'
-        ? 'hover:bg-muted'
-        : 'border hover:bg-muted';
+        ? 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'
+        : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300';
 
-      return `          <a href="${action.action}" className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium ${styleClass} transition-colors">
+      return `          <a href="${action.action}" className="px-8 py-4 rounded-xl font-bold transition-all ${styleClass}">
             ${action.label}
           </a>`;
     });

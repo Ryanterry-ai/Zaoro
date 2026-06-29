@@ -16,5 +16,5 @@
     "resolveJsonModule": true
   },
   "include": ["src/**/*"],
-  "exclude": ["src/compiler/**/*"]
+  "exclude": ["src/compiler/**/*", "src/generation/templates/components/**/*"]
 }
