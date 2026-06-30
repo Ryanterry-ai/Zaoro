@@ -6,11 +6,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await req.text();
   const result = await engineFetch(`/api/workspace/${id}/build`, {
     method: 'POST',
-    body,
+    body: '{}',
     headers: { 'Content-Type': 'application/json' },
+    timeoutMs: 30000,
   });
+
   return Response.json(result.data, { status: result.status });
 }
