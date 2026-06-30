@@ -24,16 +24,20 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy package files first for better layer caching
+# Copy package files + prisma schema first for better layer caching
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
 
 # Install all dependencies (including dev for tsx, esbuild)
 RUN npm install
 
+# Generate Prisma client
+RUN npx prisma generate
+
 # Install Playwright Chromium browser
 RUN npx playwright install chromium
 
-# Copy source code
+# Copy rest of source code
 COPY . .
 
 # Create workspace directory
