@@ -409,6 +409,12 @@ ${body}
       case 'Footer':
         lines.push(...this.generateFooterBody(spec));
         break;
+      case 'CalendarWidget':
+        lines.push(...this.generateCalendarWidgetBody(spec));
+        break;
+      case 'BookingCalendar':
+        lines.push(...this.generateBookingCalendarBody(spec));
+        break;
       default:
         lines.push(...this.generateGenericBody(spec));
         break;
@@ -679,6 +685,91 @@ ${body}
       `    <footer className="border-t border-zinc-800 py-12 px-6 text-center text-sm text-zinc-600">`,
       `      <p>© 2024 {${companyName}}. All rights reserved.</p>`,
       `    </footer>`,
+      `  );`,
+    ];
+  }
+
+  private generateCalendarWidgetBody(spec: ComponentSpec): string[] {
+    const title = this.getContentView(spec, 'title');
+    const subtitle = this.getContentView(spec, 'subtitle');
+
+    return [
+      `  return (`,
+      `    <section className="py-16 px-6">`,
+      `      <div className="max-w-2xl mx-auto">`,
+      `        <div className="text-center mb-8">`,
+      `          <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
+      `          <p className="text-zinc-400">{subtitle}</p>`,
+      `        </div>`,
+      `        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `          <div className="flex items-center justify-between mb-4">`,
+      `            <button className="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 transition">← {actions?.[0]?.label ?? 'Prev'}</button>`,
+      `            <span className="text-sm font-bold text-zinc-50">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>`,
+      `            <button className="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 transition">{actions?.[1]?.label ?? 'Next'} →</button>`,
+      `          </div>`,
+      `          <div className="grid grid-cols-7 gap-2 text-center text-xs">`,
+      `            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (`,
+      `              <div key={day} className="text-zinc-500 font-medium py-1">{day}</div>`,
+      `            ))}`,
+      `            {items?.map((item, i) => (`,
+      `              <button key={i} disabled={item.metadata?.available === 'false'} className={\`py-2 rounded-lg transition \${item.metadata?.available === 'false' ? 'text-zinc-600 cursor-not-allowed' : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50'}\`}>`,
+      `                {item.metadata?.day}`,
+      `              </button>`,
+      `            ))}`,
+      `          </div>`,
+      `        </div>`,
+      `      </div>`,
+      `    </section>`,
+      `  );`,
+    ];
+  }
+
+  private generateBookingCalendarBody(spec: ComponentSpec): string[] {
+    const title = this.getContentView(spec, 'title');
+    const subtitle = this.getContentView(spec, 'subtitle');
+
+    return [
+      `  return (`,
+      `    <section className="py-16 px-6">`,
+      `      <div className="max-w-2xl mx-auto">`,
+      `        <div className="text-center mb-8">`,
+      `          <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
+      `          <p className="text-zinc-400">{subtitle}</p>`,
+      `        </div>`,
+      `        <div className="space-y-6">`,
+      `          <div className="grid grid-cols-3 gap-4">`,
+      `            {items?.map((slot, i) => (`,
+      `              <button key={i} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-left hover:border-emerald-500/50 transition">`,
+      `                <div className="font-bold text-zinc-50 mb-1">{slot.title}</div>`,
+      `                <div className="text-sm text-zinc-400">{slot.description}</div>`,
+      `                <div className="text-xs text-emerald-400 mt-2">{slot.metadata?.slots} slots available</div>`,
+      `              </button>`,
+      `            ))}`,
+      `          </div>`,
+      `          <form className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">`,
+      ...(spec.fields ?? []).map(f => f.type === 'select'
+        ? `            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
+              <select name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:border-emerald-500 transition">
+                ${f.options?.map(o => `<option value="${o.value}">${o.label}</option>`).join('\n                ') ?? ''}
+              </select>
+            </div>`
+        : f.type === 'textarea'
+        ? `            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
+              <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={3} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition resize-none" />
+            </div>`
+        : `            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
+              <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition" />
+            </div>`),
+      `            <button type="submit" className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">`,
+      `              ${spec.actions?.[0]?.label ?? 'Book Now'}`,
+      `            </button>`,
+      `          </form>`,
+      `        </div>`,
+      `      </div>`,
+      `    </section>`,
       `  );`,
     ];
   }

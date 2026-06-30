@@ -168,6 +168,10 @@ const COMPONENT_RESOLVERS: Record<string, ComponentResolver> = {
   AuthForm: resolveAuthForm,
   SocialAuth: resolveSocialAuth,
 
+  // ─── Calendar / Booking ─────────────────────────────────────────────
+  CalendarWidget: resolveCalendarWidget,
+  BookingCalendar: resolveBookingCalendar,
+
   // ─── Account ─────────────────────────────────────────────────────────
   ProfileSection: resolveProfileSection,
   BillingSection: resolveBillingSection,
@@ -861,6 +865,72 @@ function resolveSocialAuth(
       { label: 'Twitter', action: '/api/auth/twitter', style: 'secondary' },
     ],
     layout: { alignment: 'center', maxWidth: 'sm' },
+  };
+}
+
+// ─── Calendar / Booking Resolvers ─────────────────────────────────────────
+
+function resolveCalendarWidget(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'CalendarWidget',
+    content: {
+      title: { value: vocab('Calendar', ctx), type: 'text' },
+      subtitle: { value: vocab('Select a date', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Monday', ctx), metadata: { day: '1', available: 'true' } },
+      { title: vocab('Tuesday', ctx), metadata: { day: '2', available: 'true' } },
+      { title: vocab('Wednesday', ctx), metadata: { day: '3', available: 'true' } },
+      { title: vocab('Thursday', ctx), metadata: { day: '4', available: 'true' } },
+      { title: vocab('Friday', ctx), metadata: { day: '5', available: 'true' } },
+      { title: vocab('Saturday', ctx), metadata: { day: '6', available: 'false' } },
+      { title: vocab('Sunday', ctx), metadata: { day: '0', available: 'false' } },
+    ],
+    actions: [
+      { label: vocab('Previous', ctx), action: '#prev', style: 'ghost' },
+      { label: vocab('Next', ctx), action: '#next', style: 'ghost' },
+    ],
+    layout: { alignment: 'center', maxWidth: '2xl' },
+  };
+}
+
+function resolveBookingCalendar(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'BookingCalendar',
+    content: {
+      title: { value: vocab('Book an Appointment', ctx), type: 'text' },
+      subtitle: { value: vocab('Choose your preferred date and time', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Morning', ctx), description: '9:00 AM - 12:00 PM', icon: 'sun', metadata: { slots: '3' } },
+      { title: vocab('Afternoon', ctx), description: '1:00 PM - 5:00 PM', icon: 'sun', metadata: { slots: '5' } },
+      { title: vocab('Evening', ctx), description: '6:00 PM - 8:00 PM', icon: 'moon', metadata: { slots: '2' } },
+    ],
+    fields: [
+      { name: 'date', label: 'Preferred Date', type: 'date', required: true },
+      { name: 'time', label: 'Preferred Time', type: 'select', required: true, options: [
+        { label: '9:00 AM', value: '09:00' },
+        { label: '10:00 AM', value: '10:00' },
+        { label: '11:00 AM', value: '11:00' },
+        { label: '1:00 PM', value: '13:00' },
+        { label: '2:00 PM', value: '14:00' },
+        { label: '3:00 PM', value: '15:00' },
+        { label: '4:00 PM', value: '16:00' },
+      ]},
+      { name: 'notes', label: 'Notes', type: 'textarea', required: false },
+    ],
+    actions: [
+      { label: vocab('Book Now', ctx), action: '/api/bookings', style: 'primary' },
+    ],
+    layout: { alignment: 'left', maxWidth: '2xl' },
   };
 }
 

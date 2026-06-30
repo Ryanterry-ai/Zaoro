@@ -101,10 +101,10 @@ const SECTION_REGISTRY: Record<string, string> = {
 
   // Healthcare / Restaurant (from rules engine)
   'booking-form': 'ContactForm',
-  'calendar': 'DataTable',
+  'calendar': 'CalendarWidget',
+  'booking-calendar': 'BookingCalendar',
   'menu-categories': 'CategoryGrid',
   'menu-items': 'ProductGrid',
-  'booking-calendar': 'DataTable',
 };
 
 // ─── Section Name Normalization ──────────────────────────────────────────────
