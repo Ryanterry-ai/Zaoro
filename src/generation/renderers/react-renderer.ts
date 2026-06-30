@@ -47,7 +47,10 @@ export class ReactRenderer implements Renderer {
     // Deduplicate components by type (same component can appear multiple times in a page)
     const uniqueComponents = [...new Map(spec.components.map(c => [c.type, c])).values()];
     const componentImports = uniqueComponents.map(c => `import ${c.type} from '@/components/${c.type}';`).join('\n');
-    const componentRenders = spec.components.map(c => `      <${c.type} />`).join('\n');
+    const componentRenders = spec.components.map(c => {
+      const props = this.buildComponentProps(c);
+      return `      <${c.type}${props ? ` ${props}` : ''} />`;
+    }).join('\n');
 
     const seo = spec.seo ?? {};
     const seoTitle = seo.title ?? spec.name;
@@ -86,6 +89,9 @@ ${componentRenders}
     const files: RenderedFile[] = [];
     const warnings: string[] = [];
 
+    // Generate shell (config files, CSS, layout) — the runnable scaffolding
+    files.push(...this.renderShell(spec, context));
+
     // Generate components
     const generatedComponents = new Set<string>();
     for (const page of spec.pages) {
@@ -102,8 +108,8 @@ ${componentRenders}
       files.push(...this.renderPage(page, context));
     }
 
-    // Generate layout
-    files.push(...this.renderLayout(spec, context));
+    // Generate nav data
+    files.push(...this.renderNavData(spec, context));
 
     log.info('Application rendered', {
       files: files.length,
@@ -114,7 +120,11 @@ ${componentRenders}
     return { files, warnings };
   }
 
-  renderLayout(spec: ApplicationSpec, _context: RenderContext): RenderedFile[] {
+  renderLayout(spec: ApplicationSpec, context: RenderContext): RenderedFile[] {
+    return this.renderShell(spec, context);
+  }
+
+  renderNavData(spec: ApplicationSpec, _context: RenderContext): RenderedFile[] {
     const navItems = spec.pages
       .filter(p => p.type !== 'auth' && p.type !== 'detail')
       .map(p => `  { label: '${p.name}', href: '${p.path}' }`)
@@ -132,6 +142,158 @@ export type NavItem = (typeof navItems)[number];
       content: layoutCode,
       type: 'data',
     }];
+  }
+
+  // ─── Shell Generation ─────────────────────────────────────────────────────
+
+  renderShell(spec: ApplicationSpec, _context: RenderContext): RenderedFile[] {
+    const appName = spec.appName || 'My App';
+    const colorScheme = (spec as Record<string, unknown>).colorScheme as Record<string, unknown> ?? {};
+
+    return [
+      this.renderPackageJson(appName),
+      this.renderGlobalsCSS(colorScheme),
+      this.renderTailwindConfig(colorScheme),
+      this.renderPostCSSConfig(),
+      this.renderNextConfig(),
+      this.renderRootLayout(appName),
+    ];
+  }
+
+  private renderPackageJson(appName: string): RenderedFile {
+    return {
+      path: '../package.json',
+      content: JSON.stringify({
+        name: 'build-same-sandbox-instance',
+        version: '1.0.0',
+        private: true,
+        scripts: {
+          dev: 'next dev',
+          build: 'next build',
+          start: 'next start',
+        },
+        dependencies: {
+          '@prisma/client': '^5.10.2',
+          'autoprefixer': '^10.4.17',
+          'lucide-react': '^0.344.0',
+          'next': '^14.1.0',
+          'postcss': '^8.4.35',
+          'prisma': '^5.10.2',
+          'react': '^18.2.0',
+          'react-dom': '^18.2.0',
+          'tailwindcss': '^3.4.1',
+        },
+        devDependencies: {
+          '@types/node': '^20.11.0',
+          '@types/react': '^18.2.0',
+          '@types/react-dom': '^18.2.0',
+          'typescript': '^5.3.3',
+        },
+      }, null, 2),
+      type: 'config',
+    };
+  }
+
+  private renderGlobalsCSS(_colorScheme: Record<string, unknown>): RenderedFile {
+    return {
+      path: 'app/globals.css',
+      content: `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --primary: #10b981;
+  --primary-foreground: #ffffff;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --border: #27272a;
+  --ring: #10b981;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+`,
+      type: 'style',
+    };
+  }
+
+  private renderTailwindConfig(_colorScheme: Record<string, unknown>): RenderedFile {
+    return {
+      path: '../tailwind.config.ts',
+      content: `import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+export default config;
+`,
+      type: 'config',
+    };
+  }
+
+  private renderPostCSSConfig(): RenderedFile {
+    return {
+      path: '../postcss.config.mjs',
+      content: `/** @type {import('postcss-load-config').Config} */
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+export default config;
+`,
+      type: 'config',
+    };
+  }
+
+  private renderNextConfig(): RenderedFile {
+    return {
+      path: '../next.config.mjs',
+      content: `/** @type {import('next').NextConfig} */
+const nextConfig = {};
+export default nextConfig;
+`,
+      type: 'config',
+    };
+  }
+
+  private renderRootLayout(appName: string): RenderedFile {
+    return {
+      path: 'app/layout.tsx',
+      content: `import type { Metadata } from 'next';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: '${appName}',
+  description: '${appName} — built with Build Engine',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+`,
+      type: 'layout',
+    };
   }
 
   // ─── Code Generation Helpers ───────────────────────────────────────────────
@@ -186,7 +348,7 @@ ${body}
 
     // Columns prop
     if ((spec.columns?.length ?? 0) > 0) {
-      lines.push(`  columns?: Array<{ key: string; label: string }>;`);
+      lines.push(`  columns?: Array<{ key: string; label: string; [key: string]: unknown }>;`);
     }
 
     // Fields prop
@@ -566,6 +728,50 @@ ${body}
   private getContentView(spec: ComponentSpec, key: string): string {
     const content = spec.content?.[key];
     return content?.value ?? `{${key}}`;
+  }
+
+  private buildComponentProps(spec: ComponentSpec): string {
+    const parts: string[] = [];
+
+    // Content props
+    for (const [key, content] of Object.entries(spec.content ?? {})) {
+      const val = content?.value;
+      if (val !== undefined && val !== null) {
+        parts.push(`${key}="${val.replace(/"/g, '&quot;')}"`);
+      }
+    }
+
+    // Items as JSON
+    if ((spec.items?.length ?? 0) > 0) {
+      parts.push(`items={${JSON.stringify(spec.items)}}`);
+    }
+
+    // Tiers as JSON
+    if ((spec.tiers?.length ?? 0) > 0) {
+      parts.push(`tiers={${JSON.stringify(spec.tiers)}}`);
+    }
+
+    // Stats as JSON
+    if ((spec.stats?.length ?? 0) > 0) {
+      parts.push(`stats={${JSON.stringify(spec.stats)}}`);
+    }
+
+    // Columns as JSON
+    if ((spec.columns?.length ?? 0) > 0) {
+      parts.push(`columns={${JSON.stringify(spec.columns)}}`);
+    }
+
+    // Fields as JSON
+    if ((spec.fields?.length ?? 0) > 0) {
+      parts.push(`fields={${JSON.stringify(spec.fields)}}`);
+    }
+
+    // Actions as JSON
+    if ((spec.actions?.length ?? 0) > 0) {
+      parts.push(`actions={${JSON.stringify(spec.actions)}}`);
+    }
+
+    return parts.join(' ');
   }
 
   private generateActionButtons(spec: ComponentSpec): string[] {

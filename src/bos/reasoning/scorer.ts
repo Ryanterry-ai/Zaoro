@@ -78,12 +78,25 @@ export class Scorer {
       breakdown.componentCount = Math.min(pattern.components.length * 3, 20);
       total += breakdown.componentCount;
 
+      // HARD GATE: if context requires a specific business model (e.g., wholesale)
+      // and the pattern doesn't support it, apply severe penalty.
+      // This prevents B2C patterns from winning B2B wholesale businesses
+      // just because they share a secondary model like 'direct-sales'.
+      const hasWholesale = ctx.businessModels.some(bm => bm.toLowerCase() === 'wholesale');
+      const patternSupportsWholesale = pattern.compatibleBusinessModels.some(m =>
+        m.toLowerCase() === 'wholesale',
+      );
+      if (hasWholesale && !patternSupportsWholesale) {
+        breakdown.modelGatePenalty = -Math.floor(total * 0.7);
+        total += breakdown.modelGatePenalty;
+      }
+
       return {
         id: pattern.id,
         name: pattern.name,
         score: total,
         breakdown,
-        reason: `Score ${total}/100: industry ${breakdown.industryFit}, model ${breakdown.modelFit}, pages ${breakdown.pageCoverage}, components ${breakdown.componentCount}`,
+        reason: `Score ${total}/100: industry ${breakdown.industryFit}, model ${breakdown.modelFit}, pages ${breakdown.pageCoverage}, components ${breakdown.componentCount}${breakdown.modelGatePenalty ? `, gate penalty ${breakdown.modelGatePenalty}` : ''}`,
       };
     }).sort((a, b) => b.score - a.score);
   }

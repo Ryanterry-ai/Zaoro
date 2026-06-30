@@ -506,7 +506,7 @@ export const ECOMMERCE_FASHION: Pattern = {
   design: { restrictions: ['lifestyle-photography', 'brand-storytelling'] },
   generationRules: [],
   compatibleIndustries: ['fashion', 'clothing', 'apparel', 'accessories', 'jewelry', 'footwear', 'streetwear', 'luxury-fashion', 'sustainable-fashion', 'vintage'],
-  compatibleBusinessModels: ['direct-sales', 'marketplace'],
+  compatibleBusinessModels: ['direct-sales', 'marketplace', 'wholesale'],
 };
 
 export const ECOMMERCE_FOOD_DELIVERY: Pattern = {
@@ -535,7 +535,7 @@ export const ECOMMERCE_FOOD_DELIVERY: Pattern = {
   design: { restrictions: ['food-photography', 'mobile-first'] },
   generationRules: [],
   compatibleIndustries: ['food-delivery', 'restaurant-delivery', 'meal-kit', 'grocery', 'cloud-kitchen', 'bakery-delivery'],
-  compatibleBusinessModels: ['direct-sales', 'marketplace'],
+  compatibleBusinessModels: ['direct-sales', 'marketplace', 'wholesale'],
 };
 
 export const ECOMMERCE_ELECTRONICS: Pattern = {
@@ -564,5 +564,5 @@ export const ECOMMERCE_ELECTRONICS: Pattern = {
   design: { restrictions: ['product-images-required', 'specs-visible'] },
   generationRules: [],
   compatibleIndustries: ['electronics', 'tech', 'gadgets', 'computers', 'phones', 'audio', 'gaming', 'smart-home', 'appliances'],
-  compatibleBusinessModels: ['direct-sales', 'marketplace'],
+  compatibleBusinessModels: ['direct-sales', 'marketplace', 'wholesale'],
 };

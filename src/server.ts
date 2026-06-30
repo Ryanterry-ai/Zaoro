@@ -415,20 +415,28 @@ const server = http.createServer(async (req, res) => {
     if (!fs.existsSync(targetFile)) return html(res, '<html><body style="background:#09090b;color:#f43f5e;font-family:sans-serif;padding:2rem;"><h3>Preview Not Available</h3><p>Main route src/app/page.tsx was not resolved.</p></body></html>');
 
     try {
-      // Compile TSX with esbuild, then render with Playwright
+      // Bundle the page + all imported components with esbuild, then render with Playwright
       const esbuild = await import('esbuild');
       const { chromium } = await import('playwright');
 
-      const source = fs.readFileSync(targetFile, 'utf-8');
+      // Use esbuild build API to bundle all imports (components, nav-data, etc.)
+      // External: react + react-dom come from CDN in the preview HTML
+      const bundleResult = await esbuild.build({
+        entryPoints: [targetFile],
+        bundle: true,
+        format: 'iife',
+        globalName: '__preview',
+        target: 'es2020',
+        jsx: 'transform',
+        loader: { '.tsx': 'tsx', '.ts': 'ts' },
+        external: ['react', 'react-dom'],
+        write: false,
+        alias: {
+          '@': path.join(workspacePath, 'src'),
+        },
+      });
 
-      // Strip 'use client' and imports, replace export with global
-      let cleanSource = source.replace(/'use client';?\s*/g, '');
-      cleanSource = cleanSource.replace(/^import .+$/gm, '');
-      cleanSource = cleanSource.replace(/export default function (\w+)/, 'function $1');
-      cleanSource = cleanSource.replace(/export default (\w+)/, 'var _default = $1');
-
-      // Use esbuild to compile JSX → JS (transform mode uses React.createElement, not jsx runtime)
-      const compiled = await esbuild.transform(cleanSource, { loader: 'tsx', jsx: 'transform', target: 'es2020' });
+      const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
 
       const previewHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -448,11 +456,14 @@ const server = http.createServer(async (req, res) => {
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
   <script>
-    ${compiled.code}
-    var _comp = typeof Home !== 'undefined' ? Home : (typeof _default !== 'undefined' ? _default : null);
+    ${bundledCode}
+    var _mod = typeof __preview !== 'undefined' ? __preview : {};
+    var _comp = _mod.default || _mod.Home || _mod.HomePage || null;
     if (_comp) {
       var root = ReactDOM.createRoot(document.getElementById('preview-root'));
       root.render(React.createElement(_comp));
+    } else {
+      document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">No renderable component found in module exports.</div>';
     }
   <\/script>
 </body>
@@ -665,14 +676,30 @@ try {
     try {
       const archiverModule = await import('archiver');
       const archiver = (archiverModule as any).default || archiverModule;
+
+      const archive = archiver('zip', { zlib: { level: 6 } });
+
+      // Handle archive errors BEFORE piping to prevent ERR_HTTP_HEADERS_SENT
+      let headersSent = false;
+      archive.on('error', (err: any) => {
+        console.error('[download] Archive error:', err.message);
+        if (!headersSent) {
+          headersSent = true;
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Archive creation failed: ' + err.message }));
+        }
+      });
+
+      archive.on('end', () => {
+        console.log(`[download] Archive finalized for ${id}`);
+      });
+
       res.writeHead(200, {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${id}.zip"`,
         'Access-Control-Allow-Origin': '*',
       });
-
-      const archive = archiver('zip', { zlib: { level: 6 } });
-      archive.on('error', (err: any) => { console.error('[download] Archive error:', err.message); });
+      headersSent = true;
       archive.pipe(res);
 
       // Add src/ directory
@@ -684,13 +711,18 @@ try {
       if (fs.existsSync(publicDir)) archive.directory(publicDir, 'public');
 
       // Add root config files
-      for (const f of ['package.json', 'tsconfig.json', 'next.config.ts', 'tailwind.config.ts', 'postcss.config.js', 'tailwind.config.js']) {
+      for (const f of ['package.json', 'tsconfig.json', 'next.config.mjs', 'tailwind.config.ts', 'postcss.config.mjs']) {
         const fp = path.join(wsDir, f);
         if (fs.existsSync(fp)) archive.file(fp, { name: f });
       }
 
       await archive.finalize();
-    } catch (e: any) { return json(res, { error: e.message }, 500); }
+    } catch (e: any) {
+      console.error('[download] Failed:', e.message);
+      if (!res.headersSent) {
+        return json(res, { error: e.message }, 500);
+      }
+    }
   }
 
   // GET /api/workspace/:id/clone-state — Full clone state (structured)

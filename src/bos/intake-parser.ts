@@ -112,6 +112,7 @@ const BUSINESS_MODEL_KEYWORDS: Record<string, string[]> = {
   membership: ['membership', 'member', 'join', 'club', 'access', 'exclusive'],
   donation: ['donate', 'donation', 'fundraise', 'campaign', 'support'],
   advertising: ['advertising', 'ads', 'sponsor', 'promote', 'banner'],
+  wholesale: ['wholesale', 'wholesaler', 'b2b', 'bulk', 'distributor', 'distribution', 'reseller', 'supply chain', 'supplier', 'inventory management', 'procurement', 'purchase order', 'volume pricing', 'tiered pricing', 'dealer', 'dealer network'],
 };
 
 const CAPABILITY_KEYWORDS: Record<string, string[]> = {
@@ -130,8 +131,26 @@ const CAPABILITY_KEYWORDS: Record<string, string[]> = {
   search: ['search', 'filter', 'find', 'browse', 'discover'],
 };
 
+/**
+ * Detect B2B/wholesale signals in a prompt.
+ * Returns true if the business sells to other businesses, not directly to consumers.
+ */
+function detectB2BSignal(prompt: string): boolean {
+  const lower = prompt.toLowerCase();
+  const b2bKeywords = [
+    'wholesale', 'wholesaler', 'b2b', 'bulk', 'distributor', 'distribution',
+    'reseller', 'supply chain', 'supplier', 'procurement', 'purchase order',
+    'volume pricing', 'tiered pricing', 'dealer', 'dealer network',
+    'sell to', 'selling to', 'supplies to', 'supplied to',
+    'businesses', 'other businesses', 'retailers', 'stores',
+    'inventory management', 'warehouse', 'warehousing',
+  ];
+  return b2bKeywords.some(kw => lower.includes(kw));
+}
+
 function detectIndustry(prompt: string): IndustryMapping | undefined {
   const lower = prompt.toLowerCase();
+  const isB2B = detectB2BSignal(lower);
   let bestMatch: IndustryMapping | undefined;
   let bestScore = 0;
 
@@ -141,6 +160,13 @@ function detectIndustry(prompt: string): IndustryMapping | undefined {
       if (lower.includes(keyword)) {
         score += keyword.length;
       }
+    }
+    // B2B guard: when B2B signals are present, halve scores for consumer-facing
+    // industries. This prevents customer-word collision (e.g., "gyms" triggering
+    // fitness, "platform" triggering SaaS) from dominating over business model.
+    // Only ecommerce retains full score since it's compatible with B2B wholesale.
+    if (isB2B && score > 0 && mapping.industry !== 'ecommerce') {
+      score = Math.floor(score / 2);
     }
     if (score > bestScore) {
       bestScore = score;

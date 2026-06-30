@@ -54,7 +54,7 @@ export const ECOMMERCE_MARKETPLACE: Pattern = {
   },
   generationRules: [],
   compatibleIndustries: ['ecommerce', 'retail', 'fashion', 'beauty', 'electronics', 'marketplace'],
-  compatibleBusinessModels: ['direct-sales', 'marketplace', 'subscription'],
+  compatibleBusinessModels: ['direct-sales', 'marketplace', 'subscription', 'wholesale'],
 };
 
 export const SAAS_PLATFORM: Pattern = {
@@ -108,5 +108,5 @@ export const SAAS_PLATFORM: Pattern = {
   },
   generationRules: [],
   compatibleIndustries: ['saas', 'software', 'technology', 'developer-tools', 'productivity', 'ai'],
-  compatibleBusinessModels: ['subscription', 'freemium', 'direct-sales'],
+  compatibleBusinessModels: ['subscription', 'freemium', 'direct-sales', 'wholesale'],
 };

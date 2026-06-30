@@ -69,6 +69,58 @@ function gate(projectDir) {
     }
   }
 
+  // 2.6 Structural completeness — assert required shell files exist (only for Next.js projects)
+  const isNextJsProject = hasBuildScript && (() => {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf-8'));
+      return !!(pkg.dependencies?.next || pkg.devDependencies?.next);
+    } catch { return false; }
+  })();
+
+  if (isNextJsProject) {
+    const requiredFiles = [
+      { path: 'src/app/globals.css', purpose: 'Tailwind CSS directives' },
+      { path: 'src/app/layout.tsx', purpose: 'Root layout (must import globals.css)' },
+    ];
+
+    const missingRequired = [];
+    for (const f of requiredFiles) {
+      if (!fs.existsSync(path.join(projectDir, f.path))) {
+        missingRequired.push(`${f.path} (${f.purpose})`);
+      }
+    }
+    if (missingRequired.length > 0) {
+      failures.push({
+        gate: 'structure',
+        errors: `Missing required files:\n${missingRequired.map(f => `  - ${f}`).join('\n')}\n\nThe generated project cannot render without these files.`,
+      });
+    }
+
+    // Check that layout.tsx imports globals.css
+    const layoutPath = path.join(projectDir, 'src/app/layout.tsx');
+    if (fs.existsSync(layoutPath)) {
+      const layoutContent = fs.readFileSync(layoutPath, 'utf-8');
+      if (!layoutContent.includes('globals.css')) {
+        failures.push({
+          gate: 'structure',
+          errors: 'src/app/layout.tsx does not import globals.css — Tailwind styles will not be applied.',
+        });
+      }
+    }
+
+    // Check recommended files (warn but don't fail)
+    const hasTailwindConfig = fs.existsSync(path.join(projectDir, 'tailwind.config.ts')) ||
+      fs.existsSync(path.join(projectDir, 'tailwind.config.js'));
+    const hasPostcssConfig = fs.existsSync(path.join(projectDir, 'postcss.config.mjs')) ||
+      fs.existsSync(path.join(projectDir, 'postcss.config.js'));
+    const missingRecommended = [];
+    if (!hasTailwindConfig) missingRecommended.push('tailwind.config.ts');
+    if (!hasPostcssConfig) missingRecommended.push('postcss.config.mjs');
+    if (missingRecommended.length > 0) {
+      console.warn(`[quality-gate] Warning: missing recommended files: ${missingRecommended.join(', ')}`);
+    }
+  }
+
   // 3. Build
   const buildResult = run('npm run build', projectDir);
   if (!buildResult.success) {

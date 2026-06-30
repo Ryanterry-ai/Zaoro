@@ -1,36 +1,23 @@
-# Render Blueprint — Auto-deploys the engine as a persistent web service
-# Render reads this file from the repo root on every Git push.
-# Visit https://render.com/docs/blueprint-spec for more info.
-
 services:
-  # Engine API — Node.js HTTP server with Playwright/Chromium
   - type: web
-    name: build-same-engine
-    env: docker
-    dockerfilePath: ./Dockerfile.engine
-    plan: starter  # $7/mo — needed for Chromium + no sleep
-    healthCheckPath: /api/health
-    autoDeploy: true
-    domains:
-      - api.build-same.app  # optional: set up custom domain in Render dashboard
+    name: build-engine
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    port: 3001
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: "3001"
-      - key: LLM_PROVIDER
-        sync: false  # set in Render dashboard
-      - key: LLM_API_KEY
-        sync: false
-      - key: SENTRY_DSN
-        sync: false
-      - key: POSTHOG_API_KEY
-        sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: BUILD_MAX_CONCURRENT
-        value: "2"
-      - key: BUILD_TIMEOUT_MS
-        value: "300000"
+      - key: ENGINE_PORT
+        value: 3001
+      - key: GROQ_API_KEY
+        sync: false  # Set via Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false  # Set via Render dashboard
+      - key: DATABASE_URL
+        sync: false  # Set via Render dashboard (optional Supabase)
+    disk:
+      name: workspaces
+      mountPath: /app/sandbox_workspaces
+      sizeGB: 10
+    healthCheckPath: /api/health
+    autoDeploy: true
