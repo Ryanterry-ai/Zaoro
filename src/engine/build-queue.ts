@@ -267,7 +267,15 @@ try {
       });
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
-      const previewHtml = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title><script src="https://cdn.tailwindcss.com"><\/script><style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div><script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script><script>' + bundledCode + 'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||null;if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;break;}}}if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];break;}}}if(_comp){var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}else{document.getElementById("preview-root").innerHTML=\'<div style="padding:2rem;color:#f43f5e;">No renderable component found.</div>\'}<\/script></body></html>';
+      const previewHtmlParts = [
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>',
+        '<script src="https://cdn.tailwindcss.com"><\/script>',
+        '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div>',
+        '<script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>',
+        '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>',
+        '<script>' + bundledCode + 'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||null;if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;break;}}}if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];break;}}}if(_comp){var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}else{document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component found.</div>"}<\/script></body></html>'
+      ];
+      const previewHtml = previewHtmlParts.join('');
 
       const consoleErrors: string[] = [];
       const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
@@ -339,19 +347,25 @@ try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8');
       }
     }, this.config.jobTimeoutMs);
 
+    // Ensure workspace dir exists so debug log can be written
+    fs.mkdirSync(wsDir, { recursive: true });
+
     const buildLogPath = path.join(wsDir, '.build-debug.log');
+    const engineLogPath = path.join(engineRoot, `.build-debug-${job.id}.log`);
     child = exec(
       `npx tsx .build-temp-${job.id}.ts`,
-      { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_ENV: 'production', NODE_NO_WARNINGS: '1' } }
+      { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_NO_WARNINGS: '1' } }
     );
     job.pid = child.pid;
 
     // Capture child process output for debugging
     child.stdout?.on('data', (data: string) => {
       try { fs.appendFileSync(buildLogPath, data); } catch {}
+      try { fs.appendFileSync(engineLogPath, data); } catch {}
     });
     child.stderr?.on('data', (data: string) => {
       try { fs.appendFileSync(buildLogPath, `[STDERR] ${data}`); } catch {}
+      try { fs.appendFileSync(engineLogPath, `[STDERR] ${data}`); } catch {}
     });
 
     // Memory monitoring
