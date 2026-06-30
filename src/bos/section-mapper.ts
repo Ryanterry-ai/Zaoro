@@ -52,6 +52,7 @@ const SECTION_REGISTRY: Record<string, string> = {
   'overview': 'StatsCards',
   'charts': 'ChartsPanel',
   'activity-feed': 'ActivityFeed',
+  'data-grid': 'DataGrid',
 
   // Auth
   'login-form': 'AuthForm',
@@ -70,13 +71,13 @@ const SECTION_REGISTRY: Record<string, string> = {
   // Cart / Order
   'cart-items': 'CartItems',
   'order-summary': 'OrderSummary',
-  'recommended': 'RecommendedProducts',
-  'checkout-form': 'CheckoutForm',
-  'payment': 'PaymentForm',
   'order-review': 'OrderReview',
   'order-status': 'OrderStatus',
   'order-history': 'OrderHistory',
-  'tracking': 'OrderTracking',
+  'order-tracking': 'OrderTracking',
+  'recommended': 'RecommendedProducts',
+  'checkout-form': 'CheckoutForm',
+  'payment': 'PaymentForm',
 
   // Account
   'addresses': 'AddressBook',
@@ -94,6 +95,13 @@ const SECTION_REGISTRY: Record<string, string> = {
   'filters': 'FilterSidebar',
   'sort-bar': 'SortBar',
   'data-table': 'DataTable',
+
+  // Healthcare / Restaurant (from rules engine)
+  'booking-form': 'AuthForm',
+  'calendar': 'DataTable',
+  'menu-categories': 'CategoryGrid',
+  'menu-items': 'ProductGrid',
+  'booking-calendar': 'DataTable',
 };
 
 // ─── Section Name Normalization ──────────────────────────────────────────────

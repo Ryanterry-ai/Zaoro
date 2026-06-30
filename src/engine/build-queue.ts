@@ -99,8 +99,7 @@ export class BuildQueue extends EventEmitter {
     // Write config files
     const configPath = path.join(engineRoot, `.build-config-${job.id}.json`);
     const promptPath = path.join(engineRoot, `.build-prompt-${job.id}.json`);
-    const provider = process.env.LLM_PROVIDER || 'openai';
-    const apiKey = process.env.LLM_API_KEY || '';
+    const { provider, apiKey } = (await import('../core/resolve-llm-config.js')).resolveLLMConfig();
     fs.writeFileSync(configPath, JSON.stringify({ provider, apiKey }), 'utf-8');
     fs.writeFileSync(promptPath, JSON.stringify({ id: job.workspaceId, prompt: job.prompt, type: job.pipeline ? 'pipeline' : 'build-website', pipeline: !!job.pipeline }), 'utf-8');
 
@@ -118,6 +117,15 @@ function writeProgress(step, type, message, metadata) {
   try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8'); } catch {}
 }
 function emitLLM(step, type, llmDetail) { writeProgress(step, type, \`\${type}: \${llmDetail.provider}/\${llmDetail.model}\`, { llm: llmDetail }); }
+
+// Heartbeat: write a timestamp file immediately and every 10s so /progress can detect stale builds
+const HEARTBEAT_FILE = path.join(wsDir, '.build-heartbeat');
+fs.mkdirSync(wsDir, { recursive: true });
+fs.writeFileSync(HEARTBEAT_FILE, String(Date.now()), 'utf-8');
+const _heartbeatInterval = setInterval(() => {
+  try { fs.writeFileSync(HEARTBEAT_FILE, String(Date.now()), 'utf-8'); } catch {}
+}, 10000);
+process.on('exit', () => clearInterval(_heartbeatInterval));
 
 // Intercept console.log to capture gateway/orchestrator events
 const origLog = console.log;
@@ -219,6 +227,21 @@ try {
     console.error('[quality-gate] FULL OUTPUT:', fullOutput);
     writeProgress('gate', 'failed', 'Quality gate failed: ' + fullOutput.slice(0, 1500));
     throw new Error('Quality gate failed: ' + fullOutput.slice(0, 300));
+  }
+
+  // Run content quality gate (detects generic-placeholder-dense builds)
+  const contentGateScript = path.resolve(process.cwd(), 'tools', 'content-quality-gate', 'index.cjs');
+  try {
+    writeProgress('content-gate', 'started', 'Running content quality gate...');
+    execSync('node "' + contentGateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 60000, stdio: 'pipe' });
+    writeProgress('content-gate', 'passed', 'Content quality gate passed');
+  } catch (contentGateErr) {
+    const stdout = contentGateErr.stdout?.toString() || '';
+    const stderr = contentGateErr.stderr?.toString() || '';
+    const fullOutput = stdout || stderr || contentGateErr.message;
+    console.warn('[content-quality-gate] Warning:', fullOutput.slice(0, 500));
+    // Content quality gate is a warning, not a failure — log it but don't block
+    writeProgress('content-gate', 'warning', 'Content quality gate warning: ' + fullOutput.slice(0, 500));
   }
 
   writeProgress('preview', 'info', 'Rendering preview...');

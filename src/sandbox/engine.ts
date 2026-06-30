@@ -11,11 +11,31 @@ export class SandboxEngine {
     // to avoid double-nesting (e.g. sandbox_workspaces/ws-xxx/ws-xxx)
     const alreadyNested = workspaceBase.endsWith(path.sep + id) || workspaceBase.endsWith('/' + id);
     const rootPath = alreadyNested ? path.resolve(workspaceBase) : path.resolve(path.join(workspaceBase, id));
+
+    // Always ensure directory exists
     if (!fs.existsSync(rootPath)) {
       fs.mkdirSync(rootPath, { recursive: true });
+    }
+
+    // Check for required files and backfill any that are missing (idempotent scaffold)
+    const requiredFiles = this.getRequiredScaffoldFiles(rootPath);
+    const missingFiles = requiredFiles.filter(f => !fs.existsSync(f.path));
+
+    if (missingFiles.length > 0) {
+      console.log(`[sandbox] Backfilling ${missingFiles.length} missing scaffold files: ${missingFiles.map(f => f.relativePath).join(', ')}`);
       this.scaffoldWorkspace(rootPath);
     }
+
     return { workspaceId: id, rootPath };
+  }
+
+  private getRequiredScaffoldFiles(root: string): Array<{ path: string; relativePath: string }> {
+    return [
+      { path: path.join(root, 'package.json'), relativePath: 'package.json' },
+      { path: path.join(root, 'tsconfig.json'), relativePath: 'tsconfig.json' },
+      { path: path.join(root, 'src', 'app', 'layout.tsx'), relativePath: 'src/app/layout.tsx' },
+      { path: path.join(root, 'src', 'app', 'page.tsx'), relativePath: 'src/app/page.tsx' },
+    ];
   }
 
   public runPackageInstall(config: WorkspaceConfig): Promise<string> {

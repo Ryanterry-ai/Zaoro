@@ -132,19 +132,63 @@ type ComponentResolver = (
 ) => ComponentSpec;
 
 const COMPONENT_RESOLVERS: Record<string, ComponentResolver> = {
+  // ─── Core page sections ──────────────────────────────────────────────
   HeroBanner: resolveHeroBanner,
   FeatureGrid: resolveFeatureGrid,
-  ProductGrid: resolveProductGrid,
   PricingTable: resolvePricingTable,
   Testimonials: resolveTestimonials,
   CTASection: resolveCTASection,
   FAQSection: resolveFAQSection,
+  Footer: resolveFooter,
+
+  // ─── Commerce ────────────────────────────────────────────────────────
+  ProductGrid: resolveProductGrid,
+  ProductGallery: resolveProductGallery,
+  ProductInfo: resolveProductInfo,
+  CategoryGrid: resolveCategoryGrid,
+  CartItems: resolveCartItems,
+  CheckoutForm: resolveCheckoutForm,
+  OrderSummary: resolveOrderSummary,
+  OrderReview: resolveOrderReview,
+  OrderStatus: resolveOrderStatus,
+  OrderHistory: resolveOrderHistory,
+  OrderTracking: resolveOrderTracking,
+  RecommendedProducts: resolveRecommendedProducts,
+  PaymentForm: resolvePaymentForm,
+  PaymentMethod: resolvePaymentMethod,
+  FeatureComparison: resolveFeatureComparison,
+
+  // ─── Dashboard ───────────────────────────────────────────────────────
   StatsCards: resolveStatsCards,
   ChartsPanel: resolveChartsPanel,
+  ActivityFeed: resolveActivityFeed,
+  DataGrid: resolveDataGrid,
+
+  // ─── Auth ────────────────────────────────────────────────────────────
   AuthForm: resolveAuthForm,
+  SocialAuth: resolveSocialAuth,
+
+  // ─── Account ─────────────────────────────────────────────────────────
+  ProfileSection: resolveProfileSection,
+  BillingSection: resolveBillingSection,
+  NotificationsSection: resolveNotificationsSection,
+  PlanDetails: resolvePlanDetails,
+  InvoiceList: resolveInvoiceList,
+  AddressBook: resolveAddressBook,
+  Wishlist: resolveWishlist,
+
+  // ─── Contact / About ─────────────────────────────────────────────────
   ContactForm: resolveContactForm,
+  AboutSection: resolveAboutSection,
+  TeamSection: resolveTeamSection,
+  TeamGrid: resolveTeamGrid,
+  MissionSection: resolveMissionSection,
+  Gallery: resolveGallery,
+
+  // ─── Data / Filtering ────────────────────────────────────────────────
   DataTable: resolveDataTable,
-  Footer: resolveFooter,
+  FilterSidebar: resolveFilterSidebar,
+  SortBar: resolveSortBar,
 };
 
 function resolveHeroBanner(
@@ -441,6 +485,684 @@ function resolveFooter(
     layout: { maxWidth: '7xl' },
   };
 }
+
+// ─── Commerce Resolvers ────────────────────────────────────────────────────
+
+function resolveProductGallery(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  return {
+    type: 'ProductGallery',
+    content: {
+      title: { value: vocab('Product Gallery', ctx), type: 'text' },
+      entity: { value: entity?.name ?? 'Product', type: 'text' },
+    },
+    layout: { alignment: 'left', maxWidth: '7xl' },
+  };
+}
+
+function resolveProductInfo(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  return {
+    type: 'ProductInfo',
+    content: {
+      title: { value: vocab('Product Details', ctx), type: 'text' },
+      entity: { value: entity?.name ?? 'Product', type: 'text' },
+    },
+    fields: [
+      { name: 'name', label: 'Name', type: 'text', required: true },
+      { name: 'price', label: 'Price', type: 'number', required: true },
+      { name: 'description', label: 'Description', type: 'textarea', required: false },
+      { name: 'sku', label: 'SKU', type: 'text', required: false },
+      { name: 'stock', label: 'Stock', type: 'number', required: false },
+    ],
+    layout: { alignment: 'left', maxWidth: '2xl' },
+  };
+}
+
+function resolveCategoryGrid(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'CategoryGrid',
+    content: {
+      title: { value: vocab('Categories', ctx), type: 'text' },
+      subtitle: { value: vocab('Browse by category', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('All', ctx), icon: 'grid', metadata: { href: '/shop' } },
+      { title: vocab('Featured', ctx), icon: 'star', metadata: { href: '/shop?featured=true' } },
+      { title: vocab('New Arrivals', ctx), icon: 'sparkles', metadata: { href: '/shop?new=true' } },
+      { title: vocab('Sale', ctx), icon: 'tag', metadata: { href: '/shop?sale=true' } },
+    ],
+    layout: { alignment: 'center', maxWidth: '7xl' },
+  };
+}
+
+function resolveCartItems(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  return {
+    type: 'CartItems',
+    content: {
+      title: { value: vocab('Shopping Cart', ctx), type: 'text' },
+      entity: { value: entity?.name ?? 'Item', type: 'text' },
+    },
+    columns: [
+      { key: 'name', label: 'Product', type: 'text', sortable: false, filterable: false },
+      { key: 'price', label: 'Price', type: 'number', sortable: false, filterable: false },
+      { key: 'quantity', label: 'Qty', type: 'number', sortable: false, filterable: false },
+      { key: 'total', label: 'Total', type: 'number', sortable: false, filterable: false },
+    ],
+    actions: [
+      { label: vocab('Continue Shopping', ctx), action: '/shop', style: 'ghost' },
+      { label: vocab('Checkout', ctx), action: '/checkout', style: 'primary' },
+    ],
+    layout: { maxWidth: '4xl' },
+  };
+}
+
+function resolveCheckoutForm(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'CheckoutForm',
+    content: {
+      title: { value: vocab('Checkout', ctx), type: 'text' },
+      subtitle: { value: vocab('Complete your order', ctx), type: 'text' },
+    },
+    fields: [
+      { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'you@example.com' },
+      { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'John Doe' },
+      { name: 'address', label: 'Address', type: 'text', required: true, placeholder: '123 Main St' },
+      { name: 'city', label: 'City', type: 'text', required: true },
+      { name: 'state', label: 'State', type: 'text', required: true },
+      { name: 'zip', label: 'ZIP Code', type: 'text', required: true },
+      { name: 'country', label: 'Country', type: 'select', required: true, options: [
+        { label: 'United States', value: 'US' },
+        { label: 'Canada', value: 'CA' },
+        { label: 'United Kingdom', value: 'GB' },
+      ]},
+    ],
+    actions: [
+      { label: vocab('Place Order', ctx), action: '/api/checkout', style: 'primary' },
+    ],
+    layout: { alignment: 'left', maxWidth: '2xl' },
+  };
+}
+
+function resolveOrderSummary(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'OrderSummary',
+    content: {
+      title: { value: vocab('Order Summary', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Subtotal', ctx), metadata: { value: '$0.00' } },
+      { title: vocab('Shipping', ctx), metadata: { value: 'Free' } },
+      { title: vocab('Tax', ctx), metadata: { value: '$0.00' } },
+      { title: vocab('Total', ctx), metadata: { value: '$0.00', bold: 'true' } },
+    ],
+    layout: { maxWidth: 'md' },
+  };
+}
+
+function resolveOrderReview(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'OrderReview',
+    content: {
+      title: { value: vocab('Review Your Order', ctx), type: 'text' },
+    },
+    columns: [
+      { key: 'name', label: 'Product', type: 'text', sortable: false, filterable: false },
+      { key: 'quantity', label: 'Qty', type: 'number', sortable: false, filterable: false },
+      { key: 'price', label: 'Price', type: 'number', sortable: false, filterable: false },
+    ],
+    actions: [
+      { label: vocab('Confirm Order', ctx), action: '/api/orders', style: 'primary' },
+    ],
+    layout: { maxWidth: '3xl' },
+  };
+}
+
+function resolveOrderStatus(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'OrderStatus',
+    content: {
+      title: { value: vocab('Order Status', ctx), type: 'text' },
+      subtitle: { value: vocab('Track your order', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Order Placed', ctx), description: vocab('Your order has been confirmed', ctx), icon: 'check-circle', metadata: { status: 'complete' } },
+      { title: vocab('Processing', ctx), description: vocab('We are preparing your order', ctx), icon: 'clock', metadata: { status: 'active' } },
+      { title: vocab('Shipped', ctx), description: vocab('Your order is on the way', ctx), icon: 'truck', metadata: { status: 'pending' } },
+      { title: vocab('Delivered', ctx), description: vocab('Package delivered', ctx), icon: 'package', metadata: { status: 'pending' } },
+    ],
+    layout: { alignment: 'center', maxWidth: '2xl' },
+  };
+}
+
+function resolveOrderHistory(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'OrderHistory',
+    content: {
+      title: { value: vocab('Order History', ctx), type: 'text' },
+    },
+    columns: [
+      { key: 'orderId', label: 'Order ID', type: 'text', sortable: true, filterable: false },
+      { key: 'date', label: 'Date', type: 'date', sortable: true, filterable: false },
+      { key: 'status', label: 'Status', type: 'status', sortable: true, filterable: true },
+      { key: 'total', label: 'Total', type: 'number', sortable: true, filterable: false },
+    ],
+    layout: { maxWidth: '7xl' },
+  };
+}
+
+function resolveOrderTracking(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'OrderTracking',
+    content: {
+      title: { value: vocab('Track Order', ctx), type: 'text' },
+      subtitle: { value: vocab('Enter your order number', ctx), type: 'text' },
+    },
+    fields: [
+      { name: 'orderNumber', label: 'Order Number', type: 'text', required: true, placeholder: 'ORD-12345' },
+    ],
+    actions: [
+      { label: vocab('Track', ctx), action: '/api/track', style: 'primary' },
+    ],
+    layout: { alignment: 'center', maxWidth: 'sm' },
+  };
+}
+
+function resolveRecommendedProducts(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  return {
+    type: 'RecommendedProducts',
+    content: {
+      title: { value: vocab('You May Also Like', ctx), type: 'text' },
+      entity: { value: entity?.name ?? 'Product', type: 'text' },
+    },
+    items: [
+      { title: vocab('Featured Item', ctx), description: vocab('Top rated product', ctx), icon: 'star' },
+      { title: vocab('Popular Choice', ctx), description: vocab('Best seller in category', ctx), icon: 'trending-up' },
+      { title: vocab('New Arrival', ctx), description: vocab('Just added to collection', ctx), icon: 'sparkles' },
+    ],
+    layout: { alignment: 'center', maxWidth: '7xl' },
+  };
+}
+
+function resolvePaymentForm(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'PaymentForm',
+    content: {
+      title: { value: vocab('Payment Details', ctx), type: 'text' },
+    },
+    fields: [
+      { name: 'cardNumber', label: 'Card Number', type: 'text', required: true, placeholder: '4242 4242 4242 4242' },
+      { name: 'cardName', label: 'Name on Card', type: 'text', required: true },
+      { name: 'expiry', label: 'Expiry Date', type: 'text', required: true, placeholder: 'MM/YY' },
+      { name: 'cvv', label: 'CVV', type: 'text', required: true, placeholder: '123' },
+    ],
+    layout: { alignment: 'left', maxWidth: 'sm' },
+  };
+}
+
+function resolvePaymentMethod(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'PaymentMethod',
+    content: {
+      title: { value: vocab('Payment Methods', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Visa ending in 4242', ctx), description: vocab('Expires 12/25', ctx), icon: 'credit-card', metadata: { default: 'true' } },
+    ],
+    actions: [
+      { label: vocab('Add Payment Method', ctx), action: '/account/payment/add', style: 'primary' },
+    ],
+    layout: { maxWidth: '2xl' },
+  };
+}
+
+function resolveFeatureComparison(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'FeatureComparison',
+    content: {
+      title: { value: vocab('Compare Plans', ctx), type: 'text' },
+    },
+    columns: [
+      { key: 'feature', label: 'Feature', type: 'text', sortable: false, filterable: false },
+      { key: 'basic', label: 'Basic', type: 'text', sortable: false, filterable: false },
+      { key: 'pro', label: 'Pro', type: 'text', sortable: false, filterable: false },
+      { key: 'enterprise', label: 'Enterprise', type: 'text', sortable: false, filterable: false },
+    ],
+    items: [
+      { title: vocab('Users', ctx), metadata: { basic: '5', pro: '25', enterprise: 'Unlimited' } },
+      { title: vocab('Storage', ctx), metadata: { basic: '10GB', pro: '100GB', enterprise: 'Unlimited' } },
+      { title: vocab('Support', ctx), metadata: { basic: 'Email', pro: 'Priority', enterprise: 'Dedicated' } },
+      { title: vocab('API Access', ctx), metadata: { basic: 'Limited', pro: 'Full', enterprise: 'Custom' } },
+    ],
+    layout: { alignment: 'center', maxWidth: '6xl' },
+  };
+}
+
+// ─── Dashboard Resolvers ──────────────────────────────────────────────────
+
+function resolveActivityFeed(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'ActivityFeed',
+    content: {
+      title: { value: vocab('Recent Activity', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('New order received', ctx), description: vocab('Order #1234 — $99.00', ctx), icon: 'shopping-cart', metadata: { time: '2 min ago' } },
+      { title: vocab('User signed up', ctx), description: vocab('john@example.com', ctx), icon: 'user-plus', metadata: { time: '15 min ago' } },
+      { title: vocab('Product updated', ctx), description: vocab('Inventory restocked', ctx), icon: 'package', metadata: { time: '1 hour ago' } },
+    ],
+    layout: { maxWidth: '2xl' },
+  };
+}
+
+function resolveDataGrid(
+  slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  const entity = findEntity(ctx.blueprint, slot.slot);
+  return {
+    type: 'DataGrid',
+    content: {
+      title: { value: vocab(`${entity?.name ?? 'Data'} Management`, ctx), type: 'text' },
+      entity: { value: entity?.name ?? 'Item', type: 'text' },
+    },
+    columns: entity?.fields.map(f => ({
+      key: f.name,
+      label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
+      type: 'text' as const,
+      sortable: true,
+      filterable: f.indexed,
+    })),
+    actions: [
+      { label: vocab('Add', ctx), action: '#', style: 'primary' },
+    ],
+    layout: { maxWidth: '7xl' },
+  };
+}
+
+// ─── Auth Resolvers ───────────────────────────────────────────────────────
+
+function resolveSocialAuth(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'SocialAuth',
+    content: {
+      title: { value: vocab('Or continue with', ctx), type: 'text' },
+    },
+    actions: [
+      { label: 'Google', action: '/api/auth/google', style: 'secondary' },
+      { label: 'GitHub', action: '/api/auth/github', style: 'secondary' },
+      { label: 'Twitter', action: '/api/auth/twitter', style: 'secondary' },
+    ],
+    layout: { alignment: 'center', maxWidth: 'sm' },
+  };
+}
+
+// ─── Account Resolvers ────────────────────────────────────────────────────
+
+function resolveProfileSection(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'ProfileSection',
+    content: {
+      title: { value: vocab('My Profile', ctx), type: 'text' },
+      subtitle: { value: vocab('Manage your account details', ctx), type: 'text' },
+    },
+    fields: [
+      { name: 'name', label: 'Full Name', type: 'text', required: true },
+      { name: 'email', label: 'Email', type: 'email', required: true },
+      { name: 'phone', label: 'Phone', type: 'text', required: false },
+      { name: 'bio', label: 'Bio', type: 'textarea', required: false },
+    ],
+    actions: [
+      { label: vocab('Save Changes', ctx), action: '/api/profile', style: 'primary' },
+    ],
+    layout: { alignment: 'left', maxWidth: '2xl' },
+  };
+}
+
+function resolveBillingSection(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  const hasSubscription = ctx.blueprint.businessModels.some(m =>
+    m.toLowerCase().includes('subscription'),
+  );
+
+  return {
+    type: 'BillingSection',
+    content: {
+      title: { value: vocab('Billing', ctx), type: 'text' },
+      subtitle: { value: hasSubscription ? vocab('Manage your subscription', ctx) : vocab('Manage your billing', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Current Plan', ctx), description: hasSubscription ? 'Pro — $29/month' : vocab('N/A', ctx), icon: 'credit-card' },
+      { title: vocab('Next Billing Date', ctx), description: vocab('January 1, 2025', ctx), icon: 'calendar' },
+      { title: vocab('Payment Method', ctx), description: vocab('Visa ending in 4242', ctx), icon: 'shield' },
+    ],
+    actions: [
+      { label: vocab('Update Billing', ctx), action: '/account/billing/update', style: 'primary' },
+      { label: vocab('Cancel Subscription', ctx), action: '/account/billing/cancel', style: 'ghost' },
+    ],
+    layout: { maxWidth: '2xl' },
+  };
+}
+
+function resolveNotificationsSection(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'NotificationsSection',
+    content: {
+      title: { value: vocab('Notifications', ctx), type: 'text' },
+      subtitle: { value: vocab('Configure your notification preferences', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Email Notifications', ctx), description: vocab('Receive updates via email', ctx), icon: 'mail', metadata: { enabled: 'true' } },
+      { title: vocab('Push Notifications', ctx), description: vocab('Receive push notifications', ctx), icon: 'bell', metadata: { enabled: 'false' } },
+      { title: vocab('SMS Notifications', ctx), description: vocab('Receive text messages', ctx), icon: 'smartphone', metadata: { enabled: 'false' } },
+    ],
+    layout: { maxWidth: '2xl' },
+  };
+}
+
+function resolvePlanDetails(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'PlanDetails',
+    content: {
+      title: { value: vocab('Your Plan', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Plan Name', ctx), description: 'Pro', icon: 'package' },
+      { title: vocab('Price', ctx), description: '$29/month', icon: 'dollar-sign' },
+      { title: vocab('Features Included', ctx), description: vocab('All features, priority support, API access', ctx), icon: 'check-circle' },
+    ],
+    actions: [
+      { label: vocab('Upgrade Plan', ctx), action: '/pricing', style: 'primary' },
+    ],
+    layout: { maxWidth: '2xl' },
+  };
+}
+
+function resolveInvoiceList(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'InvoiceList',
+    content: {
+      title: { value: vocab('Invoices', ctx), type: 'text' },
+    },
+    columns: [
+      { key: 'invoiceId', label: 'Invoice', type: 'text', sortable: true, filterable: false },
+      { key: 'date', label: 'Date', type: 'date', sortable: true, filterable: false },
+      { key: 'amount', label: 'Amount', type: 'number', sortable: true, filterable: false },
+      { key: 'status', label: 'Status', type: 'status', sortable: true, filterable: true },
+    ],
+    layout: { maxWidth: '7xl' },
+  };
+}
+
+function resolveAddressBook(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'AddressBook',
+    content: {
+      title: { value: vocab('Address Book', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Home', ctx), description: vocab('123 Main St, City, State 12345', ctx), icon: 'home', metadata: { default: 'true' } },
+    ],
+    actions: [
+      { label: vocab('Add Address', ctx), action: '/account/addresses/add', style: 'primary' },
+    ],
+    layout: { maxWidth: '2xl' },
+  };
+}
+
+function resolveWishlist(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  return {
+    type: 'Wishlist',
+    content: {
+      title: { value: vocab('My Wishlist', ctx), type: 'text' },
+      entity: { value: entity?.name ?? 'Product', type: 'text' },
+    },
+    items: [
+      { title: vocab('Saved Item', ctx), description: vocab('Added to wishlist', ctx), icon: 'heart' },
+    ],
+    layout: { maxWidth: '7xl' },
+  };
+}
+
+// ─── Content Resolvers ────────────────────────────────────────────────────
+
+function resolveAboutSection(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'AboutSection',
+    content: {
+      title: { value: vocab('Our Story', ctx), type: 'text' },
+      subtitle: { value: ctx.blueprint.description ?? vocab('Learn more about us', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Founded', ctx), description: vocab('Started with a vision to transform the industry', ctx), icon: 'flag' },
+      { title: vocab('Mission', ctx), description: vocab('Making technology accessible to everyone', ctx), icon: 'target' },
+      { title: vocab('Growth', ctx), description: vocab('Serving thousands of customers worldwide', ctx), icon: 'trending-up' },
+    ],
+    layout: { alignment: 'center', maxWidth: '4xl' },
+  };
+}
+
+function resolveTeamSection(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'TeamSection',
+    content: {
+      title: { value: vocab('Meet Our Team', ctx), type: 'text' },
+      subtitle: { value: vocab('The people behind the product', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Leadership', ctx), description: vocab('Driving our vision forward', ctx), icon: 'users' },
+      { title: vocab('Engineering', ctx), description: vocab('Building the future', ctx), icon: 'code' },
+      { title: vocab('Design', ctx), description: vocab('Crafting beautiful experiences', ctx), icon: 'palette' },
+    ],
+    layout: { alignment: 'center', maxWidth: '6xl' },
+  };
+}
+
+function resolveTeamGrid(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'TeamGrid',
+    content: {
+      title: { value: vocab('Our Team', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Team Member', ctx), description: vocab('Role', ctx), icon: 'user' },
+      { title: vocab('Team Member', ctx), description: vocab('Role', ctx), icon: 'user' },
+      { title: vocab('Team Member', ctx), description: vocab('Role', ctx), icon: 'user' },
+    ],
+    layout: { alignment: 'center', maxWidth: '6xl' },
+  };
+}
+
+function resolveMissionSection(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'MissionSection',
+    content: {
+      title: { value: vocab('Our Mission', ctx), type: 'text' },
+      subtitle: { value: vocab('What drives us every day', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Innovation', ctx), description: vocab('Pushing boundaries of what is possible', ctx), icon: 'zap' },
+      { title: vocab('Accessibility', ctx), description: vocab('Technology for everyone', ctx), icon: 'globe' },
+      { title: vocab('Impact', ctx), description: vocab('Making a real difference', ctx), icon: 'heart' },
+    ],
+    layout: { alignment: 'center', maxWidth: '4xl' },
+  };
+}
+
+function resolveGallery(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'Gallery',
+    content: {
+      title: { value: vocab('Gallery', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Photo 1', ctx), icon: 'image' },
+      { title: vocab('Photo 2', ctx), icon: 'image' },
+      { title: vocab('Photo 3', ctx), icon: 'image' },
+      { title: vocab('Photo 4', ctx), icon: 'image' },
+    ],
+    layout: { alignment: 'center', maxWidth: '7xl' },
+  };
+}
+
+// ─── Filter / Data Resolvers ──────────────────────────────────────────────
+
+function resolveFilterSidebar(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'FilterSidebar',
+    content: {
+      title: { value: vocab('Filters', ctx), type: 'text' },
+    },
+    items: [
+      { title: vocab('Category', ctx), icon: 'grid', metadata: { type: 'select' } },
+      { title: vocab('Price Range', ctx), icon: 'dollar-sign', metadata: { type: 'range' } },
+      { title: vocab('Rating', ctx), icon: 'star', metadata: { type: 'select' } },
+      { title: vocab('Availability', ctx), icon: 'package', metadata: { type: 'checkbox' } },
+    ],
+    layout: { maxWidth: 'xs' },
+  };
+}
+
+function resolveSortBar(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+): ComponentSpec {
+  return {
+    type: 'SortBar',
+    content: {
+      title: { value: vocab('Sort By', ctx), type: 'text' },
+    },
+    actions: [
+      { label: vocab('Newest', ctx), action: '?sort=newest', style: 'ghost' },
+      { label: vocab('Price: Low to High', ctx), action: '?sort=price-asc', style: 'ghost' },
+      { label: vocab('Price: High to Low', ctx), action: '?sort=price-desc', style: 'ghost' },
+      { label: vocab('Popular', ctx), action: '?sort=popular', style: 'ghost' },
+    ],
+    layout: { maxWidth: '7xl' },
+  };
+}
+
+// ─── Generic Fallback ─────────────────────────────────────────────────────
 
 function resolveGenericComponent(
   slot: ComponentSlot,

@@ -121,7 +121,7 @@ export function createDefaultRules(): Rule[] {
       condition: (ctx) => ctx.industry.toLowerCase().includes('commerce') || ctx.businessModels.includes('direct-sales') || ctx.businessModels.includes('Direct Sales'),
       actions: [
         { type: 'add_page', path: '/shop', name: 'Shop', sections: ['product-grid', 'filters', 'categories'] },
-        { type: 'add_page', path: '/cart', name: 'Cart', sections: ['cart-items', 'summary', 'checkout'] },
+        { type: 'add_page', path: '/cart', name: 'Cart', sections: ['cart-items', 'order-summary', 'checkout-form'] },
         { type: 'add_entity', name: 'Product', fields: ['name', 'price', 'description', 'image', 'stock'] },
         { type: 'add_entity', name: 'Order', fields: ['items', 'total', 'status', 'createdAt'] },
         { type: 'add_integration', integrationType: 'payment', name: 'Stripe', required: true },
@@ -198,8 +198,8 @@ export function createDefaultRules(): Rule[] {
       condition: () => true,
       actions: [
         { type: 'add_page', path: '/', name: 'Home', sections: ['hero', 'features', 'testimonials', 'cta'] },
-        { type: 'add_page', path: '/about', name: 'About', sections: ['story', 'team', 'values'] },
-        { type: 'add_page', path: '/contact', name: 'Contact', sections: ['form', 'info'] },
+        { type: 'add_page', path: '/about', name: 'About', sections: ['about', 'team', 'mission'] },
+        { type: 'add_page', path: '/contact', name: 'Contact', sections: ['contact'] },
       ],
       source: 'journey',
     },

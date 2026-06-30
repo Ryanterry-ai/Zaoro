@@ -21,6 +21,7 @@ export type BuildStage =
   | 'browser-verify'// Browser Verification (Sprint B)
   | 'repair'        // Repair Loop (Sprint B)
   | 'quality-gate'  // Bucket A Quality Gates (content-validator, dependency-checker, quality-gate)
+  | 'content-gate'  // Content Quality Gate (detects generic-placeholder-dense builds)
   | 'preview'       // Render Preview
   | 'complete';     // Done
 
