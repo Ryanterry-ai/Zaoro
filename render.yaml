@@ -3,6 +3,7 @@ services:
     name: build-engine
     runtime: docker
     dockerfilePath: ./Dockerfile
+    plan: standard
     port: 3001
     envVars:
       - key: NODE_ENV
