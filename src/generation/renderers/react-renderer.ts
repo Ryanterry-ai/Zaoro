@@ -343,7 +343,7 @@ ${body}
 
     // Stats prop
     if ((spec.stats?.length ?? 0) > 0) {
-      lines.push(`  stats?: Array<{ label: string; value: string; change?: string }>;`);
+      lines.push(`  stats?: Array<{ label: string; value: string; change?: string; trend?: 'up' | 'down' | 'neutral' }>;`);
     }
 
     // Columns prop
