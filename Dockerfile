@@ -24,24 +24,24 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy package files + prisma schema first for better layer caching
+# Copy package files first for better layer caching
 COPY package.json package-lock.json* ./
-COPY prisma ./prisma/
 
 # Install all dependencies (including dev for tsx, esbuild)
 RUN npm install
 
-# Generate Prisma client
-RUN npx prisma generate
-
 # Install Playwright Chromium browser
 RUN npx playwright install chromium
 
-# Copy rest of source code
+# Copy source code
 COPY . .
 
 # Create workspace directory
 RUN mkdir -p sandbox_workspaces .prompts .progress
+
+# Generate Prisma client (needs DATABASE_URL even for generation)
+ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+RUN npx prisma generate
 
 # Expose engine port
 EXPOSE 3001
