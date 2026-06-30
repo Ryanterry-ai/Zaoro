@@ -12,12 +12,16 @@ import type { BREContext } from '../bos/reasoning/rules-engine.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import type { ExecutionBlueprint } from '../bos/schemas/blueprint/execution-blueprint.schema.js';
 import type { ApplicationSpec } from '../bos/schemas/blueprint/execution-blueprint.schema.js';
+import type { Pattern } from '../bos/schemas/knowledge/pattern.schema.js';
+import type { DesignProfile } from '../bos/schemas/knowledge/design-profile.schema.js';
 import type { RenderResult } from './renderers/renderer.js';
 import { runBREV2Pipeline, type BREv2Result } from '../bos/bre-v2-pipeline.js';
 import { buildExecutionBlueprint } from '../bos/execution-planner.js';
 import { resolveContent } from '../bos/content-resolver.js';
 import { registerRenderer, renderWith, getRegisteredPlatforms } from './renderers/index.js';
 import { ReactRenderer } from './renderers/react-renderer.js';
+import { FlutterRenderer } from './renderers/flutter-renderer.js';
+import { PATTERNS, DESIGN_PROFILES } from '../bos/knowledge/registry.js';
 import { stageLogger, debugLog } from '../core/debug-logger.js';
 
 const log = stageLogger('pipeline');
@@ -107,9 +111,18 @@ export function runBuildPipeline(
 
   // Layer 3: Execution Blueprint → Application Spec (content resolution)
   const t3 = Date.now();
+  const matchedPattern = breResult.selectedPattern
+    ? PATTERNS.find(p => p.id === breResult.selectedPattern!.id)
+    : undefined;
+  const matchedDesignProfile = breResult.selectedDesignProfile
+    ? DESIGN_PROFILES.find(dp => dp.id === breResult.selectedDesignProfile!.id)
+    : undefined;
+
   const applicationSpec = resolveContent(executionBlueprint, {
     blueprint: breResult.blueprint,
     vocabulary: breResult.blueprint.vocabulary ?? {},
+    ...(matchedPattern ? { pattern: matchedPattern } : {}),
+    ...(matchedDesignProfile ? { designProfile: matchedDesignProfile } : {}),
   });
   log.info('Layer 3: Content Resolution complete', {
     pages: applicationSpec.pages.length,
@@ -157,6 +170,7 @@ let renderersRegistered = false;
 function ensureRenderers(): void {
   if (!renderersRegistered) {
     registerRenderer(new ReactRenderer());
+    registerRenderer(new FlutterRenderer());
     renderersRegistered = true;
   }
 }

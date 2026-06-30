@@ -227,7 +227,7 @@ const server = http.createServer(async (req, res) => {
       const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const usePipeline = body.pipeline === true;
       fs.mkdirSync(PROMPTS_DIR, { recursive: true });
-      fs.writeFileSync(path.join(PROMPTS_DIR, `${id}.json`), JSON.stringify({ id, type: usePipeline ? 'pipeline' : 'build', prompt: body.prompt, pipeline: usePipeline, createdAt: new Date().toISOString() }), 'utf-8');
+      fs.writeFileSync(path.join(PROMPTS_DIR, `${id}.json`), JSON.stringify({ id, type: usePipeline ? 'pipeline' : 'build-app', prompt: body.prompt, pipeline: usePipeline, createdAt: new Date().toISOString() }), 'utf-8');
       return json(res, { id, prompt: body.prompt, pipeline: usePipeline });
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }

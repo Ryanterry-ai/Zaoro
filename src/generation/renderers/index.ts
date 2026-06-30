@@ -11,3 +11,4 @@
 export type { Renderer, RenderContext, RenderedFile, RenderResult } from './renderer.js';
 export { registerRenderer, getRenderer, getRegisteredPlatforms, renderWith } from './renderer.js';
 export { ReactRenderer } from './react-renderer.js';
+export { FlutterRenderer } from './flutter-renderer.js';

@@ -173,24 +173,32 @@ export async function POST(req: NextRequest) {
 
   private static compileFrontendPages(appPath: string, blueprint: FullStackBlueprint): void {
     const color = blueprint.colorScheme;
+    const appName = blueprint.appName;
 
     for (const page of blueprint.pages) {
       const pageDir = page.path === '/' ? appPath : path.join(appPath, page.path);
       fs.mkdirSync(pageDir, { recursive: true });
 
-      const routeFuncMap: Record<string, string> = {
-        '/': 'Home',
-        '/shop': 'Shop',
-        '/booking': 'Book',
-        '/dashboard': 'Dashboard',
-        '/courses': 'Courses',
-        '/blog': 'Blog',
-        '/work': 'Work',
-        '/contact': 'Contact',
-      };
-      const funcName = routeFuncMap[page.path] || page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
+      const funcName = page.path === '/'
+        ? 'Home'
+        : page.path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\s+/g, '');
+
+      // Build navigation items from all pages
+      const navItems = blueprint.pages
+        .filter(p => p.layout !== 'auth')
+        .map(p => {
+          const label = p.path === '/' ? 'Home' : p.title;
+          return `{ label: '${label}', href: '${p.path}' }`;
+        }).join(', ');
+
+      // Render each block as a real section
+      const sections = page.blocks.map(block => this.renderBlock(block, blueprint)).join('\n');
 
       const pageCode = `import React from 'react';
+
+const navItems = [
+  ${navItems}
+];
 
 export default function ${funcName}() {
   return (
@@ -199,46 +207,357 @@ export default function ${funcName}() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="w-3.5 h-3.5 rounded-full bg-${color}-500" />
-            <span className="font-black text-lg uppercase">${blueprint.appName}</span>
+            <span className="font-black text-lg uppercase">${appName}</span>
           </div>
-          <div className="flex gap-4">
-            <span className="text-xs font-mono bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg text-zinc-400">
-              Active Module: ${page.title}
-            </span>
+          <div className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
+            {navItems.map(item => (
+              <a key={item.href} href={item.href} className="hover:text-white transition">{item.label}</a>
+            ))}
           </div>
+          <a href="/contact" className="px-4 py-2 rounded-lg bg-${color}-600 hover:bg-${color}-700 text-sm font-bold transition">Get Started</a>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-12 space-y-16">
-        <section className="text-center space-y-6 max-w-4xl mx-auto py-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-${color}-500/20 bg-${color}-500/5">
-            <span className="text-${color}-400">JIT Full-Stack Blueprint Synced</span>
-          </div>
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight">
-            Tailored Domain Solutions. <span className="text-${color}-500">Zero Regressions.</span>
-          </h1>
-          <p className="text-zinc-400 text-lg max-w-xl mx-auto leading-relaxed">
-            Database models, state contexts, REST endpoints, and custom layouts generated instantly from semantic intent.
-          </p>
-        </section>
-
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          ${blueprint.dataModels.map(model => `
-          <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-4">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              Database Model: ${model.name}
-            </h3>
-            <ul className="text-xs space-y-2 font-mono text-zinc-400">
-              ${model.fields.map(f => `<li>- ${f.name}: ${f.type}${f.isRequired ? '!' : ''}</li>`).join('\n              ')}
-            </ul>
-          </div>`).join('')}
-        </section>
+      <main>
+${sections}
       </main>
+
+      <footer className="border-t border-zinc-800 py-12 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-${color}-500" />
+            <span className="font-bold">${appName}</span>
+          </div>
+          <p className="text-sm text-zinc-500">&copy; ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }`;
 
       fs.writeFileSync(path.join(pageDir, 'page.tsx'), pageCode);
+    }
+  }
+
+  /**
+   * Render a single block as a real JSX section using blueprint data.
+   */
+  private static renderBlock(block: string, blueprint: FullStackBlueprint): string {
+    const color = blueprint.colorScheme;
+    const appName = blueprint.appName;
+    const firstModel = blueprint.dataModels[0];
+    const modelFields = firstModel?.fields.filter(f => !f.isId) ?? [];
+
+    switch (block) {
+      case 'hero':
+        return `        <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+          <div className="max-w-4xl mx-auto text-center space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-${color}-500/20 bg-${color}-500/10 text-${color}-400">
+              <span>${appName}</span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight text-zinc-50">
+              ${appName}
+            </h1>
+            <p className="text-zinc-400 text-lg max-w-xl mx-auto leading-relaxed">
+              ${firstModel ? `Manage your ${firstModel.name.toLowerCase()}s with a modern, intelligent platform.` : `A modern platform built for your business.`}
+            </p>
+            <div className="flex items-center justify-center gap-4">
+              <a href="/contact" className="px-8 py-4 rounded-xl font-bold transition-all bg-${color}-600 hover:bg-${color}-700 text-white">
+                Get Started
+              </a>
+              <a href="#features" className="px-8 py-4 rounded-xl font-bold transition-all border border-zinc-700 hover:border-zinc-500 text-zinc-300">
+                Learn More
+              </a>
+            </div>
+          </div>
+        </section>`;
+
+      case 'stats':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              ${blueprint.dataModels.map(model => `
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 text-center space-y-2">
+                <div className="text-3xl font-black text-${color}-500">0</div>
+                <div className="text-sm text-zinc-400">${model.name}s</div>
+              </div>`).join('')}
+            </div>
+          </div>
+        </section>`;
+
+      case 'features':
+        return `        <section id="features" className="py-16 px-6">
+          <div className="max-w-7xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-black">Features</h2>
+              <p className="text-zinc-400 max-w-xl mx-auto">Everything you need to manage your business.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              ${modelFields.slice(0, 6).map(f => `
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-${color}-500/10 flex items-center justify-center">
+                  <span className="text-${color}-400 text-lg">&#9672;</span>
+                </div>
+                <h3 className="font-bold text-lg">${f.name.charAt(0).toUpperCase() + f.name.slice(1)}</h3>
+                <p className="text-sm text-zinc-400">Manage ${f.name.toLowerCase()} with ease through the ${appName} platform.</p>
+              </div>`).join('')}
+            </div>
+          </div>
+        </section>`;
+
+      case 'pricing':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-5xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-black">Pricing</h2>
+              <p className="text-zinc-400">Choose the plan that works for you.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="p-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-4">
+                <h3 className="font-bold text-lg">Starter</h3>
+                <div className="text-4xl font-black">$9<span className="text-sm font-normal text-zinc-500">/mo</span></div>
+                <ul className="space-y-2 text-sm text-zinc-400">
+                  <li>Core features</li>
+                  <li>Email support</li>
+                </ul>
+                <button className="w-full py-2.5 rounded-lg border border-zinc-700 font-bold text-sm hover:bg-zinc-800 transition">Get Started</button>
+              </div>
+              <div className="p-8 rounded-2xl border-2 border-${color}-500 bg-zinc-900/50 space-y-4 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-${color}-600 text-xs font-bold">Popular</div>
+                <h3 className="font-bold text-lg">Pro</h3>
+                <div className="text-4xl font-black">$29<span className="text-sm font-normal text-zinc-500">/mo</span></div>
+                <ul className="space-y-2 text-sm text-zinc-400">
+                  <li>All features</li>
+                  <li>Priority support</li>
+                  <li>API access</li>
+                </ul>
+                <button className="w-full py-2.5 rounded-lg bg-${color}-600 hover:bg-${color}-700 font-bold text-sm transition">Get Started</button>
+              </div>
+              <div className="p-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-4">
+                <h3 className="font-bold text-lg">Enterprise</h3>
+                <div className="text-4xl font-black">Custom</div>
+                <ul className="space-y-2 text-sm text-zinc-400">
+                  <li>Unlimited everything</li>
+                  <li>Dedicated support</li>
+                  <li>Custom integrations</li>
+                </ul>
+                <button className="w-full py-2.5 rounded-lg border border-zinc-700 font-bold text-sm hover:bg-zinc-800 transition">Contact Us</button>
+              </div>
+            </div>
+          </div>
+        </section>`;
+
+      case 'testimonials':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-7xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-black">What Our Users Say</h2>
+              <p className="text-zinc-400">Trusted by teams worldwide.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-4">
+                <p className="text-zinc-300 italic">"${appName} has transformed how we manage our business. Highly recommended!"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-${color}-500/20 flex items-center justify-center font-bold text-${color}-400">A</div>
+                  <div><div className="font-bold text-sm">Alex Rivera</div><div className="text-xs text-zinc-500">Business Owner</div></div>
+                </div>
+              </div>
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-4">
+                <p className="text-zinc-300 italic">"The best platform we have used. Clean, fast, and reliable."</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-${color}-500/20 flex items-center justify-center font-bold text-${color}-400">J</div>
+                  <div><div className="font-bold text-sm">Jordan Lee</div><div className="text-xs text-zinc-500">Operations Lead</div></div>
+                </div>
+              </div>
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-4">
+                <p className="text-zinc-300 italic">"Our team productivity increased by 40% since switching."</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-${color}-500/20 flex items-center justify-center font-bold text-${color}-400">S</div>
+                  <div><div className="font-bold text-sm">Sam Patel</div><div className="text-xs text-zinc-500">Manager</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>`;
+
+      case 'cta':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-4xl mx-auto text-center space-y-8 py-16 rounded-3xl border border-zinc-800 bg-zinc-900/50">
+            <h2 className="text-3xl md:text-4xl font-black">Ready to get started?</h2>
+            <p className="text-zinc-400">Join ${appName} today and start building.</p>
+            <a href="/contact" className="inline-block px-8 py-4 rounded-xl font-bold bg-${color}-600 hover:bg-${color}-700 transition">Get Started Free</a>
+          </div>
+        </section>`;
+
+      case 'contact-form':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-2xl mx-auto space-y-8">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-black">Contact Us</h2>
+              <p className="text-zinc-400">Get in touch with ${appName}.</p>
+            </div>
+            <form className="space-y-4 p-8 rounded-2xl border border-zinc-800 bg-zinc-900/50">
+              <input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />
+              <input type="email" placeholder="Email address" className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />
+              <textarea placeholder="Your message" rows={4} className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />
+              <button type="submit" className="w-full py-3 rounded-lg bg-${color}-600 hover:bg-${color}-700 font-bold transition">Send Message</button>
+            </form>
+          </div>
+        </section>`;
+
+      case 'faq':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-3xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-black">Frequently Asked Questions</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50">
+                <h3 className="font-bold mb-2">How do I get started?</h3>
+                <p className="text-sm text-zinc-400">Sign up for an account and follow the onboarding wizard.</p>
+              </div>
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50">
+                <h3 className="font-bold mb-2">Is there a free trial?</h3>
+                <p className="text-sm text-zinc-400">Yes! All plans come with a 14-day free trial.</p>
+              </div>
+              <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-900/50">
+                <h3 className="font-bold mb-2">Can I change my plan later?</h3>
+                <p className="text-sm text-zinc-400">Absolutely. Upgrade or downgrade at any time from your account settings.</p>
+              </div>
+            </div>
+          </div>
+        </section>`;
+
+      case 'gallery':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-7xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-black">Gallery</h2>
+              <p className="text-zinc-400">See what ${appName} has to offer.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="aspect-square rounded-2xl border border-zinc-800 bg-zinc-900/50 flex items-center justify-center text-zinc-600">
+                  Image {i}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>`;
+
+      case 'data-table':
+      case 'table':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">${firstModel ? firstModel.name + 's' : 'Data'}</h2>
+              <button className="px-4 py-2 rounded-lg bg-${color}-600 hover:bg-${color}-700 text-sm font-bold transition">Add New</button>
+            </div>
+            <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/50">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800">
+                    ${modelFields.slice(0, 5).map(f => `<th className="px-4 py-3 text-left font-medium text-zinc-300">${f.name.charAt(0).toUpperCase() + f.name.slice(1)}</th>`).join('\n                    ')}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-zinc-800/50">
+                    ${modelFields.slice(0, 5).map(() => `<td className="px-4 py-3 text-zinc-500">—</td>`).join('\n                    ')}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>`;
+
+      case 'auth':
+      case 'login':
+      case 'signup':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-sm mx-auto space-y-8">
+            <div className="text-center space-y-4">
+              <h2 className="text-2xl font-bold">${block === 'signup' ? 'Create Account' : 'Welcome Back'}</h2>
+              <p className="text-sm text-zinc-400">${block === 'signup' ? 'Get started with your free trial.' : 'Sign in to your account.'}</p>
+            </div>
+            <form className="space-y-4 p-8 rounded-2xl border border-zinc-800 bg-zinc-900/50">
+              ${block === 'signup' ? '<input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />' : ''}
+              <input type="email" placeholder="Email address" className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />
+              <input type="password" placeholder="Password" className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />
+              <button type="submit" className="w-full py-3 rounded-lg bg-${color}-600 hover:bg-${color}-700 font-bold transition">${block === 'signup' ? 'Create Account' : 'Sign In'}</button>
+            </form>
+          </div>
+        </section>`;
+
+      case 'booking':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-4xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-black">Book Now</h2>
+              <p className="text-zinc-400">Reserve your spot with ${appName}.</p>
+            </div>
+            <div className="p-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-300">Date</label>
+                  <input type="date" className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-300">Time</label>
+                  <select className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500">
+                    <option>9:00 AM</option><option>10:00 AM</option><option>11:00 AM</option>
+                    <option>1:00 PM</option><option>2:00 PM</option><option>3:00 PM</option>
+                  </select>
+                </div>
+              </div>
+              <button className="w-full py-3 rounded-lg bg-${color}-600 hover:bg-${color}-700 font-bold transition">Reserve Now</button>
+            </div>
+          </div>
+        </section>`;
+
+      case 'map':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="aspect-video rounded-2xl border border-zinc-800 bg-zinc-900/50 flex items-center justify-center text-zinc-500">
+              Map View
+            </div>
+          </div>
+        </section>`;
+
+      case 'hours':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-3xl mx-auto space-y-8">
+            <h2 className="text-2xl font-bold text-center">Business Hours</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900/50"><span>Monday - Friday</span><span className="text-zinc-400">9:00 AM - 6:00 PM</span></div>
+              <div className="flex justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900/50"><span>Saturday</span><span className="text-zinc-400">10:00 AM - 4:00 PM</span></div>
+              <div className="flex justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900/50"><span>Sunday</span><span className="text-zinc-500">Closed</span></div>
+            </div>
+          </div>
+        </section>`;
+
+      case 'newsletter':
+        return `        <section className="py-16 px-6">
+          <div className="max-w-2xl mx-auto text-center space-y-6 p-12 rounded-3xl border border-zinc-800 bg-zinc-900/50">
+            <h2 className="text-2xl font-black">Stay Updated</h2>
+            <p className="text-zinc-400">Subscribe to our newsletter for the latest updates.</p>
+            <div className="flex gap-2">
+              <input type="email" placeholder="Email address" className="flex-1 px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-${color}-500" />
+              <button className="px-6 py-3 rounded-lg bg-${color}-600 hover:bg-${color}-700 font-bold transition">Subscribe</button>
+            </div>
+          </div>
+        </section>`;
+
+      default:
+        // Generic section for unrecognized blocks
+        const sectionTitle = block.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        return `        <section className="py-16 px-6">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <h2 className="text-3xl font-bold text-center">${sectionTitle}</h2>
+            <div className="p-12 rounded-2xl border border-zinc-800 bg-zinc-900/50 text-center text-zinc-500">
+              ${sectionTitle} content
+            </div>
+          </div>
+        </section>`;
     }
   }
 

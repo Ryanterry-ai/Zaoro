@@ -22,15 +22,36 @@ import type {
   TierSpec,
   StatSpec,
 } from './schemas/blueprint/execution-blueprint.schema.js';
+import type { Pattern } from './schemas/knowledge/pattern.schema.js';
+import type { DesignProfile } from './schemas/knowledge/design-profile.schema.js';
 import { stageLogger } from '../core/debug-logger.js';
 
 const log = stageLogger('resolve');
+
+// ─── Vocabulary Helper ────────────────────────────────────────────────────────
+
+/**
+ * Apply vocabulary replacements to a string.
+ * e.g. "All Products" → "All Dishes" for a restaurant.
+ */
+function vocab(text: string, ctx: ContentResolverContext): string {
+  let result = text;
+  for (const [generic, industry] of Object.entries(ctx.vocabulary)) {
+    const regex = new RegExp(`\\b${generic}\\b`, 'gi');
+    result = result.replace(regex, industry);
+  }
+  return result;
+}
 
 // ─── Content Resolver ────────────────────────────────────────────────────────
 
 export interface ContentResolverContext {
   blueprint: ApplicationBlueprint;
   vocabulary: Record<string, string>;
+  /** The matched industry pattern — provides navigation, workflows, integrations */
+  pattern?: Pattern;
+  /** The matched design profile — provides styling guidance */
+  designProfile?: DesignProfile;
 }
 
 /**
@@ -131,6 +152,10 @@ function resolveHeroBanner(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  const ctaLabel = ctx.pattern?.workflows[0]
+    ? `Start ${ctx.pattern.workflows[0]}`
+    : vocab('Get Started', ctx);
+
   return {
     type: 'HeroBanner',
     content: {
@@ -139,8 +164,8 @@ function resolveHeroBanner(
       badge: { value: ctx.blueprint.industry, type: 'text' },
     },
     actions: [
-      { label: 'Get Started', action: '/signup', style: 'primary' },
-      { label: 'Learn More', action: '#features', style: 'ghost' },
+      { label: ctaLabel, action: '/signup', style: 'primary' },
+      { label: vocab('Learn More', ctx), action: '#features', style: 'ghost' },
     ],
     layout: { alignment: 'center', maxWidth: '4xl', padding: 'lg' },
   };
@@ -154,8 +179,8 @@ function resolveFeatureGrid(
   return {
     type: 'FeatureGrid',
     content: {
-      title: { value: 'Features', type: 'text' },
-      subtitle: { value: 'Everything you need', type: 'text' },
+      title: { value: vocab('Features', ctx), type: 'text' },
+      subtitle: { value: vocab('Everything you need', ctx), type: 'text' },
     },
     items: resolveFeatures(ctx),
     layout: { alignment: 'center', maxWidth: '7xl' },
@@ -171,8 +196,8 @@ function resolveProductGrid(
   return {
     type: 'ProductGrid',
     content: {
-      title: { value: 'All Products', type: 'text' },
-      subtitle: { value: 'Browse our collection', type: 'text' },
+      title: { value: vocab('All Products', ctx), type: 'text' },
+      subtitle: { value: vocab('Browse our collection', ctx), type: 'text' },
       entity: { value: entity?.name ?? 'Product', type: 'text' },
     },
     columns: entity?.fields.map(f => ({
@@ -194,8 +219,8 @@ function resolvePricingTable(
   return {
     type: 'PricingTable',
     content: {
-      title: { value: 'Pricing', type: 'text' },
-      subtitle: { value: 'Choose your plan', type: 'text' },
+      title: { value: vocab('Pricing', ctx), type: 'text' },
+      subtitle: { value: vocab('Choose your plan', ctx), type: 'text' },
     },
     tiers: resolvePricingTiers(ctx),
     layout: { alignment: 'center', maxWidth: '6xl' },
@@ -205,18 +230,23 @@ function resolvePricingTable(
 function resolveTestimonials(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
-  _ctx: ContentResolverContext,
+  ctx: ContentResolverContext,
 ): ComponentSpec {
+  // Derive industry-specific role titles from pattern or vocabulary
+  const roleTitle = ctx.pattern
+    ? ctx.pattern.compatibleIndustries[0]?.charAt(0).toUpperCase() + (ctx.pattern.compatibleIndustries[0]?.slice(1) ?? '')
+    : vocab('User', ctx);
+
   return {
     type: 'Testimonials',
     content: {
-      title: { value: 'What Our Users Say', type: 'text' },
-      subtitle: { value: 'Trusted by thousands', type: 'text' },
+      title: { value: vocab('What Our Users Say', ctx), type: 'text' },
+      subtitle: { value: vocab('Trusted by thousands', ctx), type: 'text' },
     },
     items: [
-      { title: 'Sarah Chen', description: 'CEO, TechCorp', metadata: { quote: 'This platform transformed how we manage our business. Highly recommended!' } },
-      { title: 'Marcus Johnson', description: 'Operations Lead', metadata: { quote: 'The best platform we have used. Clean, fast, and reliable.' } },
-      { title: 'Priya Patel', description: 'Product Manager', metadata: { quote: 'Our team productivity increased by 40% since switching.' } },
+      { title: 'Alex Rivera', description: `${roleTitle} Owner`, metadata: { quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` } },
+      { title: 'Jordan Lee', description: `Operations Lead`, metadata: { quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` } },
+      { title: 'Sam Patel', description: `Manager`, metadata: { quote: `Our team productivity increased by 40% since switching.` } },
     ],
     layout: { alignment: 'center', maxWidth: '7xl' },
   };
@@ -227,14 +257,18 @@ function resolveCTASection(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  const ctaLabel = ctx.pattern?.workflows[0]
+    ? ctx.pattern.workflows[0]
+    : vocab('Get Started Free', ctx);
+
   return {
     type: 'CTASection',
     content: {
-      title: { value: 'Ready to get started?', type: 'text' },
+      title: { value: vocab('Ready to get started?', ctx), type: 'text' },
       subtitle: { value: `Join ${ctx.blueprint.name} today`, type: 'text' },
     },
     actions: [
-      { label: 'Get Started Free', action: '/signup', style: 'primary' },
+      { label: ctaLabel, action: '/signup', style: 'primary' },
     ],
     layout: { alignment: 'center', maxWidth: '4xl', padding: 'lg' },
   };
@@ -246,11 +280,30 @@ function resolveFAQSection(
   ctx: ContentResolverContext,
 ): ComponentSpec {
   const items: ItemSpec[] = [
-    { title: 'How do I get started?', description: 'Simply sign up for a free account and follow the onboarding wizard.' },
-    { title: 'Is there a free trial?', description: 'Yes! All plans come with a 14-day free trial.' },
-    { title: 'Can I change my plan later?', description: 'Absolutely. You can upgrade or downgrade at any time from your account settings.' },
+    { title: vocab('How do I get started?', ctx), description: 'Simply sign up for a free account and follow the onboarding wizard.' },
   ];
 
+  // Add workflow-based FAQ from pattern
+  if (ctx.pattern) {
+    for (const workflow of ctx.pattern.workflows.slice(0, 2)) {
+      items.push({
+        title: `How does ${workflow.toLowerCase()} work?`,
+        description: `${workflow} is easy through our platform. Follow the guided steps to complete your first ${workflow.toLowerCase()}.`,
+      });
+    }
+  }
+
+  // Add integration-based FAQ
+  if (ctx.pattern?.integrations) {
+    for (const integration of ctx.pattern.integrations.filter(i => i.required).slice(0, 1)) {
+      items.push({
+        title: `How do I set up ${integration.name}?`,
+        description: `${integration.name} integration is included with all plans. Connect it from your account settings.`,
+      });
+    }
+  }
+
+  // Add entity import FAQ
   if (ctx.blueprint.entities.length > 0) {
     const entityName = ctx.blueprint.entities[0]!.name;
     items.push({
@@ -261,7 +314,7 @@ function resolveFAQSection(
 
   return {
     type: 'FAQSection',
-    content: { title: { value: 'Frequently Asked Questions', type: 'text' } },
+    content: { title: { value: vocab('Frequently Asked Questions', ctx), type: 'text' } },
     items,
     layout: { alignment: 'left', maxWidth: '3xl' },
   };
@@ -278,8 +331,8 @@ function resolveStatsCards(
   }
   if (stats.length < 4) {
     stats.push(
-      { label: 'Active Users', value: '0', change: '+0%', trend: 'neutral' },
-      { label: 'Revenue', value: '$0', change: '+0%', trend: 'neutral' },
+      { label: vocab('Active Users', ctx), value: '0', change: '+0%', trend: 'neutral' },
+      { label: vocab('Revenue', ctx), value: '$0', change: '+0%', trend: 'neutral' },
     );
   }
   return { type: 'StatsCards', stats, layout: { maxWidth: '7xl' } };
@@ -292,7 +345,7 @@ function resolveChartsPanel(
 ): ComponentSpec {
   return {
     type: 'ChartsPanel',
-    content: { title: { value: 'Analytics', type: 'text' } },
+    content: { title: { value: vocab('Analytics', ctx), type: 'text' } },
     items: ctx.blueprint.charts.slice(0, 4).map(c => ({
       title: c.title,
       description: `Chart type: ${c.type}`,
@@ -305,14 +358,14 @@ function resolveChartsPanel(
 function resolveAuthForm(
   slot: ComponentSlot,
   _page: PageExecutionPlan,
-  _ctx: ContentResolverContext,
+  ctx: ContentResolverContext,
 ): ComponentSpec {
   const isLogin = slot.slot.includes('login');
   return {
     type: 'AuthForm',
     content: {
-      title: { value: isLogin ? 'Welcome Back' : 'Create Account', type: 'text' },
-      subtitle: { value: isLogin ? 'Sign in to your account' : 'Get started with your free trial', type: 'text' },
+      title: { value: isLogin ? vocab('Welcome Back', ctx) : vocab('Create Account', ctx), type: 'text' },
+      subtitle: { value: isLogin ? 'Sign in to your account' : vocab('Get started with your free trial', ctx), type: 'text' },
     },
     fields: [
       { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'you@example.com' },
@@ -320,7 +373,7 @@ function resolveAuthForm(
       ...(!isLogin ? [{ name: 'name', label: 'Name', type: 'text' as const, required: true, placeholder: 'Your name' }] : []),
     ],
     actions: [
-      { label: isLogin ? 'Sign In' : 'Create Account', action: '/api/auth', style: 'primary' },
+      { label: isLogin ? vocab('Sign In', ctx) : vocab('Create Account', ctx), action: '/api/auth', style: 'primary' },
     ],
     layout: { alignment: 'center', maxWidth: 'sm' },
   };
@@ -334,7 +387,7 @@ function resolveContactForm(
   return {
     type: 'ContactForm',
     content: {
-      title: { value: 'Contact Us', type: 'text' },
+      title: { value: vocab('Contact Us', ctx), type: 'text' },
       subtitle: { value: `Get in touch with ${ctx.blueprint.name}`, type: 'text' },
     },
     fields: [
@@ -344,7 +397,7 @@ function resolveContactForm(
       { name: 'message', label: 'Message', type: 'textarea', required: true },
     ],
     actions: [
-      { label: 'Send Message', action: '/api/contact', style: 'primary' },
+      { label: vocab('Send Message', ctx), action: '/api/contact', style: 'primary' },
     ],
     layout: { alignment: 'left', maxWidth: '2xl' },
   };
@@ -408,21 +461,44 @@ function resolveGenericComponent(
 function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
   const items: ItemSpec[] = [];
 
-  for (const entity of ctx.blueprint.entities.slice(0, 6)) {
+  // Entity-based features
+  for (const entity of ctx.blueprint.entities.slice(0, 4)) {
     items.push({
-      title: `${entity.name} Management`,
-      description: `Create, edit, and manage ${entity.name.toLowerCase()}s with ease`,
+      title: vocab(`${entity.name} Management`, ctx),
+      description: vocab(`Create, edit, and manage ${entity.name.toLowerCase()}s with ease`, ctx),
       icon: 'layers',
     });
   }
 
+  // Pattern workflow-based features (industry-specific)
+  if (ctx.pattern) {
+    for (const workflow of ctx.pattern.workflows.slice(0, 4)) {
+      if (items.length >= 6) break;
+      items.push({
+        title: workflow,
+        description: `${workflow} seamlessly through our platform`,
+        icon: 'zap',
+      });
+    }
+    // Pattern component-based features
+    for (const component of ctx.pattern.components.slice(0, 2)) {
+      if (items.length >= 6) break;
+      items.push({
+        title: vocab(component.replace(/([A-Z])/g, ' $1').trim(), ctx),
+        description: `Integrated ${component.toLowerCase()} for your workflow`,
+        icon: 'box',
+      });
+    }
+  }
+
+  // Fallback generic features
   const genericFeatures: ItemSpec[] = [
-    { title: 'Real-time Updates', description: 'See changes as they happen', icon: 'zap' },
-    { title: 'Analytics Dashboard', description: 'Track your performance', icon: 'bar-chart' },
-    { title: 'Team Collaboration', description: 'Work together seamlessly', icon: 'users' },
-    { title: 'API Access', description: 'Integrate with your tools', icon: 'code' },
-    { title: 'Mobile Responsive', description: 'Works on any device', icon: 'smartphone' },
-    { title: 'Security First', description: 'Enterprise-grade security', icon: 'shield' },
+    { title: vocab('Real-time Updates', ctx), description: 'See changes as they happen', icon: 'zap' },
+    { title: vocab('Analytics Dashboard', ctx), description: 'Track your performance', icon: 'bar-chart' },
+    { title: vocab('Team Collaboration', ctx), description: 'Work together seamlessly', icon: 'users' },
+    { title: vocab('API Access', ctx), description: 'Integrate with your tools', icon: 'code' },
+    { title: vocab('Mobile Responsive', ctx), description: 'Works on any device', icon: 'smartphone' },
+    { title: vocab('Security First', ctx), description: 'Enterprise-grade security', icon: 'shield' },
   ];
 
   while (items.length < 6) {
@@ -439,17 +515,20 @@ function resolvePricingTiers(ctx: ContentResolverContext): TierSpec[] {
     m.toLowerCase().includes('subscription'),
   );
 
+  const priceWord = vocab('price', ctx);
+  const featuresWord = vocab('features', ctx);
+
   if (hasSubscription) {
     return [
-      { name: 'Starter', price: '$9', period: '/month', features: ['5 users', '10GB storage', 'Basic analytics', 'Email support'], highlighted: false },
-      { name: 'Pro', price: '$29', period: '/month', features: ['25 users', '100GB storage', 'Advanced analytics', 'Priority support', 'API access'], highlighted: true },
-      { name: 'Enterprise', price: 'Custom', period: '', features: ['Unlimited users', 'Unlimited storage', 'Custom integrations', 'Dedicated support', 'SLA'], highlighted: false },
+      { name: 'Starter', price: '$9', period: '/month', features: [`5 users`, `10GB storage`, `Basic ${featuresWord}`, `Email support`], highlighted: false },
+      { name: 'Pro', price: '$29', period: '/month', features: [`25 users`, `100GB storage`, `Advanced ${featuresWord}`, `Priority support`, `API access`], highlighted: true },
+      { name: 'Enterprise', price: 'Custom', period: '', features: [`Unlimited users`, `Unlimited storage`, `Custom integrations`, `Dedicated support`, `SLA`], highlighted: false },
     ];
   }
 
   return [
-    { name: 'Basic', price: 'Free', period: '', features: ['Core features', 'Community support'], highlighted: false },
-    { name: 'Premium', price: '$19', period: '/month', features: ['All features', 'Priority support', 'API access', 'Custom branding'], highlighted: true },
+    { name: 'Basic', price: 'Free', period: '', features: [`Core ${featuresWord}`, 'Community support'], highlighted: false },
+    { name: 'Premium', price: '$19', period: '/month', features: [`All ${featuresWord}`, 'Priority support', 'API access', 'Custom branding'], highlighted: true },
   ];
 }
 
