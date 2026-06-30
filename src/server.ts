@@ -422,7 +422,7 @@ const server = http.createServer(async (req, res) => {
     if (!fs.existsSync(workspacePath)) return html(res, '<html><body style="background:#09090b;color:#a1a1aa;font-family:sans-serif;padding:2rem;"><h3>Preview Server Syncing</h3><p>Sandbox workspace setup is currently building. Please wait...</p></body></html>');
     if (fs.existsSync(cacheFile)) {
       const stat = fs.statSync(cacheFile);
-      if (Date.now() - stat.mtimeMs < 30000) return html(res, fs.readFileSync(cacheFile, 'utf-8'));
+      if (Date.now() - stat.mtimeMs < 600000) return html(res, fs.readFileSync(cacheFile, 'utf-8'));
     }
     const targetFile = path.join(workspacePath, 'src', 'app', 'page.tsx');
     if (!fs.existsSync(targetFile)) return html(res, '<html><body style="background:#09090b;color:#f43f5e;font-family:sans-serif;padding:2rem;"><h3>Preview Not Available</h3><p>Main route src/app/page.tsx was not resolved.</p></body></html>');
@@ -441,7 +441,7 @@ const server = http.createServer(async (req, res) => {
         globalName: '__preview',
         target: 'es2020',
         jsx: 'transform',
-        loader: { '.tsx': 'tsx', '.ts': 'ts' },
+        loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
         external: ['react', 'react-dom'],
         write: false,
         alias: {
@@ -471,7 +471,20 @@ const server = http.createServer(async (req, res) => {
   <script>
     ${bundledCode}
     var _mod = typeof __preview !== 'undefined' ? __preview : {};
-    var _comp = _mod.default || _mod.Home || _mod.HomePage || null;
+    var _comp = _mod.default || null;
+    if (!_comp) {
+      var _keys = Object.keys(_mod);
+      for (var i = 0; i < _keys.length; i++) {
+        var _val = _mod[_keys[i]];
+        if (typeof _val === 'function' && _val.prototype && (_val.prototype.isReactComponent || _val.$$typeof)) { _comp = _val; break; }
+      }
+    }
+    if (!_comp) {
+      var _keys2 = Object.keys(_mod);
+      for (var j = 0; j < _keys2.length; j++) {
+        if (typeof _mod[_keys2[j]] === 'function') { _comp = _mod[_keys2[j]]; break; }
+      }
+    }
     if (_comp) {
       var root = ReactDOM.createRoot(document.getElementById('preview-root'));
       root.render(React.createElement(_comp));
@@ -486,14 +499,31 @@ const server = http.createServer(async (req, res) => {
       const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
       const page = await ctx.newPage();
 
-      // Load with 'load' to ensure CDN scripts execute
+      // Capture console errors from the preview page
+      const consoleErrors: string[] = [];
+      page.on('console', msg => {
+        if (msg.type() === 'error') consoleErrors.push(msg.text());
+      });
+      page.on('pageerror', err => consoleErrors.push(err.message));
+
       await page.setContent(previewHtml, { waitUntil: 'load', timeout: 30000 });
-      // Wait for React to be available and component to render
-      await page.waitForFunction(() => {
+      const rendered = await page.waitForFunction(() => {
         const el = document.getElementById('preview-root');
         return el && el.children.length > 0;
-      }, { timeout: 15000 }).catch(() => {});
-      await page.waitForTimeout(2000);
+      }, { timeout: 15000 }).catch(() => null);
+
+      if (!rendered) {
+        console.warn('[preview] React mount failed. Console errors:', consoleErrors);
+        // Try to get any visible error from the page
+        const pageContent = await page.evaluate(() => {
+          const root = document.getElementById('preview-root');
+          return root ? root.innerHTML : 'empty';
+        });
+        console.warn('[preview] #preview-root content:', pageContent);
+      }
+
+      await page.waitForLoadState('networkidle').catch(() => {});
+      await page.waitForTimeout(500);
 
       const renderedHtml = await page.content();
       await ctx.close();
@@ -504,7 +534,8 @@ const server = http.createServer(async (req, res) => {
       return html(res, renderedHtml);
     } catch (renderErr: any) {
       console.error('[preview] render failed:', renderErr.message || renderErr);
-      const fallbackSource = fs.readFileSync(targetFile, 'utf-8');
+      console.error('[preview] stack:', renderErr.stack || 'no stack');
+      const fallbackSource = fs.existsSync(targetFile) ? fs.readFileSync(targetFile, 'utf-8') : 'No source file found';
       return html(res, `<html><body style="background:#09090b;color:#a1a1aa;font-family:sans-serif;padding:2rem;"><h3 style="color:#f43f5e;">Static Compiler Error</h3><pre style="background:#18181b;padding:1rem;border-radius:0.5rem;color:#f4f4f5;overflow-x:auto;">${fallbackSource.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></body></html>`);
     }
   }
