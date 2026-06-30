@@ -41,7 +41,7 @@ RUN mkdir -p sandbox_workspaces .prompts .progress
 
 # Generate Prisma client (needs DATABASE_URL even for generation)
 ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
-RUN npx prisma generate
+RUN npx prisma generate --schema=prisma/platform.prisma
 
 # Expose engine port
 EXPOSE 3001
