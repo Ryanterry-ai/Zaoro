@@ -27,7 +27,7 @@ WORKDIR /app
 # Copy package files first for better layer caching
 COPY package.json package-lock.json* ./
 
-# Install all dependencies (including dev for tsx, esbuild)
+# Install all dependencies (including dev for tsx, esbuild, prisma CLI)
 RUN npm install
 
 # Install Playwright Chromium browser
@@ -36,12 +36,13 @@ RUN npx playwright install chromium
 # Copy source code
 COPY . .
 
+# Generate Prisma client using LOCAL binary (pinned at 5.10.2)
+# --no-install ensures it fails loudly if prisma isn't in node_modules
+# Placeholder URL is only needed for schema parsing, never connects
+RUN DATABASE_URL="postgresql://user:pass@localhost:5432/db" npx --no-install prisma generate --schema=prisma/platform.prisma
+
 # Create workspace directory
 RUN mkdir -p sandbox_workspaces .prompts .progress
-
-# Generate Prisma client (needs DATABASE_URL even for generation)
-ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
-RUN npx prisma generate --schema=prisma/platform.prisma
 
 # Expose engine port
 EXPOSE 3001

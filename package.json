@@ -49,6 +49,7 @@
                             "@types/jsdom":  "^28.0.3",
                             "@types/node":  "^20.11.24",
                             "@types/pngjs":  "^6.0.5",
+                            "prisma":  "5.10.2",
                             "vitest":  "^4.1.9"
                         }
 }
