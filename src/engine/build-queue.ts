@@ -244,7 +244,53 @@ try {
     writeProgress('content-gate', 'warning', 'Content quality gate warning: ' + fullOutput.slice(0, 500));
   }
 
-  writeProgress('preview', 'info', 'Rendering preview...');
+  // Pre-render preview during build so it's cached when web UI requests it
+  writeProgress('preview', 'started', 'Rendering preview...');
+  try {
+    const esbuild = await import('esbuild');
+    const { chromium } = await import('playwright');
+    const targetFile = path.join(wsDir, 'src', 'app', 'page.tsx');
+    const cacheFile = path.join(wsDir, '.preview-cache.html');
+
+    if (fs.existsSync(targetFile)) {
+      const bundleResult = await esbuild.build({
+        entryPoints: [targetFile],
+        bundle: true,
+        format: 'iife',
+        globalName: '__preview',
+        target: 'es2020',
+        jsx: 'transform',
+        loader: { '.tsx': 'tsx', '.ts': 'ts' },
+        external: ['react', 'react-dom'],
+        write: false,
+        alias: { '@': path.join(wsDir, 'src') },
+      });
+
+      const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
+      const previewHtml = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title><script src="https://cdn.tailwindcss.com"><\/script><style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div><script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script><script>' + bundledCode + 'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||_mod.Home||_mod.HomePage||null;if(_comp){var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}else{document.getElementById("preview-root").innerHTML=\'<div style="padding:2rem;color:#f43f5e;">No renderable component found.</div>\'}<\/script></body></html>';
+
+      const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await ctx.newPage();
+      await page.setContent(previewHtml, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForFunction(() => {
+        const el = document.getElementById('preview-root');
+        return el && el.children.length > 0;
+      }, { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(2000);
+      const renderedHtml = await page.content();
+      await ctx.close();
+      await browser.close();
+      fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
+      writeProgress('preview', 'done', 'Preview rendered');
+    } else {
+      writeProgress('preview', 'warning', 'No page.tsx found, skipping preview');
+    }
+  } catch (previewErr) {
+    console.warn('[preview] Pre-render failed:', previewErr.message);
+    writeProgress('preview', 'warning', 'Preview render failed: ' + (previewErr.message || '').slice(0, 200));
+  }
+
   writeProgress('done', 'completed', 'Build completed! Your application is ready.');
 } catch (err) { writeProgress('error', 'error', 'Build failed: ' + (err.message || err)); process.exit(1); }
 })();

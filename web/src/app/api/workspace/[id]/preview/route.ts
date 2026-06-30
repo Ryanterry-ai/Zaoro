@@ -9,7 +9,7 @@ export async function GET(
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
     const res = await fetch(`${getEngineUrl()}/api/workspace/${id}/preview`, {
       signal: controller.signal,
       headers: {
