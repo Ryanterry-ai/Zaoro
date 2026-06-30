@@ -35,7 +35,7 @@ export class GenerateTool implements MCPTool {
       const { LLMGateway } = await import('../../core/llm-gateway.js');
       const { ArchitectAgent } = await import('../../generation/architect.js');
 
-      const apiKey = process.env.LLM_API_KEY || '';
+      const { apiKey } = (await import('../../core/resolve-llm-config.js')).resolveLLMConfig();
       const gateway = new LLMGateway({ provider: provider as any, apiKey });
 
       const architect = new ArchitectAgent();

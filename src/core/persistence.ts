@@ -1,12 +1,31 @@
-import { PrismaClient } from '@prisma/client';
+// Lazy-load PrismaClient to prevent boot-time crash if client artifacts are incompatible.
+// The static import { PrismaClient } from '@prisma/client' throws synchronously at module
+// evaluation time if the generated client is from a different Prisma major version than the
+// runtime library. By deferring the import to first use, non-persistence routes still work.
+let _PrismaClient: any = null;
+let _prismaLoadError: string | null = null;
+let _prismaInstance: any = null;
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient | undefined };
+async function loadPrismaClient(): Promise<any> {
+  if (_PrismaClient) return _PrismaClient;
+  if (_prismaLoadError) throw new Error(`PrismaClient unavailable: ${_prismaLoadError}`);
+  try {
+    const mod = await import('@prisma/client');
+    _PrismaClient = mod.PrismaClient;
+    return _PrismaClient;
+  } catch (err: any) {
+    _prismaLoadError = err.message || String(err);
+    throw new Error(`Failed to load @prisma/client: ${_prismaLoadError}`);
+  }
+}
+
+const globalForPrisma = global as unknown as { prisma: any | undefined };
 
 function getDatabaseUrl(): string | undefined {
   return process.env.PLATFORM_DATABASE_URL || process.env.DATABASE_URL;
 }
 
-function createPrismaClient(): PrismaClient {
+async function createPrismaClient(): Promise<any> {
   const url = getDatabaseUrl();
   if (!url) {
     throw new Error('PLATFORM_DATABASE_URL or DATABASE_URL must be set for platform persistence');
@@ -14,12 +33,22 @@ function createPrismaClient(): PrismaClient {
   if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL = url;
   }
-  return new PrismaClient();
+  const PrismaClientClass = await loadPrismaClient();
+  return new PrismaClientClass();
 }
 
-function getPrisma(): PrismaClient {
+async function getPrisma(): Promise<any> {
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = createPrismaClient();
+    globalForPrisma.prisma = await createPrismaClient();
+  }
+  return globalForPrisma.prisma;
+}
+
+// Synchronous getter - throws if called before async initialization completes.
+// Call isPersistenceAvailable() first to check if DB is configured.
+function getPrismaSync(): any {
+  if (!globalForPrisma.prisma) {
+    throw new Error('Prisma client not initialized. Call getPrisma() first or ensure PLATFORM_DATABASE_URL is set before boot.');
   }
   return globalForPrisma.prisma;
 }
@@ -28,11 +57,11 @@ export function isPersistenceAvailable(): boolean {
   return Boolean(getDatabaseUrl());
 }
 
-function requirePrisma(): PrismaClient {
+function requirePrisma(): any {
   if (!isPersistenceAvailable()) {
     throw new Error('Platform persistence is not configured. Set PLATFORM_DATABASE_URL or DATABASE_URL.');
   }
-  return getPrisma();
+  return getPrismaSync();
 }
 
 // ─── User ──────────────────────────────────────────────────────────
@@ -180,7 +209,8 @@ export async function getMessages(projectId: string, limit = 50) {
 export async function checkDatabaseConnection(): Promise<boolean> {
   if (!isPersistenceAvailable()) return false;
   try {
-    await getPrisma().$queryRaw`SELECT 1`;
+    const prisma = await getPrisma();
+    await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch {
     return false;

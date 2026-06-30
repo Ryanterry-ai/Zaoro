@@ -192,8 +192,7 @@ const server = http.createServer(async (req, res) => {
       if (!body.prompt || typeof body.prompt !== 'string') {
         return json(res, { error: 'prompt is required' }, 400);
       }
-      const provider = (process.env.LLM_PROVIDER || 'gemini') as any;
-      const apiKey = process.env.LLM_API_KEY || '';
+      const { provider, apiKey } = (await import('./core/resolve-llm-config.js')).resolveLLMConfig();
       if (!apiKey) return json(res, { error: 'LLM_API_KEY not configured' }, 500);
 
       // DEPRECATED: BusinessIntelligencePipeline removed. Use /api/create instead.
@@ -358,7 +357,21 @@ const server = http.createServer(async (req, res) => {
 
     // Fallback: legacy format
     const progressFile = path.join(wsDir, '.progress');
-    if (!fs.existsSync(progressFile)) return json(res, { steps: [], pages: [], status: 'in_progress' });
+    if (!fs.existsSync(progressFile)) {
+      // Check for stale heartbeat — indicates a killed/restarted build process
+      const heartbeatFile = path.join(wsDir, '.build-heartbeat');
+      if (fs.existsSync(heartbeatFile)) {
+        const lastBeat = parseInt(fs.readFileSync(heartbeatFile, 'utf-8'), 10);
+        const ageMs = Date.now() - lastBeat;
+        if (ageMs > 30000) {
+          return json(res, {
+            steps: [], pages: [], status: 'stalled',
+            message: `Build process stopped responding ${Math.round(ageMs / 1000)}s ago — likely killed by a server restart. Retry the build.`,
+          });
+        }
+      }
+      return json(res, { steps: [], pages: [], status: 'in_progress' });
+    }
     const rawSteps = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
     const PHASE_LABELS: Record<string, string> = { engine: 'Compiler', llm: 'LLM Gateway', done: 'Complete', error: 'Failed' };
     const steps = rawSteps.map((s: any) => ({
@@ -596,8 +609,7 @@ const server = http.createServer(async (req, res) => {
       const progressFile = path.join(wsDir, '.progress');
       fs.writeFileSync(progressFile, JSON.stringify([]), 'utf-8');
 
-      const provider = process.env.LLM_PROVIDER || 'openai';
-      const apiKey = process.env.LLM_API_KEY || '';
+      const { provider, apiKey } = (await import('./core/resolve-llm-config.js')).resolveLLMConfig();
 
       // Fire-and-forget async clone
       const { exec } = await import('child_process');
