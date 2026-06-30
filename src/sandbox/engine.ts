@@ -99,53 +99,61 @@ export class SandboxEngine {
     const appDir = path.join(srcDir, 'app');
     fs.mkdirSync(appDir, { recursive: true });
 
-    const packageJsonTemplate = {
-      name: "build-same-sandbox-instance",
-      version: "1.0.0",
-      private: true,
-      scripts: {
-        "dev": "next dev",
-        "build": "next build",
-        "start": "next start"
-      },
-      dependencies: {
-        "next": "^14.1.0",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "lucide-react": "^0.344.0"
-      },
-      devDependencies: {
-        "typescript": "^5.3.3",
-        "@types/node": "^20.11.0",
-        "@types/react": "^18.2.0",
-        "@types/react-dom": "^18.2.0"
-      }
-    };
-    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify(packageJsonTemplate, null, 2));
+    const packageJsonPath = path.join(root, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) {
+      const packageJsonTemplate = {
+        name: "build-same-sandbox-instance",
+        version: "1.0.0",
+        private: true,
+        scripts: {
+          "dev": "next dev",
+          "build": "next build",
+          "start": "next start"
+        },
+        dependencies: {
+          "next": "^14.1.0",
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          "lucide-react": "^0.344.0"
+        },
+        devDependencies: {
+          "typescript": "^5.3.3",
+          "@types/node": "^20.11.0",
+          "@types/react": "^18.2.0",
+          "@types/react-dom": "^18.2.0"
+        }
+      };
+      fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonTemplate, null, 2));
+    }
 
-    const tsconfigTemplate = {
-      compilerOptions: {
-        target: "ES2022",
-        lib: ["dom", "dom.iterable", "esnext"],
-        allowJs: true,
-        skipLibCheck: true,
-        strict: true,
-        noEmit: true,
-        esModuleInterop: true,
-        module: "esnext",
-        moduleResolution: "bundler",
-        resolveJsonModule: true,
-        isolatedModules: true,
-        jsx: "preserve",
-        plugins: [{ name: "next" }],
-        paths: { "@/*": ["./src/*"] }
-      },
-      include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-      exclude: ["node_modules"]
-    };
-    fs.writeFileSync(path.join(root, 'tsconfig.json'), JSON.stringify(tsconfigTemplate, null, 2));
+    const tsconfigPath = path.join(root, 'tsconfig.json');
+    if (!fs.existsSync(tsconfigPath)) {
+      const tsconfigTemplate = {
+        compilerOptions: {
+          target: "ES2022",
+          lib: ["dom", "dom.iterable", "esnext"],
+          allowJs: true,
+          skipLibCheck: true,
+          strict: true,
+          noEmit: true,
+          esModuleInterop: true,
+          module: "esnext",
+          moduleResolution: "bundler",
+          resolveJsonModule: true,
+          isolatedModules: true,
+          jsx: "preserve",
+          plugins: [{ name: "next" }],
+          paths: { "@/*": ["./src/*"] }
+        },
+        include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+        exclude: ["node_modules"]
+      };
+      fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfigTemplate, null, 2));
+    }
 
-    const layoutTemplate = `
+    const layoutPath = path.join(appDir, 'layout.tsx');
+    if (!fs.existsSync(layoutPath)) {
+      const layoutTemplate = `
 import React from 'react';
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -155,9 +163,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 `;
-    fs.writeFileSync(path.join(appDir, 'layout.tsx'), layoutTemplate.trim());
+      fs.writeFileSync(layoutPath, layoutTemplate.trim());
+    }
 
-    const pageTemplate = `
+    const pagePath = path.join(appDir, 'page.tsx');
+    if (!fs.existsSync(pagePath)) {
+      const pageTemplate = `
 import React from 'react';
 export default function Home() {
   return (
@@ -167,6 +178,7 @@ export default function Home() {
   );
 }
 `;
-    fs.writeFileSync(path.join(appDir, 'page.tsx'), pageTemplate.trim());
+      fs.writeFileSync(pagePath, pageTemplate.trim());
+    }
   }
 }

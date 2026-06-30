@@ -49,14 +49,17 @@ const SECTION_REGISTRY: Record<string, string> = {
 
   // Dashboard
   'stats-cards': 'StatsCards',
+  'stats': 'StatsCards',
   'overview': 'StatsCards',
   'charts': 'ChartsPanel',
   'activity-feed': 'ActivityFeed',
   'data-grid': 'DataGrid',
+  'user-management': 'DataTable',
 
   // Auth
   'login-form': 'AuthForm',
   'signup-form': 'AuthForm',
+  'register-form': 'AuthForm',
   'social-auth': 'SocialAuth',
 
   // Dashboard sections
@@ -97,7 +100,7 @@ const SECTION_REGISTRY: Record<string, string> = {
   'data-table': 'DataTable',
 
   // Healthcare / Restaurant (from rules engine)
-  'booking-form': 'AuthForm',
+  'booking-form': 'ContactForm',
   'calendar': 'DataTable',
   'menu-categories': 'CategoryGrid',
   'menu-items': 'ProductGrid',
