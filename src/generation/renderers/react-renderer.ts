@@ -353,7 +353,7 @@ ${body}
 
     // Fields prop
     if ((spec.fields?.length ?? 0) > 0) {
-      lines.push(`  fields?: Array<{ name: string; label: string; type?: string; required?: boolean }>;`);
+      lines.push(`  fields?: Array<{ name: string; label: string; type?: string; required?: boolean; placeholder?: string; options?: Array<{ label: string; value: string }> }>;`);
     }
 
     // Actions prop
