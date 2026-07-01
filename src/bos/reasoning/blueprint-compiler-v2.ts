@@ -1,6 +1,7 @@
 import type { BREContext, RuleDecision } from './rules-engine.js';
 import type { ConstraintReport } from './constraint-solver.js';
 import type { ScoredOption } from './scorer.js';
+import { DESIGN_PROFILES } from '../knowledge/registry.js';
 import type {
   ApplicationBlueprint,
   PagePlan,
@@ -407,18 +408,50 @@ export class BlueprintCompilerV2 {
   }
 
   private compileDesignTokens(selectedProfile?: ScoredOption): TokenSet {
+    const fallback = {
+      colors: { primary: '#7C3AED', secondary: '#3B82F6', background: '#09090B', foreground: '#FAFAFA' },
+      typography: { heading: 'Inter', body: 'Inter' },
+      spacing: { sm: '0.5rem', md: '1rem', lg: '1.5rem', xl: '2rem' },
+    };
+
     if (!selectedProfile) {
-      return {
-        colors: { primary: '#7C3AED', secondary: '#3B82F6', background: '#09090B', foreground: '#FAFAFA' },
-        typography: { heading: 'Inter', body: 'Inter' },
-        spacing: { sm: '0.5rem', md: '1rem', lg: '1.5rem', xl: '2rem' },
-      };
+      return fallback as unknown as TokenSet;
+    }
+
+    const fullProfile = DESIGN_PROFILES.find(p => p.id === selectedProfile.id);
+    if (!fullProfile) {
+      // Profile was scored but isn't in the registry by this id — fall back
+      // rather than silently shipping an empty token set.
+      return fallback as unknown as TokenSet;
     }
 
     return {
-      profileId: selectedProfile.id,
-      profileName: selectedProfile.name,
-      profileScore: String(selectedProfile.score),
+      profileId: fullProfile.id,
+      profileName: fullProfile.name,
+      colors: {
+        primary: fullProfile.colorPsychology.primary,
+        secondary: fullProfile.colorPsychology.secondary,
+        accent: fullProfile.colorPsychology.accent,
+        background: fullProfile.colorPsychology.background,
+        foreground: fullProfile.colorPsychology.foreground,
+        muted: fullProfile.colorPsychology.muted,
+        destructive: fullProfile.colorPsychology.destructive,
+        success: fullProfile.colorPsychology.success,
+        warning: fullProfile.colorPsychology.warning,
+        info: fullProfile.colorPsychology.info,
+      },
+      typography: {
+        heading: fullProfile.typography.displayFamily,
+        body: fullProfile.typography.bodyFamily,
+        ...(fullProfile.typography.monoFamily ? { mono: fullProfile.typography.monoFamily } : {}),
+      },
+      spacing: fullProfile.spacing,
+      motion: {
+        durationFast: fullProfile.motion.duration.fast,
+        durationNormal: fullProfile.motion.duration.normal,
+        durationSlow: fullProfile.motion.duration.slow,
+        easingDefault: fullProfile.motion.easing.default,
+      },
     } as unknown as TokenSet;
   }
 

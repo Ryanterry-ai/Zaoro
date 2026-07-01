@@ -164,6 +164,10 @@ export class DeterministicOrchestratorV4 {
       console.warn(`[orchestrator] Renderer warnings: ${renderResult.warnings.join(', ')}`);
     }
 
+    if (appBlueprint.warnings.length > 0) {
+      console.warn(`[orchestrator] Blueprint warnings: ${appBlueprint.warnings.join(' | ')}`);
+    }
+
     // Write generated files to workspace
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
 
@@ -222,6 +226,11 @@ export class DeterministicOrchestratorV4 {
       pageResults,
       duration: Date.now() - startTime,
     };
+
+    const allWarnings = [...appBlueprint.warnings, ...renderResult.warnings];
+    if (allWarnings.length > 0) {
+      result.warnings = allWarnings;
+    }
 
     if (failed.length > 0) {
       result.error = `${failed.length} page(s) failed: ${failed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;

@@ -146,14 +146,14 @@ export type NavItem = (typeof navItems)[number];
 
   // ─── Shell Generation ─────────────────────────────────────────────────────
 
-  renderShell(spec: ApplicationSpec, _context: RenderContext): RenderedFile[] {
+  renderShell(spec: ApplicationSpec, context: RenderContext): RenderedFile[] {
     const appName = spec.appName || 'My App';
-    const colorScheme = (spec as Record<string, unknown>).colorScheme as Record<string, unknown> ?? {};
+    const theme = (context?.theme ?? {}) as Record<string, unknown>;
 
     return [
       this.renderPackageJson(appName),
-      this.renderGlobalsCSS(colorScheme),
-      this.renderTailwindConfig(colorScheme),
+      this.renderGlobalsCSS(theme),
+      this.renderTailwindConfig(theme),
       this.renderPostCSSConfig(),
       this.renderNextConfig(),
       this.renderRootLayout(appName),
@@ -175,7 +175,6 @@ export type NavItem = (typeof navItems)[number];
         dependencies: {
           '@prisma/client': '^5.10.2',
           'autoprefixer': '^10.4.17',
-          'lucide-react': '^0.344.0',
           'next': '^14.1.0',
           'postcss': '^8.4.35',
           'prisma': '^5.10.2',
@@ -194,7 +193,22 @@ export type NavItem = (typeof navItems)[number];
     };
   }
 
-  private renderGlobalsCSS(_colorScheme: Record<string, unknown>): RenderedFile {
+  private renderGlobalsCSS(theme: Record<string, unknown>): RenderedFile {
+    const colors = (theme.colors ?? {}) as Record<string, string>;
+    const c = {
+      background: colors.background ?? '#09090b',
+      foreground: colors.foreground ?? '#fafafa',
+      primary: colors.primary ?? '#10b981',
+      secondary: colors.secondary ?? colors.primary ?? '#10b981',
+      muted: colors.muted ?? '#27272a',
+      mutedForeground: '#a1a1aa',
+      border: colors.muted ?? '#27272a',
+      destructive: colors.destructive ?? '#ef4444',
+      success: colors.success ?? '#22c55e',
+      warning: colors.warning ?? '#f59e0b',
+      info: colors.info ?? '#3b82f6',
+    };
+
     return {
       path: 'app/globals.css',
       content: `@tailwind base;
@@ -202,14 +216,19 @@ export type NavItem = (typeof navItems)[number];
 @tailwind utilities;
 
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --primary: #10b981;
+  --background: ${c.background};
+  --foreground: ${c.foreground};
+  --primary: ${c.primary};
   --primary-foreground: #ffffff;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --border: #27272a;
-  --ring: #10b981;
+  --secondary: ${c.secondary};
+  --muted: ${c.muted};
+  --muted-foreground: ${c.mutedForeground};
+  --border: ${c.border};
+  --ring: ${c.primary};
+  --destructive: ${c.destructive};
+  --success: ${c.success};
+  --warning: ${c.warning};
+  --info: ${c.info};
 }
 
 body {
@@ -224,7 +243,11 @@ body {
     };
   }
 
-  private renderTailwindConfig(_colorScheme: Record<string, unknown>): RenderedFile {
+  private renderTailwindConfig(theme: Record<string, unknown>): RenderedFile {
+    const typography = (theme.typography ?? {}) as Record<string, string>;
+    const headingFont = typography.heading ?? 'Inter';
+    const bodyFont = typography.body ?? 'Inter';
+
     return {
       path: '../tailwind.config.ts',
       content: `import type { Config } from 'tailwindcss';
@@ -236,7 +259,24 @@ const config: Config = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        primary: { DEFAULT: 'var(--primary)', foreground: 'var(--primary-foreground)' },
+        secondary: 'var(--secondary)',
+        muted: { DEFAULT: 'var(--muted)', foreground: 'var(--muted-foreground)' },
+        border: 'var(--border)',
+        destructive: 'var(--destructive)',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        info: 'var(--info)',
+      },
+      fontFamily: {
+        heading: ['${headingFont}', 'sans-serif'],
+        body: ['${bodyFont}', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };

@@ -178,6 +178,8 @@ function interceptConsole(prefix, type) {
       else if (clean.includes('Build partial') || clean.includes('Build complete')) writeProgress('compile', 'completed', clean);
       else if (clean.includes('Selected patch:')) writeProgress('compile', 'applying', clean);
       else if (clean.includes('Loaded industry model')) writeProgress('research', 'cached', clean);
+      else if (clean.includes('Blueprint warnings:')) writeProgress('architect', 'warning', clean);
+      else if (clean.includes('Renderer warnings:')) writeProgress('compile', 'warning', clean);
     } else if (clean.includes('[domain-synth]')) {
       if (clean.includes('Detected:') || clean.includes('Using resolved pattern:')) writeProgress('architect', 'info', clean);
       else writeProgress('architect', 'info', clean);
@@ -218,7 +220,7 @@ try {
   const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
   try {
     writeProgress('gate', 'started', 'Running quality gate (prisma generate + next build)...');
-    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 300000, stdio: 'pipe' });
+    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 300000, stdio: 'pipe', env: { ...process.env, NODE_ENV: 'production' } });
     writeProgress('gate', 'passed', 'Quality gate passed');
   } catch (gateErr) {
     const stdout = gateErr.stdout?.toString() || '';

@@ -190,7 +190,13 @@ function detectBusinessModels(prompt: string): string[] {
     }
   }
 
-  return models.length > 0 ? models : ['direct-sales'];
+  // Previously defaulted to ['direct-sales'] when nothing matched. That silent
+  // guess was the root cause of e-commerce pages (/shop, /cart) being added to
+  // builds with no commercial signal at all (e.g. "Build ERP for hospitals").
+  // An empty array correctly represents "no business model detected" and lets
+  // downstream rules/constraints reason about that honestly instead of acting
+  // on a fabricated default.
+  return models;
 }
 
 function detectCapabilities(prompt: string): string[] {

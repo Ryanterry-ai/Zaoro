@@ -120,6 +120,7 @@ export interface GenerationResult {
   pageResults?: PageBuildResult[];
   clonePlan?: unknown;
   analysis?: unknown;
+  warnings?: string[];
   error?: string;
   duration: number;
 }
