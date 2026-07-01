@@ -450,6 +450,8 @@ const server = http.createServer(async (req, res) => {
       });
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
+      // Escape </script> in bundled code to prevent premature HTML script tag closure
+      const safeBundledCode = bundledCode.replace(/<\/script>/gi, '<\\/script>');
 
       const previewHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -469,7 +471,7 @@ const server = http.createServer(async (req, res) => {
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
   <script>
-    ${bundledCode}
+    ${safeBundledCode}
     var _mod = typeof __preview !== 'undefined' ? __preview : {};
     var _comp = _mod.default || null;
     if (!_comp) {

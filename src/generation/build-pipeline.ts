@@ -68,10 +68,12 @@ export interface PipelineResult {
  * @param config - Pipeline configuration
  * @returns Complete pipeline result with generated code
  */
-export function runBuildPipeline(
+export async function runBuildPipeline(
   context: BREContext,
   config: PipelineConfig = {},
-): PipelineResult {
+  llmConfig?: import('../types/index.js').LLMConfig,
+  industryScore?: number,
+): Promise<PipelineResult> {
   const {
     platform = 'react',
     includeComments = true,
@@ -92,7 +94,7 @@ export function runBuildPipeline(
 
   // Layer 1: BRE v2 → Application Blueprint
   const t1 = Date.now();
-  const breResult = runBREV2Pipeline(context);
+  const breResult = await runBREV2Pipeline(context, llmConfig, industryScore);
   log.info('Layer 1: BRE v2 complete', {
     pages: breResult.blueprint.pages.length,
     entities: breResult.blueprint.entities.length,
@@ -186,9 +188,9 @@ export function getAvailableRenderers(): string[] {
 /**
  * Run the pipeline with a specific renderer.
  */
-export function runPipelineForPlatform(
+export async function runPipelineForPlatform(
   context: BREContext,
   platform: string,
-): PipelineResult {
+): Promise<PipelineResult> {
   return runBuildPipeline(context, { platform });
 }

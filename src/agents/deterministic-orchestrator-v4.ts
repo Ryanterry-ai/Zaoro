@@ -146,10 +146,10 @@ export class DeterministicOrchestratorV4 {
 
     // ═══ New 4-layer pipeline: BRE v2 → Execution Blueprint → Content Resolver → Renderer ═══
     console.log(`[orchestrator] Running 4-layer build pipeline...`);
-    const pipelineResult = runBuildPipeline(breContext, {
+    const pipelineResult = await runBuildPipeline(breContext, {
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
-    });
+    }, llmConfig);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;
     const appBlueprint = breResult.blueprint;
@@ -305,7 +305,7 @@ Rules:
 
     // BRE v2: deterministic blueprint for clone scaffold
     const breContext = buildBREContext(prompt);
-    const breResult = runBREV2Pipeline(breContext);
+    const breResult = await runBREV2Pipeline(breContext, llmConfig);
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
 
@@ -364,10 +364,10 @@ Rules:
 
     // ═══ New 4-layer pipeline ═══
     console.log(`[hybrid] Running 4-layer build pipeline...`);
-    const pipelineResult = runBuildPipeline(breContext, {
+    const pipelineResult = await runBuildPipeline(breContext, {
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
-    });
+    }, llmConfig);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;
     const appBlueprint = breResult.blueprint;

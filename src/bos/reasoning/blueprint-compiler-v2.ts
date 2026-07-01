@@ -2,6 +2,7 @@ import type { BREContext, RuleDecision } from './rules-engine.js';
 import type { ConstraintReport } from './constraint-solver.js';
 import type { ScoredOption } from './scorer.js';
 import { DESIGN_PROFILES } from '../knowledge/registry.js';
+import type { Pattern } from '../schemas/knowledge/pattern.schema.js';
 import type {
   ApplicationBlueprint,
   PagePlan,
@@ -28,26 +29,33 @@ export interface BlueprintCompilerInput {
   constraintReport: ConstraintReport;
   selectedDesignProfile?: ScoredOption | undefined;
   selectedPattern?: ScoredOption | undefined;
+  fullSelectedPattern?: Pattern | undefined;  // Full Pattern object for page-merging
   vocabulary: Record<string, string>;
   knowledgeRefs: Array<{ id: string; version: string }>;
 }
 
 export class BlueprintCompilerV2 {
   compile(input: BlueprintCompilerInput): ApplicationBlueprint {
-    const { context, decisions, constraintReport, selectedDesignProfile, selectedPattern, vocabulary, knowledgeRefs } = input;
+    const { context, decisions, constraintReport, selectedDesignProfile, selectedPattern, fullSelectedPattern, vocabulary, knowledgeRefs } = input;
 
-    const pages = this.compilePages(decisions);
-    const entities = this.compileEntities(decisions);
-    const workflows = this.compileWorkflows(decisions);
-    const integrations = this.compileIntegrations(decisions);
-    const permissions = this.compilePermissions(decisions);
-    const navigation = this.compileNavigation(decisions, context);
+    // Merge pattern pages into decisions before compiling pages.
+    // This fixes the dead-code bug identified in Phase 3: selectedPattern was
+    // scored and passed in but the full Pattern object was never looked up,
+    // meaning pattern pages never reached the final blueprint.
+    const mergedDecisions = this.mergePatternDecisions(decisions, fullSelectedPattern);
+
+    const pages = this.compilePages(mergedDecisions);
+    const entities = this.compileEntities(mergedDecisions);
+    const workflows = this.compileWorkflows(mergedDecisions);
+    const integrations = this.compileIntegrations(mergedDecisions);
+    const permissions = this.compilePermissions(mergedDecisions);
+    const navigation = this.compileNavigation(mergedDecisions, context);
     const database = this.compileDatabase(entities);
     const routes = this.compileRoutes(pages, integrations);
     const layouts = this.compileLayouts(pages);
     const apis = this.compileAPIs(entities, integrations);
-    const dashboardWidgets = this.compileDashboardWidgets(decisions, entities);
-    const charts = this.compileCharts(decisions, entities);
+    const dashboardWidgets = this.compileDashboardWidgets(mergedDecisions, entities);
+    const charts = this.compileCharts(mergedDecisions, entities);
     const forms = this.compileForms(entities);
     const tables = this.compileTables(entities);
     const designTokens = this.compileDesignTokens(selectedDesignProfile);
@@ -83,15 +91,55 @@ export class BlueprintCompilerV2 {
       tables,
       integrations,
       designTokens,
-      generationRules: decisions.map(d => ({ id: d.ruleId, params: {} })),
+      generationRules: mergedDecisions.map(d => ({ id: d.ruleId, params: {} })),
       provenance: {
         knowledge: knowledgeRefs,
         compilers: ['blueprint-compiler-v2'],
       },
       vocabulary,
-      confidence: this.computeConfidence(decisions, constraintReport, selectedDesignProfile),
+      confidence: this.computeConfidence(mergedDecisions, constraintReport, selectedDesignProfile),
       warnings,
     };
+  }
+
+  /**
+   * Merge a Pattern's pages into the existing decisions as add_page actions.
+   * This is the adapter that was missing in Phase 3 — Pattern.pages uses a
+   * local PageSpecSchema that is not type-compatible with PagePlan, so we
+   * convert through the RuleDecision shape that compilePages() already handles.
+   *
+   * Only adds pages that don't already exist in the decision set — the
+   * deterministic rule decisions always take precedence.
+   */
+  private mergePatternDecisions(
+    decisions: RuleDecision[],
+    pattern: Pattern | undefined,
+  ): RuleDecision[] {
+    if (!pattern || pattern.pages.length === 0) return decisions;
+
+    const existingPaths = new Set(
+      decisions
+        .filter(d => d.action.type === 'add_page')
+        .map(d => d.action.type === 'add_page' ? d.action.path : '')
+    );
+
+    const patternDecisions: RuleDecision[] = pattern.pages
+      .filter(page => !existingPaths.has(page.path))
+      .map(page => ({
+        ruleId: `pattern.${pattern.id}.page`,
+        ruleName: `Pattern: ${pattern.name}`,
+        action: {
+          type: 'add_page' as const,
+          path: page.path,
+          name: page.name,
+          sections: page.sections ?? [],
+        },
+        confidence: 0.75,
+        trace: `Contributed by pattern: ${pattern.name}`,
+      }));
+
+    // Pattern pages appended after rule-derived pages — rules have priority
+    return [...decisions, ...patternDecisions];
   }
 
   private compilePages(decisions: RuleDecision[]): PagePlan[] {

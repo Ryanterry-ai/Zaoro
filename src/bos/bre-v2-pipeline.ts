@@ -27,6 +27,9 @@ import {
   DESIGN_PROFILES,
   PATTERNS,
 } from './knowledge/registry.js';
+import { evaluateConfidence } from './confidence-gate.js';
+import { runLLMPlanning } from './llm-planning-agent.js';
+import type { LLMConfig } from '../types/index.js';
 import { stageLogger } from '../core/debug-logger.js';
 
 const log = stageLogger('bre');
@@ -38,13 +41,15 @@ export interface BREv2Result {
   selectedDesignProfile: ScoredOption | undefined;
   selectedPattern: ScoredOption | undefined;
   confidence: number;
+  usedLLMPlanning: boolean;
 }
 
 /**
  * Run the full BRE v2 pipeline: Rules → Constraints → Scoring → Blueprint.
- * Purely deterministic. Zero LLM calls.
+ * Deterministic path for well-covered prompts.
+ * LLM escalation path for low-confidence cases (configurable via llmConfig).
  */
-export function runBREV2Pipeline(ctx: BREContext): BREv2Result {
+export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, industryScore?: number): Promise<BREv2Result> {
   log.info('Running BRE v2 pipeline', {
     industry: ctx.industry,
     businessModels: ctx.businessModels,
@@ -59,12 +64,12 @@ export function runBREV2Pipeline(ctx: BREContext): BREv2Result {
 
   // Step 1: Evaluate rules against context
   const t1 = Date.now();
-  const decisions = rulesEngine.evaluate(ctx);
+  let decisions = rulesEngine.evaluate(ctx);
   log.info('Rules evaluated', { count: decisions.length, duration: Date.now() - t1 });
 
   // Step 2: Check constraints
   const t2 = Date.now();
-  const constraintReport = constraintSolver.evaluate(ctx, decisions);
+  let constraintReport = constraintSolver.evaluate(ctx, decisions);
   log.info('Constraints evaluated', {
     satisfied: constraintReport.satisfied,
     violated: constraintReport.violated,
@@ -92,7 +97,42 @@ export function runBREV2Pipeline(ctx: BREContext): BREv2Result {
     duration: Date.now() - t3,
   });
 
+  // Step 3b: Confidence Gate — evaluate whether the deterministic system
+  // adequately understood this prompt, or whether LLM escalation is needed.
+  const gateResult = evaluateConfidence(
+    ctx,
+    industryScore ?? 99, // 99 = trusted caller, no penalty for missing score
+    selectedPattern,
+    scoredPatterns,
+  );
+
+  let activeCtx = ctx;
+  let usedLLMPlanning = false;
+
+  if (gateResult.shouldEscalate) {
+    console.log(`[bre-v2] Confidence gate triggered (${(gateResult.confidence * 100).toFixed(0)}%): ${gateResult.reasons[0] ?? 'low confidence'}`);
+    console.log(`[bre-v2] Escalating to LLM planning agent...`);
+
+    const planningResult = await runLLMPlanning(ctx, decisions, llmConfig);
+
+    if (planningResult.usedLLM) {
+      activeCtx = planningResult.enrichedContext;
+      // Merge LLM-derived decisions with deterministic ones.
+      // LLM decisions go AFTER deterministic ones so constraints evaluated
+      // on deterministic decisions remain valid.
+      decisions = [...decisions, ...planningResult.additionalDecisions];
+      usedLLMPlanning = true;
+
+      // Re-run constraints on the expanded decision set
+      constraintReport = constraintSolver.evaluate(activeCtx, decisions);
+      console.log(`[bre-v2] LLM planning added ${planningResult.additionalDecisions.length} decisions`);
+    } else {
+      console.log(`[bre-v2] LLM planning unavailable (no API key), proceeding with deterministic output`);
+    }
+  }
+
   // Step 4: Compile blueprint
+  // selectedPattern is now wired into page compilation via mapPatternPagesToBlueprintPages.
   const t4 = Date.now();
   const vocabulary: Record<string, string> = {};
   for (const decision of decisions) {
@@ -101,12 +141,18 @@ export function runBREV2Pipeline(ctx: BREContext): BREv2Result {
     }
   }
 
+  // Resolve the full Pattern object for page-merging (fixes the selectedPattern dead-code bug)
+  const fullSelectedPattern = selectedPattern
+    ? PATTERNS.find(p => p.id === selectedPattern.id)
+    : undefined;
+
   const input: BlueprintCompilerInput = {
-    context: ctx,
+    context: activeCtx,
     decisions,
     constraintReport,
     selectedDesignProfile,
     selectedPattern,
+    fullSelectedPattern, // NEW: full Pattern object, not just ScoredOption
     vocabulary,
     knowledgeRefs: [],
   };
@@ -118,6 +164,7 @@ export function runBREV2Pipeline(ctx: BREContext): BREv2Result {
     apis: blueprint.apis.length,
     workflows: blueprint.workflows.length,
     confidence: blueprint.confidence,
+    usedLLMPlanning,
     duration: Date.now() - t4,
   });
 
@@ -128,5 +175,6 @@ export function runBREV2Pipeline(ctx: BREContext): BREv2Result {
     selectedDesignProfile,
     selectedPattern,
     confidence: blueprint.confidence,
+    usedLLMPlanning,
   };
 }
