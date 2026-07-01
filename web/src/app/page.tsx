@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const EXAMPLE_PROMPTS = [
-  "A SaaS dashboard with user authentication and analytics",
-  "An e-commerce store with product listings and cart",
-  "A portfolio website with blog and contact form",
-  "A project management tool with kanban boards",
+  "Build a hospital ERP with patient management, staff scheduling, and billing",
+  "An e-commerce store for handmade jewelry with inventory and Stripe checkout",
+  "A SaaS project management tool with kanban boards and subscription plans",
+  "A logistics dispatch platform for a trucking company with driver tracking",
+  "A dental clinic website with online booking and patient portal",
+  "A nonprofit fundraising platform with donation campaigns and volunteer management",
 ];
 
 const INDUSTRY_TEMPLATES = [
@@ -77,7 +79,7 @@ export default function Home() {
         const res = await fetch("/api/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: prompt.trim(), pipeline: true }),
+          body: JSON.stringify({ prompt: prompt.trim(), pipeline: false }),
         });
         const data = await res.json();
         if (data.id) {

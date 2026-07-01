@@ -5,31 +5,29 @@ import { useState, useEffect, useRef, useCallback } from "react";
 export interface PlanSnapshot {
   ts: number;
   breContext: {
-    domain: string;
-    subdomain?: string;
-    confidence: number;
-    traits?: string[];
-    industryTags?: string[];
-    b2b: boolean;
+    industry: string;
+    businessModels: string[];
+    entities: string[];
+    appName?: string;
   } | null;
   rules: Array<{
     ruleId: string;
     ruleName: string;
-    action: string;
+    action: Record<string, unknown>;
     confidence: number;
     trace: string;
   }>;
   blueprint: {
     pages: number;
-    dataModels: number;
+    entities: number;
     apis: number;
-    designTokens: boolean;
+    database: { engine: string; tables: number } | null;
+    hasDesignTokens: boolean;
     vocabulary?: Record<string, string>;
   } | null;
   executionBlueprint: {
     pages: Array<{
       path: string;
-      layout: string;
       slots: number;
     }>;
   } | null;

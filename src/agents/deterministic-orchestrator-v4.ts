@@ -217,21 +217,22 @@ export class DeterministicOrchestratorV4 {
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
 
     // Phase 14: Write file stream for live file generation tracking
+    // Each entry is appended immediately after writing the file so the SSE
+    // stream shows files appearing incrementally, not all at once.
     const fileStreamPath = path.join(workspace.rootPath, '.generated-files.jsonl');
-    const fileStreamEntries: string[] = [];
+    // Clear any previous stream file
+    try { fs.writeFileSync(fileStreamPath, '', 'utf-8'); } catch { }
 
     for (const file of renderResult.files) {
       const filePath = path.join(workspace.rootPath, 'src', file.path);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, file.content, 'utf-8');
       console.log(`[orchestrator] Generated: ${file.path} (${file.type})`);
-      fileStreamEntries.push(JSON.stringify({ path: file.path, type: file.type, ts: Date.now() }));
+      // Append immediately so SSE polling picks it up file-by-file
+      try {
+        fs.appendFileSync(fileStreamPath, JSON.stringify({ path: file.path, type: file.type, ts: Date.now() }) + '\n', 'utf-8');
+      } catch { }
     }
-
-    // Write all file stream entries at once (atomic write is fine since generation is fast)
-    try {
-      fs.writeFileSync(fileStreamPath, fileStreamEntries.join('\n') + '\n', 'utf-8');
-    } catch { }
 
     // Mark all pages as succeeded (they come from the renderer, not LLM)
     for (const page of blueprint.pages) {
