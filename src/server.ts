@@ -394,6 +394,98 @@ const server = http.createServer(async (req, res) => {
     return json(res, { steps, pages: pageEvents, status, phases });
   }
 
+  // GET /api/workspace/:id/events — SSE stream for live build progress
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/events$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    res.write('event: connected\ndata: {"status":"connected"}\n\n');
+
+    const sources = [
+      { path: path.join(wsDir, '.clone-state.json'), type: 'clone-state' },
+      { path: path.join(wsDir, '.build-state.json'), type: 'build-state' },
+      { path: path.join(wsDir, '.progress'), type: 'legacy' },
+    ];
+
+    let lastCounts: Record<string, number> = {};
+    let heartbeatTimer: ReturnType<typeof setInterval>;
+
+    const tick = () => {
+      for (const src of sources) {
+        try {
+          if (!fs.existsSync(src.path)) continue;
+          const content = fs.readFileSync(src.path, 'utf-8');
+          const data = JSON.parse(content);
+          const events: any[] = data.events || (Array.isArray(data) ? data : []);
+
+          if (events.length > (lastCounts[src.path] || 0)) {
+            const newEvents = events.slice(lastCounts[src.path] || 0);
+            lastCounts[src.path] = events.length;
+
+            for (const ev of newEvents) {
+              const stage = ev.stage || ev.phase || ev.step || 'unknown';
+              const status = ev.stageStatus || ev.phaseStatus || (ev.step === 'done' ? 'done' : ev.step === 'error' ? 'failed' : 'active');
+              res.write(`event: progress\ndata: ${JSON.stringify({ ts: ev.ts, stage, status, message: ev.message, data: ev.data, _source: src.type, _id: id })}\n\n`);
+            }
+
+            const last = events[events.length - 1];
+            const isComplete = last?.phaseStatus === 'done' && last?.phase === 'complete';
+            const isBuildDone = data.success === true;
+            const isStepDone = last?.step === 'done' || last?.phaseStatus === 'done' || data.success;
+            const isFailed = last?.step === 'error' || last?.phaseStatus === 'failed';
+
+            if (isComplete || isBuildDone || isStepDone) {
+              res.write(`event: complete\ndata: {"status":"complete","message":"${(last?.message || '').replace(/"/g, '\\"')}"}\n\n`);
+              clearInterval(pollTimer);
+              clearInterval(heartbeatTimer);
+              res.end();
+              return;
+            }
+            if (isFailed || data.error) {
+              res.write(`event: error\ndata: {"status":"failed","message":"${((last?.message || data.error) || '').replace(/"/g, '\\"')}"}\n\n`);
+              clearInterval(pollTimer);
+              clearInterval(heartbeatTimer);
+              res.end();
+              return;
+            }
+          }
+
+          // Also detect completion from buildState directly
+          if (data.success !== undefined && !data.events) {
+            if (data.success) {
+              res.write(`event: complete\ndata: {"status":"complete","message":"Build complete"}\n\n`);
+              clearInterval(pollTimer);
+              clearInterval(heartbeatTimer);
+              res.end();
+              return;
+            }
+          }
+        } catch {}
+      }
+    };
+
+    const pollTimer = setInterval(tick, 600);
+    heartbeatTimer = setInterval(() => {
+      try { res.write('event: heartbeat\ndata: {}\n\n'); } catch { clearInterval(pollTimer); clearInterval(heartbeatTimer); }
+    }, 10000);
+
+    req.on('close', () => {
+      clearInterval(pollTimer);
+      clearInterval(heartbeatTimer);
+    });
+
+    return;
+  }
+
   // GET /api/workspace/:id/files
   if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/files$/)) {
     const id = url.pathname.split('/')[3]!;

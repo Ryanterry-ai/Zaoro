@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useBuildEvents } from "@/lib/use-build-events";
+import { PipelineTimeline } from "@/components/PipelineTimeline";
 
 interface ProgressStep {
   step: string;
@@ -239,6 +241,44 @@ export default function WorkspacePage() {
     }
   }, [checkEngine, doBuild]);
 
+  // SSE-based live events — feeds into existing state
+  const buildEventsState = useBuildEvents(id, isBuilding);
+
+  useEffect(() => {
+    if (!buildEventsState.isLive || buildEventsState.events.length === 0) return;
+    const existingIds = new Set(steps.map((s) => `${s.ts}-${s.step}`));
+    const newSteps: ProgressStep[] = [];
+    for (const ev of buildEventsState.events) {
+      const key = `${ev.ts}-${ev.stage}`;
+      if (!existingIds.has(key)) {
+        newSteps.push({
+          step: ev.stage,
+          type: ev.status === "done" ? "completed" : ev.status === "failed" ? "error" : ev._source === "legacy" ? ev.stage : "info",
+          message: ev.message,
+          ts: ev.ts,
+          data: ev.data || null,
+        });
+        existingIds.add(key);
+      }
+    }
+    if (newSteps.length > 0) {
+      setSteps((prev) => [...prev, ...newSteps]);
+    }
+    if (buildEventsState.status === "complete") {
+      setIsBuilding(false);
+      setBuildDone(true);
+      setBuildError(null);
+      loadFiles();
+      loadPreview();
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    }
+    if (buildEventsState.status === "failed") {
+      setIsBuilding(false);
+      setBuildError(buildEventsState.error);
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    }
+  }, [buildEventsState.events, buildEventsState.status, buildEventsState.isLive, id, loadFiles, loadPreview, steps]);
+
   const handleFollowUp = async () => {
     if (!followUp.trim() || isBuilding) return;
     const msg = followUp.trim();
@@ -407,8 +447,24 @@ export default function WorkspacePage() {
           <div className="flex-1 flex flex-col min-h-0">
             <div className="px-3 py-2 flex items-center justify-between border-b border-border">
               <span className="text-[10px] uppercase tracking-wider text-muted font-medium">Live Activity</span>
-              <span className="text-[10px] text-muted">{eventCount} events</span>
+              <div className="flex items-center gap-2">
+                {buildEventsState.isLive && (
+                  <span className="flex items-center gap-1 text-[9px] text-green-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    Live
+                  </span>
+                )}
+                <span className="text-[10px] text-muted">{eventCount} events</span>
+              </div>
             </div>
+            {workspaceType === "build" && (
+              <div className="px-3 pt-2 pb-1 border-b border-border/50">
+                <PipelineTimeline
+                  events={buildEventsState.events.map((e) => ({ stage: e.stage, status: e.status }))}
+                  compact
+                />
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto px-3 py-2" ref={chatEndRef}>
               {workspaceType === "clone"
                 ? [...phases].reverse().map((ev, i) => {
