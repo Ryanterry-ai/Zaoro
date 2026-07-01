@@ -274,7 +274,7 @@ try {
         globals: { 'react': 'React', 'react-dom': 'ReactDOM' },
         write: false,
         alias: { '@': path.join(wsDir, 'src') },
-      });
+      } as any);
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
       if (!bundledCode.trim()) {

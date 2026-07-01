@@ -448,7 +448,7 @@ const server = http.createServer(async (req, res) => {
         alias: {
           '@': path.join(workspacePath, 'src'),
         },
-      });
+      } as any);
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
       // Escape </script> in bundled code to prevent premature HTML script tag closure
