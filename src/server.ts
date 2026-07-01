@@ -394,6 +394,142 @@ const server = http.createServer(async (req, res) => {
     return json(res, { steps, pages: pageEvents, status, phases });
   }
 
+  // GET /api/workspace/:id/file-stream — SSE for live file generation
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/file-stream$/)) {
+    const id = url.pathname.split('/')[3];
+    if (!id) return json(res, { error: 'Missing workspace id' }, 400);
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    const filePath = path.join(wsDir, '.generated-files.jsonl');
+    let lastSize = 0;
+
+    const sendFiles = () => {
+      try {
+        if (!fs.existsSync(filePath)) {
+          res.write(`event: snapshot\ndata: []\n\n`);
+          return;
+        }
+        const stat = fs.statSync(filePath);
+        if (stat.size <= lastSize) return;
+        const fd = fs.openSync(filePath, 'r');
+        const buf = Buffer.alloc(stat.size - lastSize);
+        fs.readSync(fd, buf, 0, buf.length, lastSize);
+        fs.closeSync(fd);
+        lastSize = stat.size;
+        const lines = buf.toString('utf-8').trim().split('\n').filter(Boolean);
+        for (const line of lines) {
+          res.write(`event: file\ndata: ${line}\n\n`);
+        }
+      } catch {}
+    };
+
+    res.write('event: connected\ndata: {}\n\n');
+    sendFiles();
+
+    const pollTimer = setInterval(sendFiles, 1000);
+    const heartbeatTimer = setInterval(() => res.write(`:heartbeat\n\n`), 15000);
+
+    req.on('close', () => {
+      clearInterval(pollTimer);
+      clearInterval(heartbeatTimer);
+    });
+    return;
+  }
+
+  // GET /api/workspace/:id/replay — Build replay manifest
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/replay$/)) {
+    const id = url.pathname.split('/')[3];
+    if (!id) return json(res, { error: 'Missing workspace id' }, 400);
+    const replayDir = path.join(WORKSPACE_BASE, id, '.replay');
+    const manifestPath = path.join(replayDir, 'manifest.json');
+    if (!fs.existsSync(replayDir)) return json(res, { error: 'No replay data available', stages: [] });
+    try {
+      const manifest = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) : { stages: [] };
+      const files = fs.readdirSync(replayDir).filter(f => f.endsWith('.json') && f !== 'manifest.json').sort();
+      return json(res, { ...manifest, files, replayDir });
+    } catch { return json(res, { error: 'Failed to read replay', stages: [] }); }
+  }
+
+  // GET /api/workspace/:id/replay/:stage — Individual replay stage
+  const replayStageMatch = url.pathname.match(/^\/api\/workspace\/([^/]+)\/replay\/([^/]+)$/);
+  if (method === 'GET' && replayStageMatch) {
+    const [, wsId, stageFile] = replayStageMatch;
+    if (!wsId || !stageFile) return json(res, { error: 'Missing params' }, 400);
+    const filePath = path.join(WORKSPACE_BASE, wsId, '.replay', stageFile.endsWith('.json') ? stageFile : `${stageFile}.json`);
+    if (!fs.existsSync(filePath)) return json(res, { error: 'Stage not found' }, 404);
+    try {
+      return json(res, JSON.parse(fs.readFileSync(filePath, 'utf-8')));
+    } catch { return json(res, { error: 'Failed to read stage' }, 500); }
+  }
+
+  // GET /api/workspace/:id/report — Build report JSON
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/report$/)) {
+    const id = url.pathname.split('/')[3];
+    if (!id) return json(res, { error: 'Missing workspace id' }, 400);
+    const reportPath = path.join(WORKSPACE_BASE, id, '.build-report.json');
+    if (!fs.existsSync(reportPath)) return json(res, { error: 'No report available', status: 'pending' }, 404);
+    try {
+      const content = fs.readFileSync(reportPath, 'utf-8');
+      return json(res, JSON.parse(content));
+    } catch {
+      return json(res, { error: 'Failed to read report' }, 500);
+    }
+  }
+
+  // GET /api/workspace/:id/inspect — SSE stream for planning artifact inspection
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/inspect$/)) {
+    const id = url.pathname.split('/')[3];
+    if (!id) return json(res, { error: 'Missing workspace id' }, 400);
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    const inspectPath = path.join(wsDir, '.plan-inspect.json');
+
+    const sendSnapshot = () => {
+      try {
+        if (!fs.existsSync(inspectPath)) {
+          res.write(`event: snapshot\ndata: {"status":"pending"}\n\n`);
+          return;
+        }
+        const content = fs.readFileSync(inspectPath, 'utf-8');
+        const data = JSON.parse(content);
+        res.write(`event: snapshot\ndata: ${JSON.stringify(data)}\n\n`);
+      } catch {}
+    };
+
+    // Send initial state and heartbeat
+    res.write('event: connected\ndata: {"status":"connected"}\n\n');
+    sendSnapshot();
+
+    const pollTimer = setInterval(sendSnapshot, 2000);
+    const heartbeatTimer = setInterval(() => {
+      res.write(`:heartbeat\n\n`);
+    }, 15000);
+
+    req.on('close', () => {
+      clearInterval(pollTimer);
+      clearInterval(heartbeatTimer);
+    });
+    return;
+  }
+
   // GET /api/workspace/:id/events — SSE stream for live build progress
   if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/events$/)) {
     const id = url.pathname.split('/')[3]!;

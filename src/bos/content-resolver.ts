@@ -372,9 +372,64 @@ function getMissionItems(ctx: ContentResolverContext): ItemSpec[] {
     nonprofit: [
       { title: 'Compassion', description: 'Leading with empathy in everything we do', icon: 'heart' },
       { title: 'Transparency', description: 'Every dollar accounted for, every impact measured', icon: 'eye' },
-      { title: 'Sustainable Change', description: 'Building solutions that outlast any single program', icon: 'refresh-cw' },
-    ],
-  };
+        { title: 'Sustainable Change', description: 'Building solutions that outlast any single program', icon: 'refresh-cw' },
+      ],
+      media: [
+        { title: 'Quality Journalism', description: 'Fact-based reporting that informs and empowers', icon: 'newspaper' },
+        { title: 'Free Expression', description: 'Amplifying diverse voices and perspectives', icon: 'message-circle' },
+        { title: 'Community Engagement', description: 'Building conversations that matter', icon: 'users' },
+      ],
+      travel: [
+        { title: 'Authentic Experiences', description: 'Travel that connects people to places and cultures', icon: 'compass' },
+        { title: 'Sustainable Tourism', description: 'Protecting destinations for future travelers', icon: 'leaf' },
+        { title: 'Accessible Adventure', description: 'Making travel possible for everyone', icon: 'globe' },
+      ],
+      beauty: [
+        { title: 'Confidence Through Care', description: 'Beauty that starts with feeling great', icon: 'sparkles' },
+        { title: 'Clean Ingredients', description: 'Cruelty-free products you can trust', icon: 'flower-2' },
+        { title: 'Inclusive Beauty', description: 'Products for every skin type and tone', icon: 'heart' },
+      ],
+      event: [
+        { title: 'Memorable Moments', description: 'Creating experiences that last a lifetime', icon: 'sparkles' },
+        { title: 'Community Connection', description: 'Bringing people together through shared experiences', icon: 'users' },
+        { title: 'Flawless Execution', description: 'Every detail handled with precision and care', icon: 'check-circle' },
+      ],
+      portfolio: [
+        { title: 'Creative Excellence', description: 'Pushing creative boundaries with every project', icon: 'star' },
+        { title: 'Client Success', description: 'Delivering work that exceeds expectations', icon: 'trending-up' },
+        { title: 'Continuous Growth', description: 'Always learning and evolving the craft', icon: 'zap' },
+      ],
+      automotive: [
+        { title: 'Customer Trust', description: 'Honest sales and transparent pricing', icon: 'shield' },
+        { title: 'Quality Service', description: 'Keeping every vehicle running at its best', icon: 'wrench' },
+        { title: 'Community Roots', description: 'Serving local drivers for generations', icon: 'home' },
+      ],
+      enterprise: [
+        { title: 'Operational Excellence', description: 'Streamlining business processes at scale', icon: 'settings' },
+        { title: 'Enterprise Security', description: 'Protecting data with defense-in-depth', icon: 'lock' },
+        { title: 'Innovation at Scale', description: 'Enterprise-grade solutions without the complexity', icon: 'zap' },
+      ],
+      logistics: [
+        { title: 'On-Time Delivery', description: 'Every shipment, every promise, every time', icon: 'clock' },
+        { title: 'Supply Chain Innovation', description: 'Smarter logistics through technology', icon: 'cpu' },
+        { title: 'Sustainable Operations', description: 'Reducing carbon footprint across the network', icon: 'leaf' },
+      ],
+      manufacturing: [
+        { title: 'Precision & Quality', description: 'Zero-defect manufacturing through rigorous standards', icon: 'check-circle' },
+        { title: 'Operational Efficiency', description: 'Lean processes that reduce waste and cost', icon: 'zap' },
+        { title: 'Workplace Safety', description: 'Protecting every team member on the floor', icon: 'shield' },
+      ],
+      fintech: [
+        { title: 'Financial Inclusion', description: 'Banking services accessible to everyone', icon: 'globe' },
+        { title: 'Trust & Security', description: 'Bank-grade protection for every transaction', icon: 'lock' },
+        { title: 'Innovation First', description: 'Modern finance powered by cutting-edge technology', icon: 'cpu' },
+      ],
+      proptech: [
+        { title: 'Smart Living', description: 'Technology that makes property management effortless', icon: 'building' },
+        { title: 'Tenant Satisfaction', description: 'Creating spaces where people love to live', icon: 'smile' },
+        { title: 'Sustainable Properties', description: 'Energy-efficient buildings for a greener future', icon: 'leaf' },
+      ],
+    };
 
   const defaults: ItemSpec[] = [
     { title: 'Innovation', description: 'Pushing boundaries of what is possible in our industry', icon: 'zap' },
@@ -437,9 +492,64 @@ function getTeamRoles(ctx: ContentResolverContext): ItemSpec[] {
     nonprofit: [
       { title: 'Executive Director', description: 'Leading our mission with passion and integrity', icon: 'heart' },
       { title: 'Program Manager', description: 'Designing and executing programs that create real impact', icon: 'award' },
-      { title: 'Community Outreach', description: 'Connecting with the people and partners who make our work possible', icon: 'users' },
-    ],
-  };
+        { title: 'Community Outreach', description: 'Connecting with the people and partners who make our work possible', icon: 'users' },
+      ],
+      media: [
+        { title: 'Editor-in-Chief', description: 'Setting editorial vision and journalistic standards', icon: 'edit' },
+        { title: 'Senior Writer', description: 'Award-winning reporting and long-form storytelling', icon: 'file-text' },
+        { title: 'Content Strategist', description: 'Growing audience through data-driven content planning', icon: 'trending-up' },
+      ],
+      travel: [
+        { title: 'Travel Director', description: 'Curating unforgettable journeys worldwide', icon: 'compass' },
+        { title: 'Concierge Lead', description: 'Personalized service for every traveler', icon: 'headphones' },
+        { title: 'Partnership Manager', description: 'Exclusive deals with top hotels and airlines', icon: 'handshake' },
+      ],
+      beauty: [
+        { title: 'Founder & Stylist', description: 'Creative vision behind every transformation', icon: 'sparkles' },
+        { title: 'Lead Esthetician', description: 'Advanced skincare expertise and personalized treatments', icon: 'flower-2' },
+        { title: 'Studio Manager', description: 'Ensuring every visit is a relaxing experience', icon: 'smile' },
+      ],
+      event: [
+        { title: 'Event Director', description: 'Orchestrating large-scale events with precision', icon: 'calendar' },
+        { title: 'Creative Producer', description: 'Designing unforgettable event experiences', icon: 'palette' },
+        { title: 'Logistics Coordinator', description: 'Managing every vendor, timeline, and detail', icon: 'clipboard' },
+      ],
+      portfolio: [
+        { title: 'Creative Director', description: 'Setting the artistic vision across all work', icon: 'palette' },
+        { title: 'Lead Developer', description: 'Bringing designs to life with clean code', icon: 'code' },
+        { title: 'Project Manager', description: 'Keeping every project on time and on budget', icon: 'clock' },
+      ],
+      automotive: [
+        { title: 'Sales Manager', description: 'Helping customers find the perfect vehicle', icon: 'car' },
+        { title: 'Master Technician', description: 'ASE-certified service and repair expertise', icon: 'wrench' },
+        { title: 'Finance Director', description: 'Flexible financing options for every budget', icon: 'calculator' },
+      ],
+      enterprise: [
+        { title: 'VP of Engineering', description: 'Architecting scalable enterprise systems', icon: 'cpu' },
+        { title: 'Customer Success Lead', description: 'Ensuring every client achieves their goals', icon: 'headphones' },
+        { title: 'Solutions Architect', description: 'Designing custom integrations for enterprise needs', icon: 'settings' },
+      ],
+      logistics: [
+        { title: 'Operations Director', description: 'Managing fleet and delivery network operations', icon: 'truck' },
+        { title: 'Warehouse Manager', description: 'Optimizing inventory and fulfillment operations', icon: 'package' },
+        { title: 'Route Planner', description: 'Maximizing efficiency through smart routing', icon: 'map' },
+      ],
+      manufacturing: [
+        { title: 'Plant Manager', description: 'Overseeing production operations and quality standards', icon: 'settings' },
+        { title: 'Quality Engineer', description: 'Ensuring every product meets specifications', icon: 'check-circle' },
+        { title: 'Supply Chain Director', description: 'Managing procurement and supplier relationships', icon: 'link' },
+      ],
+      fintech: [
+        { title: 'Chief Compliance Officer', description: 'Ensuring regulatory compliance across all products', icon: 'shield' },
+        { title: 'Head of Product', description: 'Building financial products that users love', icon: 'credit-card' },
+        { title: 'Risk Manager', description: 'AI-powered fraud detection and risk assessment', icon: 'bar-chart' },
+      ],
+      proptech: [
+        { title: 'Property Operations Lead', description: 'Managing property portfolios at scale', icon: 'building' },
+        { title: 'Tenant Experience Manager', description: 'Creating exceptional living experiences', icon: 'smile' },
+        { title: 'Data Analyst', description: 'Driving decisions with real-time property data', icon: 'bar-chart' },
+      ],
+    };
 
   const defaults: ItemSpec[] = [
     { title: 'Leadership', description: 'Driving our vision forward with experience and passion', icon: 'crown' },
@@ -1510,11 +1620,76 @@ function resolveBillingSection(
       { title: 'Lease Payment', description: '$2,200/month due on the 1st', icon: 'calendar' },
       { title: 'Security Deposit', description: 'Held in escrow', icon: 'shield' },
     ],
-    nonprofit: [
-      { title: 'Total Donated', description: '$1,250 this year', icon: 'heart' },
-      { title: 'Tax Receipt', description: '2025 receipt available for download', icon: 'file-text' },
-      { title: 'Recurring Donation', description: '$50/month — thank you!', icon: 'refresh-cw' },
-    ],
+      nonprofit: [
+        { title: 'Total Donated', description: '$1,250 this year', icon: 'heart' },
+        { title: 'Tax Receipt', description: '2025 receipt available for download', icon: 'file-text' },
+        { title: 'Recurring Donation', description: '$50/month — thank you!', icon: 'refresh-cw' },
+      ],
+      media: [
+        { title: 'Subscription Plan', description: 'Premium — $9.99/month', icon: 'credit-card' },
+        { title: 'Next Billing', description: 'Auto-renews on your billing date', icon: 'calendar' },
+        { title: 'Ad Revenue', description: '$0.00 this month', icon: 'bar-chart' },
+      ],
+      travel: [
+        { title: 'Payment Method', description: 'Visa ending in 4242', icon: 'credit-card' },
+        { title: 'Upcoming Trips', description: '2 trips booked this quarter', icon: 'compass' },
+        { title: 'Travel Credits', description: '$250 in loyalty rewards', icon: 'gift' },
+      ],
+      beauty: [
+        { title: 'Membership', description: 'VIP Beauty Club — $29/month', icon: 'credit-card' },
+        { title: 'Next Appointment', description: 'Scheduled for Mar 15', icon: 'calendar' },
+        { title: 'Loyalty Points', description: '1,850 points — $18.50 value', icon: 'gift' },
+      ],
+      event: [
+        { title: 'Payment Method', description: 'Visa ending in 4242', icon: 'credit-card' },
+        { title: 'Upcoming Events', description: '3 tickets purchased', icon: 'ticket' },
+        { title: 'Event Credits', description: '$50 in referral credits', icon: 'gift' },
+      ],
+      portfolio: [
+        { title: 'Payment Method', description: 'Stripe connected', icon: 'credit-card' },
+        { title: 'Invoice History', description: '15 paid invoices on file', icon: 'file-text' },
+        { title: 'Retainer Balance', description: '$0.00 — no active retainer', icon: 'clock' },
+      ],
+      automotive: [
+        { title: 'Payment Method', description: 'Visa ending in 4242', icon: 'credit-card' },
+        { title: 'Service Plan', description: 'Gold Care Plan — $39/month', icon: 'wrench' },
+        { title: 'Vehicle Financing', description: '$450/month — 24 months remaining', icon: 'calculator' },
+      ],
+      enterprise: [
+        { title: 'Current Plan', description: 'Enterprise — Custom pricing', icon: 'credit-card' },
+        { title: 'Contract Term', description: 'Annual — renews Dec 2025', icon: 'calendar' },
+        { title: 'Account Manager', description: 'Dedicated support included', icon: 'headphones' },
+      ],
+      logistics: [
+        { title: 'Shipping Account', description: 'Business — Volume pricing', icon: 'truck' },
+        { title: 'Monthly Spend', description: '$12,450 this month', icon: 'bar-chart' },
+        { title: 'Payment Terms', description: 'Net 30 — $0 balance due', icon: 'credit-card' },
+      ],
+      manufacturing: [
+        { title: 'Payment Method', description: 'ACH transfer — verified', icon: 'credit-card' },
+        { title: 'Purchase Orders', description: '3 active POs this quarter', icon: 'file-text' },
+        { title: 'Supplier Credits', description: '90-day payment terms', icon: 'clock' },
+      ],
+      fintech: [
+        { title: 'Processing Volume', description: '$250K processed this month', icon: 'credit-card' },
+        { title: 'Fee Schedule', description: '2.9% + $0.30 per transaction', icon: 'percent' },
+        { title: 'Payout Schedule', description: 'Daily — next payout tomorrow', icon: 'clock' },
+      ],
+      proptech: [
+        { title: 'Property Management Fee', description: '8% of monthly rent collected', icon: 'building' },
+        { title: 'Tenant Payments', description: '45 units — $112,500 collected', icon: 'credit-card' },
+        { title: 'Maintenance Fund', description: '$3,200 reserved for repairs', icon: 'tool' },
+      ],
+      legal: [
+        { title: 'Trust Account', description: 'IOLTA balance — $12,500', icon: 'shield' },
+        { title: 'Billing Method', description: 'Hourly — $350/hr standard rate', icon: 'clock' },
+        { title: 'Retainer', description: '$5,000 retainer on file', icon: 'lock' },
+      ],
+      agency: [
+        { title: 'Current Retainer', description: 'Monthly — $12,000/mo', icon: 'credit-card' },
+        { title: 'Active Projects', description: '4 projects in progress', icon: 'briefcase' },
+        { title: 'Invoice Status', description: '2 invoices pending — $8,500', icon: 'file-text' },
+      ],
   };
 
   const items = billingItems[industry] ?? [
@@ -1579,11 +1754,81 @@ function resolveNotificationsSection(
       { title: 'Special Offers', description: 'Exclusive deals and events', icon: 'gift', metadata: { enabled: 'false' } },
       { title: 'Loyalty Rewards', description: 'Points earned and rewards available', icon: 'star', metadata: { enabled: 'true' } },
     ],
-    nonprofit: [
-      { title: 'Donation Receipts', description: 'Tax-deductible contribution confirmations', icon: 'heart', metadata: { enabled: 'true' } },
-      { title: 'Impact Updates', description: 'How your donations are making a difference', icon: 'trending-up', metadata: { enabled: 'true' } },
-      { title: 'Volunteer Opportunities', description: 'Upcoming events and ways to help', icon: 'users', metadata: { enabled: 'false' } },
-    ],
+      nonprofit: [
+        { title: 'Donation Receipts', description: 'Tax-deductible contribution confirmations', icon: 'heart', metadata: { enabled: 'true' } },
+        { title: 'Impact Updates', description: 'How your donations are making a difference', icon: 'trending-up', metadata: { enabled: 'true' } },
+        { title: 'Volunteer Opportunities', description: 'Upcoming events and ways to help', icon: 'users', metadata: { enabled: 'false' } },
+      ],
+      media: [
+        { title: 'New Articles', description: 'When new content is published in your feed', icon: 'newspaper', metadata: { enabled: 'true' } },
+        { title: 'Weekly Digest', description: 'Top stories and trending topics', icon: 'mail', metadata: { enabled: 'true' } },
+        { title: 'Breaking News', description: 'Real-time alerts for important stories', icon: 'zap', metadata: { enabled: 'true' } },
+      ],
+      travel: [
+        { title: 'Booking Confirmations', description: 'Trip reservation updates', icon: 'check-circle', metadata: { enabled: 'true' } },
+        { title: 'Price Drop Alerts', description: 'When fares drop for saved trips', icon: 'tag', metadata: { enabled: 'true' } },
+        { title: 'Travel Advisories', description: 'Destination safety and entry requirements', icon: 'shield', metadata: { enabled: 'true' } },
+      ],
+      beauty: [
+        { title: 'Appointment Reminders', description: 'Upcoming service confirmations', icon: 'calendar', metadata: { enabled: 'true' } },
+        { title: 'Special Offers', description: 'Exclusive deals and seasonal promotions', icon: 'gift', metadata: { enabled: 'false' } },
+        { title: 'Product Restocks', description: 'When your favorite products are back', icon: 'refresh-cw', metadata: { enabled: 'false' } },
+      ],
+      event: [
+        { title: 'Event Reminders', description: 'Upcoming event notifications', icon: 'calendar', metadata: { enabled: 'true' } },
+        { title: 'Ticket Alerts', description: 'When tickets go on sale for saved events', icon: 'ticket', metadata: { enabled: 'true' } },
+        { title: 'Recommendations', description: 'Events tailored to your interests', icon: 'sparkles', metadata: { enabled: 'false' } },
+      ],
+      portfolio: [
+        { title: 'Inquiry Alerts', description: 'When someone contacts you about your work', icon: 'message-circle', metadata: { enabled: 'true' } },
+        { title: 'Project Updates', description: 'Track engagement on your portfolio', icon: 'bar-chart', metadata: { enabled: 'true' } },
+        { title: 'Job Opportunities', description: 'Relevant freelance and full-time leads', icon: 'briefcase', metadata: { enabled: 'false' } },
+      ],
+      automotive: [
+        { title: 'Service Reminders', description: 'Upcoming maintenance notifications', icon: 'wrench', metadata: { enabled: 'true' } },
+        { title: 'Vehicle Alerts', description: 'Recall and warranty notifications', icon: 'bell', metadata: { enabled: 'true' } },
+        { title: 'Inventory Updates', description: 'When matching vehicles arrive', icon: 'car', metadata: { enabled: 'false' } },
+      ],
+      enterprise: [
+        { title: 'System Alerts', description: 'Uptime, incidents, and maintenance windows', icon: 'bell', metadata: { enabled: 'true' } },
+        { title: 'Usage Reports', description: 'Weekly team activity and adoption metrics', icon: 'bar-chart', metadata: { enabled: 'true' } },
+        { title: 'Security Notices', description: 'Access changes, audits, and policy updates', icon: 'shield', metadata: { enabled: 'true' } },
+      ],
+      logistics: [
+        { title: 'Delivery Alerts', description: 'Real-time shipment status changes', icon: 'truck', metadata: { enabled: 'true' } },
+        { title: 'Service Updates', description: 'Route changes and operational alerts', icon: 'map', metadata: { enabled: 'true' } },
+        { title: 'Inventory Alerts', description: 'Low stock and reorder notifications', icon: 'package', metadata: { enabled: 'true' } },
+      ],
+      manufacturing: [
+        { title: 'Production Alerts', description: 'Line stops and output deviations', icon: 'settings', metadata: { enabled: 'true' } },
+        { title: 'Quality Reports', description: 'Defect rate and compliance alerts', icon: 'check-circle', metadata: { enabled: 'true' } },
+        { title: 'Supply Chain', description: 'Supplier delays and raw material updates', icon: 'link', metadata: { enabled: 'true' } },
+      ],
+      fintech: [
+        { title: 'Transaction Alerts', description: 'Real-time payment and transfer notifications', icon: 'credit-card', metadata: { enabled: 'true' } },
+        { title: 'Fraud Warnings', description: 'Suspicious activity and security alerts', icon: 'shield', metadata: { enabled: 'true' } },
+        { title: 'Monthly Statements', description: 'Account summaries and reconciliation reports', icon: 'file-text', metadata: { enabled: 'true' } },
+      ],
+      proptech: [
+        { title: 'Tenant Communications', description: 'Lease renewals and maintenance requests', icon: 'building', metadata: { enabled: 'true' } },
+        { title: 'Payment Alerts', description: 'Rent collection and late payment notices', icon: 'credit-card', metadata: { enabled: 'true' } },
+        { title: 'Property Insights', description: 'Occupancy trends and portfolio analytics', icon: 'bar-chart', metadata: { enabled: 'false' } },
+      ],
+      legal: [
+        { title: 'Case Updates', description: 'Filing deadlines and court date reminders', icon: 'briefcase', metadata: { enabled: 'true' } },
+        { title: 'Client Alerts', description: 'New messages and document requests', icon: 'message-circle', metadata: { enabled: 'true' } },
+        { title: 'Compliance Reminders', description: 'Filing deadlines and regulatory updates', icon: 'shield', metadata: { enabled: 'true' } },
+      ],
+      agency: [
+        { title: 'Project Updates', description: 'Milestone completions and client feedback', icon: 'briefcase', metadata: { enabled: 'true' } },
+        { title: 'New Leads', description: 'Inquiries and RFP notifications', icon: 'funnel', metadata: { enabled: 'true' } },
+        { title: 'Time Tracking', description: 'Weekly hour summaries and budget alerts', icon: 'clock', metadata: { enabled: 'true' } },
+      ],
+      realestate: [
+        { title: 'Property Alerts', description: 'New listings matching your criteria', icon: 'home', metadata: { enabled: 'true' } },
+        { title: 'Showing Reminders', description: 'Upcoming property viewing notifications', icon: 'calendar', metadata: { enabled: 'true' } },
+        { title: 'Market Reports', description: 'Weekly market trend and pricing updates', icon: 'bar-chart', metadata: { enabled: 'false' } },
+      ],
   };
 
   const defaults: ItemSpec[] = [

@@ -7,6 +7,20 @@ import type { CompliancePack } from '../schemas/knowledge/compliance-pack.schema
 import { LUXURY_DARK_OPULENCE } from './design-profiles/luxury-dark-opulence.js';
 import { SAAS_MODERN } from './design-profiles/saas-modern.js';
 import { HEALTHCARE_CLEAN, ECOMMERCE_MODERN } from './design-profiles/healthcare-clean.js';
+import {
+  RESTAURANT_WARM,
+  FITNESS_ENERGETIC,
+  EDUCATION_FRIENDLY,
+  REALESTATE_PREMIUM,
+  FINTECH_SECURE,
+  ENTERPRISE_CLEAN,
+  NONPROFIT_WARM,
+  MEDIA_CONTENT,
+  TRAVEL_VIBRANT,
+  LEGAL_TRUST,
+  AGENCY_BOLD,
+  LOGISTICS_RELIABLE,
+} from './design-profiles/industry-profiles.js';
 import { LUXURY_WATCH_BRAND } from './patterns/luxury-watch-brand.js';
 import { ECOMMERCE_MARKETPLACE, SAAS_PLATFORM } from './patterns/ecommerce-marketplace.js';
 import { CAP_INVENTORY_LITE } from './skill-packs/cap-inventory-lite.js';
@@ -24,6 +38,18 @@ export const DESIGN_PROFILES: DesignProfile[] = [
   SAAS_MODERN,
   HEALTHCARE_CLEAN,
   ECOMMERCE_MODERN,
+  RESTAURANT_WARM,
+  FITNESS_ENERGETIC,
+  EDUCATION_FRIENDLY,
+  REALESTATE_PREMIUM,
+  FINTECH_SECURE,
+  ENTERPRISE_CLEAN,
+  NONPROFIT_WARM,
+  MEDIA_CONTENT,
+  TRAVEL_VIBRANT,
+  LEGAL_TRUST,
+  AGENCY_BOLD,
+  LOGISTICS_RELIABLE,
 ];
 
 export const PATTERNS: Pattern[] = [

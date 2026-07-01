@@ -168,15 +168,70 @@ export class DeterministicOrchestratorV4 {
       console.warn(`[orchestrator] Blueprint warnings: ${appBlueprint.warnings.join(' | ')}`);
     }
 
+    // Write planning artifacts for Live Object Inspector (Phase 11)
+    try {
+      const inspectPayload: Record<string, unknown> = {
+        ts: Date.now(),
+        breContext: {
+          industry: breContext.industry,
+          businessModels: breContext.businessModels,
+          entities: breContext.entities,
+          appName: breContext.appName,
+        },
+        rules: (breResult.decisions ?? []).map(d => ({
+          ruleId: d.ruleId,
+          ruleName: d.ruleName,
+          action: d.action,
+          confidence: d.confidence,
+          trace: d.trace,
+        })),
+        blueprint: {
+          pages: appBlueprint.pages?.length ?? 0,
+          entities: appBlueprint.entities?.length ?? 0,
+          apis: appBlueprint.apis?.length ?? 0,
+          database: !!appBlueprint.database && appBlueprint.database.engine ? { engine: appBlueprint.database.engine, tables: (appBlueprint.database.tables ?? []).length } : null,
+          hasDesignTokens: !!appBlueprint.designTokens,
+          vocabulary: appBlueprint.vocabulary,
+        },
+        executionBlueprint: {
+          pages: executionBlueprint.pages.map((p: { path: string; [key: string]: unknown }) => ({
+            path: p.path,
+            slots: ((p as any).slots ?? []).length,
+          })),
+        },
+        applicationSpec: {
+          pages: applicationSpec.pages.length,
+          totalComponents: applicationSpec.pages.reduce((s: number, p: any) => s + (p.components ?? []).length, 0),
+        },
+      };
+      fs.writeFileSync(
+        path.join(workspace.rootPath, '.plan-inspect.json'),
+        JSON.stringify(inspectPayload, null, 2),
+        'utf-8',
+      );
+    } catch (e) {
+      console.warn('[orchestrator] Failed to write plan-inspect artifact:', (e as Error).message);
+    }
+
     // Write generated files to workspace
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
+
+    // Phase 14: Write file stream for live file generation tracking
+    const fileStreamPath = path.join(workspace.rootPath, '.generated-files.jsonl');
+    const fileStreamEntries: string[] = [];
 
     for (const file of renderResult.files) {
       const filePath = path.join(workspace.rootPath, 'src', file.path);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, file.content, 'utf-8');
       console.log(`[orchestrator] Generated: ${file.path} (${file.type})`);
+      fileStreamEntries.push(JSON.stringify({ path: file.path, type: file.type, ts: Date.now() }));
     }
+
+    // Write all file stream entries at once (atomic write is fine since generation is fast)
+    try {
+      fs.writeFileSync(fileStreamPath, fileStreamEntries.join('\n') + '\n', 'utf-8');
+    } catch { }
 
     // Mark all pages as succeeded (they come from the renderer, not LLM)
     for (const page of blueprint.pages) {
@@ -209,6 +264,51 @@ export class DeterministicOrchestratorV4 {
 
     this.snapshot.clearSnapshots(workspace.rootPath);
 
+    // Phase 16: Save replay artifacts
+    try {
+      const replayDir = path.join(workspace.rootPath, '.replay');
+      fs.mkdirSync(replayDir, { recursive: true });
+      const saveArtifact = (name: string, data: unknown) => {
+        fs.writeFileSync(path.join(replayDir, name), JSON.stringify(data, null, 2), 'utf-8');
+      };
+      saveArtifact('manifest.json', {
+        createdAt: new Date().toISOString(),
+        stages: ['bre-context', 'rules-decisions', 'blueprint', 'execution-blueprint', 'application-spec', 'render-result'],
+        totalStages: 6,
+      });
+      saveArtifact('01-bre-context.json', breContext);
+      saveArtifact('02-rules-decisions.json', (breResult.decisions ?? []).map(d => ({
+        ruleId: d.ruleId, ruleName: d.ruleName, action: d.action, confidence: d.confidence, trace: d.trace,
+      })));
+      saveArtifact('03-blueprint.json', {
+        pages: appBlueprint.pages?.length ?? 0,
+        entities: appBlueprint.entities?.length ?? 0,
+        apis: appBlueprint.apis?.length ?? 0,
+        workflows: appBlueprint.workflows?.length ?? 0,
+        database: appBlueprint.database ? { engine: appBlueprint.database.engine, tables: (appBlueprint.database.tables ?? []).length } : null,
+        confidence: appBlueprint.confidence,
+        designTokens: !!appBlueprint.designTokens,
+        vocabulary: appBlueprint.vocabulary,
+      });
+      saveArtifact('04-execution-blueprint.json', {
+        pages: executionBlueprint.pages.map((p: { path: string; [key: string]: unknown }) => ({
+          path: p.path,
+          slots: ((p as any).slots ?? []).length,
+        })),
+      });
+      saveArtifact('05-application-spec.json', {
+        pages: applicationSpec.pages.length,
+        totalComponents: applicationSpec.pages.reduce((s: number, p: any) => s + (p.components ?? []).length, 0),
+        fileCount: renderResult.files.length,
+      });
+      saveArtifact('06-render-result.json', {
+        files: renderResult.files.map((f: { path: string; type: string }) => ({ path: f.path, type: f.type })),
+        warnings: renderResult.warnings,
+      });
+    } catch (e) {
+      console.warn('[orchestrator] Failed to write replay artifacts:', (e as Error).message);
+    }
+
     const succeeded = pageResults.filter(r => r.succeeded).length;
     const failed = pageResults.filter(r => !r.succeeded);
 
@@ -234,6 +334,48 @@ export class DeterministicOrchestratorV4 {
 
     if (failed.length > 0) {
       result.error = `${failed.length} page(s) failed: ${failed.map(f => `${f.path} — ${f.lastError}`).join('; ')}`;
+    }
+
+    // Phase 17: Write build report
+    try {
+      const fileTypes = new Map<string, number>();
+      for (const f of renderResult.files) {
+        const ext = path.extname(f.path) || 'unknown';
+        fileTypes.set(ext, (fileTypes.get(ext) || 0) + 1);
+      }
+      const pagePaths = blueprint.pages.map((p: { path: string; title?: string }) => ({ path: p.path, title: p.title || p.path }));
+      const report = {
+        ts: Date.now(),
+        duration: result.duration,
+        success: result.success,
+        workspaceId,
+        blueprint: {
+          appName: breContext.appName || 'Untitled',
+          industry: breContext.industry,
+          businessModels: breContext.businessModels,
+          pagesCount: blueprint.pages.length,
+          dataModelsCount: blueprint.dataModels?.length ?? 0,
+          apisCount: blueprint.apiRoutes?.length ?? appBlueprint.apis?.length ?? 0,
+          entitiesCount: appBlueprint.entities?.length ?? 0,
+          workflowsCount: appBlueprint.workflows?.length ?? 0,
+        },
+        files: {
+          total: renderResult.files.length,
+          byType: Object.fromEntries(fileTypes),
+          paths: renderResult.files.map((f: { path: string }) => f.path),
+        },
+        pages: pagePaths,
+        warnings: allWarnings,
+        error: result.error || null,
+        generatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(
+        path.join(workspace.rootPath, '.build-report.json'),
+        JSON.stringify(report, null, 2),
+        'utf-8',
+      );
+    } catch (e) {
+      console.warn('[orchestrator] Failed to write build report:', (e as Error).message);
     }
 
     TelemetryLayer.reportBuildComplete({

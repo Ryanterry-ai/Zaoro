@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useBuildEvents } from "@/lib/use-build-events";
 import { PipelineTimeline } from "@/components/PipelineTimeline";
+import { usePlanInspect } from "@/lib/use-plan-inspect";
+import { ArchitectureGraph, buildArchGraph } from "@/components/ArchitectureGraph";
 
 interface ProgressStep {
   step: string;
@@ -94,7 +96,7 @@ export default function WorkspacePage() {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
-  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance">("preview");
+  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance" | "architecture">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
@@ -243,6 +245,9 @@ export default function WorkspacePage() {
 
   // SSE-based live events — feeds into existing state
   const buildEventsState = useBuildEvents(id, isBuilding);
+
+  // Planning artifact inspector — feeds Architecture tab
+  const planInspect = usePlanInspect(id, true);
 
   useEffect(() => {
     if (!buildEventsState.isLive || buildEventsState.events.length === 0) return;
@@ -619,6 +624,9 @@ export default function WorkspacePage() {
               <button onClick={() => setRightTab("provenance")} className={`px-4 py-2.5 text-xs font-medium transition-all ${rightTab === "provenance" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
                 Provenance
               </button>
+              <button onClick={() => setRightTab("architecture")} className={`px-4 py-2.5 text-xs font-medium transition-all ${rightTab === "architecture" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
+                Architecture
+              </button>
             </div>
             {rightTab === "preview" && (
               <div className="flex items-center gap-1.5 pr-3">
@@ -764,7 +772,29 @@ export default function WorkspacePage() {
                 })()}
               </div>
             </div>
-          )}
+          ) : rightTab === "architecture" ? (
+            <div className="flex-1 overflow-y-auto bg-surface p-4">
+              <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-4">Architecture Graph</div>
+              <div className="w-full h-[400px] rounded-xl border border-border bg-background p-4">
+                <ArchitectureGraph
+                  {...buildArchGraph(
+                    planInspect.snapshot?.breContext,
+                    planInspect.snapshot?.blueprint
+                      ? {
+                          pages: planInspect.snapshot.blueprint.pages,
+                          entities: planInspect.snapshot.blueprint.dataModels,
+                          apis: planInspect.snapshot.blueprint.apis,
+                        }
+                      : null,
+                    planInspect.snapshot?.executionBlueprint,
+                    planInspect.snapshot?.applicationSpec,
+                    planInspect.status,
+                  )}
+                  height={360}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

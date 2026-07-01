@@ -24,6 +24,10 @@ import { FlutterRenderer } from './renderers/flutter-renderer.js';
 import { PATTERNS, DESIGN_PROFILES } from '../bos/knowledge/registry.js';
 import { stageLogger, debugLog } from '../core/debug-logger.js';
 
+// Pipeline-v2 enrichment — provides richer entity, DB, and API detail
+import { runNormalizedPipeline } from '../bos/pipeline-v2/pipeline.js';
+import type { EntityDef, TableDef, EndpointDef } from '../bos/pipeline-v2/stages.js';
+
 const log = stageLogger('pipeline');
 
 // ─── Pipeline Configuration ──────────────────────────────────────────────────
@@ -101,6 +105,86 @@ export async function runBuildPipeline(
     confidence: breResult.confidence,
     duration: Date.now() - t1,
   });
+
+  // Layer 1b: Pipeline-v2 enrichment — richer entity, DB, and API detail
+  {
+    const t1b = Date.now();
+    try {
+      const stageInput = {
+        context,
+        decisions: breResult.decisions,
+        constraintReport: breResult.constraintReport,
+        selectedDesignProfile: breResult.selectedDesignProfile ?? undefined,
+        selectedPattern: breResult.selectedPattern ?? undefined,
+        vocabulary: breResult.blueprint.vocabulary ?? {},
+        knowledgeRefs: [],
+      } as import('../bos/pipeline-v2/stages.js').StageInput;
+      const pipelineV2Result = await runNormalizedPipeline(stageInput);
+      log.info('Layer 1b: Pipeline-v2 enrichment complete', {
+        duration: Date.now() - t1b,
+        capabilities: pipelineV2Result.output.capabilityGraph?.capabilities.length,
+        entities: pipelineV2Result.output.entityGraph?.entities.length,
+        workflows: pipelineV2Result.output.workflowGraph?.workflows.length,
+        pages: pipelineV2Result.output.navigationGraph?.pages.length,
+        tables: pipelineV2Result.output.databaseGraph?.tables.length,
+        endpoints: pipelineV2Result.output.apiGraph?.endpoints.length,
+      });
+
+      // Enrich blueprint entities with detailed field definitions from pipeline-v2
+      if (pipelineV2Result.output.entityGraph) {
+        for (const pv2Entity of pipelineV2Result.output.entityGraph.entities) {
+          const existing = breResult.blueprint.entities.find(
+            e => e.name.toLowerCase() === pv2Entity.name.toLowerCase(),
+          );
+          if (existing && pv2Entity.fields.length > (existing.fields?.length ?? 0)) {
+            existing.fields = pv2Entity.fields.map(f => ({
+              name: f.name,
+              type: f.type,
+              required: f.required,
+              indexed: f.indexed ?? false,
+              unique: (f as any).unique ?? false,
+            }));
+          }
+        }
+      }
+
+      // Enrich blueprint with database tables
+      if (pipelineV2Result.output.databaseGraph) {
+        const validEngines = ['postgresql', 'mysql', 'sqlite', 'mongodb', 'supabase', 'firebase'] as const;
+        const engine = validEngines.includes(pipelineV2Result.output.databaseGraph.engine as any)
+          ? (pipelineV2Result.output.databaseGraph.engine as 'postgresql' | 'mysql' | 'sqlite' | 'mongodb' | 'supabase' | 'firebase')
+          : 'postgresql';
+        breResult.blueprint.database = {
+          engine,
+          tables: pipelineV2Result.output.databaseGraph.tables.map(t => ({
+            name: t.name,
+            columns: t.columns as any,
+            indexes: t.indexes,
+            foreignKeys: (t as any).foreignKeys ?? [],
+          })),
+        };
+      }
+
+      // Enrich blueprint with API endpoints
+      if (pipelineV2Result.output.apiGraph) {
+        const existingEndpointPaths = new Set(breResult.blueprint.apis.map(a => a.path));
+        for (const ep of pipelineV2Result.output.apiGraph.endpoints) {
+          if (!existingEndpointPaths.has(ep.path)) {
+            breResult.blueprint.apis.push({
+              path: ep.path,
+              method: ep.method,
+              auth: ep.auth,
+              description: ep.description,
+            });
+          }
+        }
+      }
+    } catch (e: unknown) {
+      log.warn('Layer 1b: Pipeline-v2 enrichment failed (continuing with base blueprint)', {
+        error: (e as Error).message,
+      });
+    }
+  }
 
   // Layer 2: Application Blueprint → Execution Blueprint
   const t2 = Date.now();
