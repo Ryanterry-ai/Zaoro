@@ -816,16 +816,110 @@ ${body}
 
   private generateGenericBody(spec: ComponentSpec): string[] {
     const title = this.getContentView(spec, 'title');
+    const subtitle = this.getContentView(spec, 'subtitle');
+    const hasItems = (spec.items?.length ?? 0) > 0;
+    const hasFields = (spec.fields?.length ?? 0) > 0;
+    const hasColumns = (spec.columns?.length ?? 0) > 0;
+    const hasStats = (spec.stats?.length ?? 0) > 0;
+    const hasTiers = (spec.tiers?.length ?? 0) > 0;
 
-    return [
+    const lines: string[] = [
       `  return (`,
       `    <section className="py-16">`,
       `      <div className="max-w-7xl mx-auto px-6">`,
       `        <h2 className="text-2xl font-bold">${title}</h2>`,
-      `      </div>`,
-      `    </section>`,
-      `  );`,
     ];
+
+    if (subtitle !== `{subtitle}`) {
+      lines.push(`        <p className="text-zinc-400 mt-2">${subtitle}</p>`);
+    }
+
+    // Render items grid (for about, team, mission, activity, features, etc.)
+    if (hasItems) {
+      lines.push(`        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">`);
+      lines.push(`          {items?.map((item, i) => (`);
+      lines.push(`            <div key={i} className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">`);
+      lines.push(`              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">`);
+      lines.push(`                <span className="text-lg font-bold">{item.icon ? '★' : '→'}</span>`);
+      lines.push(`              </div>`);
+      lines.push(`              <h3 className="text-lg font-semibold text-zinc-100 mb-2">{item.title}</h3>`);
+      lines.push(`              <p className="text-zinc-400 text-sm">{item.description}</p>`);
+      lines.push(`            </div>`);
+      lines.push(`          ))}`);
+      lines.push(`        </div>`);
+    }
+
+    // Render fields form (for profile, billing, auth, etc.)
+    if (hasFields && !hasItems) {
+      lines.push(`        <div className="mt-8 space-y-4 max-w-lg">`);
+      lines.push(`          {fields?.map((field, i) => (`);
+      lines.push(`            <div key={i}>`);
+      lines.push(`              <label className="block text-sm font-medium text-zinc-300 mb-1">{field.label}</label>`);
+      lines.push(`              {field.type === 'textarea' ? (`);
+      lines.push(`                <textarea className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100" rows={3} />`);
+      lines.push(`              ) : field.type === 'select' ? (`);
+      lines.push(`                <select className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100">`);
+      lines.push(`                  {field.options?.map((opt, j) => <option key={j} value={opt.value}>{opt.label}</option>)}`);
+      lines.push(`                </select>`);
+      lines.push(`              ) : (`);
+      lines.push(`                <input type={field.type || 'text'} className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100" placeholder={field.placeholder} />`);
+      lines.push(`              )}`);
+      lines.push(`            </div>`);
+      lines.push(`          ))}`);
+      lines.push(`        </div>`);
+    }
+
+    // Render columns table (for data tables, feature comparison, etc.)
+    if (hasColumns) {
+      lines.push(`        <div className="mt-8 overflow-x-auto">`);
+      lines.push(`          <table className="w-full">`);
+      lines.push(`            <thead><tr>`);
+      lines.push(`              {columns?.map((col, i) => <th key={i} className="px-4 py-3 text-left font-medium text-zinc-300">{col.label}</th>)}`);
+      lines.push(`            </tr></thead>`);
+      lines.push(`            <tbody>`);
+      lines.push(`              {items?.map((row, i) => (`);
+      lines.push(`                <tr key={i} className="border-t border-zinc-800">`);
+      lines.push(`                  <td className="px-4 py-3 text-zinc-100">{row.title}</td>`);
+      lines.push(`                  {columns?.slice(1).map((col, j) => <td key={j} className="px-4 py-3 text-zinc-400">{(row.metadata as any)?.[col.key] ?? '—'}</td>)}`);
+      lines.push(`                </tr>`);
+      lines.push(`              ))}`);
+      lines.push(`            </tbody>`);
+      lines.push(`          </table>`);
+      lines.push(`        </div>`);
+    }
+
+    // Render stats cards
+    if (hasStats) {
+      lines.push(`        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-10">`);
+      lines.push(`          {stats?.map((stat, i) => (`);
+      lines.push(`            <div key={i} className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 text-center">`);
+      lines.push(`              <div className="text-3xl font-black text-zinc-50">{stat.value}</div>`);
+      lines.push(`              <div className="text-sm text-zinc-400 mt-1">{stat.label}</div>`);
+      lines.push(`            </div>`);
+      lines.push(`          ))}`);
+      lines.push(`        </div>`);
+    }
+
+    // Render pricing tiers
+    if (hasTiers) {
+      lines.push(`        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">`);
+      lines.push(`          {tiers?.map((tier, i) => (`);
+      lines.push(`            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-emerald-500 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900'}\`}>`);
+      lines.push(`              <h3 className="text-xl font-bold text-zinc-100">{tier.name}</h3>`);
+      lines.push(`              <div className="mt-4 text-4xl font-black text-zinc-50">{tier.price}<span className="text-sm text-zinc-400">{tier.period}</span></div>`);
+      lines.push(`              <ul className="mt-6 space-y-3">`);
+      lines.push(`                {tier.features?.map((f, j) => <li key={j} className="flex items-center gap-2 text-sm text-zinc-400">✓ {f}</li>)}`);
+      lines.push(`              </ul>`);
+      lines.push(`            </div>`);
+      lines.push(`          ))}`);
+      lines.push(`        </div>`);
+    }
+
+    lines.push(`      </div>`);
+    lines.push(`    </section>`);
+    lines.push(`  );`);
+
+    return lines;
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
