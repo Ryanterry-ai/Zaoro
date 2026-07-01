@@ -7,6 +7,7 @@ import { PipelineTimeline } from "@/components/PipelineTimeline";
 import { usePlanInspect } from "@/lib/use-plan-inspect";
 import { ArchitectureGraph, buildArchGraph } from "@/components/ArchitectureGraph";
 import { useBuildReport } from "@/lib/use-build-report";
+import { useBuildReplay } from "@/lib/use-build-replay";
 
 interface ProgressStep {
   step: string;
@@ -97,7 +98,7 @@ export default function WorkspacePage() {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
-  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance" | "architecture" | "report">("preview");
+  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance" | "architecture" | "report" | "replay">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
@@ -250,6 +251,7 @@ export default function WorkspacePage() {
   // Planning artifact inspector — feeds Architecture tab
   const planInspect = usePlanInspect(id, true);
   const buildReport = useBuildReport(id, buildEventsState.status === "complete");
+  const buildReplay = useBuildReplay(id, buildEventsState.status === "complete");
 
   useEffect(() => {
     if (!buildEventsState.isLive || buildEventsState.events.length === 0) return;
@@ -633,6 +635,10 @@ export default function WorkspacePage() {
                 Report
                 {buildReport.report && <span className="ml-1.5 text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">✓</span>}
               </button>
+              <button onClick={() => setRightTab("replay")} className={`px-4 py-2.5 text-xs font-medium transition-all ${rightTab === "replay" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
+                Replay
+                {buildReplay.manifest && <span className="ml-1.5 text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">{buildReplay.manifest.totalStages}</span>}
+              </button>
             </div>
             {rightTab === "preview" && (
               <div className="flex items-center gap-1.5 pr-3">
@@ -788,7 +794,7 @@ export default function WorkspacePage() {
                     planInspect.snapshot?.blueprint
                       ? {
                           pages: planInspect.snapshot.blueprint.pages,
-                          entities: planInspect.snapshot.blueprint.dataModels,
+                          entities: planInspect.snapshot.blueprint.entities,
                           apis: planInspect.snapshot.blueprint.apis,
                         }
                       : null,
@@ -884,6 +890,52 @@ export default function WorkspacePage() {
                   )}
                 </div>
               ) : null}
+            </div>
+          ) : rightTab === "replay" ? (
+            <div className="flex-1 overflow-y-auto bg-surface p-4">
+              <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-4">Build Replay</div>
+              {buildReplay.manifest ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-border bg-background p-3">
+                      <div className="text-[10px] text-muted uppercase tracking-wider">Stages</div>
+                      <div className="text-sm font-medium mt-1">{buildReplay.manifest.totalStages}</div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background p-3">
+                      <div className="text-[10px] text-muted uppercase tracking-wider">Created</div>
+                      <div className="text-sm font-medium mt-1">{new Date(buildReplay.manifest.createdAt).toLocaleString()}</div>
+                    </div>
+                  </div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted font-medium">Stages</div>
+                  <div className="space-y-1">
+                    {buildReplay.manifest.stages.map((stage) => (
+                      <button key={stage} onClick={() => buildReplay.loadStage(stage)}
+                        className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg border border-border transition-all ${buildReplay.currentStage === stage ? "bg-accent/10 border-accent/30" : "bg-background hover:bg-surface-hover"}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`w-1.5 h-1.5 rounded-full ${buildReplay.currentStage === stage ? "bg-accent" : "bg-muted"}`} />
+                          <span className="text-xs font-mono">{stage}</span>
+                        </div>
+                        {buildReplay.currentStage === stage && buildReplay.loading && (
+                          <svg className="animate-spin h-3 w-3 text-accent" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {buildReplay.currentStage && (buildReplay.stageData as Record<string, unknown>)[buildReplay.currentStage] ? (
+                    <div>
+                      <div className="text-[11px] uppercase tracking-wider text-muted font-medium mb-2">{buildReplay.currentStage} Data</div>
+                      <pre className="text-[10px] font-mono text-foreground/70 bg-background rounded-xl border border-border p-3 max-h-64 overflow-y-auto whitespace-pre-wrap">
+                        {JSON.stringify(buildReplay.stageData[buildReplay.currentStage], null, 2)}
+                      </pre>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="text-center text-muted text-xs py-8">
+                  {buildReplay.error ? buildReplay.error : "No replay data available yet — build to generate"}
+                </div>
+              )}
             </div>
           ) : null}
         </div>

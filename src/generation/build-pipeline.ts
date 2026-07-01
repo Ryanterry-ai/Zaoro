@@ -179,6 +179,48 @@ export async function runBuildPipeline(
           }
         }
       }
+
+      // Enrich blueprint with workflow definitions from pipeline-v2
+      if (pipelineV2Result.output.workflowGraph) {
+        const existingWorkflowNames = new Set(breResult.blueprint.workflows.map(w => w.name));
+        for (const wf of pipelineV2Result.output.workflowGraph.workflows) {
+          if (!existingWorkflowNames.has(wf.name)) {
+            breResult.blueprint.workflows.push({
+              id: `wf-${wf.name.toLowerCase().replace(/\s+/g, '-')}`,
+              name: wf.name,
+              trigger: wf.trigger,
+              steps: wf.steps.map(s => ({ name: s.name, action: s.action, entity: s.entity, condition: s.condition })),
+              entities: wf.entities,
+              services: [],
+            });
+          }
+        }
+      }
+
+      // Enrich blueprint with navigation structure from pipeline-v2
+      if (pipelineV2Result.output.navigationGraph) {
+        const navGraph = pipelineV2Result.output.navigationGraph;
+        if (navGraph.navItems.length > 0) {
+          breResult.blueprint.navigation.items = navGraph.navItems.map(n => ({
+            label: n.label,
+            href: n.href,
+            icon: n.icon,
+            children: n.children,
+          }));
+        }
+        for (const layout of navGraph.layouts) {
+          const existing = breResult.blueprint.layouts.find(l => l.id === layout.id);
+          if (!existing) {
+            breResult.blueprint.layouts.push({
+              id: layout.id,
+              name: layout.id,
+              areas: layout.areas,
+              components: layout.components,
+              responsive: {},
+            });
+          }
+        }
+      }
     } catch (e: unknown) {
       log.warn('Layer 1b: Pipeline-v2 enrichment failed (continuing with base blueprint)', {
         error: (e as Error).message,
