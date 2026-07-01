@@ -115,13 +115,11 @@ function gate(projectDir) {
     })),
   };
 
-  // NEW: Warn but don't fail the build
-  console.error(`\n[content-quality-gate] WARNING: ${genericCount}/${analyses.length} components (${Math.round(genericRatio * 100)}%) are generic (threshold: ${Math.round(threshold * 100)}%) - continuing build.`);
+  console.error(`\n[content-quality-gate] ${genericCount}/${analyses.length} components (${Math.round(genericRatio * 100)}%) are generic (threshold: ${Math.round(threshold * 100)}%)`);
   console.error(`Generic components: ${analyses.filter(a => a.isGeneric).map(a => a.name).join(', ')}`);
 
-  // Pass the gate regardless - just warn
   console.log(JSON.stringify(result));
-  process.exit(0);
+  process.exit(pass ? 0 : 1);
 }
 
 const projectDir = process.argv[2] || process.cwd();

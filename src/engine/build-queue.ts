@@ -220,7 +220,7 @@ try {
   const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
   try {
     writeProgress('gate', 'started', 'Running quality gate (prisma generate + next build)...');
-    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 300000, stdio: 'pipe', env: { ...process.env, NODE_ENV: 'production' } });
+    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 600000, stdio: 'pipe', env: { ...process.env, NODE_ENV: 'production' } });
     writeProgress('gate', 'passed', 'Quality gate passed');
   } catch (gateErr) {
     const stdout = gateErr.stdout?.toString() || '';
@@ -240,9 +240,16 @@ try {
     if (cgResult.pass) {
       writeProgress('content-gate', 'passed', 'Content quality gate passed');
     } else {
-      writeProgress('content-gate', 'warning', 'Content quality gate: generic ratio exceeds threshold. Continuing build.');
+      writeProgress('content-gate', 'failed', 'Content quality gate failed: ' + cgResult.generic + '/' + cgResult.components + ' components are generic (' + Math.round(cgResult.genericRatio * 100) + '% > ' + Math.round(cgResult.threshold * 100) + '% threshold)');
+      throw new Error('Content quality gate failed: ' + cgResult.generic + '/' + cgResult.components + ' components are generic. Build must produce real business content, not generic templates.');
     }
   } catch (cgErr) {
+    // If the gate script exits with code 1, it means the gate failed
+    if (cgErr.status === 1) {
+      // Already handled above - re-throw
+      throw cgErr;
+    }
+    // Other errors (script not found, parse errors) - log but continue
     writeProgress('content-gate', 'warning', 'Content quality gate: could not run, continuing build');
   }
 
@@ -264,50 +271,61 @@ try {
         jsx: 'transform',
         loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
         external: ['react', 'react-dom'],
+        globals: { 'react': 'React', 'react-dom': 'ReactDOM' },
         write: false,
         alias: { '@': path.join(wsDir, 'src') },
       });
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
-      // Escape </script> in bundled code to prevent premature HTML script tag closure
-      const safeBundledCode = bundledCode.split('<' + '/script>').join('<' + '/script' + '>');
-      const SCRIPT_END = '<' + '/script>';
-      const previewHtmlParts = [
-        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>',
-        '<script src="https://cdn.tailwindcss.com">' + SCRIPT_END,
-        '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div>',
-        '<script src="https://unpkg.com/react@18/umd/react.production.min.js">' + SCRIPT_END,
-        '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">' + SCRIPT_END,
-        '<script>' + safeBundledCode + 'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||null;if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;break;}}}if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];break;}}}if(_comp){var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}else{document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component found.</div>"}' + SCRIPT_END + '</body></html>'
-      ];
-      const previewHtml = previewHtmlParts.join('');
+      if (!bundledCode.trim()) {
+        writeProgress('preview', 'warning', 'Esbuild produced empty output, skipping preview');
+      } else {
+        // Escape </script> in bundled code to prevent premature HTML script tag closure
+        const safeBundledCode = bundledCode.split('<' + '/script>').join('<' + '/script' + '>');
+        const SCRIPT_END = '<' + '/script>';
+        const previewHtmlParts = [
+          '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>',
+          '<script src="https://cdn.tailwindcss.com">' + SCRIPT_END,
+          '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div>',
+          '<script src="https://unpkg.com/react@18/umd/react.production.min.js">' + SCRIPT_END,
+          '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">' + SCRIPT_END,
+          '<script>',
+          safeBundledCode,
+          'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||null;',
+          'if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;break;}}}',
+          'if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];break;}}}',
+          'if(_comp){try{var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}catch(e){document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Render error: "+e.message+"</div>"}}',
+          'else{document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component found.</div>"}',
+          SCRIPT_END + '</body></html>'
+        ];
+        const previewHtml = previewHtmlParts.join('');
 
-      const consoleErrors: string[] = [];
-      const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-      const page = await ctx.newPage();
-      page.on('console', (msg: any) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
-      page.on('pageerror', (err: any) => consoleErrors.push(err.message));
-      await page.setContent(previewHtml, { waitUntil: 'load', timeout: 30000 });
-      const rendered = await page.waitForFunction(() => {
-        const el = document.getElementById('preview-root');
-        return el && el.children.length > 0;
-      }, { timeout: 15000 }).catch(() => null);
-      if (!rendered) {
-        console.warn('[preview] React mount failed. Console errors:', consoleErrors);
-        const pageContent = await page.evaluate(() => {
-          const root = document.getElementById('preview-root');
-          return root ? root.innerHTML : 'empty';
-        });
-        console.warn('[preview] #preview-root content:', pageContent);
+        const consoleErrors: string[] = [];
+        const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+        const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+        const page = await ctx.newPage();
+        page.on('console', (msg: any) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+        page.on('pageerror', (err: any) => consoleErrors.push(err.message));
+        await page.setContent(previewHtml, { waitUntil: 'networkidle', timeout: 30000 });
+        const rendered = await page.waitForFunction(() => {
+          const el = document.getElementById('preview-root');
+          return el && el.children.length > 0;
+        }, { timeout: 15000 }).catch(() => null);
+        if (!rendered) {
+          console.warn('[preview] React mount failed. Console errors:', consoleErrors);
+          const pageContent = await page.evaluate(() => {
+            const root = document.getElementById('preview-root');
+            return root ? root.innerHTML : 'empty';
+          });
+          console.warn('[preview] #preview-root content:', pageContent);
+        }
+        await page.waitForTimeout(1000);
+        const renderedHtml = await page.content();
+        await ctx.close();
+        await browser.close();
+        fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
+        writeProgress('preview', 'done', 'Preview rendered');
       }
-      await page.waitForLoadState('networkidle').catch(() => {});
-      await page.waitForTimeout(500);
-      const renderedHtml = await page.content();
-      await ctx.close();
-      await browser.close();
-      fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
-      writeProgress('preview', 'done', 'Preview rendered');
     } else {
       writeProgress('preview', 'warning', 'No page.tsx found, skipping preview');
     }

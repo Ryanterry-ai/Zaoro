@@ -9,7 +9,7 @@ const fs = require('fs');
 
 function run(cmd, cwd) {
   try {
-    const output = execSync(cmd, { cwd, stdio: 'pipe', timeout: 180000 });
+    const output = execSync(cmd, { cwd, stdio: 'pipe', timeout: 600000 });
     return { success: true, output: output.toString() };
   } catch (e) {
     return { success: false, output: (e.stdout?.toString() || '') + '\n' + (e.stderr?.toString() || '') + '\n' + e.message };

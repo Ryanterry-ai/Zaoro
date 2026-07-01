@@ -443,6 +443,7 @@ const server = http.createServer(async (req, res) => {
         jsx: 'transform',
         loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
         external: ['react', 'react-dom'],
+        globals: { 'react': 'React', 'react-dom': 'ReactDOM' },
         write: false,
         alias: {
           '@': path.join(workspacePath, 'src'),
@@ -452,6 +453,7 @@ const server = http.createServer(async (req, res) => {
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
       // Escape </script> in bundled code to prevent premature HTML script tag closure
       const safeBundledCode = bundledCode.split('<' + '/script>').join('<' + '/script' + '>');
+      const SCRIPT_END = '<' + '/script>';
 
       const previewHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -459,7 +461,7 @@ const server = http.createServer(async (req, res) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Preview</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="https://cdn.tailwindcss.com">${SCRIPT_END}</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
@@ -468,32 +470,36 @@ const server = http.createServer(async (req, res) => {
 </head>
 <body>
   <div id="preview-root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js">${SCRIPT_END}</script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">${SCRIPT_END}</script>
   <script>
     ${safeBundledCode}
-    var _mod = typeof __preview !== 'undefined' ? __preview : {};
-    var _comp = _mod.default || null;
-    if (!_comp) {
-      var _keys = Object.keys(_mod);
-      for (var i = 0; i < _keys.length; i++) {
-        var _val = _mod[_keys[i]];
-        if (typeof _val === 'function' && _val.prototype && (_val.prototype.isReactComponent || _val.$$typeof)) { _comp = _val; break; }
+    try {
+      var _mod = typeof __preview !== 'undefined' ? __preview : {};
+      var _comp = _mod.default || null;
+      if (!_comp) {
+        var _keys = Object.keys(_mod);
+        for (var i = 0; i < _keys.length; i++) {
+          var _val = _mod[_keys[i]];
+          if (typeof _val === 'function' && _val.prototype && (_val.prototype.isReactComponent || _val.$$typeof)) { _comp = _val; break; }
+        }
       }
-    }
-    if (!_comp) {
-      var _keys2 = Object.keys(_mod);
-      for (var j = 0; j < _keys2.length; j++) {
-        if (typeof _mod[_keys2[j]] === 'function') { _comp = _mod[_keys2[j]]; break; }
+      if (!_comp) {
+        var _keys2 = Object.keys(_mod);
+        for (var j = 0; j < _keys2.length; j++) {
+          if (typeof _mod[_keys2[j]] === 'function') { _comp = _mod[_keys2[j]]; break; }
+        }
       }
+      if (_comp) {
+        var root = ReactDOM.createRoot(document.getElementById('preview-root'));
+        root.render(React.createElement(_comp));
+      } else {
+        document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">No renderable component found in module exports.</div>';
+      }
+    } catch (e) {
+      document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">Render error: ' + (e.message || e) + '</div>';
     }
-    if (_comp) {
-      var root = ReactDOM.createRoot(document.getElementById('preview-root'));
-      root.render(React.createElement(_comp));
-    } else {
-      document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">No renderable component found in module exports.</div>';
-    }
-  <\/script>
+  ${SCRIPT_END}</script>
 </body>
 </html>`;
 
@@ -508,7 +514,7 @@ const server = http.createServer(async (req, res) => {
       });
       page.on('pageerror', err => consoleErrors.push(err.message));
 
-      await page.setContent(previewHtml, { waitUntil: 'load', timeout: 30000 });
+      await page.setContent(previewHtml, { waitUntil: 'networkidle', timeout: 30000 });
       const rendered = await page.waitForFunction(() => {
         const el = document.getElementById('preview-root');
         return el && el.children.length > 0;
@@ -524,8 +530,7 @@ const server = http.createServer(async (req, res) => {
         console.warn('[preview] #preview-root content:', pageContent);
       }
 
-      await page.waitForLoadState('networkidle').catch(() => {});
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1000);
 
       const renderedHtml = await page.content();
       await ctx.close();
