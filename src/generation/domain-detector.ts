@@ -1,3 +1,5 @@
+import { detectIndustryWithScore } from '../bos/intake-parser.js';
+
 export interface DomainContext {
   industry: string;
   subIndustry: string;
@@ -9,194 +11,32 @@ export interface DomainContext {
   imageKeywords: string[];
 }
 
-interface IndustryRule {
-  industry: string;
-  keywords: string[];
-  subIndustries: Record<string, string[]>;
-  defaultSections: string[];
-  colorHint: string;
-}
+// ─── Industry → Domain mapping (unified with intake-parser) ──────────────────
 
-const INDUSTRY_RULES: IndustryRule[] = [
-  {
-    industry: 'real-estate',
-    keywords: ['real estate', 'property', 'properties', 'realtor', 'housing', 'home', 'apartment', 'condo', 'mortgage', 'virtual tour', 'listing', 'broker'],
-    subIndustries: {
-      luxury: ['luxury', 'premium', 'high-end', 'exclusive', 'estate', 'villa', 'penthouse'],
-      commercial: ['commercial', 'office', 'retail', 'warehouse', 'industrial'],
-      residential: ['residential', 'family', 'suburban', 'neighborhood'],
-    },
-    defaultSections: ['hero', 'featured-properties', 'stats-bar', 'services', 'testimonials', 'contact-form', 'cta'],
-    colorHint: 'emerald',
-  },
-  {
-    industry: 'dental',
-    keywords: ['dental', 'dentist', 'teeth', 'smile', 'implant', 'whitening', 'orthodont', 'invisalign', 'braces', 'oral surgery', 'periodontal', 'dental clinic'],
-    subIndustries: {},
-    defaultSections: ['hero', 'services', 'team/doctors', 'before-after', 'testimonials', 'contact-info', 'faq'],
-    colorHint: 'cyan',
-  },
-  {
-    industry: 'coffee-shop',
-    keywords: ['coffee shop', 'coffee bar', 'cafe', 'espresso', 'latte', 'roasted', 'roastery', 'barista', 'brew', 'cold brew', 'artisan coffee', 'specialty coffee'],
-    subIndustries: {},
-    defaultSections: ['hero', 'menu-highlights', 'about', 'gallery', 'testimonials', 'contact-info'],
-    colorHint: 'amber',
-  },
-  {
-    industry: 'pet-services',
-    keywords: ['pet services', 'veterinary clinic', 'pet grooming', 'pet boarding', 'dog grooming', 'cat grooming', 'animal hospital', 'puppy', 'kitten', 'pet care', 'pet hotel', 'vet clinic'],
-    subIndustries: {},
-    defaultSections: ['hero', 'services', 'team/doctors', 'pricing', 'testimonials', 'contact-info'],
-    colorHint: 'emerald',
-  },
-  {
-    industry: 'restaurant',
-    keywords: ['restaurant', 'cafe', 'bakery', 'bar', 'pub', 'bistro', 'dining', 'food', 'menu', 'chef', 'kitchen', 'pizza', 'sushi', 'burger'],
-    subIndustries: {
-      fine_dining: ['fine dining', 'gourmet', 'michelin', 'upscale', 'elegant'],
-      casual: ['casual', 'family', 'comfort food', 'diner'],
-      cafe: ['cafe', 'espresso', 'latte', 'pastry', 'bakery'],
-    },
-    defaultSections: ['hero', 'menu-highlights', 'about', 'gallery', 'reservations', 'testimonials', 'contact-info'],
-    colorHint: 'amber',
-  },
-  {
-    industry: 'fitness',
-    keywords: ['gym', 'fitness', 'workout', 'training', 'personal trainer', 'exercise', 'yoga', 'pilates', 'crossfit', 'wellness', 'health club', 'athletic'],
-    subIndustries: {
-      gym: ['gym', 'weight', 'strength', 'bodybuilding', 'crossfit'],
-      yoga: ['yoga', 'pilates', 'meditation', 'mindfulness', 'wellness'],
-      studio: ['studio', 'spin', 'cycling', 'barre', 'dance'],
-    },
-    defaultSections: ['hero', 'class-schedule', 'trainers', 'membership-plans', 'gallery', 'testimonials', 'contact-info'],
-    colorHint: 'rose',
-  },
-  {
-    industry: 'saas',
-    keywords: ['saas', 'software', 'app', 'platform', 'dashboard', 'tool', 'api', 'integration', 'analytics', 'automation', 'cloud', 'subscription'],
-    subIndustries: {
-      crm: ['crm', 'customer relationship', 'lead', 'pipeline', 'sales'],
-      analytics: ['analytics', 'data', 'insights', 'reporting', 'metrics'],
-      project_management: ['project management', 'task', 'kanban', 'sprint', 'agile'],
-      marketing: ['marketing', 'email', 'campaign', 'seo', 'social media'],
-    },
-    defaultSections: ['hero', 'features', 'pricing-table', 'integrations', 'testimonials', 'cta', 'faq'],
-    colorHint: 'violet',
-  },
-  {
-    industry: 'healthcare',
-    keywords: ['healthcare', 'medical', 'doctor', 'hospital', 'patient', 'health', 'therapy', 'psychology'],
-    subIndustries: {
-      therapy: ['therapy', 'counseling', 'psychology', 'mental health'],
-      clinic: ['clinic', 'medical', 'primary care', 'family practice'],
-    },
-    defaultSections: ['hero', 'services', 'team/doctors', 'appointment-booking', 'testimonials', 'contact-info', 'faq'],
-    colorHint: 'cyan',
-  },
-  {
-    industry: 'law-firm',
-    keywords: ['law firm', 'lawyer', 'attorney', 'legal', 'litigation', 'court', 'justice', 'advocate', 'counsel', 'paralegal', 'practice areas'],
-    subIndustries: {
-      corporate: ['corporate', 'business', 'mergers', 'acquisitions', 'compliance'],
-      family: ['family law', 'divorce', 'custody', 'marriage'],
-      injury: ['personal injury', 'accident', 'malpractice', 'workers comp'],
-      criminal: ['criminal', 'defense', 'dui', 'felony'],
-    },
-    defaultSections: ['hero', 'practice-areas', 'team', 'case-studies', 'testimonials', 'contact-form', 'faq'],
-    colorHint: 'slate',
-  },
-  {
-    industry: 'education',
-    keywords: ['education', 'school', 'university', 'college', 'course', 'learn', 'training', 'academy', 'tutor', 'student', 'lecture', 'curriculum'],
-    subIndustries: {
-      online: ['online', 'e-learning', 'digital', 'virtual', 'remote'],
-      k12: ['k-12', 'high school', 'elementary', 'middle school'],
-      higher_ed: ['university', 'college', 'degree', 'graduate'],
-    },
-    defaultSections: ['hero', 'courses', 'features', 'pricing-table', 'testimonials', 'cta', 'faq'],
-    colorHint: 'blue',
-  },
-  {
-    industry: 'ecommerce',
-    keywords: ['shop', 'store', 'ecommerce', 'e-commerce', 'buy', 'sell', 'product', 'cart', 'checkout', 'order', 'marketplace', 'retail'],
-    subIndustries: {
-      fashion: ['fashion', 'clothing', 'apparel', 'wear', 'style'],
-      electronics: ['electronics', 'gadget', 'tech', 'device', 'gadget'],
-      beauty: ['beauty', 'cosmetics', 'skincare', 'makeup'],
-      food: ['food', 'grocery', 'organic', 'snack', 'beverage'],
-    },
-    defaultSections: ['hero', 'categories', 'featured-products', 'product-grid', 'testimonials', 'newsletter-cta', 'cta'],
-    colorHint: 'orange',
-  },
-  {
-    industry: 'portfolio',
-    keywords: ['portfolio', 'personal', 'freelance', 'resume', 'cv', 'showcase', 'creative', 'designer', 'developer portfolio'],
-    subIndustries: {
-      design: ['designer', 'graphic', 'ui', 'ux', 'visual'],
-      development: ['developer', 'engineer', 'full-stack', 'frontend', 'backend'],
-      photography: ['photographer', 'photo', 'camera', 'shot'],
-    },
-    defaultSections: ['hero', 'about', 'featured-projects', 'skills', 'testimonials', 'contact-form'],
-    colorHint: 'pink',
-  },
-  {
-    industry: 'agency',
-    keywords: ['agency', 'studio', 'creative agency', 'digital agency', 'marketing agency', 'branding', 'consulting', 'firm'],
-    subIndustries: {
-      marketing: ['marketing', 'advertising', 'social media', 'seo', 'ppc'],
-      creative: ['creative', 'design', 'branding', 'identity'],
-      technology: ['technology', 'digital', 'transformation', 'innovation'],
-    },
-    defaultSections: ['hero', 'services', 'case-studies', 'clients', 'team', 'testimonials', 'cta'],
-    colorHint: 'indigo',
-  },
-  {
-    industry: 'nonprofit',
-    keywords: ['nonprofit', 'non-profit', 'charity', 'foundation', 'donation', 'cause', 'community', 'volunteer', 'impact'],
-    subIndustries: {},
-    defaultSections: ['hero', 'mission', 'impact-stats', 'programs', 'donate-cta', 'testimonials', 'contact-info'],
-    colorHint: 'green',
-  },
-  {
-    industry: 'event',
-    keywords: ['event', 'conference', 'wedding', 'party', 'festival', 'concert', 'workshop', 'seminar', 'gala', 'ceremony'],
-    subIndustries: {
-      wedding: ['wedding', 'bride', 'groom', 'ceremony', 'reception'],
-      corporate: ['conference', 'summit', 'corporate event', 'seminar'],
-      music: ['concert', 'festival', 'music', 'live show'],
-    },
-    defaultSections: ['hero', 'event-details', 'schedule', 'speakers', 'gallery', 'tickets', 'contact-info'],
-    colorHint: 'fuchsia',
-  },
-  {
-    industry: 'beauty-salon',
-    keywords: ['beauty salon', 'hair salon', 'nail salon', 'manicure', 'pedicure', 'balayage', 'haircut', 'hair styling', 'facial', 'skincare salon', 'grooming salon', 'waxing'],
-    subIndustries: {},
-    defaultSections: ['hero', 'services', 'gallery', 'pricing', 'team', 'testimonials', 'contact-info'],
-    colorHint: 'pink',
-  },
-  {
-    industry: 'auto-dealership',
-    keywords: ['auto dealership', 'car dealership', 'vehicle', 'automotive', 'pre-owned', 'certified', 'trade-in', 'test drive', 'showroom', 'inventory', 'financing'],
-    subIndustries: {},
-    defaultSections: ['hero', 'featured-vehicles', 'services', 'financing', 'testimonials', 'contact-info'],
-    colorHint: 'slate',
-  },
-  {
-    industry: 'luxury',
-    keywords: ['luxury', 'premium', 'high-end', 'exclusive', 'elegant', 'sophisticated', 'artisan', 'bespoke', 'timepiece', 'watch brand', 'jewelry', 'fine watch', 'chronograph', 'horology', 'swiss'],
-    subIndustries: {
-      watches: ['watch', 'timepiece', 'chronograph', 'horology', 'swiss', 'automatic', 'mechanical'],
-      jewelry: ['jewelry', 'jewellery', 'diamond', 'gold', 'silver', 'necklace', 'ring', 'bracelet'],
-      fashion: ['fashion', 'couture', 'designer', 'runway', 'collection', 'boutique'],
-      automotive: ['automobile', 'car brand', 'supercar', 'exotic', 'classic car'],
-      real_estate: ['villa', 'penthouse', 'estate', 'mansion', 'luxury property'],
-    },
-    defaultSections: ['hero', 'gallery', 'about', 'features', 'testimonials', 'cta'],
-    colorHint: 'amber',
-  },
-];
+const INDUSTRY_DOMAIN_MAP: Record<string, { sections: string[]; color: string; mood: DomainContext['mood']; features: string[]; images: string[] }> = {
+  restaurant: { sections: ['hero', 'menu-highlights', 'about', 'gallery', 'reservations', 'testimonials', 'contact-info'], color: 'amber', mood: 'warm', features: ['online-ordering', 'booking', 'gallery', 'testimonials', 'contact-form'], images: ['fine dining', 'restaurant interior', 'gourmet food', 'chef cooking'] },
+  healthcare: { sections: ['hero', 'services', 'team/doctors', 'appointment-booking', 'testimonials', 'contact-info', 'faq'], color: 'cyan', mood: 'modern', features: ['booking', 'team', 'testimonials', 'contact-form', 'faq'], images: ['doctor office', 'medical clinic', 'healthcare professional', 'patient care'] },
+  saas: { sections: ['hero', 'features', 'pricing-table', 'integrations', 'testimonials', 'cta', 'faq'], color: 'violet', mood: 'modern', features: ['dashboard', 'pricing', 'integrations', 'testimonials', 'faq'], images: ['dashboard', 'software interface', 'analytics', 'team collaboration'] },
+  ecommerce: { sections: ['hero', 'categories', 'featured-products', 'product-grid', 'testimonials', 'newsletter-cta', 'cta'], color: 'orange', mood: 'modern', features: ['ecommerce', 'product-gallery', 'cart', 'checkout', 'testimonials'], images: ['product photography', 'online store', 'shopping', 'ecommerce'] },
+  fitness: { sections: ['hero', 'class-schedule', 'trainers', 'membership-plans', 'gallery', 'testimonials', 'contact-info'], color: 'rose', mood: 'bold', features: ['booking', 'membership', 'gallery', 'team', 'testimonials'], images: ['gym interior', 'personal training', 'yoga class', 'fitness workout'] },
+  education: { sections: ['hero', 'courses', 'features', 'pricing-table', 'testimonials', 'cta', 'faq'], color: 'blue', mood: 'corporate', features: ['courses', 'pricing', 'testimonials', 'faq'], images: ['online learning', 'classroom', 'university', 'library'] },
+  realestate: { sections: ['hero', 'featured-properties', 'stats-bar', 'services', 'testimonials', 'contact-form', 'cta'], color: 'emerald', mood: 'corporate', features: ['property-gallery', 'maps', 'contact-form', 'testimonials'], images: ['luxury home', 'modern house', 'apartment interior', 'real estate'] },
+  legal: { sections: ['hero', 'practice-areas', 'team', 'case-studies', 'testimonials', 'contact-form', 'faq'], color: 'slate', mood: 'corporate', features: ['team', 'case-studies', 'testimonials', 'contact-form', 'faq'], images: ['law office', 'courtroom', 'legal books', 'attorney consultation'] },
+  agency: { sections: ['hero', 'services', 'case-studies', 'clients', 'team', 'testimonials', 'cta'], color: 'indigo', mood: 'modern', features: ['services', 'case-studies', 'team', 'testimonials'], images: ['team meeting', 'creative brainstorm', 'office collaboration', 'strategy'] },
+  nonprofit: { sections: ['hero', 'mission', 'impact-stats', 'programs', 'donate-cta', 'testimonials', 'contact-info'], color: 'green', mood: 'warm', features: ['donation', 'mission', 'testimonials', 'contact-form'], images: ['community', 'volunteers', 'charity event', 'helping hands'] },
+  media: { sections: ['hero', 'featured-articles', 'categories', 'newsletter-cta', 'testimonials', 'cta'], color: 'slate', mood: 'modern', features: ['blog', 'newsletter', 'testimonials'], images: ['journalism', 'newsroom', 'content creation', 'media production'] },
+  travel: { sections: ['hero', 'popular-destinations', 'deals', 'testimonials', 'cta'], color: 'sky', mood: 'warm', features: ['booking', 'gallery', 'testimonials', 'maps'], images: ['travel destination', 'vacation', 'adventure', 'tourism'] },
+  luxury: { sections: ['hero', 'gallery', 'about', 'features', 'testimonials', 'cta'], color: 'amber', mood: 'premium', features: ['gallery', 'testimonials', 'cta'], images: ['luxury watch', 'premium product', 'elegant design', 'high-end brand'] },
+  beauty: { sections: ['hero', 'services', 'gallery', 'pricing', 'team', 'testimonials', 'contact-info'], color: 'pink', mood: 'warm', features: ['booking', 'gallery', 'pricing', 'team', 'testimonials'], images: ['beauty salon', 'spa treatment', 'cosmetics', 'skincare'] },
+  event: { sections: ['hero', 'event-details', 'schedule', 'speakers', 'gallery', 'tickets', 'contact-info'], color: 'fuchsia', mood: 'bold', features: ['booking', 'gallery', 'testimonials'], images: ['event venue', 'conference stage', 'wedding decor', 'festival crowd'] },
+  portfolio: { sections: ['hero', 'about', 'featured-projects', 'skills', 'testimonials', 'contact-form'], color: 'pink', mood: 'warm', features: ['gallery', 'contact-form', 'testimonials'], images: ['workspace', 'design tools', 'creative process', 'portfolio'] },
+  automotive: { sections: ['hero', 'featured-vehicles', 'services', 'financing', 'testimonials', 'contact-info'], color: 'slate', mood: 'corporate', features: ['inventory', 'financing', 'booking', 'testimonials'], images: ['car dealership', 'vehicle showroom', 'auto service', 'car financing'] },
+  'enterprise-software': { sections: ['hero', 'features', 'pricing-table', 'integrations', 'testimonials', 'cta', 'faq'], color: 'blue', mood: 'corporate', features: ['dashboard', 'pricing', 'integrations', 'testimonials', 'faq'], images: ['enterprise dashboard', 'business analytics', 'team collaboration', 'software platform'] },
+  logistics: { sections: ['hero', 'features', 'tracking', 'pricing', 'testimonials', 'cta'], color: 'orange', mood: 'modern', features: ['tracking', 'pricing', 'testimonials'], images: ['shipping logistics', 'warehouse', 'delivery truck', 'package tracking'] },
+  manufacturing: { sections: ['hero', 'features', 'production', 'quality', 'testimonials', 'cta'], color: 'slate', mood: 'corporate', features: ['production', 'quality', 'inventory', 'testimonials'], images: ['factory floor', 'production line', 'quality control', 'manufacturing'] },
+  fintech: { sections: ['hero', 'features', 'pricing-table', 'security', 'testimonials', 'cta', 'faq'], color: 'emerald', mood: 'modern', features: ['payments', 'security', 'analytics', 'testimonials', 'faq'], images: ['fintech dashboard', 'payment processing', 'financial analytics', 'secure banking'] },
+  proptech: { sections: ['hero', 'features', 'properties', 'pricing', 'testimonials', 'cta'], color: 'blue', mood: 'modern', features: ['property-management', 'tenant-portal', 'maintenance', 'testimonials'], images: ['property management', 'smart building', 'tenant portal', 'real estate tech'] },
+};
 
 const MOOD_KEYWORDS: Record<string, string[]> = {
   premium: ['luxury', 'premium', 'high-end', 'exclusive', 'elegant', 'sophisticated', 'refined', 'elite'],
@@ -207,52 +47,26 @@ const MOOD_KEYWORDS: Record<string, string[]> = {
   corporate: ['corporate', 'professional', 'business', 'enterprise', 'formal'],
   warm: ['warm', 'cozy', 'friendly', 'welcoming', 'comfortable', 'homey'],
   dark: ['dark', 'moody', 'noir', 'gothic', 'mysterious', 'shadowy'],
+  creative: ['creative', 'artistic', 'design', 'portfolio', 'showcase'],
+  clean: ['clean', 'clinical', 'hygienic', 'fresh', 'pure'],
 };
 
+/**
+ * Detect domain from prompt — unified with intake-parser industry detection.
+ * Uses intake-parser for industry detection, then maps to DomainContext shape.
+ */
 export function detectDomain(prompt: string): DomainContext {
   const lower = prompt.toLowerCase();
 
-  let bestMatch: IndustryRule | null = null;
-  let bestScore = 0;
+  // Use intake-parser for industry detection (single source of truth)
+  const { mapping, subIndustry } = detectIndustryWithScore(prompt);
+  const industry = mapping?.industry ?? 'saas';
 
-  for (const rule of INDUSTRY_RULES) {
-    let score = 0;
-    for (const kw of rule.keywords) {
-      if (lower.includes(kw)) score += kw.split(' ').length;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = rule;
-    }
-  }
+  // Get domain mapping for this industry
+  const domain = INDUSTRY_DOMAIN_MAP[industry] ?? INDUSTRY_DOMAIN_MAP['saas']!;
 
-  if (!bestMatch) {
-    return {
-      industry: 'general',
-      subIndustry: '',
-      mood: 'modern',
-      features: [],
-      contentKeywords: extractKeywords(lower),
-      suggestedSections: ['hero', 'features', 'stats-bar', 'testimonials', 'cta'],
-      colorHint: 'blue',
-      imageKeywords: ['business', 'technology', 'office'],
-    };
-  }
-
-  let subIndustry = '';
-  let maxSubScore = 0;
-  for (const [sub, subKws] of Object.entries(bestMatch.subIndustries)) {
-    let subScore = 0;
-    for (const kw of subKws) {
-      if (lower.includes(kw)) subScore++;
-    }
-    if (subScore > maxSubScore) {
-      maxSubScore = subScore;
-      subIndustry = sub;
-    }
-  }
-
-  let mood: DomainContext['mood'] = 'modern';
+  // Detect mood from prompt
+  let mood: DomainContext['mood'] = domain.mood;
   let moodScore = 0;
   for (const [m, mKws] of Object.entries(MOOD_KEYWORDS)) {
     let s = 0;
@@ -265,34 +79,21 @@ export function detectDomain(prompt: string): DomainContext {
     }
   }
 
+  // Extract features from prompt
   const features = extractFeatures(lower);
+
+  // Extract content keywords
   const contentKeywords = extractKeywords(lower);
 
-  const IMAGE_KEYWORDS: Record<string, string[]> = {
-    'real-estate': ['luxury home', 'modern house', 'apartment interior', 'real estate'],
-    'restaurant': ['fine dining', 'restaurant interior', 'gourmet food', 'chef cooking'],
-    'fitness': ['gym interior', 'personal training', 'yoga class', 'fitness workout'],
-    'saas': ['dashboard', 'software interface', 'analytics', 'team collaboration'],
-    'healthcare': ['doctor office', 'medical clinic', 'healthcare professional', 'patient care'],
-    'law-firm': ['law office', 'courtroom', 'legal books', 'attorney consultation'],
-    'education': ['online learning', 'classroom', 'university', 'library'],
-    'ecommerce': ['product photography', 'online store', 'shopping', 'ecommerce'],
-    'portfolio': ['workspace', 'design tools', 'creative process', 'portfolio'],
-    'agency': ['team meeting', 'creative brainstorm', 'office collaboration', 'strategy'],
-    'nonprofit': ['community', 'volunteers', 'charity event', 'helping hands'],
-    'event': ['event venue', 'conference stage', 'wedding decor', 'festival crowd'],
-    'luxury': ['luxury watch', 'premium product', 'elegant design', 'high-end brand', 'artisan craft', 'fine jewelry'],
-  };
-
   return {
-    industry: bestMatch.industry,
-    subIndustry,
+    industry,
+    subIndustry: subIndustry ?? '',
     mood,
-    features,
+    features: features.length > 0 ? features : domain.features,
     contentKeywords,
-    suggestedSections: bestMatch.defaultSections,
-    colorHint: bestMatch.colorHint,
-    imageKeywords: IMAGE_KEYWORDS[bestMatch.industry] || ['business', 'technology', 'office'],
+    suggestedSections: domain.sections,
+    colorHint: domain.color,
+    imageKeywords: domain.images,
   };
 }
 
