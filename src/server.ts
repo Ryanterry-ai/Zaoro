@@ -285,6 +285,43 @@ const server = http.createServer(async (req, res) => {
     return json(res, buildQueue.getStatus());
   }
 
+  // GET /api/workspaces — List all workspaces
+  if (method === 'GET' && url.pathname === '/api/workspaces') {
+    try {
+      if (!fs.existsSync(WORKSPACE_BASE)) return json(res, []);
+      const dirs = fs.readdirSync(WORKSPACE_BASE, { withFileTypes: true })
+        .filter(d => d.isDirectory())
+        .map(d => d.name)
+        .filter(name => name.startsWith('ws-'));
+      const workspaces = dirs.map(name => {
+        const metaPath = path.join(WORKSPACE_BASE, name, '.meta.json');
+        const centralPrompt = path.join(PROMPTS_DIR, `${name}.json`);
+        let prompt = '';
+        let createdAt = '';
+        try {
+          if (fs.existsSync(metaPath)) {
+            const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+            prompt = meta.prompt || '';
+            createdAt = meta.createdAt || '';
+          }
+          if (!prompt && fs.existsSync(centralPrompt)) {
+            const pData = JSON.parse(fs.readFileSync(centralPrompt, 'utf-8'));
+            prompt = pData.prompt || '';
+            createdAt = pData.createdAt || '';
+          }
+          if (!createdAt) {
+            const stat = fs.statSync(path.join(WORKSPACE_BASE, name));
+            createdAt = stat.birthtime.toISOString();
+          }
+        } catch {}
+        return { id: name, prompt: prompt.slice(0, 120), createdAt };
+      });
+      return json(res, workspaces.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    } catch {
+      return json(res, []);
+    }
+  }
+
   // GET /api/workspace/:id/meta
   if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/meta$/)) {
     const id = url.pathname.split('/')[3]!;

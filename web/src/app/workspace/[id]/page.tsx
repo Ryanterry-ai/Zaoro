@@ -6,6 +6,7 @@ import { useBuildEvents } from "@/lib/use-build-events";
 import { PipelineTimeline } from "@/components/PipelineTimeline";
 import { usePlanInspect } from "@/lib/use-plan-inspect";
 import { ArchitectureGraph, buildArchGraph } from "@/components/ArchitectureGraph";
+import { useBuildReport } from "@/lib/use-build-report";
 
 interface ProgressStep {
   step: string;
@@ -96,7 +97,7 @@ export default function WorkspacePage() {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
-  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance" | "architecture">("preview");
+  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance" | "architecture" | "report">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
@@ -248,6 +249,7 @@ export default function WorkspacePage() {
 
   // Planning artifact inspector — feeds Architecture tab
   const planInspect = usePlanInspect(id, true);
+  const buildReport = useBuildReport(id, buildEventsState.status === "complete");
 
   useEffect(() => {
     if (!buildEventsState.isLive || buildEventsState.events.length === 0) return;
@@ -627,6 +629,10 @@ export default function WorkspacePage() {
               <button onClick={() => setRightTab("architecture")} className={`px-4 py-2.5 text-xs font-medium transition-all ${rightTab === "architecture" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
                 Architecture
               </button>
+              <button onClick={() => setRightTab("report")} className={`px-4 py-2.5 text-xs font-medium transition-all ${rightTab === "report" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
+                Report
+                {buildReport.report && <span className="ml-1.5 text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">✓</span>}
+              </button>
             </div>
             {rightTab === "preview" && (
               <div className="flex items-center gap-1.5 pr-3">
@@ -694,7 +700,7 @@ export default function WorkspacePage() {
                 )}
               </div>
             </div>
-          ) : (
+          ) : rightTab === "provenance" ? (
             <div className="flex-1 overflow-y-auto bg-surface">
               <div className="p-4 space-y-4">
                 <div className="text-[10px] uppercase tracking-wider text-muted font-medium">BOS Provenance Chain</div>
@@ -793,6 +799,91 @@ export default function WorkspacePage() {
                   height={360}
                 />
               </div>
+            </div>
+          ) : rightTab === "report" ? (
+            <div className="flex-1 overflow-y-auto bg-surface p-4">
+              <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-4">Build Report</div>
+              {buildReport.loading ? (
+                <div className="text-center text-muted text-xs py-8">Loading...</div>
+              ) : buildReport.error === "pending" ? (
+                <div className="text-center text-muted text-xs py-8">No report yet — build to generate</div>
+              ) : buildReport.error ? (
+                <div className="text-center text-red-400 text-xs py-8">{buildReport.error}</div>
+              ) : buildReport.report ? (
+                <div className="space-y-4">
+                  {/* Summary grid */}
+                  <div className="grid grid-cols-4 gap-3">
+                    {[
+                      { label: "Duration", value: `${(buildReport.report.duration / 1000).toFixed(1)}s` },
+                      { label: "Status", value: buildReport.report.success ? "Success" : "Failed" },
+                      { label: "Industry", value: buildReport.report.blueprint.industry },
+                      { label: "App", value: buildReport.report.blueprint.appName || "Untitled" },
+                    ].map((s) => (
+                      <div key={s.label} className="rounded-xl border border-border bg-background p-3">
+                        <div className="text-[10px] text-muted uppercase tracking-wider">{s.label}</div>
+                        <div className="text-sm font-medium mt-1">{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Blueprint stats */}
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Blueprint</div>
+                    <div className="grid grid-cols-5 gap-3 text-center">
+                      {[
+                        { label: "Pages", value: buildReport.report.blueprint.pagesCount },
+                        { label: "Models", value: buildReport.report.blueprint.dataModelsCount },
+                        { label: "APIs", value: buildReport.report.blueprint.apisCount },
+                        { label: "Entities", value: buildReport.report.blueprint.entitiesCount },
+                        { label: "Workflows", value: buildReport.report.blueprint.workflowsCount },
+                      ].map((s) => (
+                        <div key={s.label} className="rounded-lg bg-surface-hover p-2">
+                          <div className="text-lg font-bold text-foreground">{s.value}</div>
+                          <div className="text-[10px] text-muted">{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Files breakdown */}
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Generated Files ({(buildReport.report.files?.total ?? 0)})</div>
+                    {buildReport.report.files?.byType && Object.keys(buildReport.report.files.byType).length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(buildReport.report.files.byType).map(([ext, count]) => (
+                          <div key={ext} className="px-2.5 py-1 rounded-lg bg-accent/10 text-accent text-[11px] font-mono">
+                            {ext || "(no ext)"} <span className="font-bold">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted">No file data</div>
+                    )}
+                    {buildReport.report.files?.paths && buildReport.report.files.paths.length > 0 && (
+                      <details className="mt-3">
+                        <summary className="text-[11px] text-muted cursor-pointer hover:text-foreground">Show all paths</summary>
+                        <div className="mt-2 space-y-0.5 max-h-48 overflow-y-auto">
+                          {buildReport.report.files.paths.map((p: string) => (
+                            <div key={p} className="text-[10px] font-mono text-muted/80">{p}</div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+
+                  {/* Warnings */}
+                  {buildReport.report.warnings && buildReport.report.warnings.length > 0 && (
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Warnings ({(buildReport.report.warnings as string[]).length})</div>
+                      <div className="space-y-1">
+                        {(buildReport.report.warnings as string[]).map((w: string, i: number) => (
+                          <div key={i} className="text-[11px] text-amber-400/80 font-mono">⚠ {w}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

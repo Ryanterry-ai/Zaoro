@@ -17,6 +17,13 @@ export class SandboxEngine {
       fs.mkdirSync(rootPath, { recursive: true });
     }
 
+    // Write or update .meta.json for workspace tracking
+    const metaPath = path.join(rootPath, '.meta.json');
+    try {
+      const existing = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, 'utf-8')) : {};
+      fs.writeFileSync(metaPath, JSON.stringify({ ...existing, id, updatedAt: new Date().toISOString(), createdAt: existing.createdAt || new Date().toISOString() }, null, 2), 'utf-8');
+    } catch {}
+
     // Check for required files and backfill any that are missing (idempotent scaffold)
     const requiredFiles = this.getRequiredScaffoldFiles(rootPath);
     const missingFiles = requiredFiles.filter(f => !fs.existsSync(f.path));
