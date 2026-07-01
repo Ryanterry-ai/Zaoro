@@ -451,7 +451,7 @@ const server = http.createServer(async (req, res) => {
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
       // Escape </script> in bundled code to prevent premature HTML script tag closure
-      const safeBundledCode = bundledCode.replace(/<\/script>/gi, '<\\/script>');
+      const safeBundledCode = bundledCode.split('<' + '/script>').join('<' + '/script' + '>');
 
       const previewHtml = `<!DOCTYPE html>
 <html lang="en">

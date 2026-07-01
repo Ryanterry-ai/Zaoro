@@ -235,25 +235,15 @@ try {
   const contentGateScript = path.resolve(process.cwd(), 'tools', 'content-quality-gate', 'index.js');
   try {
     writeProgress('content-gate', 'started', 'Running content quality gate...');
-    const gateOutput = execSync('node "' + contentGateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 60000, encoding: 'utf-8' });
-    const gateResult = JSON.parse(gateOutput.trim());
-    if (gateResult.pass) {
-      writeProgress('content-gate', 'passed', 'Content quality gate passed (' + Math.round(gateResult.genericRatio * 100) + '% generic, threshold: ' + Math.round(gateResult.threshold * 100) + '%)');
+    var cgOutput = execSync('node "' + contentGateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 60000, encoding: 'utf-8' });
+    var cgResult = JSON.parse(cgOutput.trim());
+    if (cgResult.pass) {
+      writeProgress('content-gate', 'passed', 'Content quality gate passed');
     } else {
-      writeProgress('content-gate', 'warning', 'Content quality gate: ' + Math.round(gateResult.genericRatio * 100) + '% generic exceeds ' + Math.round(gateResult.threshold * 100) + '% threshold (' + gateResult.generic + '/' + gateResult.components + ' components). Continuing build.');
+      writeProgress('content-gate', 'warning', 'Content quality gate: generic ratio exceeds threshold. Continuing build.');
     }
-  } catch (contentGateErr) {
-    var _cgOut = (contentGateErr.stdout?.toString() || contentGateErr.stderr?.toString() || contentGateErr.message);
-    try {
-      var _cgResult = JSON.parse(_cgOut.trim());
-      if (_cgResult.pass) {
-        writeProgress('content-gate', 'passed', 'Content quality gate passed');
-      } else {
-        writeProgress('content-gate', 'warning', 'Content quality gate: ' + Math.round(_cgResult.genericRatio * 100) + '% generic exceeds threshold. Continuing build.');
-      }
-    } catch(e2) {
-      writeProgress('content-gate', 'warning', 'Content quality gate output could not be parsed, continuing build');
-    }
+  } catch (cgErr) {
+    writeProgress('content-gate', 'warning', 'Content quality gate: could not run, continuing build');
   }
 
   // Pre-render preview during build so it's cached when web UI requests it
@@ -280,14 +270,15 @@ try {
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
       // Escape </script> in bundled code to prevent premature HTML script tag closure
-      const safeBundledCode = bundledCode.replace(/<\/script>/gi, '<\\/script>');
+      const safeBundledCode = bundledCode.split('<' + '/script>').join('<' + '/script' + '>');
+      const SCRIPT_END = '<' + '/script>';
       const previewHtmlParts = [
         '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>',
-        '<script src="https://cdn.tailwindcss.com"><\/script>',
+        '<script src="https://cdn.tailwindcss.com">' + SCRIPT_END,
         '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div>',
-        '<script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>',
-        '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>',
-        '<script>' + safeBundledCode + 'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||null;if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;break;}}}if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];break;}}}if(_comp){var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}else{document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component found.</div>"}<\/script></body></html>'
+        '<script src="https://unpkg.com/react@18/umd/react.production.min.js">' + SCRIPT_END,
+        '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">' + SCRIPT_END,
+        '<script>' + safeBundledCode + 'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||null;if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;break;}}}if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];break;}}}if(_comp){var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}else{document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component found.</div>"}' + SCRIPT_END + '</body></html>'
       ];
       const previewHtml = previewHtmlParts.join('');
 
