@@ -502,6 +502,160 @@ export function createDefaultRules(): Rule[] {
       source: 'industry',
     },
 
+    // ── Industry — Media ─────────────────────────────────────────────────────
+
+    {
+      id: 'rule.media.core',
+      name: 'Media businesses need content publishing and subscriber management',
+      priority: 18,
+      condition: (ctx) => is(ctx, 'media'),
+      actions: [
+        { type: 'add_page', path: '/articles', name: 'Articles', sections: ['data-table', 'filters', 'stats-cards'] },
+        { type: 'add_page', path: '/subscribers', name: 'Subscribers', sections: ['data-table', 'stats-cards'] },
+        { type: 'add_page', path: '/analytics', name: 'Analytics', sections: ['charts', 'stats-cards', 'activity-feed'] },
+        { type: 'add_entity', name: 'Article', fields: ['title', 'slug', 'content', 'author', 'status', 'publishedAt', 'views'] },
+        { type: 'add_entity', name: 'Subscriber', fields: ['email', 'name', 'plan', 'subscribedAt', 'status'] },
+        { type: 'add_kpi', name: 'Total Subscribers', formula: 'count(subscribers.active)' },
+        { type: 'add_kpi', name: 'Articles Published', formula: 'count(articles.published)' },
+        { type: 'add_kpi', name: 'Page Views Today', formula: 'sum(articles.viewsToday)' },
+        { type: 'add_integration', integrationType: 'email', name: 'Mailchimp', required: false },
+      ],
+      source: 'industry',
+    },
+
+    // ── Industry — Beauty ────────────────────────────────────────────────────
+
+    {
+      id: 'rule.beauty.core',
+      name: 'Beauty businesses need service menus and booking',
+      priority: 18,
+      condition: (ctx) => is(ctx, 'beauty'),
+      actions: [
+        { type: 'add_page', path: '/services', name: 'Services', sections: ['product-grid', 'pricing-table'] },
+        { type: 'add_page', path: '/stylists', name: 'Our Stylists', sections: ['team-grid', 'team'] },
+        { type: 'add_page', path: '/book', name: 'Book Now', sections: ['booking-calendar', 'contact-form'] },
+        { type: 'add_entity', name: 'Service', fields: ['name', 'description', 'duration', 'price', 'category'] },
+        { type: 'add_entity', name: 'Stylist', fields: ['name', 'specialty', 'bio', 'avatar', 'available'] },
+        { type: 'add_entity', name: 'Appointment', fields: ['serviceId', 'stylistId', 'clientName', 'email', 'date', 'time', 'status'] },
+        { type: 'add_integration', integrationType: 'booking', name: 'Cal.com', required: true },
+        { type: 'add_kpi', name: 'Appointments Today', formula: 'count(appointments.today)' },
+        { type: 'add_kpi', name: 'Revenue This Week', formula: 'sum(appointments.thisWeek.total)' },
+        { type: 'set_vocabulary', original: 'product', replacement: 'service' },
+        { type: 'set_vocabulary', original: 'buy', replacement: 'book' },
+      ],
+      source: 'industry',
+    },
+
+    // ── Industry — Event ─────────────────────────────────────────────────────
+
+    {
+      id: 'rule.event.core',
+      name: 'Event businesses need event discovery and ticketing',
+      priority: 18,
+      condition: (ctx) => is(ctx, 'event'),
+      actions: [
+        { type: 'add_page', path: '/events', name: 'Events', sections: ['product-grid', 'filters', 'calendar'] },
+        { type: 'add_page', path: '/event/:id', name: 'Event Detail', sections: ['product-info', 'pricing-table', 'contact-form'] },
+        { type: 'add_page', path: '/my-tickets', name: 'My Tickets', sections: ['data-table', 'stats-cards'] },
+        { type: 'add_entity', name: 'Event', fields: ['name', 'date', 'venue', 'description', 'image', 'capacity', 'price', 'status'] },
+        { type: 'add_entity', name: 'Ticket', fields: ['eventId', 'buyerName', 'email', 'type', 'price', 'qrCode', 'status'] },
+        { type: 'add_integration', integrationType: 'payment', name: 'Stripe', required: true },
+        { type: 'add_kpi', name: 'Tickets Sold', formula: 'count(tickets.sold)' },
+        { type: 'add_kpi', name: 'Revenue', formula: 'sum(tickets.totalRevenue)' },
+        { type: 'add_kpi', name: 'Events This Month', formula: 'count(events.thisMonth)' },
+      ],
+      source: 'industry',
+    },
+
+    // ── Industry — Portfolio ─────────────────────────────────────────────────
+
+    {
+      id: 'rule.portfolio.core',
+      name: 'Portfolios need project showcase and contact',
+      priority: 18,
+      condition: (ctx) => is(ctx, 'portfolio'),
+      actions: [
+        { type: 'add_page', path: '/work', name: 'Work', sections: ['product-grid', 'filters', 'category-grid'] },
+        { type: 'add_page', path: '/work/:id', name: 'Project Detail', sections: ['product-info', 'product-gallery', 'contact-form'] },
+        { type: 'add_page', path: '/about', name: 'About', sections: ['about', 'team', 'gallery'] },
+        { type: 'add_entity', name: 'Project', fields: ['title', 'description', 'client', 'category', 'images', 'url', 'year'] },
+        { type: 'add_kpi', name: 'Projects', formula: 'count(projects)' },
+        { type: 'set_vocabulary', original: 'product', replacement: 'project' },
+        { type: 'set_vocabulary', original: 'buy', replacement: 'inquire' },
+      ],
+      source: 'industry',
+    },
+
+    // ── Industry — Automotive ────────────────────────────────────────────────
+
+    {
+      id: 'rule.automotive.core',
+      name: 'Automotive businesses need inventory and test drive booking',
+      priority: 18,
+      condition: (ctx) => is(ctx, 'automotive'),
+      actions: [
+        { type: 'add_page', path: '/inventory', name: 'Inventory', sections: ['product-grid', 'filters', 'stats-cards'] },
+        { type: 'add_page', path: '/vehicle/:id', name: 'Vehicle Detail', sections: ['product-info', 'product-gallery', 'pricing-table'] },
+        { type: 'add_page', path: '/financing', name: 'Financing', sections: ['pricing-table', 'contact-form', 'faq'] },
+        { type: 'add_page', path: '/service', name: 'Service', sections: ['booking-calendar', 'data-table'] },
+        { type: 'add_entity', name: 'Vehicle', fields: ['make', 'model', 'year', 'price', 'mileage', 'color', 'vin', 'status', 'image'] },
+        { type: 'add_entity', name: 'TestDrive', fields: ['vehicleId', 'customerName', 'email', 'phone', 'date', 'time', 'status'] },
+        { type: 'add_entity', name: 'ServiceRecord', fields: ['vehicleId', 'type', 'date', 'cost', 'technician', 'notes'] },
+        { type: 'add_integration', integrationType: 'maps', name: 'Mapbox', required: false },
+        { type: 'add_kpi', name: 'Vehicles in Stock', formula: 'count(vehicles.available)' },
+        { type: 'add_kpi', name: 'Test Drives This Week', formula: 'count(testDrives.thisWeek)' },
+        { type: 'add_kpi', name: 'Service Appointments', formula: 'count(serviceRecords.scheduled)' },
+      ],
+      source: 'industry',
+    },
+
+    // ── Industry — Manufacturing ─────────────────────────────────────────────
+
+    {
+      id: 'rule.manufacturing.core',
+      name: 'Manufacturing needs production planning and quality control',
+      priority: 20,
+      condition: (ctx) => is(ctx, 'manufacturing'),
+      actions: [
+        { type: 'add_page', path: '/production', name: 'Production', sections: ['data-table', 'stats-cards', 'charts'] },
+        { type: 'add_page', path: '/inventory', name: 'Inventory', sections: ['data-table', 'filters', 'stats-cards'] },
+        { type: 'add_page', path: '/quality', name: 'Quality Control', sections: ['data-table', 'stats-cards'] },
+        { type: 'add_page', path: '/suppliers', name: 'Suppliers', sections: ['data-table', 'stats-cards'] },
+        { type: 'add_entity', name: 'ProductionRun', fields: ['productId', 'quantity', 'startDate', 'endDate', 'status', 'defectRate'] },
+        { type: 'add_entity', name: 'InventoryItem', fields: ['name', 'sku', 'quantity', 'unit', 'reorderPoint', 'warehouse'] },
+        { type: 'add_entity', name: 'QualityCheck', fields: ['runId', 'inspector', 'date', 'result', 'defects', 'notes'] },
+        { type: 'add_entity', name: 'Supplier', fields: ['name', 'contact', 'materials', 'leadTime', 'rating'] },
+        { type: 'add_kpi', name: 'Output This Month', formula: 'sum(productionRun.quantity)' },
+        { type: 'add_kpi', name: 'Defect Rate', formula: 'defects / total * 100' },
+        { type: 'add_kpi', name: 'Inventory Value', formula: 'sum(inventoryItem.quantity * inventoryItem.unitCost)' },
+      ],
+      source: 'industry',
+    },
+
+    // ── Industry — PropTech ──────────────────────────────────────────────────
+
+    {
+      id: 'rule.proptech.core',
+      name: 'PropTech needs tenant management and lease tracking',
+      priority: 18,
+      condition: (ctx) => is(ctx, 'proptech'),
+      actions: [
+        { type: 'add_page', path: '/properties', name: 'Properties', sections: ['product-grid', 'filters', 'stats-cards'] },
+        { type: 'add_page', path: '/tenants', name: 'Tenants', sections: ['data-table', 'stats-cards'] },
+        { type: 'add_page', path: '/leases', name: 'Leases', sections: ['data-table', 'calendar'] },
+        { type: 'add_page', path: '/maintenance', name: 'Maintenance', sections: ['data-table', 'booking-calendar'] },
+        { type: 'add_entity', name: 'Property', fields: ['name', 'address', 'type', 'units', 'occupancy', 'revenue'] },
+        { type: 'add_entity', name: 'Tenant', fields: ['name', 'email', 'propertyId', 'unit', 'leaseStart', 'leaseEnd', 'rent'] },
+        { type: 'add_entity', name: 'Lease', fields: ['tenantId', 'propertyId', 'unit', 'startDate', 'endDate', 'rent', 'deposit', 'status'] },
+        { type: 'add_entity', name: 'MaintenanceRequest', fields: ['tenantId', 'propertyId', 'description', 'priority', 'status', 'assignedTo'] },
+        { type: 'add_kpi', name: 'Occupancy Rate', formula: 'occupiedUnits / totalUnits * 100' },
+        { type: 'add_kpi', name: 'Monthly Revenue', formula: 'sum(leases.active.rent)' },
+        { type: 'add_kpi', name: 'Open Maintenance', formula: 'count(maintenanceRequests.open)' },
+        { type: 'add_integration', integrationType: 'payment', name: 'Stripe', required: true },
+      ],
+      source: 'industry',
+    },
+
     // ── Business Model Rules ─────────────────────────────────────────────────
 
     {
