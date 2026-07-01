@@ -5,16 +5,11 @@ import fs from 'fs';
 const GENERIC_PATTERNS = [
   // Generic resolver output: single title prop, no body content
   /export interface \w+Props {\s*title\?: string;\s*}/,
-  // Single h2 with title only
-  /<h2 className="text-2xl font-bold">\{title\}<\/h2>/,
-  // No items, no fields, no columns, no stats, no tiers
-  /return \(\s*<section className="py-16">\s*<div className="max-w-7xl mx-auto px-6">\s*<h2/,
 ];
 
 const TRIVIAL_COMPONENT_PATTERNS = [
-  // Component that only renders a title in a section
-  /<section className="py-16">[\s\S]*?<h2[^>]*>\{title\}<\/h2>[\s\S]*?<\/section>/,
-  // No interactive elements (buttons, forms, tables, grids)
+  // Component that ONLY renders a title in a section (no items, fields, columns, stats, tiers, actions)
+  // Matches: section > div > h2{title} </div> </section> with nothing else
   /return \(\s*<section[^>]*>\s*<div[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<\/div>\s*<\/section>\s*\);/,
 ];
 
@@ -53,13 +48,17 @@ function analyzeComponent(filePath) {
   // Count props (more props = more real content)
   const propCount = (content.match(/\?:/g) || []).length;
 
+  // A component is "trivial" if it only has a title and no dynamic content
+  const isTrivial = !hasAnyContent && propCount <= 1;
+
   return {
     name: componentName,
     path: filePath,
     issues,
     isGeneric,
+    isTrivial,
     propCount,
-    score: isGeneric ? 0 : (hasAnyContent ? 100 : 50),
+    score: isGeneric ? 0 : (isTrivial ? 25 : (hasAnyContent ? 100 : 50)),
   };
 }
 
@@ -88,7 +87,7 @@ function gate(projectDir) {
   // Analyze each component
   const analyses = componentFiles.map(analyzeComponent);
   const genericCount = analyses.filter(a => a.isGeneric).length;
-  const trivialCount = analyses.filter(a => a.issues.includes('trivial-body')).length;
+  const trivialCount = analyses.filter(a => a.isTrivial).length;
   const totalIssues = analyses.filter(a => a.issues.length > 0).length;
 
   const genericRatio = genericCount / analyses.length;
@@ -117,6 +116,7 @@ function gate(projectDir) {
 
   console.error(`\n[content-quality-gate] ${genericCount}/${analyses.length} components (${Math.round(genericRatio * 100)}%) are generic (threshold: ${Math.round(threshold * 100)}%)`);
   console.error(`Generic components: ${analyses.filter(a => a.isGeneric).map(a => a.name).join(', ')}`);
+  console.error(`Trivial components: ${analyses.filter(a => a.isTrivial).map(a => a.name).join(', ')}`);
 
   console.log(JSON.stringify(result));
   process.exit(pass ? 0 : 1);
