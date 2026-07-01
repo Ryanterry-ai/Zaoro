@@ -9,7 +9,9 @@ sandbox_workspaces/
 .build-config-*.json
 .build-prompt-*.json
 .build-temp-*.mts
+.build-temp-*.ts
 .clone-temp-*.mts
+.clone-temp-*.ts
 ngrok.exe
 ngrok.zip
 ngrok.log
