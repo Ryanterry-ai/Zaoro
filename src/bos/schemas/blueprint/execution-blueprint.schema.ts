@@ -77,8 +77,8 @@ export const ItemSpecSchema = z.object({
   description: z.string().optional(),
   icon: z.string().optional(),
   metadata: z.record(z.string()).optional(),
-});
-export type ItemSpec = z.infer<typeof ItemSpecSchema>;
+}).passthrough();
+export type ItemSpec = z.infer<typeof ItemSpecSchema> & Record<string, unknown>;
 
 /**
  * ColumnSpec — a table column definition.

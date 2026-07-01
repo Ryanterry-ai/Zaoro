@@ -629,6 +629,11 @@ function resolveHeroBanner(
       subtitle: { value: ctx.blueprint.description ?? `${ctx.blueprint.industry} platform`, type: 'text' },
       badge: { value: ctx.blueprint.industry, type: 'text' },
     },
+    items: [
+      { title: vocab('Reliable', ctx), description: vocab('Enterprise-grade reliability', ctx), icon: 'shield' },
+      { title: vocab('Scalable', ctx), description: vocab('Built for growth', ctx), icon: 'trending-up' },
+      { title: vocab('Secure', ctx), description: vocab('Data protection first', ctx), icon: 'lock' },
+    ],
     actions: [
       { label: ctaLabel, action: '/signup', style: 'primary' },
       { label: vocab('Learn More', ctx), action: '#features', style: 'ghost' },
@@ -733,6 +738,10 @@ function resolveCTASection(
       title: { value: vocab('Ready to get started?', ctx), type: 'text' },
       subtitle: { value: `Join ${ctx.blueprint.name} today`, type: 'text' },
     },
+    items: [
+      { title: vocab('No credit card required', ctx), description: vocab('Start free and upgrade anytime', ctx), icon: 'credit-card' },
+      { title: vocab('Instant setup', ctx), description: vocab('Get up and running in minutes', ctx), icon: 'zap' },
+    ],
     actions: [
       { label: ctaLabel, action: '/signup', style: 'primary' },
     ],
@@ -884,16 +893,35 @@ function resolveDataTable(
   ctx: ContentResolverContext,
 ): ComponentSpec {
   const entity = findEntity(ctx.blueprint, slot.slot);
+  const entityName = entity?.name ?? 'Record';
+  const columns = entity?.fields?.map(f => ({
+    key: f.name,
+    label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
+    type: 'text' as const,
+    sortable: true,
+    filterable: f.indexed,
+  }));
+  const fallbackColumns = columns ?? [
+    { key: 'id', label: 'ID', type: 'text' as const, sortable: true, filterable: false },
+    { key: 'name', label: 'Name', type: 'text' as const, sortable: true, filterable: true },
+    { key: 'status', label: 'Status', type: 'text' as const, sortable: true, filterable: true },
+    { key: 'created', label: 'Created', type: 'text' as const, sortable: true, filterable: false },
+  ];
   return {
     type: 'DataTable',
-    content: { entity: { value: entity?.name ?? 'Item', type: 'text' } },
-    columns: entity?.fields.map(f => ({
-      key: f.name,
-      label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
-      type: 'text' as const,
-      sortable: true,
-      filterable: f.indexed,
-    })),
+    content: {
+      title: { value: vocab(`${entityName} Management`, ctx), type: 'text' },
+      entity: { value: entityName, type: 'text' },
+    },
+    columns: fallbackColumns,
+    items: [
+      { id: '1', title: `${entityName} #001`, status: 'Active', created: '2024-01-15', metadata: { id: '1', status: 'Active' } },
+      { id: '2', title: `${entityName} #002`, status: 'Pending', created: '2024-01-20', metadata: { id: '2', status: 'Pending' } },
+      { id: '3', title: `${entityName} #003`, status: 'Active', created: '2024-02-01', metadata: { id: '3', status: 'Active' } },
+    ],
+    actions: [
+      { label: vocab('Add', ctx), action: '#', style: 'primary' },
+    ],
     layout: { maxWidth: '7xl' },
   };
 }
@@ -1259,19 +1287,33 @@ function resolveDataGrid(
   ctx: ContentResolverContext,
 ): ComponentSpec {
   const entity = findEntity(ctx.blueprint, slot.slot);
+  const entityName = entity?.name ?? 'Item';
+  const columns = entity?.fields?.map(f => ({
+    key: f.name,
+    label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
+    type: 'text' as const,
+    sortable: true,
+    filterable: f.indexed,
+  }));
+  // Provide fallback columns when entity isn't found
+  const fallbackColumns = columns ?? [
+    { key: 'id', label: 'ID', type: 'text' as const, sortable: true, filterable: false },
+    { key: 'name', label: 'Name', type: 'text' as const, sortable: true, filterable: true },
+    { key: 'status', label: 'Status', type: 'text' as const, sortable: true, filterable: true },
+    { key: 'created', label: 'Created', type: 'text' as const, sortable: true, filterable: false },
+  ];
   return {
     type: 'DataGrid',
     content: {
-      title: { value: vocab(`${entity?.name ?? 'Data'} Management`, ctx), type: 'text' },
-      entity: { value: entity?.name ?? 'Item', type: 'text' },
+      title: { value: vocab(`${entityName} Management`, ctx), type: 'text' },
+      entity: { value: entityName, type: 'text' },
     },
-    columns: entity?.fields.map(f => ({
-      key: f.name,
-      label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
-      type: 'text' as const,
-      sortable: true,
-      filterable: f.indexed,
-    })),
+    columns: fallbackColumns,
+    items: [
+      { id: '1', title: `${entityName} #001`, status: 'Active', created: '2024-01-15', metadata: { id: '1', status: 'Active' } },
+      { id: '2', title: `${entityName} #002`, status: 'Pending', created: '2024-01-20', metadata: { id: '2', status: 'Pending' } },
+      { id: '3', title: `${entityName} #003`, status: 'Active', created: '2024-02-01', metadata: { id: '3', status: 'Active' } },
+    ],
     actions: [
       { label: vocab('Add', ctx), action: '#', style: 'primary' },
     ],
@@ -1304,7 +1346,11 @@ function resolveSocialAuth(
     content: {
       title: { value: vocab('Or continue with', ctx), type: 'text' },
     },
-    actions: providers,
+    items: providers.map(p => ({
+      title: p.label,
+      description: `${vocab('Sign in with', ctx)} ${p.label}`,
+      icon: p.label.toLowerCase(),
+    })),
     layout: { alignment: 'center', maxWidth: 'sm' },
   };
 }
