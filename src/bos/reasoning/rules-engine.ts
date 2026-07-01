@@ -25,8 +25,8 @@ export interface Rule {
 export type RuleAction =
   | { type: 'add_pattern'; patternId: string }
   | { type: 'add_page'; path: string; name: string; sections: string[] }
-  | { type: 'add_entity'; name: string; fields: string[] }
-  | { type: 'add_workflow'; name: string; steps: string[] }
+  | { type: 'add_entity'; name: string; fields: string[]; capabilities?: string[] }
+  | { type: 'add_workflow'; name: string; steps: string[]; trigger?: string; entities?: string[] }
   | { type: 'add_kpi'; name: string; formula: string }
   | { type: 'add_design_profile'; profileId: string }
   | { type: 'add_integration'; integrationType: string; name: string; required: boolean }
@@ -34,7 +34,10 @@ export type RuleAction =
   | { type: 'add_skill_pack'; packId: string }
   | { type: 'set_navigation'; style: string }
   | { type: 'set_vocabulary'; original: string; replacement: string }
-  | { type: 'add_permission'; role: string; resource: string; actions: string[] };
+  | { type: 'add_permission'; role: string; resource: string; actions: string[] }
+  | { type: 'add_capability'; name: string; features?: string[] }
+  | { type: 'add_feature'; name: string; capability: string; uiSections?: string[]; entities?: string[] }
+  | { type: 'add_relationship'; source: string; target: string; relationType?: string; foreignKey?: string };
 
 export interface RuleDecision {
   ruleId: string;

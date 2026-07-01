@@ -93,11 +93,17 @@ const SECTION_REGISTRY: Record<string, string> = {
   'team-members': 'TeamGrid',
   'gallery': 'Gallery',
   'mission': 'MissionSection',
+  'profile-section': 'ProfileSection',
 
   // Filters / Data
   'filters': 'FilterSidebar',
+  'filter-sidebar': 'FilterSidebar',
   'sort-bar': 'SortBar',
   'data-table': 'DataTable',
+
+  // Layout
+  'page-header': 'PageHeader',
+  'auth-form': 'AuthForm',
 
   // Healthcare / Restaurant (from rules engine)
   'booking-form': 'ContactForm',

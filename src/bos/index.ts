@@ -207,3 +207,14 @@ export { BlueprintCompiler, serializeBlueprint, deserializeBlueprint } from './r
 export type { Blueprint, BlueprintInput } from './reasoning/blueprint-compiler.js';
 export type { BusinessIntent, ReasoningResult } from './reasoning/engine.js';
 export type { PrimitiveCapability, IndustryTemplate } from './knowledge/builder.js';
+export { runNormalizedPipeline } from './pipeline-v2/pipeline.js';
+export type { PipelineResult } from './pipeline-v2/pipeline.js';
+export type { StageInput, StageOutput, PipelineEvent } from './pipeline-v2/stages.js';
+export type {
+  CapabilityGraph, CapabilityNode,
+  EntityGraph, EntityDef,
+  WorkflowGraph, WorkflowDef,
+  NavigationGraph, PageDef,
+  DatabaseGraph, TableDef,
+  APIGraph, EndpointDef,
+} from './pipeline-v2/stages.js';
