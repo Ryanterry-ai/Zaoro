@@ -52,8 +52,7 @@ export function useBuildReplay(
         setError("Stage not available");
         return;
       }
-      const data = await res.json();
-      setStageData((prev: Record<string, unknown>) => ({ ...prev, [stage]: data }));
+      setStageData((prev) => ({ ...prev, [stage]: await res.json() }));
     } catch (e) {
       setError((e as Error).message);
     } finally {

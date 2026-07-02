@@ -66,5 +66,11 @@ export const PatternSchema = VersionedObject.extend({
   generationRules: z.array(RuleRef).default([]),
   compatibleIndustries: z.array(z.string()).default([]),
   compatibleBusinessModels: z.array(z.string()).default([]),
+  // Enterprise / domain-specific extensions — optional so existing patterns compile unchanged
+  roles: z.array(z.string()).optional(),
+  departments: z.array(z.string()).optional(),
+  kpis: z.array(z.string()).optional(),
+  vocabulary: z.record(z.string()).optional(),
+  businessRules: z.array(z.string()).optional(),
 });
 export type Pattern = z.infer<typeof PatternSchema>;

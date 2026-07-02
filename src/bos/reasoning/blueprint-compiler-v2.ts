@@ -103,43 +103,138 @@ export class BlueprintCompilerV2 {
   }
 
   /**
-   * Merge a Pattern's pages into the existing decisions as add_page actions.
-   * This is the adapter that was missing in Phase 3 — Pattern.pages uses a
-   * local PageSpecSchema that is not type-compatible with PagePlan, so we
-   * convert through the RuleDecision shape that compilePages() already handles.
-   *
-   * Only adds pages that don't already exist in the decision set — the
+   * Merge a Pattern's pages AND enterprise fields into the existing decisions.
+   * Only adds items that don't already exist in the decision set — the
    * deterministic rule decisions always take precedence.
+   *
+   * Enterprise fields (roles, KPIs, vocabulary, businessRules, departments)
+   * are converted into corresponding RuleDecision actions so they flow through
+   * the existing compilation pipeline (compilePermissions, compileWorkflows, etc).
    */
   private mergePatternDecisions(
     decisions: RuleDecision[],
     pattern: Pattern | undefined,
   ): RuleDecision[] {
-    if (!pattern || pattern.pages.length === 0) return decisions;
+    if (!pattern) return decisions;
 
+    const enriched: RuleDecision[] = [...decisions];
+
+    // ── Pages ──
     const existingPaths = new Set(
       decisions
         .filter(d => d.action.type === 'add_page')
         .map(d => d.action.type === 'add_page' ? d.action.path : '')
     );
+    for (const page of (pattern.pages ?? [])) {
+      if (!existingPaths.has(page.path)) {
+        enriched.push({
+          ruleId: `pattern.${pattern.id}.page`,
+          ruleName: `Pattern: ${pattern.name}`,
+          action: {
+            type: 'add_page' as const,
+            path: page.path,
+            name: page.name,
+            sections: page.sections ?? [],
+          },
+          confidence: 0.75,
+          trace: `Contributed by pattern: ${pattern.name}`,
+        });
+      }
+    }
 
-    const patternDecisions: RuleDecision[] = pattern.pages
-      .filter(page => !existingPaths.has(page.path))
-      .map(page => ({
-        ruleId: `pattern.${pattern.id}.page`,
-        ruleName: `Pattern: ${pattern.name}`,
-        action: {
-          type: 'add_page' as const,
-          path: page.path,
-          name: page.name,
-          sections: page.sections ?? [],
-        },
-        confidence: 0.75,
-        trace: `Contributed by pattern: ${pattern.name}`,
-      }));
+    // ── Roles → Permissions ──
+    const existingRoles = new Set(
+      decisions
+        .filter(d => d.action.type === 'add_permission')
+        .map(d => d.action.type === 'add_permission' ? d.action.role : '')
+    );
+    for (const role of (pattern.roles ?? [])) {
+      if (!existingRoles.has(role)) {
+        enriched.push({
+          ruleId: `pattern.${pattern.id}.role`,
+          ruleName: `Pattern: ${pattern.name}`,
+          action: {
+            type: 'add_permission' as const,
+            role,
+            resource: pattern.pages[0]?.name ?? 'app',
+            actions: ['create', 'read', 'update', 'delete'],
+          },
+          confidence: 0.7,
+          trace: `Enterprise role from pattern: ${pattern.name}`,
+        });
+      }
+    }
 
-    // Pattern pages appended after rule-derived pages — rules have priority
-    return [...decisions, ...patternDecisions];
+    // ── KPIs ──
+    const existingKpis = new Set(
+      decisions
+        .filter(d => d.action.type === 'add_kpi')
+        .map(d => d.action.type === 'add_kpi' ? d.action.name : '')
+    );
+    for (const kpi of (pattern.kpis ?? [])) {
+      if (!existingKpis.has(kpi)) {
+        enriched.push({
+          ruleId: `pattern.${pattern.id}.kpi`,
+          ruleName: `Pattern: ${pattern.name}`,
+          action: {
+            type: 'add_kpi' as const,
+            name: kpi,
+            formula: 'manual',
+          },
+          confidence: 0.7,
+          trace: `Enterprise KPI from pattern: ${pattern.name}`,
+        });
+      }
+    }
+
+    // ── Vocabulary ──
+    const existingVocabOriginals = new Set(
+      decisions
+        .filter(d => d.action.type === 'set_vocabulary')
+        .map(d => d.action.type === 'set_vocabulary' ? d.action.original : '')
+    );
+    for (const [original, replacement] of Object.entries(pattern.vocabulary ?? {})) {
+      if (!existingVocabOriginals.has(original)) {
+        enriched.push({
+          ruleId: `pattern.${pattern.id}.vocab`,
+          ruleName: `Pattern: ${pattern.name}`,
+          action: {
+            type: 'set_vocabulary' as const,
+            original,
+            replacement,
+          },
+          confidence: 0.8,
+          trace: `Enterprise vocabulary from pattern: ${pattern.name}`,
+        });
+      }
+    }
+
+    // ── Business Rules → Workflows ──
+    const existingWorkflowNames = new Set(
+      decisions
+        .filter(d => d.action.type === 'add_workflow')
+        .map(d => d.action.type === 'add_workflow' ? d.action.name : '')
+    );
+    for (const workflow of (pattern.workflows ?? [])) {
+      if (!existingWorkflowNames.has(workflow)) {
+        const steps = workflow.split('→').map(s => s.trim());
+        enriched.push({
+          ruleId: `pattern.${pattern.id}.workflow`,
+          ruleName: `Pattern: ${pattern.name}`,
+          action: {
+            type: 'add_workflow' as const,
+            name: steps[0] ?? workflow,
+            steps,
+            entities: [],
+            trigger: 'manual',
+          },
+          confidence: 0.75,
+          trace: `Enterprise workflow from pattern: ${pattern.name}`,
+        });
+      }
+    }
+
+    return enriched;
   }
 
   private compilePages(decisions: RuleDecision[]): PagePlan[] {

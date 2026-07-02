@@ -32,6 +32,27 @@ import {
   DENTAL_CLINIC, ARCHITECTURE_FIRM, PHOTOGRAPHY_STUDIO, CONSULTING_FIRM,
   SAAS_STARTUP, ECOMMERCE_FASHION, ECOMMERCE_FOOD_DELIVERY, ECOMMERCE_ELECTRONICS,
 } from './patterns/industry-templates.js';
+// ─── Phase 1A: Enterprise Patterns ───────────────────────────────────────────
+import {
+  HOSPITAL_MANAGEMENT,
+  ERP_SYSTEM,
+  HRM_SYSTEM,
+  SCHOOL_LMS,
+  CRM_ENTERPRISE,
+  LOGISTICS_PLATFORM,
+  MANUFACTURING_ERP,
+} from './patterns/enterprise-patterns.js';
+// ─── Phase 1B: Enterprise Skill Packs ────────────────────────────────────────
+import {
+  CAP_APPOINTMENTS,
+  CAP_HR_MANAGEMENT,
+  CAP_BILLING_ENTERPRISE,
+  CAP_WORKFLOW_ENGINE,
+  CAP_REPORTING,
+  CAP_DOCUMENT_MANAGEMENT,
+  CAP_ROLE_PERMISSIONS,
+  CAP_AUDIT_LOG,
+} from './skill-packs/enterprise-packs.js';
 
 export const DESIGN_PROFILES: DesignProfile[] = [
   LUXURY_DARK_OPULENCE,
@@ -53,6 +74,7 @@ export const DESIGN_PROFILES: DesignProfile[] = [
 ];
 
 export const PATTERNS: Pattern[] = [
+  // B2C / SMB patterns (existing — 23 total)
   LUXURY_WATCH_BRAND,
   ECOMMERCE_MARKETPLACE,
   SAAS_PLATFORM,
@@ -76,15 +98,33 @@ export const PATTERNS: Pattern[] = [
   ECOMMERCE_FASHION,
   ECOMMERCE_FOOD_DELIVERY,
   ECOMMERCE_ELECTRONICS,
+  // Enterprise patterns (Phase 1A — 7 new)
+  HOSPITAL_MANAGEMENT,
+  ERP_SYSTEM,
+  HRM_SYSTEM,
+  SCHOOL_LMS,
+  CRM_ENTERPRISE,
+  LOGISTICS_PLATFORM,
+  MANUFACTURING_ERP,
 ];
 
 export const SKILL_PACKS: SkillPack[] = [
+  // Existing packs (6)
   CAP_INVENTORY_LITE,
   CAP_AUTH,
   CAP_PAYMENT,
   CAP_NOTIFICATION,
   CAP_COMPLIANCE,
   CAP_ANALYTICS,
+  // Enterprise packs (Phase 1B — 8 new)
+  CAP_APPOINTMENTS,
+  CAP_HR_MANAGEMENT,
+  CAP_BILLING_ENTERPRISE,
+  CAP_WORKFLOW_ENGINE,
+  CAP_REPORTING,
+  CAP_DOCUMENT_MANAGEMENT,
+  CAP_ROLE_PERMISSIONS,
+  CAP_AUDIT_LOG,
 ];
 
 export const BUSINESS_MODELS: BusinessModel[] = [
@@ -232,6 +272,23 @@ export const COMPLIANCE_PACKS: CompliancePack[] = [
     applicableIndustries: ['ecommerce', 'saas', 'hospitality'],
     applicableBusinessModels: ['direct-sales', 'subscription', 'marketplace'],
   },
+  {
+    id: 'compliance.hipaa', version: '1.0.0', status: 'active',
+    createdAt: '2026-07-01T00:00:00+00:00', updatedAt: '2026-07-01T00:00:00+00:00',
+    evidenceRefs: [], kind: 'CompliancePack', name: 'HIPAA',
+    description: 'Health Insurance Portability and Accountability Act',
+    jurisdiction: 'US',
+    category: 'privacy',
+    rules: [
+      { rule: 'PHI must be encrypted at rest and in transit', severity: 'must' },
+      { rule: 'Access logs required for all PHI access', severity: 'must' },
+      { rule: 'Minimum necessary access principle', severity: 'must' },
+      { rule: 'BAA required with third-party vendors handling PHI', severity: 'must' },
+      { rule: 'Breach notification within 60 days', severity: 'must' },
+    ],
+    applicableIndustries: ['healthcare', 'hospital', 'dental', 'pharmacy', 'medical-device'],
+    applicableBusinessModels: ['subscription', 'direct-sales'],
+  },
 ];
 
 export class KnowledgeRegistry {
@@ -298,6 +355,11 @@ export class KnowledgeRegistry {
     return Array.from(this.skillPacks.values()).filter(sp =>
       sp.capability === capability,
     );
+  }
+
+  /** Returns enterprise patterns — those with roles defined */
+  findEnterprisePatterns(): Pattern[] {
+    return Array.from(this.patterns.values()).filter(p => p.roles && p.roles.length > 0);
   }
 
   stats(): {

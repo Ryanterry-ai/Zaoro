@@ -85,6 +85,8 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     decisions,
     designProfiles: DESIGN_PROFILES,
     patterns: PATTERNS,
+    ...(ctx.subIndustry ? { subIndustry: ctx.subIndustry } : {}),
+    ...(ctx.description ? { description: ctx.description } : {}),
   };
 
   const scoredProfiles = scorer.scoreDesignProfiles(scoringContext);

@@ -216,7 +216,7 @@ export function buildArchGraph(
   } | null,
   execBlueprint?: { pages?: Array<{ path: string }> } | null,
   appSpec?: { pages?: number; totalComponents?: number } | null,
-  status?: "pending" | "connecting" | "connected" | "failed",
+  status?: "pending" | "connected" | "failed",
 ): { nodes: ArchNode[]; edges: ArchEdge[] } {
   const s = status === "connected" ? "done" : status === "failed" ? "failed" : "pending";
   const nodes: ArchNode[] = [];

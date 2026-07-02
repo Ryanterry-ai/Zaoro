@@ -12,11 +12,21 @@ export interface ScoredOption {
 
 export interface ScoringContext {
   industry: string;
+  subIndustry?: string;
+  description?: string;
   businessModels: string[];
   capabilities: string[];
   decisions: RuleDecision[];
   designProfiles: DesignProfile[];
   patterns: Pattern[];
+}
+
+function getDescriptionKeywords(desc?: string): string[] {
+  if (!desc) return [];
+  return desc.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2);
 }
 
 export class Scorer {
@@ -66,6 +76,32 @@ export class Scorer {
       breakdown.industryFit = industryMatch ? 30 : 5;
       total += breakdown.industryFit;
 
+      // Sub-industry match: more specific than top-level industry
+      if (ctx.subIndustry) {
+        const si = ctx.subIndustry.toLowerCase();
+        const subMatch = pattern.compatibleIndustries.some(i =>
+          si === i || si.includes(i) || i.includes(si),
+        );
+        if (subMatch) {
+          breakdown.subIndustryFit = 15;
+          total += breakdown.subIndustryFit;
+        }
+      }
+
+      // Description keyword boost: matches user's prompt words against pattern's
+      // compatibleIndustries. Fixes the sub-industry routing gap where "hospital ERP"
+      // is classified as enterprise-software but should also match hospital patterns.
+      if (ctx.description) {
+        const desc = ctx.description.toLowerCase();
+        const kwMatch = pattern.compatibleIndustries.some(i =>
+          desc.includes(i),
+        );
+        if (kwMatch) {
+          breakdown.descriptionKeywordBoost = 10;
+          total += breakdown.descriptionKeywordBoost;
+        }
+      }
+
       const modelMatch = pattern.compatibleBusinessModels.some(m =>
         ctx.businessModels.some(bm => bm.toLowerCase() === m.toLowerCase()),
       );
@@ -96,7 +132,7 @@ export class Scorer {
         name: pattern.name,
         score: total,
         breakdown,
-        reason: `Score ${total}/100: industry ${breakdown.industryFit}, model ${breakdown.modelFit}, pages ${breakdown.pageCoverage}, components ${breakdown.componentCount}${breakdown.modelGatePenalty ? `, gate penalty ${breakdown.modelGatePenalty}` : ''}`,
+        reason: `Score ${total}/100: industry ${breakdown.industryFit}${breakdown.subIndustryFit ? `, sub-industry ${breakdown.subIndustryFit}` : ''}${breakdown.descriptionKeywordBoost ? `, desc-kw ${breakdown.descriptionKeywordBoost}` : ''}, model ${breakdown.modelFit}, pages ${breakdown.pageCoverage}, components ${breakdown.componentCount}${breakdown.modelGatePenalty ? `, gate penalty ${breakdown.modelGatePenalty}` : ''}`,
       };
     }).sort((a, b) => b.score - a.score);
   }
