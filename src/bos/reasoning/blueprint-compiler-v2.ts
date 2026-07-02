@@ -44,6 +44,15 @@ export class BlueprintCompilerV2 {
     // meaning pattern pages never reached the final blueprint.
     const mergedDecisions = this.mergePatternDecisions(decisions, fullSelectedPattern);
 
+    // Re-extract vocabulary from merged decisions so pattern vocabulary
+    // (added by mergePatternDecisions above) is included.
+    const effectiveVocabulary: Record<string, string> = {};
+    for (const decision of mergedDecisions) {
+      if (decision.action.type === 'set_vocabulary') {
+        effectiveVocabulary[decision.action.original] = decision.action.replacement;
+      }
+    }
+
     const pages = this.compilePages(mergedDecisions);
     const entities = this.compileEntities(mergedDecisions);
     const workflows = this.compileWorkflows(mergedDecisions);
@@ -96,7 +105,7 @@ export class BlueprintCompilerV2 {
         knowledge: knowledgeRefs,
         compilers: ['blueprint-compiler-v2'],
       },
-      vocabulary,
+      vocabulary: effectiveVocabulary,
       confidence: this.computeConfidence(mergedDecisions, constraintReport, selectedDesignProfile),
       warnings,
     };

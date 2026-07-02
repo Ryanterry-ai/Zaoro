@@ -80,7 +80,7 @@ export const EDUCATION_ELEARNING: Pattern = {
   integrations: [{ type: 'payment', name: 'Stripe', config: {}, required: true }, { type: 'video', name: 'Mux', config: {}, required: false }, { type: 'analytics', name: 'PostHog', config: {}, required: false }],
   design: { restrictions: ['accessible-colors', 'clear-typography'] },
   generationRules: [],
-  compatibleIndustries: ['education', 'elearning', 'online-course', 'tutoring', 'training', 'workshop', 'bootcamp', 'language-learning', 'kids-education', 'corporate-training'],
+  compatibleIndustries: ['education', 'elearning', 'e-learning', 'online-course', 'tutoring', 'training', 'workshop', 'bootcamp', 'language-learning', 'kids-education', 'corporate-training'],
   compatibleBusinessModels: ['subscription', 'direct-sales', 'freemium'],
 };
 
