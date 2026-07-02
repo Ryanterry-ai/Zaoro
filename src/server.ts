@@ -23,6 +23,42 @@ config({ path: path.join(ENGINE_ROOT, '.env') });
 const WORKSPACE_BASE = path.join(ENGINE_ROOT, 'sandbox_workspaces');
 const PROMPTS_DIR = path.join(ENGINE_ROOT, '.prompts');
 const PORT = parseInt(process.env.ENGINE_PORT || '3001', 10);
+const VENDOR_DIR = path.join(ENGINE_ROOT, 'static', 'vendor');
+
+// Ensure vendor dir with cached UMD builds for React, ReactDOM, Tailwind CDN.
+// Downloads from CDN on first run — these are build-time dependencies, not runtime hot-links.
+(async function ensureVendorAssets(): Promise<void> {
+  if (!fs.existsSync(VENDOR_DIR)) fs.mkdirSync(VENDOR_DIR, { recursive: true });
+
+  const assets: { filename: string; url: string }[] = [
+    { filename: 'react.production.min.js', url: 'https://unpkg.com/react@18/umd/react.production.min.js' },
+    { filename: 'react-dom.production.min.js', url: 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js' },
+    { filename: 'tailwind-cdn.min.js', url: 'https://cdn.tailwindcss.com' },
+  ];
+
+  for (const asset of assets) {
+    const dest = path.join(VENDOR_DIR, asset.filename);
+    if (fs.existsSync(dest)) continue;
+    try {
+      const https = await import('node:https');
+      await new Promise<void>((resolve, reject) => {
+        https.get(asset.url, (res: any) => {
+          if (res.statusCode && res.statusCode >= 300 && res.headers.location) {
+            https.get(res.headers.location, (res2: any) => {
+              const chunks: Buffer[] = [];
+              res2.on('data', (c: Buffer) => chunks.push(c));
+              res2.on('end', () => { fs.writeFileSync(dest, Buffer.concat(chunks)); resolve(); });
+            }).on('error', (e: Error) => { console.warn(`[vendor] Failed ${asset.filename}:`, e.message); resolve(); });
+            return;
+          }
+          const chunks: Buffer[] = [];
+          res.on('data', (c: Buffer) => chunks.push(c));
+          res.on('end', () => { fs.writeFileSync(dest, Buffer.concat(chunks)); resolve(); });
+        }).on('error', (e: Error) => { console.warn(`[vendor] Failed ${asset.filename}:`, e.message); resolve(); });
+      });
+    } catch { /* ignore */ }
+  }
+})();
 
 // Initialize MCP server
 const mcpServer = new MCPServer(WORKSPACE_BASE);
@@ -107,6 +143,7 @@ const server = http.createServer(async (req, res) => {
         visual_diff: 'POST /api/workspace/:id/visual-diff',
         visual_diff_get: 'GET /api/workspace/:id/visual-diff',
         verification: 'GET /api/workspace/:id/verification',
+        deploy: 'POST /api/workspace/:id/deploy',
         debug_logs: 'GET /api/debug/logs',
         debug_logs_ws: 'GET /api/debug/logs/:workspaceId',
         debug_enable: 'POST /api/debug/enable',
@@ -679,18 +716,48 @@ const server = http.createServer(async (req, res) => {
     return json(res, { content: fs.readFileSync(fullPath, 'utf-8'), path: normalized });
   }
 
-  // GET /api/workspace/:id/preview
+  // GET /_vendor/:file — Serve vendored React/ReactDOM/Tailwind locally (rule #4 compliance)
+  if (method === 'GET' && url.pathname.startsWith('/_vendor/')) {
+    const fileName = path.basename(url.pathname);
+    const vendorFile = path.join(VENDOR_DIR, fileName);
+    if (fs.existsSync(vendorFile)) {
+      const ext = path.extname(fileName);
+      const ct = ext === '.js' ? 'application/javascript' : ext === '.css' ? 'text/css' : 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'public, max-age=86400' });
+      return res.end(fs.readFileSync(vendorFile));
+    }
+    return html(res, '/* Vendor file not found */', 404);
+  }
+
+  // GET /api/workspace/:id/preview — Multi-page aware preview
   if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/preview$/)) {
     const id = url.pathname.split('/')[3]!;
     const workspacePath = path.join(WORKSPACE_BASE, id);
-    const cacheFile = path.join(workspacePath, '.preview-cache.html');
+
+    // Parse ?page=/about to support multi-page preview
+    const pageParam = (typeof url.searchParams.get('page') === 'string' && url.searchParams.get('page')!.trim()) ? url.searchParams.get('page')!.trim() : '';
+    const pageRoute = pageParam || '/';
+    let relativePagePath: string;
+    if (pageRoute === '/' || pageRoute === '/index' || pageRoute === '') {
+      relativePagePath = 'src/app/page.tsx';
+    } else {
+      relativePagePath = path.join('src', 'app', pageRoute.replace(/^\//, ''), 'page.tsx');
+    }
+    // Also try index.tsx as fallback
+    const pageFile = path.join(workspacePath, relativePagePath);
+    const indexFile = path.join(workspacePath, 'src', 'app', pageRoute.replace(/^\//, ''), 'index.tsx');
+    const targetFile = fs.existsSync(pageFile) ? pageFile : (fs.existsSync(indexFile) ? indexFile : null);
+
+    // Cache key includes page route so different pages have separate caches
+    const cacheKey = pageRoute.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const cacheFile = path.join(workspacePath, `.preview-cache-${cacheKey}.html`);
+
     if (!fs.existsSync(workspacePath)) return html(res, '<html><body style="background:#09090b;color:#a1a1aa;font-family:sans-serif;padding:2rem;"><h3>Preview Server Syncing</h3><p>Sandbox workspace setup is currently building. Please wait...</p></body></html>');
     if (fs.existsSync(cacheFile)) {
       const stat = fs.statSync(cacheFile);
       if (Date.now() - stat.mtimeMs < 600000) return html(res, fs.readFileSync(cacheFile, 'utf-8'));
     }
-    const targetFile = path.join(workspacePath, 'src', 'app', 'page.tsx');
-    if (!fs.existsSync(targetFile)) return html(res, '<html><body style="background:#09090b;color:#f43f5e;font-family:sans-serif;padding:2rem;"><h3>Preview Not Available</h3><p>Main route src/app/page.tsx was not resolved.</p></body></html>');
+    if (!targetFile) return html(res, `<html><body style="background:#09090b;color:#f43f5e;font-family:sans-serif;padding:2rem;"><h3>Preview Not Available</h3><p>Page ${pageRoute} was not found in the generated project.</p></body></html>`);
 
     try {
       // Bundle the page + all imported components with esbuild, then render with Playwright
@@ -698,7 +765,7 @@ const server = http.createServer(async (req, res) => {
       const { chromium } = await import('playwright');
 
       // Use esbuild build API to bundle all imports (components, nav-data, etc.)
-      // External: react + react-dom come from CDN in the preview HTML
+      // External: react + react-dom are vendored locally via /_vendor/ path
       const bundleResult = await esbuild.build({
         entryPoints: [targetFile],
         bundle: true,
@@ -725,8 +792,8 @@ const server = http.createServer(async (req, res) => {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Preview</title>
-  <script src="https://cdn.tailwindcss.com">${SCRIPT_END}</script>
+  <title>Preview — ${pageRoute}</title>
+  <script src="/_vendor/tailwind-cdn.min.js">${SCRIPT_END}</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
@@ -735,8 +802,8 @@ const server = http.createServer(async (req, res) => {
 </head>
 <body>
   <div id="preview-root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js">${SCRIPT_END}</script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">${SCRIPT_END}</script>
+  <script src="/_vendor/react.production.min.js">${SCRIPT_END}</script>
+  <script src="/_vendor/react-dom.production.min.js">${SCRIPT_END}</script>
   <script>
     ${safeBundledCode}
     try {
@@ -1245,6 +1312,35 @@ try {
       const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
       return json(res, { report, status: 'ready' });
     } catch { return json(res, { status: 'error' }); }
+  }
+
+  // POST /api/workspace/:id/deploy — Deploy workspace to Vercel
+  if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/deploy$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    try {
+      // Generate deploy configs
+      const { execSync } = await import('child_process');
+      const deployCodegen = path.join(ENGINE_ROOT, 'tools', 'deploy-codegen', 'index.cjs');
+      execSync(`node "${deployCodegen}" tier-standard "${wsDir}" --platform vercel`, { timeout: 10000 });
+
+      // Run vercel deploy in workspace directory
+      const buf = execSync('npx vercel deploy --prod -y --scope upgraded-ai-factory-s-projects 2>&1', {
+        cwd: wsDir,
+        timeout: 120000,
+        env: { ...process.env, VERCEL_PROJECT_ID: undefined }, // let vercel create new project
+      });
+
+      const output = Buffer.isBuffer(buf) ? buf.toString('utf-8') : String(buf);
+      const urlMatch = output.match(/(https:\/\/[^\s]+\.vercel\.app)/);
+      const deployUrl = urlMatch ? urlMatch[1] : output.trim();
+
+      return json(res, { success: true, url: deployUrl, output });
+    } catch (e: any) {
+      return json(res, { error: e.message, stderr: e.stderr?.toString() || '' }, 500);
+    }
   }
 
   // ─── Platform Persistence Routes ─────────────────────────────────
