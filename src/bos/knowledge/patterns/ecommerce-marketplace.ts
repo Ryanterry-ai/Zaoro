@@ -27,6 +27,7 @@ export const ECOMMERCE_MARKETPLACE: Pattern = {
     { path: '/product/:id', name: 'Product Detail', type: 'detail', sections: ['product-gallery', 'product-info', 'reviews', 'related-products'] },
     { path: '/cart', name: 'Cart', type: 'page', sections: ['cart-items', 'order-summary', 'recommended'] },
     { path: '/checkout', name: 'Checkout', type: 'auth', sections: ['checkout-form', 'payment', 'order-review'] },
+    { path: '/orders', name: 'Orders', type: 'listing', sections: ['filters', 'data-table', 'order-status'] },
     { path: '/account', name: 'My Account', type: 'dashboard', sections: ['order-history', 'addresses', 'wishlist'] },
     { path: '/account/orders/:id', name: 'Order Detail', type: 'detail', sections: ['order-status', 'items', 'tracking'] },
   ],

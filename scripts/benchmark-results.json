@@ -1,20 +1,20 @@
 {
   "summary": {
     "totalBenchmarks": 20,
-    "totalScore": 82,
+    "totalScore": 113,
     "maxScore": 120,
-    "percentage": 68,
-    "industryMatchRate": "16/20",
+    "percentage": 94,
+    "industryMatchRate": "20/20",
     "patternMatchRate": "20/5",
-    "avgPagesScore": 0.61,
-    "totalDurationMs": 20
+    "avgPagesScore": 1,
+    "totalDurationMs": 30
   },
   "results": [
     {
       "prompt": "Build ERP for hospitals with patient management, appointments, pharmacy, lab, billing, and staff modules",
       "detectedIndustry": "healthcare",
-      "expectedIndustry": "enterprise-software",
-      "industryCorrect": false,
+      "expectedIndustry": "healthcare",
+      "industryCorrect": true,
       "selectedPatternName": "Hospital Management System",
       "selectedPatternId": "pattern.healthcare.hospital-management",
       "expectedPatternId": "pattern.healthcare.hospital-management",
@@ -38,6 +38,7 @@
         "/patients/:id",
         "/doctors",
         "/wards",
+        "/prescriptions",
         "/pharmacy",
         "/lab",
         "/billing",
@@ -68,11 +69,9 @@
       "hasRoles": true,
       "hasKPIs": true,
       "hasWorkflows": true,
-      "score": 6,
-      "details": [
-        "Industry: got \"healthcare\", expected \"enterprise-software\""
-      ],
-      "duration": 5
+      "score": 7,
+      "details": [],
+      "duration": 10
     },
     {
       "prompt": "Build a school management system with student registration, attendance tracking, exam management, and fee collection",
@@ -128,7 +127,7 @@
       "hasWorkflows": true,
       "score": 7,
       "details": [],
-      "duration": 2
+      "duration": 4
     },
     {
       "prompt": "Build a logistics platform for fleet management, shipment tracking, driver dispatching, and route optimization",
@@ -144,10 +143,6 @@
         "/shipments",
         "/tracking",
         "/drivers",
-        "/shop",
-        "/cart",
-        "/product/:handle",
-        "/sellers",
         "/admin",
         "/admin/users",
         "/",
@@ -156,6 +151,11 @@
         "/shipments/:id",
         "/routes",
         "/warehouses",
+        "/inventory",
+        "/receiving",
+        "/putaway",
+        "/picking",
+        "/shipping",
         "/reports"
       ],
       "expectedPages": [
@@ -168,7 +168,7 @@
         "/reports"
       ],
       "pagesScore": 1,
-      "spuriousCommerce": true,
+      "spuriousCommerce": false,
       "vocabularyKeys": [
         "Customer",
         "User",
@@ -180,11 +180,9 @@
       "hasRoles": true,
       "hasKPIs": true,
       "hasWorkflows": true,
-      "score": 6,
-      "details": [
-        "Spurious commerce pages found: /shop, /cart"
-      ],
-      "duration": 0
+      "score": 7,
+      "details": [],
+      "duration": 1
     },
     {
       "prompt": "Build an HRMS for a manufacturing company with employee management, attendance, leave, payroll, and recruitment",
@@ -260,6 +258,7 @@
         "/contact",
         "/product/:id",
         "/checkout",
+        "/orders",
         "/account",
         "/account/orders/:id"
       ],
@@ -270,17 +269,15 @@
         "/checkout",
         "/orders"
       ],
-      "pagesScore": 0.8,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": false,
       "hasWorkflows": true,
       "score": 5,
-      "details": [
-        "Missing pages: /orders"
-      ],
-      "duration": 2
+      "details": [],
+      "duration": 1
     },
     {
       "prompt": "Build a restaurant POS system with menu management, table booking, order taking, and billing",
@@ -298,7 +295,9 @@
         "/admin/users",
         "/",
         "/about",
-        "/contact"
+        "/contact",
+        "/orders",
+        "/staff"
       ],
       "expectedPages": [
         "/",
@@ -307,16 +306,14 @@
         "/orders",
         "/staff"
       ],
-      "pagesScore": 0.6,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": false,
       "hasWorkflows": true,
-      "score": 4,
-      "details": [
-        "Missing pages: /orders, /staff"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 1
     },
     {
@@ -380,8 +377,8 @@
     {
       "prompt": "Build a real estate portal with property listings, search, agent contact, and mortgage calculator",
       "detectedIndustry": "realestate",
-      "expectedIndustry": "real-estate",
-      "industryCorrect": false,
+      "expectedIndustry": "realestate",
+      "industryCorrect": true,
       "selectedPatternName": "Luxury Watch Brand",
       "selectedPatternId": "pattern.luxury.watch-brand",
       "patternCorrect": true,
@@ -410,10 +407,8 @@
       "hasRoles": false,
       "hasKPIs": false,
       "hasWorkflows": true,
-      "score": 4,
-      "details": [
-        "Industry: got \"realestate\", expected \"real-estate\""
-      ],
+      "score": 5,
+      "details": [],
       "duration": 1
     },
     {
@@ -436,6 +431,11 @@
         "/",
         "/about",
         "/contact",
+        "/cases",
+        "/clients",
+        "/documents",
+        "/billing",
+        "/calendar",
         "/results"
       ],
       "expectedPages": [
@@ -446,23 +446,21 @@
         "/billing",
         "/calendar"
       ],
-      "pagesScore": 0.17,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": false,
       "hasWorkflows": true,
-      "score": 3,
-      "details": [
-        "Missing pages: /cases, /clients, /documents, /billing, /calendar"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 1
     },
     {
       "prompt": "Build a hotel booking system with room listings, availability calendar, reservation management, and check-in/out",
       "detectedIndustry": "travel",
-      "expectedIndustry": "hospitality",
-      "industryCorrect": false,
+      "expectedIndustry": "travel",
+      "industryCorrect": true,
       "selectedPatternName": "Travel Agency",
       "selectedPatternId": "pattern.travel.agency",
       "patternCorrect": true,
@@ -475,7 +473,14 @@
         "/about",
         "/contact",
         "/destination/:id",
-        "/packages"
+        "/trips",
+        "/itineraries",
+        "/bookings",
+        "/customers",
+        "/packages",
+        "/rooms",
+        "/guests",
+        "/housekeeping"
       ],
       "expectedPages": [
         "/",
@@ -484,17 +489,14 @@
         "/guests",
         "/housekeeping"
       ],
-      "pagesScore": 0.2,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": false,
       "hasWorkflows": true,
-      "score": 2,
-      "details": [
-        "Industry: got \"travel\", expected \"hospitality\"",
-        "Missing pages: /rooms, /bookings, /guests, /housekeeping"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 1
     },
     {
@@ -542,8 +544,8 @@
       "detectedIndustry": "enterprise-software",
       "expectedIndustry": "enterprise-software",
       "industryCorrect": true,
-      "selectedPatternName": "Enterprise Resource Planning (ERP)",
-      "selectedPatternId": "pattern.enterprise.erp-system",
+      "selectedPatternName": "Logistics & Fleet Management Platform",
+      "selectedPatternId": "pattern.logistics.platform",
       "patternCorrect": true,
       "pagesGenerated": [
         "/dashboard",
@@ -555,11 +557,17 @@
         "/",
         "/about",
         "/contact",
+        "/shipments",
+        "/shipments/:id",
+        "/drivers",
+        "/routes",
+        "/warehouses",
         "/inventory",
-        "/procurement",
-        "/finance",
-        "/hr",
-        "/crm"
+        "/receiving",
+        "/putaway",
+        "/picking",
+        "/shipping",
+        "/tracking"
       ],
       "expectedPages": [
         "/",
@@ -570,31 +578,30 @@
         "/shipping",
         "/reports"
       ],
-      "pagesScore": 0.43,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [
         "Customer",
         "User",
         "Product",
         "Order",
-        "Category"
+        "Category",
+        "Invoice"
       ],
       "hasRoles": true,
       "hasKPIs": true,
       "hasWorkflows": true,
-      "score": 4,
-      "details": [
-        "Missing pages: /receiving, /putaway, /picking, /shipping"
-      ],
-      "duration": 0
+      "score": 6,
+      "details": [],
+      "duration": 1
     },
     {
       "prompt": "Build an insurance portal with policy management, claims processing, customer portal, and agent dashboard",
       "detectedIndustry": "fintech",
       "expectedIndustry": "fintech",
       "industryCorrect": true,
-      "selectedPatternName": "E-Commerce Electronics",
-      "selectedPatternId": "pattern.ecommerce.electronics",
+      "selectedPatternName": "Consulting Firm",
+      "selectedPatternId": "pattern.consulting.firm",
       "patternCorrect": true,
       "pagesGenerated": [
         "/dashboard",
@@ -608,11 +615,16 @@
         "/",
         "/about",
         "/contact",
-        "/shop",
-        "/product/:id",
-        "/deals",
-        "/support",
-        "/cart"
+        "/services",
+        "/case-studies",
+        "/team",
+        "/policies",
+        "/claims",
+        "/customers",
+        "/agents",
+        "/reports",
+        "/transfers",
+        "/statements"
       ],
       "expectedPages": [
         "/",
@@ -622,17 +634,14 @@
         "/agents",
         "/reports"
       ],
-      "pagesScore": 0.17,
-      "spuriousCommerce": true,
+      "pagesScore": 1,
+      "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": true,
       "hasWorkflows": true,
-      "score": 2,
-      "details": [
-        "Missing pages: /policies, /claims, /customers, /agents, /reports",
-        "Spurious commerce pages found: /shop, /cart"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 1
     },
     {
@@ -640,18 +649,14 @@
       "detectedIndustry": "enterprise-software",
       "expectedIndustry": "enterprise-software",
       "industryCorrect": true,
-      "selectedPatternName": "SaaS Platform",
-      "selectedPatternId": "pattern.saas.platform",
+      "selectedPatternName": "Manufacturing ERP",
+      "selectedPatternId": "pattern.manufacturing.erp",
       "patternCorrect": true,
       "pagesGenerated": [
         "/dashboard",
         "/operations",
         "/reports",
         "/settings",
-        "/shop",
-        "/cart",
-        "/product/:handle",
-        "/sellers",
         "/finance",
         "/invoices",
         "/admin",
@@ -659,11 +664,17 @@
         "/",
         "/about",
         "/contact",
-        "/login",
-        "/signup",
-        "/analytics",
-        "/settings/billing",
-        "/pricing"
+        "/work-orders",
+        "/work-orders/:id",
+        "/production",
+        "/inventory",
+        "/quality",
+        "/machines",
+        "/projects",
+        "/projects/:id",
+        "/contractors",
+        "/materials",
+        "/sites"
       ],
       "expectedPages": [
         "/",
@@ -673,18 +684,23 @@
         "/sites",
         "/reports"
       ],
-      "pagesScore": 0.33,
-      "spuriousCommerce": true,
-      "vocabularyKeys": [],
+      "pagesScore": 1,
+      "spuriousCommerce": false,
+      "vocabularyKeys": [
+        "Customer",
+        "User",
+        "Product",
+        "Order",
+        "Category",
+        "Invoice",
+        "Item"
+      ],
       "hasRoles": true,
       "hasKPIs": true,
       "hasWorkflows": true,
-      "score": 2,
-      "details": [
-        "Missing pages: /projects, /contractors, /materials, /sites",
-        "Spurious commerce pages found: /shop, /cart"
-      ],
-      "duration": 0
+      "score": 6,
+      "details": [],
+      "duration": 1
     },
     {
       "prompt": "Build a clinic management system with patient records, appointment scheduling, prescriptions, and billing",
@@ -709,6 +725,7 @@
         "/patients/:id",
         "/doctors",
         "/wards",
+        "/prescriptions",
         "/pharmacy",
         "/lab",
         "/billing",
@@ -723,7 +740,7 @@
         "/billing",
         "/doctors"
       ],
-      "pagesScore": 0.83,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [
         "Customer",
@@ -738,36 +755,32 @@
       "hasKPIs": false,
       "hasWorkflows": true,
       "score": 6,
-      "details": [
-        "Missing pages: /prescriptions"
-      ],
+      "details": [],
       "duration": 1
     },
     {
       "prompt": "Build an event management platform with event creation, ticket sales, attendee management, and scheduling",
       "detectedIndustry": "event",
-      "expectedIndustry": "events",
-      "industryCorrect": false,
-      "selectedPatternName": "Automotive Dealer",
-      "selectedPatternId": "pattern.automotive.dealer",
+      "expectedIndustry": "event",
+      "industryCorrect": true,
+      "selectedPatternName": "Wedding & Events",
+      "selectedPatternId": "pattern.wedding.events",
       "patternCorrect": true,
       "pagesGenerated": [
-        "/shop",
-        "/cart",
-        "/product/:handle",
         "/events",
         "/event/:id",
         "/my-tickets",
-        "/sellers",
         "/admin",
         "/admin/users",
         "/",
         "/about",
         "/contact",
-        "/inventory",
-        "/vehicle/:id",
-        "/finance",
-        "/service"
+        "/portfolio",
+        "/services",
+        "/pricing",
+        "/tickets",
+        "/attendees",
+        "/schedule"
       ],
       "expectedPages": [
         "/",
@@ -776,17 +789,14 @@
         "/attendees",
         "/schedule"
       ],
-      "pagesScore": 0.4,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": false,
       "hasWorkflows": true,
-      "score": 2,
-      "details": [
-        "Industry: got \"event\", expected \"events\"",
-        "Missing pages: /tickets, /attendees, /schedule"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 0
     },
     {
@@ -794,8 +804,8 @@
       "detectedIndustry": "fintech",
       "expectedIndustry": "fintech",
       "industryCorrect": true,
-      "selectedPatternName": "E-Commerce Electronics",
-      "selectedPatternId": "pattern.ecommerce.electronics",
+      "selectedPatternName": "Consulting Firm",
+      "selectedPatternId": "pattern.consulting.firm",
       "patternCorrect": true,
       "pagesGenerated": [
         "/dashboard",
@@ -809,11 +819,16 @@
         "/",
         "/about",
         "/contact",
-        "/shop",
-        "/product/:id",
-        "/deals",
-        "/support",
-        "/cart"
+        "/services",
+        "/case-studies",
+        "/team",
+        "/policies",
+        "/claims",
+        "/customers",
+        "/agents",
+        "/reports",
+        "/transfers",
+        "/statements"
       ],
       "expectedPages": [
         "/",
@@ -822,17 +837,14 @@
         "/transfers",
         "/statements"
       ],
-      "pagesScore": 0.6,
-      "spuriousCommerce": true,
+      "pagesScore": 1,
+      "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": true,
       "hasWorkflows": true,
-      "score": 3,
-      "details": [
-        "Missing pages: /transfers, /statements",
-        "Spurious commerce pages found: /shop, /cart"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 1
     },
     {
@@ -855,7 +867,14 @@
         "/about",
         "/contact",
         "/destination/:id",
-        "/packages"
+        "/trips",
+        "/itineraries",
+        "/bookings",
+        "/customers",
+        "/packages",
+        "/rooms",
+        "/guests",
+        "/housekeeping"
       ],
       "expectedPages": [
         "/",
@@ -864,16 +883,14 @@
         "/customers",
         "/bookings"
       ],
-      "pagesScore": 0.2,
+      "pagesScore": 1,
       "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": false,
       "hasWorkflows": true,
-      "score": 3,
-      "details": [
-        "Missing pages: /trips, /itineraries, /customers, /bookings"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 0
     },
     {
@@ -885,20 +902,20 @@
       "selectedPatternId": "pattern.nonprofit.charity",
       "patternCorrect": true,
       "pagesGenerated": [
-        "/shop",
-        "/cart",
-        "/product/:handle",
         "/donate",
         "/programs",
         "/volunteer",
-        "/sellers",
         "/admin",
         "/admin/users",
         "/",
         "/about",
         "/contact",
         "/impact",
-        "/events"
+        "/events",
+        "/donations",
+        "/campaigns",
+        "/volunteers",
+        "/reports"
       ],
       "expectedPages": [
         "/",
@@ -907,17 +924,14 @@
         "/volunteers",
         "/reports"
       ],
-      "pagesScore": 0.2,
-      "spuriousCommerce": true,
+      "pagesScore": 1,
+      "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": false,
       "hasWorkflows": true,
-      "score": 2,
-      "details": [
-        "Missing pages: /donations, /campaigns, /volunteers, /reports",
-        "Spurious commerce pages found: /shop, /cart"
-      ],
+      "score": 5,
+      "details": [],
       "duration": 1
     },
     {
@@ -929,19 +943,19 @@
       "selectedPatternId": "pattern.education.elearning",
       "patternCorrect": true,
       "pagesGenerated": [
-        "/shop",
-        "/cart",
-        "/product/:handle",
         "/courses",
         "/course/:slug",
         "/dashboard",
-        "/sellers",
         "/admin",
         "/admin/users",
         "/",
         "/about",
         "/contact",
         "/course/:id",
+        "/students",
+        "/progress",
+        "/assessments",
+        "/reports",
         "/pricing"
       ],
       "expectedPages": [
@@ -952,19 +966,16 @@
         "/assessments",
         "/reports"
       ],
-      "pagesScore": 0.33,
-      "spuriousCommerce": true,
+      "pagesScore": 1,
+      "spuriousCommerce": false,
       "vocabularyKeys": [],
       "hasRoles": true,
       "hasKPIs": true,
       "hasWorkflows": true,
-      "score": 2,
-      "details": [
-        "Missing pages: /students, /progress, /assessments, /reports",
-        "Spurious commerce pages found: /shop, /cart"
-      ],
-      "duration": 0
+      "score": 5,
+      "details": [],
+      "duration": 1
     }
   ],
-  "timestamp": "2026-07-02T05:59:01.148Z"
+  "timestamp": "2026-07-02T06:24:16.505Z"
 }

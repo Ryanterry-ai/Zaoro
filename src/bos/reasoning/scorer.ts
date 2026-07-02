@@ -89,12 +89,14 @@ export class Scorer {
       }
 
       // Description keyword boost: matches user's prompt words against pattern's
-      // compatibleIndustries. Fixes the sub-industry routing gap where "hospital ERP"
-      // is classified as enterprise-software but should also match hospital patterns.
+      // compatibleIndustries. Uses word-boundary regex to avoid false positives
+      // where a short substring like 'ev' matches within a longer word like 'event'.
+      // Fixes the sub-industry routing gap where "hospital ERP" is classified as
+      // enterprise-software but should also match hospital patterns.
       if (ctx.description) {
         const desc = ctx.description.toLowerCase();
         const kwMatch = pattern.compatibleIndustries.some(i =>
-          desc.includes(i),
+          i.length >= 3 && new RegExp('\\b' + i.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(desc),
         );
         if (kwMatch) {
           breakdown.descriptionKeywordBoost = 10;

@@ -303,6 +303,7 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
       hrm: ['hrm', 'hris', 'human resource management', 'people management', 'talent'],
       finance: ['accounting', 'finance system', 'financial management', 'invoicing', 'accounts payable', 'accounts receivable', 'ledger', 'bookkeeping'],
       project: ['project management', 'portfolio management', 'resource management', 'ppm'],
+      construction: ['construction', 'contractor management', 'job site', 'building project', 'construction project'],
       supply_chain: ['supply chain', 'procurement', 'vendor management', 'purchase order', 'sourcing'],
     },
     keywords: ['erp', 'enterprise resource planning', 'hrm', 'hris', 'accounting software',
@@ -383,7 +384,7 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
 const BUSINESS_MODEL_KEYWORDS: Record<string, string[]> = {
   subscription: ['subscription', 'subscribe', 'monthly', 'annual', 'plan', 'tier', 'recurring', 'membership', 'saas', 'software as a service'],
   'direct-sales': ['sell', 'shop', 'store', 'buy', 'purchase', 'product', 'cart', 'checkout', 'ecommerce', 'order online'],
-  marketplace: ['marketplace', 'vendor', 'multi-seller', 'platform', 'connect buyers', 'connect sellers'],
+  marketplace: ['marketplace', 'multi-seller', 'connect buyers', 'connect sellers', 'multi-vendor'],
   'service-booking': ['book', 'appointment', 'schedule', 'consultation', 'session', 'reserve', 'slot'],
   membership: ['membership', 'member', 'join', 'club', 'access', 'exclusive', 'vip'],
   donation: ['donate', 'donation', 'fundraise', 'campaign', 'support', 'crowdfund'],

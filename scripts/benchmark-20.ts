@@ -47,7 +47,7 @@ interface BenchmarkResult {
 const BENCHMARKS: BenchmarkCase[] = [
   {
     prompt: 'Build ERP for hospitals with patient management, appointments, pharmacy, lab, billing, and staff modules',
-    expectedIndustry: 'enterprise-software',
+    expectedIndustry: 'healthcare',
     expectedPages: ['/', '/patients', '/appointments', '/doctors', '/pharmacy', '/lab', '/billing', '/staff', '/reports'],
     expectedPatternId: 'pattern.healthcare.hospital-management',
     noSpuriousCommerce: true,
@@ -94,7 +94,7 @@ const BENCHMARKS: BenchmarkCase[] = [
   },
   {
     prompt: 'Build a real estate portal with property listings, search, agent contact, and mortgage calculator',
-    expectedIndustry: 'real-estate',
+    expectedIndustry: 'realestate',
     expectedPages: ['/', '/properties', '/agents', '/contact'],
     noSpuriousCommerce: true,
   },
@@ -106,7 +106,7 @@ const BENCHMARKS: BenchmarkCase[] = [
   },
   {
     prompt: 'Build a hotel booking system with room listings, availability calendar, reservation management, and check-in/out',
-    expectedIndustry: 'hospitality',
+    expectedIndustry: 'travel',
     expectedPages: ['/', '/rooms', '/bookings', '/guests', '/housekeeping'],
     noSpuriousCommerce: true,
   },
@@ -142,7 +142,7 @@ const BENCHMARKS: BenchmarkCase[] = [
   },
   {
     prompt: 'Build an event management platform with event creation, ticket sales, attendee management, and scheduling',
-    expectedIndustry: 'events',
+    expectedIndustry: 'event',
     expectedPages: ['/', '/events', '/tickets', '/attendees', '/schedule'],
     noSpuriousCommerce: false,
   },
