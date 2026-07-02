@@ -249,6 +249,11 @@ export class DeterministicOrchestratorV4 {
           prisma: '^5.10.2',
           '@prisma/client': '^5.10.2',
         };
+        // Ensure `prisma generate` runs automatically on `npm install` for end users
+        // who download the project (the engine's own quality-gate runs it explicitly,
+        // but a plain `npm install` outside the engine would otherwise leave
+        // @prisma/client uninitialized, breaking `next build`/`next dev`).
+        pkg.scripts = { ...pkg.scripts, postinstall: 'prisma generate' };
         fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8');
       }
 
@@ -568,6 +573,7 @@ Rules:
           prisma: '^5.10.2',
           '@prisma/client': '^5.10.2',
         };
+        pkg.scripts = { ...pkg.scripts, postinstall: 'prisma generate' };
         fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8');
       }
 

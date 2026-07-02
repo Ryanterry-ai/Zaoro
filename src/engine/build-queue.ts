@@ -270,8 +270,17 @@ try {
         target: 'es2020',
         jsx: 'transform',
         loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
-        external: ['react', 'react-dom'],
-        globals: { 'react': 'React', 'react-dom': 'ReactDOM' },
+        plugins: [{
+          name: 'react-globals',
+          setup(build) {
+            const globalMap = { react: 'React', 'react-dom': 'ReactDOM' };
+            build.onResolve({ filter: /^(react|react-dom)$/ }, (args) => ({ path: args.path, namespace: 'react-globals-ns' }));
+            build.onLoad({ filter: /.*/, namespace: 'react-globals-ns' }, (args) => ({
+              contents: 'module.exports = window[' + JSON.stringify(globalMap[args.path]) + '];',
+              loader: 'js',
+            }));
+          },
+        }],
         write: false,
         alias: { '@': path.join(wsDir, 'src') },
       } as any);

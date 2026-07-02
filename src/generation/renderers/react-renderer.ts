@@ -373,7 +373,7 @@ ${body}
 
     // Items prop
     if ((spec.items?.length ?? 0) > 0) {
-      lines.push(`  items?: Array<{ title?: string; description?: string; icon?: string; metadata?: Record<string, string> }>;`);
+      lines.push(`  items?: Array<{ title?: string; description?: string; icon?: string; metadata?: Record<string, string>; [key: string]: unknown }>;`);
     }
 
     // Tiers prop
@@ -738,7 +738,7 @@ ${body}
       `        <tbody>`,
       `          {items?.map((item, i) => (`,
       `            <tr key={i} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">`,
-      `              {columns?.map((col, j) => (<td key={j} className="px-4 py-3 text-zinc-300">{item[col.key] ?? item.title ?? '—'}</td>))}`,
+      `              {columns?.map((col, j) => (<td key={j} className="px-4 py-3 text-zinc-300">{String(item[col.key] ?? item.title ?? '—')}</td>))}`,
       `            </tr>`,
       `          ))}`,
       `        </tbody>`,
@@ -901,7 +901,7 @@ ${body}
     }
 
     // Render columns table (for data tables, feature comparison, etc.)
-    if (hasColumns) {
+    if (hasColumns && hasItems) {
       lines.push(`        <div className="mt-8 overflow-x-auto">`);
       lines.push(`          <table className="w-full">`);
       lines.push(`            <thead><tr>`);

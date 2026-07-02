@@ -1123,17 +1123,22 @@ function resolveCartItems(
   ctx: ContentResolverContext,
 ): ComponentSpec {
   const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  const entityName = entity?.name ?? 'Item';
   return {
     type: 'CartItems',
     content: {
       title: { value: vocab('Shopping Cart', ctx), type: 'text' },
-      entity: { value: entity?.name ?? 'Item', type: 'text' },
+      entity: { value: entityName, type: 'text' },
     },
     columns: [
       { key: 'name', label: 'Product', type: 'text', sortable: false, filterable: false },
       { key: 'price', label: 'Price', type: 'number', sortable: false, filterable: false },
       { key: 'quantity', label: 'Qty', type: 'number', sortable: false, filterable: false },
       { key: 'total', label: 'Total', type: 'number', sortable: false, filterable: false },
+    ],
+    items: [
+      { title: `${entityName} #1`, metadata: { price: '$12.00', quantity: '1', total: '$12.00' } },
+      { title: `${entityName} #2`, metadata: { price: '$8.50', quantity: '2', total: '$17.00' } },
     ],
     actions: [
       { label: vocab('Continue Shopping', ctx), action: '/shop', style: 'ghost' },
@@ -1209,6 +1214,10 @@ function resolveOrderReview(
       { key: 'quantity', label: 'Qty', type: 'number', sortable: false, filterable: false },
       { key: 'price', label: 'Price', type: 'number', sortable: false, filterable: false },
     ],
+    items: [
+      { title: 'Item #1', metadata: { quantity: '1', price: '$12.00' } },
+      { title: 'Item #2', metadata: { quantity: '2', price: '$8.50' } },
+    ],
     actions: [
       { label: vocab('Confirm Order', ctx), action: '/api/orders', style: 'primary' },
     ],
@@ -1252,6 +1261,11 @@ function resolveOrderHistory(
       { key: 'date', label: 'Date', type: 'date', sortable: true, filterable: false },
       { key: 'status', label: 'Status', type: 'status', sortable: true, filterable: true },
       { key: 'total', label: 'Total', type: 'number', sortable: true, filterable: false },
+    ],
+    items: [
+      { title: '#ORD-1001', metadata: { date: '2024-01-15', status: 'Delivered', total: '$42.00' } },
+      { title: '#ORD-1002', metadata: { date: '2024-01-20', status: 'Processing', total: '$18.50' } },
+      { title: '#ORD-1003', metadata: { date: '2024-02-01', status: 'Delivered', total: '$63.20' } },
     ],
     layout: { maxWidth: '7xl' },
   };
@@ -1885,6 +1899,10 @@ function resolveInvoiceList(
       { key: 'date', label: 'Date', type: 'date', sortable: true, filterable: false },
       { key: 'amount', label: 'Amount', type: 'number', sortable: true, filterable: false },
       { key: 'status', label: 'Status', type: 'status', sortable: true, filterable: true },
+    ],
+    items: [
+      { title: '#INV-2001', metadata: { date: '2024-01-15', amount: '$120.00', status: 'Paid' } },
+      { title: '#INV-2002', metadata: { date: '2024-02-01', amount: '$85.50', status: 'Pending' } },
     ],
     layout: { maxWidth: '7xl' },
   };

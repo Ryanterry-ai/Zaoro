@@ -41,20 +41,20 @@ const VENDOR_DIR = path.join(ENGINE_ROOT, 'static', 'vendor');
     if (fs.existsSync(dest)) continue;
     try {
       const https = await import('node:https');
-      await new Promise<void>((resolve, reject) => {
-        https.get(asset.url, (res: any) => {
-          if (res.statusCode && res.statusCode >= 300 && res.headers.location) {
-            https.get(res.headers.location, (res2: any) => {
-              const chunks: Buffer[] = [];
-              res2.on('data', (c: Buffer) => chunks.push(c));
-              res2.on('end', () => { fs.writeFileSync(dest, Buffer.concat(chunks)); resolve(); });
-            }).on('error', (e: Error) => { console.warn(`[vendor] Failed ${asset.filename}:`, e.message); resolve(); });
-            return;
-          }
-          const chunks: Buffer[] = [];
-          res.on('data', (c: Buffer) => chunks.push(c));
-          res.on('end', () => { fs.writeFileSync(dest, Buffer.concat(chunks)); resolve(); });
-        }).on('error', (e: Error) => { console.warn(`[vendor] Failed ${asset.filename}:`, e.message); resolve(); });
+      await new Promise<void>((resolve) => {
+        const get = (url: string) => {
+          https.get(url, (res: any) => {
+            if (res.statusCode && res.statusCode >= 300 && res.headers.location) {
+              const loc = res.headers.location;
+              get(loc.startsWith('http') ? loc : new URL(loc, url).href);
+              return;
+            }
+            const chunks: Buffer[] = [];
+            res.on('data', (c: Buffer) => chunks.push(c));
+            res.on('end', () => { fs.writeFileSync(dest, Buffer.concat(chunks)); resolve(); });
+          }).on('error', (e: Error) => { console.warn(`[vendor] Failed ${asset.filename}:`, e.message); resolve(); });
+        };
+        get(asset.url);
       });
     } catch { /* ignore */ }
   }
@@ -765,7 +765,20 @@ const server = http.createServer(async (req, res) => {
       const { chromium } = await import('playwright');
 
       // Use esbuild build API to bundle all imports (components, nav-data, etc.)
-      // External: react + react-dom are vendored locally via /_vendor/ path
+      // React/ReactDOM are externalized to window globals (loaded via /_vendor/) using an esbuild plugin,
+      // since esbuild's Node API has no built-in "globals" option (that's a Rollup/Webpack concept).
+      const reactGlobalsPlugin = {
+        name: 'react-globals',
+        setup(build: any) {
+          const globalMap: Record<string, string> = { react: 'React', 'react-dom': 'ReactDOM' };
+          build.onResolve({ filter: /^(react|react-dom)$/ }, (args: any) => ({ path: args.path, namespace: 'react-globals-ns' }));
+          build.onLoad({ filter: /.*/, namespace: 'react-globals-ns' }, (args: any) => ({
+            contents: `module.exports = window[${JSON.stringify(globalMap[args.path])}];`,
+            loader: 'js',
+          }));
+        },
+      };
+
       const bundleResult = await esbuild.build({
         entryPoints: [targetFile],
         bundle: true,
@@ -774,8 +787,7 @@ const server = http.createServer(async (req, res) => {
         target: 'es2020',
         jsx: 'transform',
         loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
-        external: ['react', 'react-dom'],
-        globals: { 'react': 'React', 'react-dom': 'ReactDOM' },
+        plugins: [reactGlobalsPlugin],
         write: false,
         alias: {
           '@': path.join(workspacePath, 'src'),
@@ -793,7 +805,7 @@ const server = http.createServer(async (req, res) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Preview — ${pageRoute}</title>
-  <script src="/_vendor/tailwind-cdn.min.js">${SCRIPT_END}</script>
+  <script src="http://127.0.0.1:${PORT}/_vendor/tailwind-cdn.min.js">${SCRIPT_END}</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
@@ -802,8 +814,8 @@ const server = http.createServer(async (req, res) => {
 </head>
 <body>
   <div id="preview-root"></div>
-  <script src="/_vendor/react.production.min.js">${SCRIPT_END}</script>
-  <script src="/_vendor/react-dom.production.min.js">${SCRIPT_END}</script>
+  <script src="http://127.0.0.1:${PORT}/_vendor/react.production.min.js">${SCRIPT_END}</script>
+  <script src="http://127.0.0.1:${PORT}/_vendor/react-dom.production.min.js">${SCRIPT_END}</script>
   <script>
     ${safeBundledCode}
     try {
@@ -1056,10 +1068,8 @@ try {
     if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
 
     try {
-      const archiverModule = await import('archiver');
-      const archiver = (archiverModule as any).default || archiverModule;
-
-      const archive = archiver('zip', { zlib: { level: 6 } });
+      const { ZipArchive } = await import('archiver');
+      const archive = new ZipArchive({ zlib: { level: 6 } });
 
       // Handle archive errors BEFORE piping to prevent ERR_HTTP_HEADERS_SENT
       let headersSent = false;

@@ -788,13 +788,13 @@ export default function WorkspacePage() {
                     planInspect.snapshot?.blueprint
                       ? {
                           pages: planInspect.snapshot.blueprint.pages,
-                          entities: planInspect.snapshot.blueprint.dataModels,
+                          entities: planInspect.snapshot.blueprint.entities,
                           apis: planInspect.snapshot.blueprint.apis,
                         }
                       : null,
                     planInspect.snapshot?.executionBlueprint,
                     planInspect.snapshot?.applicationSpec,
-                    planInspect.status,
+                    (planInspect.status === "connecting" ? "pending" : planInspect.status) as "pending" | "connected" | "failed",
                   )}
                   height={360}
                 />
