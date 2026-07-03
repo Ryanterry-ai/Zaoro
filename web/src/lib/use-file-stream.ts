@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { engineUrl } from "./engine-url";
 
 export interface GeneratedFile {
   path: string;
@@ -38,7 +39,7 @@ export function useFileStream(
     let cancelled = false;
 
     const connect = () => {
-      const url = `/api/workspace/${workspaceId}/file-stream`;
+      const url = engineUrl(`/api/workspace/${workspaceId}/file-stream`);
       const es = new EventSource(url);
       esRef.current = es;
 

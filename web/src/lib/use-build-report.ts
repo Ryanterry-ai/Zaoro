@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { engineUrl } from "./engine-url";
 
 export interface BuildReport {
   ts: number;
@@ -46,7 +47,7 @@ export function useBuildReport(
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/workspace/${workspaceId}/report`);
+      const res = await fetch(engineUrl(`/api/workspace/${workspaceId}/report`));
       if (res.status === 404) {
         setReport(null);
         setError("pending");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { engineUrl } from "./engine-url";
 
 export interface PlanSnapshot {
   ts: number;
@@ -71,7 +72,7 @@ export function usePlanInspect(
     let cancelled = false;
 
     const connect = () => {
-      const url = `/api/workspace/${workspaceId}/inspect`;
+      const url = engineUrl(`/api/workspace/${workspaceId}/inspect`);
       const es = new EventSource(url);
       esRef.current = es;
 

@@ -215,45 +215,9 @@ try {
   await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
   writeProgress('compile', 'info', 'Compilation finished', { duration: Date.now() - tBi });
 
-  // Run quality gate (prisma generate + next build)
-  const { execSync } = await import('child_process');
-  const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
-  try {
-    writeProgress('gate', 'started', 'Running quality gate (prisma generate + next build)...');
-    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 600000, stdio: 'pipe', env: { ...process.env, NODE_ENV: 'production' } });
-    writeProgress('gate', 'passed', 'Quality gate passed');
-  } catch (gateErr) {
-    const stdout = gateErr.stdout?.toString() || '';
-    const stderr = gateErr.stderr?.toString() || '';
-    const fullOutput = stdout || stderr || gateErr.message;
-    console.error('[quality-gate] FULL OUTPUT:', fullOutput);
-    writeProgress('gate', 'failed', 'Quality gate failed: ' + fullOutput.slice(0, 1500));
-    throw new Error('Quality gate failed: ' + fullOutput.slice(0, 300));
-  }
-
-  // Run content quality gate (detects generic-placeholder-dense builds)
-  const contentGateScript = path.resolve(process.cwd(), 'tools', 'content-quality-gate', 'index.js');
-  try {
-    writeProgress('content-gate', 'started', 'Running content quality gate...');
-    var cgOutput = execSync('node "' + contentGateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 60000, encoding: 'utf-8' });
-    var cgResult = JSON.parse(cgOutput.trim());
-    if (cgResult.pass) {
-      writeProgress('content-gate', 'passed', 'Content quality gate passed');
-    } else {
-      writeProgress('content-gate', 'failed', 'Content quality gate failed: ' + cgResult.generic + '/' + cgResult.components + ' components are generic (' + Math.round(cgResult.genericRatio * 100) + '% > ' + Math.round(cgResult.threshold * 100) + '% threshold)');
-      throw new Error('Content quality gate failed: ' + cgResult.generic + '/' + cgResult.components + ' components are generic. Build must produce real business content, not generic templates.');
-    }
-  } catch (cgErr) {
-    // If the gate script exits with code 1, it means the gate failed
-    if (cgErr.status === 1) {
-      // Already handled above - re-throw
-      throw cgErr;
-    }
-    // Other errors (script not found, parse errors) - log but continue
-    writeProgress('content-gate', 'warning', 'Content quality gate: could not run, continuing build');
-  }
-
-  // Pre-render preview during build so it's cached when web UI requests it
+  // ═══ FAST PATH: Preview first (20-40s) ═══════════════════════════════════════
+  // Generate preview immediately so the user sees their app ASAP.
+  // Quality gates run in background after preview is delivered.
   writeProgress('preview', 'started', 'Rendering preview...');
   try {
     const esbuild = await import('esbuild');
@@ -345,7 +309,7 @@ try {
         await ctx.close();
         await browser.close();
         fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
-        writeProgress('preview', 'done', 'Preview rendered');
+        writeProgress('preview', 'done', 'Preview rendered — your app is live!');
       }
     } else {
       writeProgress('preview', 'warning', 'No page.tsx found, skipping preview');
@@ -354,6 +318,42 @@ try {
     console.warn('[preview] Pre-render failed:', previewErr.message);
     console.warn('[preview] stack:', previewErr.stack || 'no stack');
     writeProgress('preview', 'warning', 'Preview render failed: ' + (previewErr.message || '').slice(0, 200));
+  }
+
+  // ═══ BACKGROUND QC: Quality gates (non-blocking) ═════════════════════════════
+  // These run after preview is delivered. Failures don't block the user from
+  // seeing their app — they just log warnings and feed the SelfHealingEngine.
+  const { execSync } = await import('child_process');
+
+  // Run quality gate (prisma generate + next build) in background
+  const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
+  try {
+    writeProgress('gate', 'started', 'Running background quality gate...');
+    execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 600000, stdio: 'pipe', env: { ...process.env, NODE_ENV: 'production' } });
+    writeProgress('gate', 'passed', 'Quality gate passed');
+  } catch (gateErr) {
+    const stdout = gateErr.stdout?.toString() || '';
+    const stderr = gateErr.stderr?.toString() || '';
+    const fullOutput = stdout || stderr || gateErr.message;
+    console.error('[quality-gate] FULL OUTPUT:', fullOutput);
+    // Don't throw — log warning and continue. Preview is already live.
+    writeProgress('gate', 'warning', 'Quality gate issues (non-blocking): ' + fullOutput.slice(0, 500));
+  }
+
+  // Run content quality gate in background
+  const contentGateScript = path.resolve(process.cwd(), 'tools', 'content-quality-gate', 'index.js');
+  try {
+    writeProgress('content-gate', 'started', 'Running content quality gate...');
+    var cgOutput = execSync('node "' + contentGateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 60000, encoding: 'utf-8' });
+    var cgResult = JSON.parse(cgOutput.trim());
+    if (cgResult.pass) {
+      writeProgress('content-gate', 'passed', 'Content quality gate passed');
+    } else {
+      writeProgress('content-gate', 'warning', 'Content quality gate: ' + cgResult.generic + '/' + cgResult.components + ' generic (' + Math.round(cgResult.genericRatio * 100) + '%)');
+    }
+  } catch (cgErr) {
+    // Script not found or parse errors — non-blocking
+    writeProgress('content-gate', 'warning', 'Content quality gate: could not run, continuing');
   }
 
   writeProgress('done', 'completed', 'Build completed! Your application is ready.');

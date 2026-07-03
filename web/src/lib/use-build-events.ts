@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { engineUrl } from "./engine-url";
 
 export interface BuildEvent {
   ts: number;
@@ -43,7 +44,7 @@ export function useBuildEvents(
     let cancelled = false;
 
     const connectSSE = () => {
-      const url = `/api/workspace/${workspaceId}/events`;
+      const url = engineUrl(`/api/workspace/${workspaceId}/events`);
       const es = new EventSource(url);
       esRef.current = es;
 
@@ -115,7 +116,7 @@ export function useBuildEvents(
       const tick = async () => {
         if (cancelled) return;
         try {
-          const res = await fetch(`/api/workspace/${workspaceId}/progress`);
+          const res = await fetch(engineUrl(`/api/workspace/${workspaceId}/progress`));
           if (!res.ok) return;
           const data = await res.json();
           const rawEvents = data.steps || data.phases || [];
