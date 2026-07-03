@@ -97,7 +97,7 @@ export default function WorkspacePage() {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState("");
-  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance" | "architecture" | "report">("preview");
+  const [rightTab, setRightTab] = useState<"preview" | "files" | "provenance" | "architecture" | "report" | "inspector">("preview");
   const [isBuilding, setIsBuilding] = useState(true);
   const [buildDone, setBuildDone] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
@@ -633,6 +633,10 @@ export default function WorkspacePage() {
                 Report
                 {buildReport.report && <span className="ml-1.5 text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">✓</span>}
               </button>
+              <button onClick={() => setRightTab("inspector")} className={`px-4 py-2.5 text-xs font-medium transition-all ${rightTab === "inspector" ? "text-foreground border-b-2 border-accent" : "text-muted hover:text-foreground"}`}>
+                Inspector
+                {planInspect.snapshot && <span className="ml-1.5 text-[10px] text-muted bg-surface-hover px-1.5 py-0.5 rounded-full">IR</span>}
+              </button>
             </div>
             {rightTab === "preview" && (
               <div className="flex items-center gap-1.5 pr-3">
@@ -884,6 +888,131 @@ export default function WorkspacePage() {
                   )}
                 </div>
               ) : null}
+            </div>
+          ) : rightTab === "inspector" ? (
+            <div className="flex-1 overflow-y-auto bg-surface p-4">
+              <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-4">IR Inspector</div>
+              {!planInspect.snapshot ? (
+                <div className="text-center text-muted text-xs py-8">
+                  {planInspect.status === "connecting" ? "Connecting to build stream..." : "No IR data yet — build to generate"}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* BRE Context */}
+                  {planInspect.snapshot.breContext && (
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Business Context</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-lg bg-surface-hover p-2">
+                          <div className="text-[10px] text-muted">Industry</div>
+                          <div className="text-sm font-medium">{planInspect.snapshot.breContext.industry}</div>
+                        </div>
+                        <div className="rounded-lg bg-surface-hover p-2">
+                          <div className="text-[10px] text-muted">App Name</div>
+                          <div className="text-sm font-medium">{planInspect.snapshot.breContext.appName || "—"}</div>
+                        </div>
+                        <div className="rounded-lg bg-surface-hover p-2">
+                          <div className="text-[10px] text-muted">Business Models</div>
+                          <div className="text-sm font-medium">{planInspect.snapshot.breContext.businessModels.join(", ")}</div>
+                        </div>
+                        <div className="rounded-lg bg-surface-hover p-2">
+                          <div className="text-[10px] text-muted">Entities</div>
+                          <div className="text-sm font-medium">{planInspect.snapshot.breContext.entities.join(", ")}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rules Decisions */}
+                  {planInspect.snapshot.rules.length > 0 && (
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Rules Engine ({planInspect.snapshot.rules.length} decisions)</div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {planInspect.snapshot.rules.map((r, i) => (
+                          <div key={i} className="rounded-lg bg-surface-hover p-2 text-[11px]">
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono text-foreground">{r.ruleName}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${r.confidence > 0.8 ? "bg-green-500/10 text-green-400" : r.confidence > 0.5 ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400"}`}>
+                                {(r.confidence * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                            <div className="text-muted mt-1 font-mono text-[10px]">{r.trace}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Blueprint */}
+                  {planInspect.snapshot.blueprint && (
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Blueprint</div>
+                      <div className="grid grid-cols-5 gap-3 text-center">
+                        {[
+                          { label: "Pages", value: planInspect.snapshot.blueprint.pages },
+                          { label: "Entities", value: planInspect.snapshot.blueprint.entities },
+                          { label: "APIs", value: planInspect.snapshot.blueprint.apis },
+                          { label: "DB Tables", value: planInspect.snapshot.blueprint.database?.tables ?? 0 },
+                          { label: "Tokens", value: planInspect.snapshot.blueprint.hasDesignTokens ? "✓" : "—" },
+                        ].map((s) => (
+                          <div key={s.label} className="rounded-lg bg-surface-hover p-2">
+                            <div className="text-lg font-bold text-foreground">{s.value}</div>
+                            <div className="text-[10px] text-muted">{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {planInspect.snapshot.blueprint.vocabulary && Object.keys(planInspect.snapshot.blueprint.vocabulary).length > 0 && (
+                        <div className="mt-3">
+                          <div className="text-[10px] text-muted mb-1">Vocabulary</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(planInspect.snapshot.blueprint.vocabulary).map(([k, v]) => (
+                              <span key={k} className="px-2 py-0.5 rounded bg-accent/10 text-accent text-[10px] font-mono">{k}: {v}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Execution Blueprint */}
+                  {planInspect.snapshot.executionBlueprint && (
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Execution Blueprint ({planInspect.snapshot.executionBlueprint.pages.length} pages)</div>
+                      <div className="space-y-1.5">
+                        {planInspect.snapshot.executionBlueprint.pages.map((p, i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg bg-surface-hover px-3 py-2 text-[11px]">
+                            <span className="font-mono text-foreground">{p.path}</span>
+                            <span className="text-muted">{p.slots} slots</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Application Spec */}
+                  {planInspect.snapshot.applicationSpec && (
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-3">Application Spec</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-lg bg-surface-hover p-2">
+                          <div className="text-lg font-bold text-foreground">{planInspect.snapshot.applicationSpec.pages}</div>
+                          <div className="text-[10px] text-muted">Pages</div>
+                        </div>
+                        <div className="rounded-lg bg-surface-hover p-2">
+                          <div className="text-lg font-bold text-foreground">{planInspect.snapshot.applicationSpec.totalComponents}</div>
+                          <div className="text-[10px] text-muted">Components</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Raw JSON toggle */}
+                  <details className="rounded-xl border border-border bg-background">
+                    <summary className="px-4 py-3 text-[10px] uppercase tracking-wider text-muted font-medium cursor-pointer hover:text-foreground">Raw IR JSON</summary>
+                    <pre className="px-4 pb-4 text-[10px] font-mono text-muted/80 overflow-x-auto max-h-96 overflow-y-auto">{JSON.stringify(planInspect.snapshot, null, 2)}</pre>
+                  </details>
+                </div>
+              )}
             </div>
           ) : null}
         </div>

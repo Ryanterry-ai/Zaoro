@@ -259,7 +259,8 @@ try {
     const esbuild = await import('esbuild');
     const { chromium } = await import('playwright');
     const targetFile = path.join(wsDir, 'src', 'app', 'page.tsx');
-    const cacheFile = path.join(wsDir, '.preview-cache.html');
+    // Match server.ts cache key convention: homepage uses '-_' suffix
+    const cacheFile = path.join(wsDir, '.preview-cache-_.html');
 
     if (fs.existsSync(targetFile)) {
       const bundleResult = await esbuild.build({
@@ -293,10 +294,10 @@ try {
         const SCRIPT_END = '<' + '/script>';
         const previewHtmlParts = [
           '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>',
-          '<script src="https://cdn.tailwindcss.com">' + SCRIPT_END,
+          '<script src="/_vendor/tailwind-cdn.min.js">' + SCRIPT_END,
           '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div>',
-          '<script src="https://unpkg.com/react@18/umd/react.production.min.js">' + SCRIPT_END,
-          '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">' + SCRIPT_END,
+          '<script src="/_vendor/react.production.min.js">' + SCRIPT_END,
+          '<script src="/_vendor/react-dom.production.min.js">' + SCRIPT_END,
           '<script>',
           'window.__previewLog=[];function _log(m){window.__previewLog.push(m)}',
           '_log("Script starting");',
@@ -305,9 +306,9 @@ try {
           '_log("Bundle executed, __preview type="+typeof __preview);',
           '}catch(be){_log("Bundle error: "+be.message);document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Bundle error: "+be.message+"</div>"}',
           'try{var _mod=typeof __preview!=="undefined"?__preview:{};_log("Module keys: "+Object.keys(_mod).join(", "));var _comp=_mod.default||null;_log("default export: "+typeof _comp);',
-          'if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;_log("Found React component: "+_keys[i]);break;}}}',
-          'if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];_log("Found function: "+_keys2[j]);break;}}}',
-          'if(_comp){_log("Rendering: "+(_comp.name||"anon"));var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp));_log("React.render called");}',
+          'if(!_comp||typeof _comp!=="function"){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;_log("Found React component: "+_keys[i]);break;}}}',
+          'if(!_comp||typeof _comp!=="function"){var _best=null,_bestScore=-1;var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){var _name=_keys2[j];var _sc=_name[0]===_name[0].toUpperCase()&&_name[0]!=="_"?10:0;if(_sc>_bestScore){_bestScore=_sc;_best=_mod[_keys2[j]];_log("Candidate function: "+_name);}}}if(_best){_comp=_best;}}',
+          'if(_comp&&typeof _comp==="function"){_log("Rendering: "+(_comp.name||"anon"));var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp));_log("React.render called");}',
           'else{_log("No component found");document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component. Keys: "+Object.keys(_mod).join(", ")+"</div>"}',
           '}catch(e){_log("Render error: "+e.message);document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Render error: "+e.message+"</div>"}',
           SCRIPT_END + '</body></html>'
@@ -335,7 +336,11 @@ try {
           });
           console.warn('[preview] #preview-root content:', pageContent);
         }
-        await page.waitForTimeout(1000);
+        // Wait for React to finish rendering (check for text content, not just children)
+        await page.waitForFunction(() => {
+          const el = document.getElementById('preview-root');
+          return el && el.textContent && el.textContent.trim().length > 0;
+        }, { timeout: 5000 }).catch(() => {});
         const renderedHtml = await page.content();
         await ctx.close();
         await browser.close();

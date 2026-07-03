@@ -801,7 +801,7 @@ const server = http.createServer(async (req, res) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Preview — ${pageRoute}</title>
-  <script src="https://cdn.tailwindcss.com">${SCRIPT_END}</script>
+  <script src="/_vendor/tailwind-cdn.min.js">${SCRIPT_END}</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
@@ -810,8 +810,8 @@ const server = http.createServer(async (req, res) => {
 </head>
 <body>
   <div id="preview-root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js">${SCRIPT_END}</script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">${SCRIPT_END}</script>
+  <script src="/_vendor/react.production.min.js">${SCRIPT_END}</script>
+  <script src="/_vendor/react-dom.production.min.js">${SCRIPT_END}</script>
   <script>
     window.__previewLog = [];
     function _log(msg) { window.__previewLog.push(msg); }
@@ -828,20 +828,27 @@ const server = http.createServer(async (req, res) => {
       _log('Module keys: ' + Object.keys(_mod).join(', '));
       var _comp = _mod.default || null;
       _log('default export: ' + typeof _comp);
-      if (!_comp) {
+      if (!_comp || typeof _comp !== 'function') {
         var _keys = Object.keys(_mod);
         for (var i = 0; i < _keys.length; i++) {
           var _val = _mod[_keys[i]];
           if (typeof _val === 'function' && _val.prototype && (_val.prototype.isReactComponent || _val.$$typeof)) { _comp = _val; _log('Found React component: ' + _keys[i]); break; }
         }
       }
-      if (!_comp) {
+      if (!_comp || typeof _comp !== 'function') {
+        var _best = null, _bestScore = -1;
         var _keys2 = Object.keys(_mod);
         for (var j = 0; j < _keys2.length; j++) {
-          if (typeof _mod[_keys2[j]] === 'function') { _comp = _mod[_keys2[j]]; _log('Found function export: ' + _keys2[j]); break; }
+          if (typeof _mod[_keys2[j]] === 'function') {
+            var _name = _keys2[j];
+            // Prefer uppercase-starting names (React convention) over helpers/hooks
+            var _sc = _name[0] === _name[0].toUpperCase() && _name[0] !== '_' ? 10 : 0;
+            if (_sc > _bestScore) { _bestScore = _sc; _best = _mod[_keys2[j]]; _log('Candidate function: ' + _name); }
+          }
         }
+        if (_best) { _comp = _best; }
       }
-      if (_comp) {
+      if (_comp && typeof _comp === 'function') {
         _log('Rendering component: ' + (_comp.name || 'anonymous'));
         var root = ReactDOM.createRoot(document.getElementById('preview-root'));
         root.render(React.createElement(_comp));
@@ -887,7 +894,11 @@ const server = http.createServer(async (req, res) => {
         console.warn('[preview] #preview-root content:', pageContent);
       }
 
-      await page.waitForTimeout(1000);
+      // Wait for React to finish rendering (check for text content, not just children)
+      await page.waitForFunction(() => {
+        const el = document.getElementById('preview-root');
+        return el && el.textContent && el.textContent.trim().length > 0;
+      }, { timeout: 5000 }).catch(() => {});
 
       const renderedHtml = await page.content();
       await ctx.close();
@@ -902,6 +913,41 @@ const server = http.createServer(async (req, res) => {
       const fallbackSource = fs.existsSync(targetFile) ? fs.readFileSync(targetFile, 'utf-8') : 'No source file found';
       return html(res, `<html><body style="background:#09090b;color:#a1a1aa;font-family:sans-serif;padding:2rem;"><h3 style="color:#f43f5e;">Static Compiler Error</h3><pre style="background:#18181b;padding:1rem;border-radius:0.5rem;color:#f4f4f5;overflow-x:auto;">${fallbackSource.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></body></html>`);
     }
+  }
+
+  // GET /api/workspace/:id/ir — Load saved IR for a workspace
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/ir$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const workspacePath = path.join(WORKSPACE_BASE, id);
+    if (!fs.existsSync(workspacePath)) return json(res, { error: 'Workspace not found' }, 404);
+    const irPath = path.join(workspacePath, '.ir.json');
+    if (!fs.existsSync(irPath)) return json(res, { error: 'No saved IR found' }, 404);
+    try {
+      const ir = JSON.parse(fs.readFileSync(irPath, 'utf-8'));
+      return json(res, ir);
+    } catch (e) {
+      return json(res, { error: 'Failed to parse IR' }, 500);
+    }
+  }
+
+  // GET /api/workspace/:id/ir/has — Check if workspace has saved IR
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/ir\/has$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const workspacePath = path.join(WORKSPACE_BASE, id);
+    const irPath = path.join(workspacePath, '.ir.json');
+    return json(res, { hasIR: fs.existsSync(irPath) });
+  }
+
+  // DELETE /api/workspace/:id/ir — Delete saved IR
+  if (method === 'DELETE' && url.pathname.match(/^\/api\/workspace\/[^/]+\/ir$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const workspacePath = path.join(WORKSPACE_BASE, id);
+    const irPath = path.join(workspacePath, '.ir.json');
+    if (fs.existsSync(irPath)) {
+      fs.unlinkSync(irPath);
+      return json(res, { deleted: true });
+    }
+    return json(res, { deleted: false, error: 'No IR found' });
   }
 
   // GET /api/mcp/tools - List available MCP tools

@@ -27,6 +27,7 @@ import { mapBlueprintToFullStack } from '../bos/blueprint-mapper.js';
 import { buildBREContext } from '../bos/intake-parser.js';
 import { runBuildPipeline } from '../generation/build-pipeline.js';
 import { ProgressEmitter } from '../core/progress-emitter.js';
+import { saveIR, loadIR } from '../bos/ir-persistence.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -251,6 +252,33 @@ export class DeterministicOrchestratorV4 {
 
     progress.emit('compile', 'completed', `All ${renderResult.files.length} files written`);
 
+    // Phase 14b: Post-render TS audit + self-healing
+    progress.emit('repair', 'started', 'Auditing generated code for TypeScript errors...');
+    const tAudit = Date.now();
+    try {
+      const tsAuditor = new TypeScriptAuditor();
+      const tsErrors = tsAuditor.audit(workspace.rootPath);
+      if (tsErrors.length > 0) {
+        progress.emit('repair', 'info', `Found ${tsErrors.length} TypeScript errors, attempting self-healing...`);
+        console.log(`[orchestrator] TS audit found ${tsErrors.length} errors, running SelfHealingEngine...`);
+        const healingEngine = new SelfHealingEngine();
+        const healingResult = await healingEngine.heal(
+          workspace.rootPath,
+          llmConfig ? new LLMGateway(llmConfig) : undefined as any,
+          prompt,
+          (iteration, errors, msg) => progress.emit('repair', 'info', `[${iteration + 1}] ${msg}`),
+        );
+        progress.emit('repair', 'completed', `Self-healing: ${healingResult.errorsFixed} fixed, ${healingResult.remainingErrors} remaining (${Date.now() - tAudit}ms)`);
+        console.log(`[orchestrator] Self-healing complete: ${healingResult.errorsFixed} fixed, ${healingResult.remainingErrors} remaining`);
+      } else {
+        progress.emit('repair', 'completed', `TS audit passed — 0 errors (${Date.now() - tAudit}ms)`);
+        console.log(`[orchestrator] TS audit passed — 0 errors`);
+      }
+    } catch (auditErr) {
+      progress.emit('repair', 'warning', `TS audit failed: ${(auditErr as Error).message}`);
+      console.warn('[orchestrator] TS audit/healing failed:', (auditErr as Error).message);
+    }
+
     // Mark all pages as succeeded (they come from the renderer, not LLM)
     for (const page of blueprint.pages) {
       pageResults.push({ path: page.path, succeeded: true });
@@ -329,6 +357,32 @@ export class DeterministicOrchestratorV4 {
       });
     } catch (e) {
       console.warn('[orchestrator] Failed to write replay artifacts:', (e as Error).message);
+    }
+
+    // Phase 16b: Save IR for follow-up builds
+    try {
+      saveIR(workspace.rootPath, {
+        prompt,
+        breContext: breContext as unknown as Record<string, unknown>,
+        breResult: {
+          blueprint: appBlueprint,
+          decisions: breResult.decisions ?? [],
+          constraintReport: breResult.constraintReport,
+          selectedDesignProfile: breResult.selectedDesignProfile,
+          selectedPattern: breResult.selectedPattern,
+          confidence: breResult.confidence,
+        },
+        applicationBlueprint: appBlueprint,
+        executionBlueprint,
+        applicationSpec,
+        renderResult: {
+          files: renderResult.files.map((f: { path: string; type: string }) => ({ path: f.path, type: f.type })),
+          warnings: renderResult.warnings,
+        },
+      });
+      progress.emit('compile', 'info', 'IR saved for follow-up builds');
+    } catch (e) {
+      console.warn('[orchestrator] Failed to save IR:', (e as Error).message);
     }
 
     const succeeded = pageResults.filter(r => r.succeeded).length;
