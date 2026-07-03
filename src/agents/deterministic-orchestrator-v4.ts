@@ -263,7 +263,7 @@ export class DeterministicOrchestratorV4 {
       const safePath = file.path.replace(/:/g, '_');
       // Files prefixed with ../ are root-level (package.json, tailwind.config, etc.)
       // Files starting with prisma/ are also root-level (Prisma schema)
-      const isRootLevel = safePath.startsWith('../') || safePath.startsWith('prisma/') || safePath.startsWith('lib/');
+      const isRootLevel = safePath.startsWith('../') || safePath.startsWith('prisma/');
       const relPath = isRootLevel ? safePath.replace(/^\.\.\//, '') : safePath;
       const filePath = path.join(workspace.rootPath, isRootLevel ? '' : 'src', relPath);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -624,7 +624,7 @@ Rules:
 
     for (const file of renderResult.files) {
       const safePath = file.path.replace(/:/g, '_');
-      const isRootLevel = safePath.startsWith('../') || safePath.startsWith('prisma/') || safePath.startsWith('lib/');
+      const isRootLevel = safePath.startsWith('../') || safePath.startsWith('prisma/');
       const relPath = isRootLevel ? safePath.replace(/^\.\.\//, '') : safePath;
       const filePath = path.join(workspace.rootPath, isRootLevel ? '' : 'src', relPath);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });

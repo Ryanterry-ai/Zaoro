@@ -93,6 +93,7 @@ export type GenerationIntentType =
   | 'build-website'
   | 'clone-website'
   | 'hybrid'
+  | 'pipeline'
   | 'analyze-domain'
   | 'extract-components'
   | 'extract-design-system';

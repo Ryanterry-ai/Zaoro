@@ -67,6 +67,20 @@ function generatePrismaSchema(graph: ApplicationGraph): RenderedFile | null {
 
   const engine = graph.metadata.databaseEngine || 'postgresql';
 
+  // Build reverse relation map: targetModel → [{ sourceModel, fieldName }]
+  const reverseRelations = new Map<string, Array<{ sourceModel: string; fieldName: string }>>();
+  for (const table of tables) {
+    const t = table.data;
+    const sourceModel = t.name.charAt(0).toUpperCase() + t.name.slice(1);
+    for (const fk of t.foreignKeys ?? []) {
+      const rawRef = fk.references.split('.').pop() ?? fk.references;
+      const refTable = rawRef.replace(/\(.*\)/, '');
+      const refModel = refTable.charAt(0).toUpperCase() + refTable.slice(1);
+      if (!reverseRelations.has(refModel)) reverseRelations.set(refModel, []);
+      reverseRelations.get(refModel)!.push({ sourceModel, fieldName: sourceModel.toLowerCase() });
+    }
+  }
+
   let schema = `datasource db {
   provider = "${engine}"
   url      = env("DATABASE_URL")
@@ -80,9 +94,9 @@ generator client {
 
   for (const table of tables) {
     const t = table.data;
-    schema += `model ${t.name} {\n`;
+    const modelName = t.name.charAt(0).toUpperCase() + t.name.slice(1);
+    schema += `model ${modelName} {\n`;
 
-    // Ensure id field exists
     const hasId = t.columns.some(c => c.name === 'id');
     if (!hasId) {
       schema += `  id String @id @default(uuid())\n`;
@@ -92,18 +106,28 @@ generator client {
       const typeStr = mapFieldType(col.type, col.name);
       const optionalChar = col.required ? '' : '?';
       const idSuffix = col.name === 'id' ? ' @id @default(uuid())' : '';
-      const indexSuffix = col.indexed && col.name !== 'id' ? ' @index' : '';
       const uniqueSuffix = col.unique && col.name !== 'id' ? ' @unique' : '';
-      schema += `  ${col.name} ${typeStr}${optionalChar}${idSuffix}${indexSuffix}${uniqueSuffix}\n`;
+      schema += `  ${col.name} ${typeStr}${optionalChar}${idSuffix}${uniqueSuffix}\n`;
     }
 
-    // Add foreign key relations
+    // Add foreign key relations (relation field must be optional if FK column is optional)
     for (const fk of t.foreignKeys ?? []) {
-      const refTable = fk.references.split('.').pop() ?? fk.references;
-      schema += `  ${refTable.toLowerCase()} ${refTable} @relation(fields: [${fk.column}], references: [id], onDelete: ${fk.onDelete ?? 'Cascade'})\n`;
+      const rawRef = fk.references.split('.').pop() ?? fk.references;
+      const refTable = rawRef.replace(/\(.*\)/, '');
+      const refModel = refTable.charAt(0).toUpperCase() + refTable.slice(1);
+      const fkField = refTable.toLowerCase();
+      const fkCol = t.columns.find(c => c.name === fk.column);
+      const optional = fkCol && !fkCol.required ? '?' : '';
+      const onDelete = (fk.onDelete ?? 'Cascade').replace(/^[a-z]/, c => c.toUpperCase());
+      schema += `  ${fkField} ${refModel}${optional} @relation(fields: [${fk.column}], references: [id], onDelete: ${onDelete})\n`;
     }
 
-    // Add @@index for indexed columns
+    // Add reverse relation fields (one-to-many: e.g., users has products Products[])
+    const revRels = reverseRelations.get(modelName) ?? [];
+    for (const rel of revRels) {
+      schema += `  ${rel.fieldName} ${rel.sourceModel}[]\n`;
+    }
+
     const indexedCols = t.columns.filter(c => c.indexed && c.name !== 'id');
     if (indexedCols.length > 0) {
       schema += `\n  @@index([${indexedCols.map(c => c.name).join(', ')}])\n`;
@@ -161,7 +185,10 @@ function generateAPIRoutes(graph: ApplicationGraph): RenderedFile[] {
 
   for (const entity of entities) {
     const name = entity.data.name;
-    const camelName = name.charAt(0).toLowerCase() + name.slice(1);
+    // Find matching table to get the plural name used in Prisma schema
+    const tableNode = graph.nodes.find((n): n is TableNode => n.kind === 'table' && n.data.name.toLowerCase().startsWith(name.toLowerCase()));
+    const tableName = tableNode?.data.name ?? `${name.toLowerCase()}s`;
+    const camelName = tableName.charAt(0).toLowerCase() + tableName.slice(1);
     const fields = entity.data.fields;
 
     // Find endpoints for this entity
@@ -233,7 +260,10 @@ function generateDynamicRoutes(graph: ApplicationGraph): RenderedFile[] {
 
   for (const entity of entities) {
     const name = entity.data.name;
-    const camelName = name.charAt(0).toLowerCase() + name.slice(1);
+    // Find matching table to get the plural name used in Prisma schema
+    const tableNode = graph.nodes.find((n): n is TableNode => n.kind === 'table' && n.data.name.toLowerCase().startsWith(name.toLowerCase()));
+    const tableName = tableNode?.data.name ?? `${name.toLowerCase()}s`;
+    const camelName = tableName.charAt(0).toLowerCase() + tableName.slice(1);
 
     // Check if any endpoint requires PUT or DELETE
     const endpoints = graph.nodes
