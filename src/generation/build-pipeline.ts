@@ -26,7 +26,12 @@ import { stageLogger, debugLog } from '../core/debug-logger.js';
 
 // Pipeline-v2 enrichment — provides richer entity, DB, and API detail
 import { runNormalizedPipeline } from '../bos/pipeline-v2/pipeline.js';
-import type { EntityDef, TableDef, EndpointDef } from '../bos/pipeline-v2/stages.js';
+import type { EntityDef, TableDef, EndpointDef, EntityRelation } from '../bos/pipeline-v2/stages.js';
+
+// Pass 3: graph-driven code generation
+import { buildApplicationGraph, computeAppGraphStats } from '../bos/graph/application-graph.js';
+import type { ApplicationGraph, AppGraphStats } from '../bos/graph/application-graph.js';
+import { runPass3CodeGeneration } from './pass3-code-generator.js';
 
 const log = stageLogger('pipeline');
 
@@ -58,6 +63,12 @@ export interface PipelineResult {
 
   /** Generated code files */
   renderResult: RenderResult;
+
+  /** Unified application graph (Pass 3 input) */
+  applicationGraph: ApplicationGraph;
+
+  /** Graph telemetry stats */
+  graphStats: AppGraphStats;
 
   /** Available platforms */
   availablePlatforms: string[];
@@ -107,6 +118,15 @@ export async function runBuildPipeline(
   });
 
   // Layer 1b: Pipeline-v2 enrichment — richer entity, DB, and API detail
+  let pipelineV2Entities: EntityDef[] = [];
+  let pipelineV2Relations: EntityRelation[] = [];
+  let pipelineV2Tables: TableDef[] = [];
+  let pipelineV2Endpoints: EndpointDef[] = [];
+  let pipelineV2Workflows: import('../bos/pipeline-v2/stages.js').WorkflowDef[] = [];
+  let pipelineV2Pages: import('../bos/pipeline-v2/stages.js').PageDef[] = [];
+  let pipelineV2Capabilities: import('../bos/pipeline-v2/stages.js').CapabilityNode[] = [];
+  let pipelineV2Features: import('../bos/pipeline-v2/stages.js').FeatureDef[] = [];
+  let pipelineV2NavItems: import('../bos/pipeline-v2/stages.js').NavItemDef[] = [];
   {
     const t1b = Date.now();
     try {
@@ -129,6 +149,17 @@ export async function runBuildPipeline(
         tables: pipelineV2Result.output.databaseGraph?.tables.length,
         endpoints: pipelineV2Result.output.apiGraph?.endpoints.length,
       });
+
+      // Capture sub-graph outputs for ApplicationGraph construction
+      pipelineV2Entities = pipelineV2Result.output.entityGraph?.entities ?? [];
+      pipelineV2Relations = pipelineV2Result.output.entityGraph?.relationships ?? [];
+      pipelineV2Tables = pipelineV2Result.output.databaseGraph?.tables ?? [];
+      pipelineV2Endpoints = pipelineV2Result.output.apiGraph?.endpoints ?? [];
+      pipelineV2Workflows = pipelineV2Result.output.workflowGraph?.workflows ?? [];
+      pipelineV2Pages = pipelineV2Result.output.navigationGraph?.pages ?? [];
+      pipelineV2Capabilities = pipelineV2Result.output.capabilityGraph?.capabilities ?? [];
+      pipelineV2Features = pipelineV2Result.output.capabilityGraph?.features ?? [];
+      pipelineV2NavItems = pipelineV2Result.output.navigationGraph?.navItems ?? [];
 
       // Enrich blueprint entities with detailed field definitions from pipeline-v2
       if (pipelineV2Result.output.entityGraph) {
@@ -230,6 +261,41 @@ export async function runBuildPipeline(
     duration: Date.now() - t4,
   });
 
+  // Layer 5: Build ApplicationGraph + Pass 3 code generation
+  const t5 = Date.now();
+  const databaseEngine = breResult.blueprint.database?.engine ?? 'postgresql';
+  const applicationGraph = buildApplicationGraph({
+    entities: pipelineV2Entities,
+    entityRelations: pipelineV2Relations,
+    tables: pipelineV2Tables,
+    endpoints: pipelineV2Endpoints,
+    workflows: pipelineV2Workflows,
+    pages: pipelineV2Pages,
+    capabilities: pipelineV2Capabilities,
+    features: pipelineV2Features,
+    navItems: pipelineV2NavItems,
+    industry: context.industry,
+    appName: context.appName ?? 'Application',
+    databaseEngine,
+  });
+
+  const pass3Result = runPass3CodeGeneration(applicationGraph);
+  const graphStats = pass3Result.stats;
+
+  // Merge Pass 3 files into renderResult
+  renderResult.files.push(...pass3Result.files);
+  renderResult.warnings.push(...pass3Result.warnings);
+
+  log.info('Layer 5: Pass 3 (graph → code) complete', {
+    graphNodes: graphStats.nodes,
+    graphEdges: graphStats.edges,
+    pass3Files: pass3Result.files.length,
+    entities: graphStats.entityCount,
+    tables: graphStats.tableCount,
+    endpoints: graphStats.endpointCount,
+    duration: Date.now() - t5,
+  });
+
   const totalDuration = Date.now() - pipelineStart;
   log.info('Pipeline complete', {
     totalDuration,
@@ -245,6 +311,8 @@ export async function runBuildPipeline(
     executionBlueprint,
     applicationSpec,
     renderResult,
+    applicationGraph,
+    graphStats,
     availablePlatforms: getRegisteredPlatforms(),
   };
 }
