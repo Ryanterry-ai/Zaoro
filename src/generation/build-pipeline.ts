@@ -127,6 +127,11 @@ export async function runBuildPipeline(
   let pipelineV2Capabilities: import('../bos/pipeline-v2/stages.js').CapabilityNode[] = [];
   let pipelineV2Features: import('../bos/pipeline-v2/stages.js').FeatureDef[] = [];
   let pipelineV2NavItems: import('../bos/pipeline-v2/stages.js').NavItemDef[] = [];
+
+  // Clone blueprint before enrichment to prevent in-place mutation
+  // that would cause inconsistency on IR reload
+  breResult.blueprint = JSON.parse(JSON.stringify(breResult.blueprint));
+
   {
     const t1b = Date.now();
     try {

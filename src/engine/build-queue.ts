@@ -114,7 +114,15 @@ const PROGRESS_FILE = path.join(wsDir, '.progress');
 const _progressEvents = [];
 function writeProgress(step, type, message, metadata) {
   _progressEvents.push({ step, type, message, ts: Date.now(), metadata: metadata || undefined });
-  try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8'); } catch {}
+  // Read-merge-write to avoid clobbering orchestrator's ProgressEmitter events
+  try {
+    let existing = [];
+    try { const raw = fs.readFileSync(PROGRESS_FILE, 'utf-8'); existing = JSON.parse(raw); } catch {}
+    // Deduplicate by ts+step+message
+    const seen = new Set(existing.map(e => e.ts + '|' + e.step + '|' + e.message));
+    const newEvents = _progressEvents.filter(e => !seen.has(e.ts + '|' + e.step + '|' + e.message));
+    fs.writeFileSync(PROGRESS_FILE, JSON.stringify([...existing, ...newEvents]), 'utf-8');
+  } catch {}
 }
 function emitLLM(step, type, llmDetail) { writeProgress(step, type, \`\${type}: \${llmDetail.provider}/\${llmDetail.model}\`, { llm: llmDetail }); }
 
@@ -280,36 +288,44 @@ try {
         const previewHtml = previewHtmlParts.join('');
 
         const consoleErrors: string[] = [];
+        let previewFailed = false;
         const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-        const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-        const page = await ctx.newPage();
-        page.on('console', (msg: any) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
-        page.on('pageerror', (err: any) => consoleErrors.push(err.message));
-        await page.setContent(previewHtml, { waitUntil: 'networkidle', timeout: 30000 });
-        const rendered = await page.waitForFunction(() => {
-          const el = document.getElementById('preview-root');
-          return el && el.children.length > 0;
-        }, { timeout: 15000 }).catch(() => null);
-        if (!rendered) {
-          const previewLogs = await page.evaluate(() => (window as any).__previewLog || []).catch(() => []);
-          console.warn('[preview] React mount failed. Diagnostic logs:', previewLogs);
-          console.warn('[preview] Console errors:', consoleErrors);
-          const pageContent = await page.evaluate(() => {
-            const root = document.getElementById('preview-root');
-            return root ? root.innerHTML : 'empty';
-          });
-          console.warn('[preview] #preview-root content:', pageContent);
+        try {
+          const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+          try {
+            const page = await ctx.newPage();
+            page.on('console', (msg: any) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+            page.on('pageerror', (err: any) => consoleErrors.push(err.message));
+            await page.setContent(previewHtml, { waitUntil: 'networkidle', timeout: 30000 });
+            const rendered = await page.waitForFunction(() => {
+              const el = document.getElementById('preview-root');
+              return el && el.children.length > 0;
+            }, { timeout: 15000 }).catch(() => null);
+            if (!rendered) {
+              const previewLogs = await page.evaluate(() => (window as any).__previewLog || []).catch(() => []);
+              console.warn('[preview] React mount failed. Diagnostic logs:', previewLogs);
+              console.warn('[preview] Console errors:', consoleErrors);
+              const pageContent = await page.evaluate(() => {
+                const root = document.getElementById('preview-root');
+                return root ? root.innerHTML : 'empty';
+              });
+              console.warn('[preview] #preview-root content:', pageContent);
+              previewFailed = true;
+            }
+            // Wait for React to finish rendering (check for text content, not just children)
+            await page.waitForFunction(() => {
+              const el = document.getElementById('preview-root');
+              return el && el.textContent && el.textContent.trim().length > 0;
+            }, { timeout: 5000 }).catch(() => {});
+            const renderedHtml = await page.content();
+            fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
+            writeProgress('preview', 'done', 'Preview rendered — your app is live!');
+          } finally {
+            await ctx.close().catch(() => {});
+          }
+        } finally {
+          await browser.close().catch(() => {});
         }
-        // Wait for React to finish rendering (check for text content, not just children)
-        await page.waitForFunction(() => {
-          const el = document.getElementById('preview-root');
-          return el && el.textContent && el.textContent.trim().length > 0;
-        }, { timeout: 5000 }).catch(() => {});
-        const renderedHtml = await page.content();
-        await ctx.close();
-        await browser.close();
-        fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
-        writeProgress('preview', 'done', 'Preview rendered — your app is live!');
       }
     } else {
       writeProgress('preview', 'warning', 'No page.tsx found, skipping preview');
@@ -358,15 +374,21 @@ try {
 
   writeProgress('done', 'completed', 'Build completed! Your application is ready.');
 } catch (err) { writeProgress('error', 'error', 'Build failed: ' + (err.message || err)); process.exit(1); }
-})();
 
-// Restore console
+// Restore console INSIDE async IIFE so interception works during orchestrator execution
 console.log = origLog;
 console.warn = origWarn;
 console.error = origError;
 
 // Final flush — ensure all events are written before exit
-try { fs.writeFileSync(PROGRESS_FILE, JSON.stringify(_progressEvents), 'utf-8'); } catch {}
+try {
+  let existing = [];
+  try { const raw = fs.readFileSync(PROGRESS_FILE, 'utf-8'); existing = JSON.parse(raw); } catch {}
+  const seen = new Set(existing.map(e => e.ts + '|' + e.step + '|' + e.message));
+  const newEvents = _progressEvents.filter(e => !seen.has(e.ts + '|' + e.step + '|' + e.message));
+  fs.writeFileSync(PROGRESS_FILE, JSON.stringify([...existing, ...newEvents]), 'utf-8');
+} catch {}
+})();
 `;
     const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.ts`);
     fs.writeFileSync(scriptPath, buildScript, 'utf-8');
