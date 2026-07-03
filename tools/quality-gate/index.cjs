@@ -122,7 +122,11 @@ function gate(projectDir) {
   }
 
   // 3. Build
-  const buildResult = run('npm run build', projectDir);
+  // Use 'npx --no next build' instead of 'npm run build' so the local next binary
+  // is resolved by npx regardless of whether node_modules/.bin is in PATH.
+  // 'npm run build' fails with "next is not recognised" on Windows when PATH
+  // doesn't include node_modules/.bin — npx handles this correctly on all platforms.
+  const buildResult = run('npx --no next build', projectDir);
   if (!buildResult.success) {
     failures.push({ gate: 'build', errors: buildResult.output });
   }

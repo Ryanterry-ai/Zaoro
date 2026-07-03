@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
-import { MCPServer } from './mcp/server.js';
+import { MCPServer } from './mcp/server.ts';
 import { BuildQueue } from './engine/build-queue.js';
 import {
   createProject, getProject, listProjects, updateProjectStatus,
@@ -765,20 +765,7 @@ const server = http.createServer(async (req, res) => {
       const { chromium } = await import('playwright');
 
       // Use esbuild build API to bundle all imports (components, nav-data, etc.)
-      // React/ReactDOM are externalized to window globals (loaded via /_vendor/) using an esbuild plugin,
-      // since esbuild's Node API has no built-in "globals" option (that's a Rollup/Webpack concept).
-      const reactGlobalsPlugin = {
-        name: 'react-globals',
-        setup(build: any) {
-          const globalMap: Record<string, string> = { react: 'React', 'react-dom': 'ReactDOM' };
-          build.onResolve({ filter: /^(react|react-dom)$/ }, (args: any) => ({ path: args.path, namespace: 'react-globals-ns' }));
-          build.onLoad({ filter: /.*/, namespace: 'react-globals-ns' }, (args: any) => ({
-            contents: `module.exports = window[${JSON.stringify(globalMap[args.path])}];`,
-            loader: 'js',
-          }));
-        },
-      };
-
+      // External: react + react-dom are vendored locally via /_vendor/ path
       const bundleResult = await esbuild.build({
         entryPoints: [targetFile],
         bundle: true,
@@ -787,11 +774,20 @@ const server = http.createServer(async (req, res) => {
         target: 'es2020',
         jsx: 'transform',
         loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
-        plugins: [reactGlobalsPlugin],
+        external: ['react', 'react-dom'],
         write: false,
         alias: {
           '@': path.join(workspacePath, 'src'),
         },
+        plugins: [{
+          name: 'globals-shim',
+          setup(build: any) {
+            build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'globals' }));
+            build.onResolve({ filter: /^react-dom$/ }, () => ({ path: 'react-dom', namespace: 'globals' }));
+            build.onLoad({ filter: /^react$/, namespace: 'globals' }, () => ({ contents: 'module.exports = React;' }));
+            build.onLoad({ filter: /^react-dom$/, namespace: 'globals' }, () => ({ contents: 'module.exports = ReactDOM;' }));
+          },
+        }],
       } as any);
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
@@ -805,7 +801,7 @@ const server = http.createServer(async (req, res) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Preview — ${pageRoute}</title>
-  <script src="http://127.0.0.1:${PORT}/_vendor/tailwind-cdn.min.js">${SCRIPT_END}</script>
+  <script src="https://cdn.tailwindcss.com">${SCRIPT_END}</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
@@ -814,33 +810,48 @@ const server = http.createServer(async (req, res) => {
 </head>
 <body>
   <div id="preview-root"></div>
-  <script src="http://127.0.0.1:${PORT}/_vendor/react.production.min.js">${SCRIPT_END}</script>
-  <script src="http://127.0.0.1:${PORT}/_vendor/react-dom.production.min.js">${SCRIPT_END}</script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js">${SCRIPT_END}</script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">${SCRIPT_END}</script>
   <script>
-    ${safeBundledCode}
+    window.__previewLog = [];
+    function _log(msg) { window.__previewLog.push(msg); }
+    _log('Script starting');
+    try {
+      ${safeBundledCode}
+      _log('Bundle executed, __preview type=' + typeof __preview);
+    } catch(bundleErr) {
+      _log('Bundle error: ' + bundleErr.message);
+      document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">Bundle error: ' + bundleErr.message + '</div>';
+    }
     try {
       var _mod = typeof __preview !== 'undefined' ? __preview : {};
+      _log('Module keys: ' + Object.keys(_mod).join(', '));
       var _comp = _mod.default || null;
+      _log('default export: ' + typeof _comp);
       if (!_comp) {
         var _keys = Object.keys(_mod);
         for (var i = 0; i < _keys.length; i++) {
           var _val = _mod[_keys[i]];
-          if (typeof _val === 'function' && _val.prototype && (_val.prototype.isReactComponent || _val.$$typeof)) { _comp = _val; break; }
+          if (typeof _val === 'function' && _val.prototype && (_val.prototype.isReactComponent || _val.$$typeof)) { _comp = _val; _log('Found React component: ' + _keys[i]); break; }
         }
       }
       if (!_comp) {
         var _keys2 = Object.keys(_mod);
         for (var j = 0; j < _keys2.length; j++) {
-          if (typeof _mod[_keys2[j]] === 'function') { _comp = _mod[_keys2[j]]; break; }
+          if (typeof _mod[_keys2[j]] === 'function') { _comp = _mod[_keys2[j]]; _log('Found function export: ' + _keys2[j]); break; }
         }
       }
       if (_comp) {
+        _log('Rendering component: ' + (_comp.name || 'anonymous'));
         var root = ReactDOM.createRoot(document.getElementById('preview-root'));
         root.render(React.createElement(_comp));
+        _log('React.render called');
       } else {
-        document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">No renderable component found in module exports.</div>';
+        _log('No component found');
+        document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">No renderable component found in module exports. Keys: ' + Object.keys(_mod).join(', ') + '</div>';
       }
     } catch (e) {
+      _log('Render error: ' + e.message);
       document.getElementById('preview-root').innerHTML = '<div style="padding:2rem;color:#f43f5e;">Render error: ' + (e.message || e) + '</div>';
     }
   ${SCRIPT_END}</script>
@@ -865,8 +876,10 @@ const server = http.createServer(async (req, res) => {
       }, { timeout: 15000 }).catch(() => null);
 
       if (!rendered) {
-        console.warn('[preview] React mount failed. Console errors:', consoleErrors);
-        // Try to get any visible error from the page
+        // Capture preview diagnostic logs
+        const previewLogs = await page.evaluate(() => (window as any).__previewLog || []).catch(() => []);
+        console.warn('[preview] React mount failed. Diagnostic logs:', previewLogs);
+        console.warn('[preview] Console errors:', consoleErrors);
         const pageContent = await page.evaluate(() => {
           const root = document.getElementById('preview-root');
           return root ? root.innerHTML : 'empty';
@@ -1067,12 +1080,13 @@ try {
     const wsDir = path.join(WORKSPACE_BASE, id);
     if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
 
+    let headersSent = false;
     try {
-      const { ZipArchive } = await import('archiver');
+      const archiverModule = await import('archiver');
+      const ZipArchive = archiverModule.ZipArchive || archiverModule.Archiver;
+
       const archive = new ZipArchive({ zlib: { level: 6 } });
 
-      // Handle archive errors BEFORE piping to prevent ERR_HTTP_HEADERS_SENT
-      let headersSent = false;
       archive.on('error', (err: any) => {
         console.error('[download] Archive error:', err.message);
         if (!headersSent) {
@@ -1094,16 +1108,16 @@ try {
       headersSent = true;
       archive.pipe(res);
 
-      // Add src/ directory
       const srcDir = path.join(wsDir, 'src');
       if (fs.existsSync(srcDir)) archive.directory(srcDir, 'src');
 
-      // Add public/ directory
       const publicDir = path.join(wsDir, 'public');
       if (fs.existsSync(publicDir)) archive.directory(publicDir, 'public');
 
-      // Add root config files
-      for (const f of ['package.json', 'tsconfig.json', 'next.config.mjs', 'tailwind.config.ts', 'postcss.config.mjs']) {
+      const prismaDir = path.join(wsDir, 'prisma');
+      if (fs.existsSync(prismaDir)) archive.directory(prismaDir, 'prisma');
+
+      for (const f of ['package.json', 'tsconfig.json', 'next.config.mjs', 'tailwind.config.ts', 'postcss.config.mjs', '.env']) {
         const fp = path.join(wsDir, f);
         if (fs.existsSync(fp)) archive.file(fp, { name: f });
       }
@@ -1111,7 +1125,7 @@ try {
       await archive.finalize();
     } catch (e: any) {
       console.error('[download] Failed:', e.message);
-      if (!res.headersSent) {
+      if (!headersSent) {
         return json(res, { error: e.message }, 500);
       }
     }

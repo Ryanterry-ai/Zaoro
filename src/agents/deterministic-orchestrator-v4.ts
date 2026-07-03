@@ -26,6 +26,7 @@ import { runBREV2Pipeline } from '../bos/bre-v2-pipeline.js';
 import { mapBlueprintToFullStack } from '../bos/blueprint-mapper.js';
 import { buildBREContext } from '../bos/intake-parser.js';
 import { runBuildPipeline } from '../generation/build-pipeline.js';
+import { ProgressEmitter } from '../core/progress-emitter.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -140,12 +141,16 @@ export class DeterministicOrchestratorV4 {
   ): Promise<GenerationResult> {
     const prompt = intent.prompt || '';
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
+    const progress = new ProgressEmitter(workspace.rootPath);
 
     // BRE v2: deterministic business reasoning (zero LLM calls)
+    progress.emit('bre', 'started', 'Analyzing business intent...');
     const breContext = buildBREContext(prompt);
+    progress.emit('bre', 'completed', `Business context: ${breContext.industry}, ${breContext.entities.length} entities`);
 
     // ═══ New 4-layer pipeline: BRE v2 → Execution Blueprint → Content Resolver → Renderer ═══
-    console.log(`[orchestrator] Running 4-layer build pipeline...`);
+    progress.emit('architect', 'started', 'Running 4-layer build pipeline...');
+    const tPipeline = Date.now();
     const pipelineResult = await runBuildPipeline(breContext, {
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
@@ -155,10 +160,17 @@ export class DeterministicOrchestratorV4 {
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
 
+    progress.emit('architect', 'completed', `Pipeline complete: ${renderResult.files.length} files, confidence=${breResult.confidence.toFixed(2)}`, {
+      duration: Date.now() - tPipeline,
+      pages: blueprint.pages.length,
+      models: blueprint.dataModels.length,
+      confidence: breResult.confidence,
+    });
+
     console.log(`[orchestrator] Pipeline complete: ${renderResult.files.length} files generated`);
     console.log(`[orchestrator] BRE v2: confidence=${breResult.confidence.toFixed(2)}, ${blueprint.pages.length} pages, ${blueprint.dataModels.length} models`);
     console.log(`[orchestrator] Execution blueprint: ${executionBlueprint.pages.length} pages, ${executionBlueprint.pages.reduce((s, p) => s + p.slots.length, 0)} slots`);
-    console.log(`[orchestrator] Application spec: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s, p) => s + p.components.length, 0)} components`);
+    console.log(`[orchestrator] Application spec: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s: number, p: any) => s + (p.components ?? []).length, 0)} components`);
 
     if (renderResult.warnings.length > 0) {
       console.warn(`[orchestrator] Renderer warnings: ${renderResult.warnings.join(', ')}`);
@@ -216,6 +228,8 @@ export class DeterministicOrchestratorV4 {
     // Write generated files to workspace
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
 
+    progress.emit('compile', 'started', `Writing ${renderResult.files.length} generated files...`);
+
     // Phase 14: Write file stream for live file generation tracking
     // Each entry is appended immediately after writing the file so the SSE
     // stream shows files appearing incrementally, not all at once.
@@ -227,12 +241,15 @@ export class DeterministicOrchestratorV4 {
       const filePath = path.join(workspace.rootPath, 'src', file.path);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, file.content, 'utf-8');
+      progress.emitFile('compile', file.path, 'generated');
       console.log(`[orchestrator] Generated: ${file.path} (${file.type})`);
       // Append immediately so SSE polling picks it up file-by-file
       try {
         fs.appendFileSync(fileStreamPath, JSON.stringify({ path: file.path, type: file.type, ts: Date.now() }) + '\n', 'utf-8');
       } catch { }
     }
+
+    progress.emit('compile', 'completed', `All ${renderResult.files.length} files written`);
 
     // Mark all pages as succeeded (they come from the renderer, not LLM)
     for (const page of blueprint.pages) {
@@ -241,6 +258,7 @@ export class DeterministicOrchestratorV4 {
 
     // Scaffold Prisma/API for data models (still needed for DB layer)
     if (blueprint.dataModels && blueprint.dataModels.length > 0) {
+      progress.emit('compile', 'info', `Scaffolding Prisma for ${blueprint.dataModels.length} data models`);
       const pkgPath = path.join(workspace.rootPath, 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
@@ -249,11 +267,6 @@ export class DeterministicOrchestratorV4 {
           prisma: '^5.10.2',
           '@prisma/client': '^5.10.2',
         };
-        // Ensure `prisma generate` runs automatically on `npm install` for end users
-        // who download the project (the engine's own quality-gate runs it explicitly,
-        // but a plain `npm install` outside the engine would otherwise leave
-        // @prisma/client uninitialized, breaking `next build`/`next dev`).
-        pkg.scripts = { ...pkg.scripts, postinstall: 'prisma generate' };
         fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8');
       }
 
@@ -262,8 +275,11 @@ export class DeterministicOrchestratorV4 {
     }
 
     // Install dependencies (required for quality gate to find `next` in PATH)
+    progress.emit('install', 'started', 'Installing npm dependencies...');
+    const tInstall = Date.now();
     console.log(`[orchestrator] Installing dependencies...`);
     await this.sandbox.runPackageInstall(workspace);
+    progress.emit('install', 'completed', `Dependencies installed (${Date.now() - tInstall}ms)`);
     console.log(`[orchestrator] Dependencies installed.`);
 
     TelemetryLayer.reportBuildStart(workspaceId, prompt);
@@ -573,7 +589,6 @@ Rules:
           prisma: '^5.10.2',
           '@prisma/client': '^5.10.2',
         };
-        pkg.scripts = { ...pkg.scripts, postinstall: 'prisma generate' };
         fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8');
       }
 

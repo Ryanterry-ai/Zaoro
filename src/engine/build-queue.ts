@@ -270,19 +270,18 @@ try {
         target: 'es2020',
         jsx: 'transform',
         loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
-        plugins: [{
-          name: 'react-globals',
-          setup(build) {
-            const globalMap = { react: 'React', 'react-dom': 'ReactDOM' };
-            build.onResolve({ filter: /^(react|react-dom)$/ }, (args) => ({ path: args.path, namespace: 'react-globals-ns' }));
-            build.onLoad({ filter: /.*/, namespace: 'react-globals-ns' }, (args) => ({
-              contents: 'module.exports = window[' + JSON.stringify(globalMap[args.path]) + '];',
-              loader: 'js',
-            }));
-          },
-        }],
+        external: ['react', 'react-dom'],
         write: false,
         alias: { '@': path.join(wsDir, 'src') },
+        plugins: [{
+          name: 'globals-shim',
+          setup(build) {
+            build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'globals' }));
+            build.onResolve({ filter: /^react-dom$/ }, () => ({ path: 'react-dom', namespace: 'globals' }));
+            build.onLoad({ filter: /^react$/, namespace: 'globals' }, () => ({ contents: 'module.exports = React;' }));
+            build.onLoad({ filter: /^react-dom$/, namespace: 'globals' }, () => ({ contents: 'module.exports = ReactDOM;' }));
+          },
+        }],
       } as any);
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
@@ -299,12 +298,18 @@ try {
           '<script src="https://unpkg.com/react@18/umd/react.production.min.js">' + SCRIPT_END,
           '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">' + SCRIPT_END,
           '<script>',
+          'window.__previewLog=[];function _log(m){window.__previewLog.push(m)}',
+          '_log("Script starting");',
+          'try{',
           safeBundledCode,
-          'var _mod=typeof __preview!=="undefined"?__preview:{};var _comp=_mod.default||null;',
-          'if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;break;}}}',
-          'if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];break;}}}',
-          'if(_comp){try{var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp))}catch(e){document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Render error: "+e.message+"</div>"}}',
-          'else{document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component found.</div>"}',
+          '_log("Bundle executed, __preview type="+typeof __preview);',
+          '}catch(be){_log("Bundle error: "+be.message);document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Bundle error: "+be.message+"</div>"}',
+          'try{var _mod=typeof __preview!=="undefined"?__preview:{};_log("Module keys: "+Object.keys(_mod).join(", "));var _comp=_mod.default||null;_log("default export: "+typeof _comp);',
+          'if(!_comp){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;_log("Found React component: "+_keys[i]);break;}}}',
+          'if(!_comp){var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){_comp=_mod[_keys2[j]];_log("Found function: "+_keys2[j]);break;}}}',
+          'if(_comp){_log("Rendering: "+(_comp.name||"anon"));var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp));_log("React.render called");}',
+          'else{_log("No component found");document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component. Keys: "+Object.keys(_mod).join(", ")+"</div>"}',
+          '}catch(e){_log("Render error: "+e.message);document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Render error: "+e.message+"</div>"}',
           SCRIPT_END + '</body></html>'
         ];
         const previewHtml = previewHtmlParts.join('');
@@ -321,7 +326,9 @@ try {
           return el && el.children.length > 0;
         }, { timeout: 15000 }).catch(() => null);
         if (!rendered) {
-          console.warn('[preview] React mount failed. Console errors:', consoleErrors);
+          const previewLogs = await page.evaluate(() => (window as any).__previewLog || []).catch(() => []);
+          console.warn('[preview] React mount failed. Diagnostic logs:', previewLogs);
+          console.warn('[preview] Console errors:', consoleErrors);
           const pageContent = await page.evaluate(() => {
             const root = document.getElementById('preview-root');
             return root ? root.innerHTML : 'empty';

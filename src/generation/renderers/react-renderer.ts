@@ -372,18 +372,18 @@ ${body}
     }
 
     // Items prop
-    if ((spec.items?.length ?? 0) > 0) {
+    if ((spec.items?.length ?? 0) > 0 || (spec.columns?.length ?? 0) > 0) {
       lines.push(`  items?: Array<{ title?: string; description?: string; icon?: string; metadata?: Record<string, string>; [key: string]: unknown }>;`);
     }
 
     // Tiers prop
     if ((spec.tiers?.length ?? 0) > 0) {
-      lines.push(`  tiers?: Array<{ name: string; price: string; period?: string; features?: string[]; highlighted?: boolean }>;`);
+      lines.push(`  tiers?: Array<{ name: string; price: string; period?: string; features?: string[]; highlighted?: boolean; [key: string]: unknown }>;`);
     }
 
     // Stats prop
     if ((spec.stats?.length ?? 0) > 0) {
-      lines.push(`  stats?: Array<{ label: string; value: string; change?: string; trend?: 'up' | 'down' | 'neutral' }>;`);
+      lines.push(`  stats?: Array<{ label: string; value: string; change?: string; trend?: 'up' | 'down' | 'neutral'; [key: string]: unknown }>;`);
     }
 
     // Columns prop
@@ -393,12 +393,12 @@ ${body}
 
     // Fields prop
     if ((spec.fields?.length ?? 0) > 0) {
-      lines.push(`  fields?: Array<{ name: string; label: string; type?: string; required?: boolean; placeholder?: string; options?: Array<{ label: string; value: string }> }>;`);
+      lines.push(`  fields?: Array<{ name: string; label: string; type?: string; required?: boolean; placeholder?: string; options?: Array<{ label: string; value: string }>; [key: string]: unknown }>;`);
     }
 
     // Actions prop
     if ((spec.actions?.length ?? 0) > 0) {
-      lines.push(`  actions?: Array<{ label: string; action: string; style?: string }>;`);
+      lines.push(`  actions?: Array<{ label: string; action: string; style?: string; [key: string]: unknown }>;`);
     }
 
     lines.push('}');
@@ -901,7 +901,7 @@ ${body}
     }
 
     // Render columns table (for data tables, feature comparison, etc.)
-    if (hasColumns && hasItems) {
+    if (hasColumns) {
       lines.push(`        <div className="mt-8 overflow-x-auto">`);
       lines.push(`          <table className="w-full">`);
       lines.push(`            <thead><tr>`);
@@ -972,7 +972,7 @@ ${body}
     for (const key of Object.keys(spec.content ?? {})) {
       names.push(key);
     }
-    if ((spec.items?.length ?? 0) > 0) names.push('items');
+    if ((spec.items?.length ?? 0) > 0 || (spec.columns?.length ?? 0) > 0) names.push('items');
     if ((spec.tiers?.length ?? 0) > 0) names.push('tiers');
     if ((spec.stats?.length ?? 0) > 0) names.push('stats');
     if ((spec.columns?.length ?? 0) > 0) names.push('columns');

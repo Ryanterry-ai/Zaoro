@@ -47,13 +47,34 @@ export class SandboxEngine {
 
   public runPackageInstall(config: WorkspaceConfig): Promise<string> {
     return new Promise((resolve, reject) => {
-      exec('npm install --silent --legacy-peer-deps', { cwd: config.rootPath }, (error, stdout, stderr) => {
-        if (error) {
-          reject(new Error(`Sandbox npm installation failed: ${stderr || error.message}`));
-        } else {
+      // --silent removed: it swallows stderr, making failures invisible in debug logs.
+      // timeout: 120 s is generous; a stalled network request should not block the build forever.
+      exec(
+        'npm install --legacy-peer-deps',
+        { cwd: config.rootPath, timeout: 120_000 },
+        (error, stdout, stderr) => {
+          if (error) {
+            const detail = stderr?.trim() || stdout?.trim() || error.message;
+            reject(new Error(`Sandbox npm installation failed:\n${detail}`));
+            return;
+          }
+          // Sanity-check: verify the next binary was actually installed.
+          // An empty node_modules dir (permissions issue, network timeout, etc.)
+          // would otherwise produce a silent "next is not recognised" crash later.
+          const nextBin = path.join(config.rootPath, 'node_modules', '.bin', 'next');
+          const nextBinCmd = path.join(config.rootPath, 'node_modules', '.bin', 'next.cmd'); // Windows
+          const fs2 = fs; // alias for clarity inside callback
+          if (!fs2.existsSync(nextBin) && !fs2.existsSync(nextBinCmd)) {
+            reject(new Error(
+              `npm install finished but node_modules/.bin/next is missing.\n` +
+              `This usually means the install was interrupted or the registry timed out.\n` +
+              `stderr: ${stderr?.trim() || '(empty)'}`
+            ));
+            return;
+          }
           resolve(stdout);
         }
-      });
+      );
     });
   }
 
@@ -118,16 +139,17 @@ export class SandboxEngine {
           "start": "next start"
         },
         dependencies: {
-          "next": "^14.1.0",
-          "react": "^18.2.0",
-          "react-dom": "^18.2.0",
-          "lucide-react": "^0.344.0"
+          // Pinned exact versions: range resolution with no cache causes flaky installs.
+          "next": "14.2.29",
+          "react": "18.3.1",
+          "react-dom": "18.3.1",
+          "lucide-react": "0.344.0"
         },
         devDependencies: {
-          "typescript": "^5.3.3",
-          "@types/node": "^20.11.0",
-          "@types/react": "^18.2.0",
-          "@types/react-dom": "^18.2.0"
+          "typescript": "5.4.5",
+          "@types/node": "20.14.2",
+          "@types/react": "18.3.3",
+          "@types/react-dom": "18.3.0"
         }
       };
       fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonTemplate, null, 2));

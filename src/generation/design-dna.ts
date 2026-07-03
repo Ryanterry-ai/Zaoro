@@ -3,7 +3,11 @@
 // Maps Industry -> Audience -> Brand Personality -> Design Language.
 // Every downstream agent reads from this instead of making its own choices.
 
-import type { IntentDNA } from './intent-dna.js';
+// Minimal IntentDNA — only the fields design-dna needs
+interface IntentDNA {
+  business_domain: string;
+  design_style?: string;
+}
 
 export interface DesignDNA {
   industry: string;
