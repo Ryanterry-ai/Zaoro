@@ -82,6 +82,7 @@ export class DeterministicOrchestratorV4 {
       switch (intent.type) {
         case 'build-app':
         case 'build-website':
+        case 'pipeline':
           return await this.handleBuildIntent(workspaceId, intent, llmConfig, startTime);
 
         case 'clone-website':
@@ -257,7 +258,10 @@ export class DeterministicOrchestratorV4 {
     try { fs.writeFileSync(fileStreamPath, '', 'utf-8'); } catch { }
 
     for (const file of renderResult.files) {
-      const filePath = path.join(workspace.rootPath, 'src', file.path);
+      // Sanitize path for Windows: colons (Next.js dynamic routes like :handle/:id)
+      // are invalid on NTFS. Replace with underscores for filesystem only.
+      const safePath = file.path.replace(/:/g, '_');
+      const filePath = path.join(workspace.rootPath, 'src', safePath);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, file.content, 'utf-8');
       progress.emitFile('compile', file.path, 'generated');
@@ -615,7 +619,8 @@ Rules:
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
 
     for (const file of renderResult.files) {
-      const filePath = path.join(workspace.rootPath, 'src', file.path);
+      const safePath = file.path.replace(/:/g, '_');
+      const filePath = path.join(workspace.rootPath, 'src', safePath);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, file.content, 'utf-8');
     }
