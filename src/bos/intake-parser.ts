@@ -468,7 +468,7 @@ export function detectIndustryWithScore(prompt: string): IndustryDetectionResult
     }
   }
 
-  if (bestScore < 3) {
+  if (bestScore < 2) {
     return { mapping: undefined, score: 0, subIndustry: undefined };
   }
 

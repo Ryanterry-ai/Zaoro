@@ -317,19 +317,17 @@ export function mapSectionToSlot(
 
   if (!component) {
     // Fallback: create a generic placeholder
-    const order = Array.isArray(page.sections) ? page.sections.indexOf(sectionName) : -1;
     return {
       slot: sectionName,
       component: 'PlaceholderSection',
-      order,
+      order: page.sections.indexOf(sectionName),
     };
   }
 
-  const order = Array.isArray(page.sections) ? page.sections.indexOf(sectionName) : -1;
   return {
     slot: sectionName,
     component,
-    order,
+    order: page.sections.indexOf(sectionName),
   };
 }
 

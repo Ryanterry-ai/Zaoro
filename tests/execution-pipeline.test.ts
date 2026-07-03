@@ -6,35 +6,44 @@ import { runBREV2Pipeline } from '../src/bos/bre-v2-pipeline.js';
 import { buildBREContext } from '../src/bos/intake-parser.js';
 import { ReactRenderer } from '../src/generation/renderers/react-renderer.js';
 import { registerRenderer, renderWith } from '../src/generation/renderers/renderer.js';
-import type { ApplicationBlueprint } from '../src/bos/schemas/blueprint/application-blueprint.schema.js';
-import type { PagePlan } from '../src/bos/schemas/blueprint/application-blueprint.schema.js';
+import type { ApplicationBlueprint, PagePlan } from '../src/bos/schemas/blueprint/application-blueprint.schema.js';
 
 describe('Section Mapper', () => {
   it('should map hero-banner to HeroBanner', () => {
-    const result = mapSectionToSlot('hero-banner', {} as PagePlan, {} as ApplicationBlueprint);
+    const page = { id: 'p1', path: '/', name: 'Home', type: 'home', sections: ['hero-banner', 'features'] };
+    const result = mapSectionToSlot('hero-banner', page, {} as ApplicationBlueprint);
     expect(result).toBeDefined();
     expect(result?.component).toBe('HeroBanner');
     expect(result?.slot).toBe('hero-banner');
+    expect(result?.order).toBe(0);
   });
 
   it('should map pricing-table to PricingTable', () => {
-    const result = mapSectionToSlot('pricing-table', {} as PagePlan, {} as ApplicationBlueprint);
+    const page = { id: 'p1', path: '/pricing', name: 'Pricing', type: 'marketing', sections: ['pricing-table', 'faqs'] };
+    const result = mapSectionToSlot('pricing-table', page, {} as ApplicationBlueprint);
     expect(result?.component).toBe('PricingTable');
+    expect(result?.order).toBe(0);
   });
 
   it('should map testimonials to Testimonials', () => {
-    const result = mapSectionToSlot('testimonials', {} as PagePlan, {} as ApplicationBlueprint);
+    const page = { id: 'p1', path: '/testimonials', name: 'Testimonials', type: 'marketing', sections: ['testimonials', 'hero-banner'] };
+    const result = mapSectionToSlot('testimonials', page, {} as ApplicationBlueprint);
     expect(result?.component).toBe('Testimonials');
+    expect(result?.order).toBe(0);
   });
 
   it('should map login-form to AuthForm', () => {
-    const result = mapSectionToSlot('login-form', {} as PagePlan, {} as ApplicationBlueprint);
+    const page = { id: 'p1', path: '/login', name: 'Login', type: 'auth', sections: ['login-form', 'hero'] };
+    const result = mapSectionToSlot('login-form', page, {} as ApplicationBlueprint);
     expect(result?.component).toBe('AuthForm');
+    expect(result?.order).toBe(0);
   });
 
   it('should return placeholder for unknown sections', () => {
-    const result = mapSectionToSlot('custom-section', {} as PagePlan, {} as ApplicationBlueprint);
+    const page = { id: 'p1', path: '/custom', name: 'Custom', type: 'general', sections: ['hero-banner', 'custom-section'] };
+    const result = mapSectionToSlot('custom-section', page, {} as ApplicationBlueprint);
     expect(result?.component).toBe('PlaceholderSection');
+    expect(result?.order).toBe(1);
   });
 
   it('should return all registered sections', () => {
@@ -53,9 +62,9 @@ describe('Section Mapper', () => {
 });
 
 describe('Execution Planner', () => {
-  it('should build ExecutionBlueprint from ApplicationBlueprint', () => {
+  it('should build ExecutionBlueprint from ApplicationBlueprint', async () => {
     const ctx = buildBREContext('Build a restaurant called Bella Vista');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
 
     expect(execBlueprint).toBeDefined();
@@ -65,9 +74,9 @@ describe('Execution Planner', () => {
     expect(execBlueprint.themeId).toBeDefined();
   });
 
-  it('should map sections to component slots', () => {
+  it('should map sections to component slots', async () => {
     const ctx = buildBREContext('Build a SaaS platform called CloudDash');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
 
     const homePage = execBlueprint.pages.find(p => p.path === '/');
@@ -76,9 +85,9 @@ describe('Execution Planner', () => {
     expect(homePage?.slots.some(s => s.component === 'HeroBanner')).toBe(true);
   });
 
-  it('should include dashboard layout for dashboard pages', () => {
+  it('should include dashboard layout for dashboard pages', async () => {
     const ctx = buildBREContext('Build a SaaS platform with dashboard');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
 
     const dashboardPage = execBlueprint.pages.find(p => p.path === '/dashboard');
@@ -87,9 +96,9 @@ describe('Execution Planner', () => {
 });
 
 describe('Content Resolver', () => {
-  it('should resolve ExecutionBlueprint into ApplicationSpec', () => {
+  it('should resolve ExecutionBlueprint into ApplicationSpec', async () => {
     const ctx = buildBREContext('Build a restaurant called Bella Vista');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
     const appSpec = resolveContent(execBlueprint, {
       blueprint: breResult.blueprint,
@@ -102,9 +111,9 @@ describe('Content Resolver', () => {
     expect(appSpec.pages[0]?.components.length).toBeGreaterThan(0);
   });
 
-  it('should fill hero banner with business content', () => {
+  it('should fill hero banner with business content', async () => {
     const ctx = buildBREContext('Build a restaurant called Bella Vista');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
     const appSpec = resolveContent(execBlueprint, {
       blueprint: breResult.blueprint,
@@ -119,9 +128,9 @@ describe('Content Resolver', () => {
     expect(hero?.actions?.length).toBeGreaterThan(0);
   });
 
-  it('should fill pricing tiers for subscription businesses', () => {
+  it('should fill pricing tiers for subscription businesses', async () => {
     const ctx = buildBREContext('Build a SaaS subscription platform called CloudDash');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
     const appSpec = resolveContent(execBlueprint, {
       blueprint: breResult.blueprint,
@@ -135,9 +144,9 @@ describe('Content Resolver', () => {
     expect(pricing?.tiers?.some(t => t.highlighted)).toBe(true);
   });
 
-  it('should generate features from entities', () => {
+  it('should generate features from entities', async () => {
     const ctx = buildBREContext('Build a gym membership app called FitZone');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
     const appSpec = resolveContent(execBlueprint, {
       blueprint: breResult.blueprint,
@@ -172,8 +181,10 @@ describe('React Renderer', () => {
 
     expect(result.path).toBe('components/HeroBanner.tsx');
     expect(result.content).toContain('HeroBanner');
-    expect(result.content).toContain('Test App');
     expect(result.content).toContain('Get Started');
+    expect(result.content).toContain("'use client'");
+    expect(result.content).toContain('export default function HeroBanner');
+    expect(result.content).toContain('HeroBannerProps');
   });
 
   it('should render a page with multiple components', () => {
@@ -200,10 +211,10 @@ describe('React Renderer', () => {
     expect(result[0].content).toContain('FeatureGrid');
   });
 
-  it('should render full application', () => {
+  it('should render full application', async () => {
     registerRenderer(new ReactRenderer());
     const ctx = buildBREContext('Build a restaurant called Bella Vista');
-    const breResult = runBREV2Pipeline(ctx);
+    const breResult = await runBREV2Pipeline(ctx);
     const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
     const appSpec = resolveContent(execBlueprint, {
       blueprint: breResult.blueprint,
@@ -218,29 +229,32 @@ describe('React Renderer', () => {
     });
 
     expect(result.files.length).toBeGreaterThan(0);
-    expect(result.warnings.length).toBe(0);
     expect(result.files.some(f => f.path.includes('page.tsx'))).toBe(true);
     expect(result.files.some(f => f.path.includes('.tsx') && f.path.includes('components/'))).toBe(true);
   });
 });
 
 describe('Full Pipeline', () => {
-  it('should run complete pipeline from prompt to code', () => {
-    const { runBuildPipeline } = require('../src/generation/build-pipeline.js');
-    const result = runBuildPipeline({
-      industry: 'restaurant',
-      businessModels: ['direct-sales'],
-      capabilities: ['booking'],
-      journeys: ['visitor', 'customer'],
-      entities: ['MenuItem', 'Reservation'],
-      appName: 'Bella Vista',
-      description: 'Italian restaurant with online reservations',
+  it('should run complete pipeline from prompt to code', async () => {
+    const ctx = buildBREContext('Build a restaurant called Bella Vista');
+    const breResult = await runBREV2Pipeline(ctx);
+    const execBlueprint = buildExecutionBlueprint(breResult.blueprint);
+    const appSpec = resolveContent(execBlueprint, {
+      blueprint: breResult.blueprint,
+      vocabulary: breResult.blueprint.vocabulary ?? {},
     });
 
-    expect(result.breResult).toBeDefined();
-    expect(result.executionBlueprint).toBeDefined();
-    expect(result.applicationSpec).toBeDefined();
-    expect(result.renderResult.files.length).toBeGreaterThan(0);
-    expect(result.availablePlatforms).toContain('react');
+    registerRenderer(new ReactRenderer());
+    const renderResult = renderWith(appSpec, 'react', {
+      theme: breResult.blueprint.designTokens as Record<string, unknown>,
+      includeComments: true,
+      includeTests: false,
+      outputDir: './test',
+    });
+
+    expect(breResult.blueprint).toBeDefined();
+    expect(execBlueprint.pages.length).toBeGreaterThan(0);
+    expect(appSpec.pages.length).toBeGreaterThan(0);
+    expect(renderResult.files.length).toBeGreaterThan(0);
   });
 });

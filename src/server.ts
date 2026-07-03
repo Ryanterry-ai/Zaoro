@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
-import { MCPServer } from './mcp/server.ts';
+import { MCPServer } from './mcp/server.js';
 import { BuildQueue } from './engine/build-queue.js';
 import {
   createProject, getProject, listProjects, updateProjectStatus,

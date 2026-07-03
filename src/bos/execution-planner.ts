@@ -25,9 +25,18 @@ const log = stageLogger('exec');
  *   ApplicationBlueprint → ExecutionBlueprint → (ContentResolver) → ApplicationSpec → (Renderer) → Code
  */
 export function buildExecutionBlueprint(blueprint: ApplicationBlueprint): ExecutionBlueprint {
+  if (!blueprint) {
+    log.warn('buildExecutionBlueprint: blueprint is undefined or null');
+    throw new Error('buildExecutionBlueprint: blueprint is undefined or null');
+  }
+  if (!blueprint.pages || !Array.isArray(blueprint.pages)) {
+    log.warn('buildExecutionBlueprint: blueprint.pages is undefined or not an array');
+    throw new Error('buildExecutionBlueprint: blueprint.pages is undefined or not an array');
+  }
+
   log.info('Building execution blueprint', {
     pages: blueprint.pages.length,
-    entities: blueprint.entities.length,
+    entities: blueprint.entities?.length ?? 0,
   });
 
   const t = Date.now();
