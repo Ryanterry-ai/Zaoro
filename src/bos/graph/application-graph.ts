@@ -168,9 +168,16 @@ export function buildApplicationGraph(opts: {
     const id = `entity:${entity.name}`;
     nodes.push({ kind: 'entity', id, data: entity });
 
-    // Find matching table
+    // Find matching table (database-graph stage pluralizes names: "products" for "Product")
+    const entityLower = entity.name.toLowerCase();
     const table = opts.tables.find(
-      t => t.name.toLowerCase() === entity.name.toLowerCase(),
+      t => {
+        const tName = t.name.toLowerCase();
+        return tName === entityLower ||
+          tName === entityLower + 's' ||
+          tName === entity.slug + 's' ||
+          tName.replace(/s$/, '') === entityLower;
+      },
     );
     if (table) {
       const tableId = `table:${table.name}`;

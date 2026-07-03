@@ -261,7 +261,11 @@ export class DeterministicOrchestratorV4 {
       // Sanitize path for Windows: colons (Next.js dynamic routes like :handle/:id)
       // are invalid on NTFS. Replace with underscores for filesystem only.
       const safePath = file.path.replace(/:/g, '_');
-      const filePath = path.join(workspace.rootPath, 'src', safePath);
+      // Files prefixed with ../ are root-level (package.json, tailwind.config, etc.)
+      // Files starting with prisma/ are also root-level (Prisma schema)
+      const isRootLevel = safePath.startsWith('../') || safePath.startsWith('prisma/') || safePath.startsWith('lib/');
+      const relPath = isRootLevel ? safePath.replace(/^\.\.\//, '') : safePath;
+      const filePath = path.join(workspace.rootPath, isRootLevel ? '' : 'src', relPath);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, file.content, 'utf-8');
       progress.emitFile('compile', file.path, 'generated');
@@ -620,7 +624,9 @@ Rules:
 
     for (const file of renderResult.files) {
       const safePath = file.path.replace(/:/g, '_');
-      const filePath = path.join(workspace.rootPath, 'src', safePath);
+      const isRootLevel = safePath.startsWith('../') || safePath.startsWith('prisma/') || safePath.startsWith('lib/');
+      const relPath = isRootLevel ? safePath.replace(/^\.\.\//, '') : safePath;
+      const filePath = path.join(workspace.rootPath, isRootLevel ? '' : 'src', relPath);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, file.content, 'utf-8');
     }
