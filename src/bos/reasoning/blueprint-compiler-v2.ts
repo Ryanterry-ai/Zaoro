@@ -48,7 +48,7 @@ export class BlueprintCompilerV2 {
 
     // Re-extract vocabulary from merged decisions so pattern vocabulary
     // (added by mergePatternDecisions above) is included.
-    const effectiveVocabulary: Record<string, string> = {};
+    const effectiveVocabulary: Record<string, string> = { ...vocabulary };
     for (const decision of mergedDecisions) {
       if (decision.action.type === 'set_vocabulary') {
         effectiveVocabulary[decision.action.original] = decision.action.replacement;

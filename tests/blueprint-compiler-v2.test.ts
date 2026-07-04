@@ -280,10 +280,10 @@ describe('BlueprintCompilerV2', () => {
   });
 
   it('should compile design tokens from selected profile', () => {
-    const selectedDesignProfile = { id: 'dark-tech', name: 'Dark Tech', score: 85, breakdown: {}, reason: 'good fit' };
+    const selectedDesignProfile = { id: 'design.saas.modern', name: 'SaaS Modern', score: 85, breakdown: {}, reason: 'good fit' };
     const blueprint = compiler.compile(makeInput({ selectedDesignProfile }));
     expect(blueprint.designTokens).toBeDefined();
-    expect((blueprint.designTokens as Record<string, unknown>).profileId).toBe('dark-tech');
+    expect((blueprint.designTokens as Record<string, unknown>).profileId).toBe('design.saas.modern');
   });
 
   it('should use default design tokens when no profile selected', () => {

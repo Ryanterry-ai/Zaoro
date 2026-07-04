@@ -4,7 +4,7 @@ import { detectDomain } from '../src/generation/domain-detector.js';
 describe('detectDomain', () => {
   it('should detect real-estate from keywords', () => {
     const ctx = detectDomain('We are a luxury real estate agency selling premium properties');
-    expect(ctx.industry).toBe('real-estate');
+    expect(ctx.industry).toBe('realestate');
     expect(ctx.subIndustry).toBe('luxury');
     expect(ctx.colorHint).toBe('emerald');
     expect(ctx.suggestedSections).toContain('featured-properties');
@@ -12,13 +12,15 @@ describe('detectDomain', () => {
 
   it('should detect dental practice', () => {
     const ctx = detectDomain('Modern dental clinic with teeth whitening and orthodontics');
-    expect(ctx.industry).toBe('dental');
+    expect(ctx.industry).toBe('healthcare');
+    expect(ctx.subIndustry).toBe('dental');
     expect(ctx.colorHint).toBe('cyan');
   });
 
   it('should detect coffee shop', () => {
     const ctx = detectDomain('Artisan coffee bar with specialty espresso and cold brew');
-    expect(ctx.industry).toBe('coffee-shop');
+    expect(ctx.industry).toBe('restaurant');
+    expect(ctx.subIndustry).toBe('cafe');
     expect(ctx.colorHint).toBe('amber');
   });
 
@@ -52,7 +54,7 @@ describe('detectDomain', () => {
 
   it('should detect law firm', () => {
     const ctx = detectDomain('Corporate law firm specializing in mergers and acquisitions');
-    expect(ctx.industry).toBe('law-firm');
+    expect(ctx.industry).toBe('legal');
     expect(ctx.subIndustry).toBe('corporate');
     expect(ctx.colorHint).toBe('slate');
   });

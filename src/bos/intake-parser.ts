@@ -613,8 +613,8 @@ function detectCountry(prompt: string): string | undefined {
 
 function extractAppName(prompt: string): string | undefined {
   const patterns = [
-    // "called X" / "named X"
-    /(?:called|named)\s+["']?([A-Z][A-Za-z0-9\s&'.-]{1,40})["']?(?:\s+(?:with|for|that|and|the)|\s*[,.]|\s*$)/,
+    // "called X" / "named X" — stop before common joiners (with, for, that, and, the)
+    /(?:called|named)\s+["']?([A-Z][A-Za-z0-9&'.-]{1,30})["']?(?:\s+(?:with|for|that|and|the)\b|\s*[,.]|\s*$)/,
     // Quoted names: "Build 'MediTrack'"
     /["']([A-Z][A-Za-z0-9\s&'.-]{1,40})["']/,
     // Capital-letter multi-word after "for": "ERP for HospitalOS"

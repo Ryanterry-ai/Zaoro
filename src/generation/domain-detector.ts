@@ -60,7 +60,7 @@ export function detectDomain(prompt: string): DomainContext {
 
   // Use intake-parser for industry detection (single source of truth)
   const { mapping, subIndustry } = detectIndustryWithScore(prompt);
-  const industry = mapping?.industry ?? 'saas';
+  const industry = mapping?.industry ?? 'general';
 
   // Get domain mapping for this industry
   const domain = INDUSTRY_DOMAIN_MAP[industry] ?? INDUSTRY_DOMAIN_MAP['saas']!;
