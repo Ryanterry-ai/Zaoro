@@ -369,7 +369,7 @@ export class BlueprintCompilerV2 {
       if (decision.action.type === 'add_integration') {
         integrations.push({
           id: `integration-${decision.action.name.toLowerCase().replace(/\s+/g, '-')}`,
-          type: decision.action.type as IntegrationPlan['type'],
+          type: decision.action.integrationType as IntegrationPlan['type'],
           name: decision.action.name,
           config: {},
           required: decision.action.required,
