@@ -1510,6 +1510,57 @@ try {
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
+  // GET /api/workspaces — list all workspaces for the homepage recent-builds panel
+  if (method === 'GET' && url.pathname === '/api/workspaces') {
+    try {
+      if (!fs.existsSync(WORKSPACE_BASE)) return json(res, []);
+      const dirs = fs.readdirSync(WORKSPACE_BASE).filter(name => {
+        const full = path.join(WORKSPACE_BASE, name);
+        return fs.statSync(full).isDirectory();
+      });
+
+      const workspaces = dirs
+        .map(id => {
+          const wsDir = path.join(WORKSPACE_BASE, id);
+          // Read prompt from .prompts/{id}.json (written at build/clone time)
+          let prompt = '';
+          let type: 'build' | 'clone' = 'build';
+          let createdAt = '';
+          const promptFile = path.join(PROMPTS_DIR, `${id}.json`);
+          if (fs.existsSync(promptFile)) {
+            try {
+              const meta = JSON.parse(fs.readFileSync(promptFile, 'utf-8'));
+              prompt = meta.prompt || '';
+              type = meta.type === 'clone' ? 'clone' : 'build';
+              createdAt = meta.createdAt || '';
+            } catch {}
+          }
+          // Fall back to mtime of the directory itself
+          if (!createdAt) {
+            try { createdAt = fs.statSync(wsDir).birthtime.toISOString(); } catch {}
+          }
+          // Determine completion status from .progress file
+          let status: 'building' | 'done' | 'error' = 'building';
+          const progressFile = path.join(wsDir, '.progress');
+          if (fs.existsSync(progressFile)) {
+            try {
+              const steps: Array<{ step: string }> = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
+              const last = steps[steps.length - 1]?.step || '';
+              if (last === 'done') status = 'done';
+              else if (last === 'error') status = 'error';
+            } catch {}
+          }
+          return { id, prompt, type, createdAt, status };
+        })
+        // Sort newest first
+        .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
+
+      return json(res, workspaces);
+    } catch (e: any) {
+      return json(res, { error: e.message }, 500);
+    }
+  }
+
   json(res, { error: 'Not found' }, 404);
 });
 
