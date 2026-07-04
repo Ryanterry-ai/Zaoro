@@ -16,7 +16,7 @@ import { RegressionPredictor } from '../intelligence/regression-predictor.js';
 
 import { ASTPatch, CompilationError, WorkspaceConfig, LLMContext, LLMConfig, GenerationIntent, GenerationResult, FullStackBlueprint } from '../types/index.js';
 import { LLMGateway } from '../core/llm-gateway.js';
-import { FullStackCompilerPipeline } from '../generation/compiler-pipeline.js';
+
 import { DBCompiler } from '../core/db-compiler.js';
 import { APICompiler } from '../core/api-compiler.js';
 import { TelemetryLayer } from '../core/telemetry.js';
@@ -552,9 +552,6 @@ Rules:
     const breResult = await runBREV2Pipeline(breContext, llmConfig);
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
-
-    // Scaffold the workspace structure
-    FullStackCompilerPipeline.compileRich(workspace, appBlueprint);
 
     // Import and run clone orchestrator
     const { CloneOrchestrator } = await import('../cloning/clone-orchestrator-v2.js');

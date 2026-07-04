@@ -16,8 +16,6 @@ services:
         sync: false  # Set via Render dashboard
       - key: DATABASE_URL
         sync: false  # Set via Render dashboard (optional Supabase)
-      - key: VERCEL_TOKEN
-        sync: false  # Set manually via the Render dashboard
     disk:
       name: workspaces
       mountPath: /app/sandbox_workspaces

@@ -1487,29 +1487,6 @@ try {
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
-  // GET /health — infrastructure health check
-  if (method === 'GET' && url.pathname === '/health') {
-    let storageHealthy = false;
-    try {
-      // Assert that the workspace staging base is readable and writable
-      fs.accessSync(WORKSPACE_BASE, fs.constants.R_OK | fs.constants.W_OK);
-      storageHealthy = true;
-    } catch (err) {
-      storageHealthy = false;
-    }
-
-    const payload = {
-      status: storageHealthy ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
-      uptimeSeconds: Math.floor(process.uptime()),
-      services: {
-        sandboxFileSystem: storageHealthy ? 'OK' : 'ERROR',
-      },
-    };
-
-    return json(res, payload, storageHealthy ? 200 : 503);
-  }
-
   // GET /api/projects/:id/workspace
   if (method === 'GET' && url.pathname.match(/^\/api\/projects\/[^/]+\/workspace$/)) {
     const id = url.pathname.split('/')[3]!;
@@ -1536,31 +1513,7 @@ try {
   json(res, { error: 'Not found' }, 404);
 });
 
-// ─── Graceful Shutdown ─────────────────────────────────────────────
-
-export function registerShutdownHooks(serverInstance: http.Server) {
-  const handleShutdown = (signal: string) => {
-    console.log(`\nReceived ${signal}. Initiating graceful engine shutdown lifecycle...`);
-
-    // Set a fail-safe active connection drain timeout boundary
-    const forceKillTimeout = setTimeout(() => {
-      console.error('Forced shutdown boundary crossed. Exiting immediately.');
-      process.exit(1);
-    }, 10000);
-
-    serverInstance.close(() => {
-      console.log('All active network sockets drained cleanly. System offline.');
-      clearTimeout(forceKillTimeout);
-      process.exit(0);
-    });
-  };
-
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
-}
-
 server.listen(PORT, '::', () => {
   console.log(`Engine server running on http://[::]:${PORT} (IPv4+IPv6)`);
   console.log(`Workspace base: ${WORKSPACE_BASE}`);
-  registerShutdownHooks(server);
 });

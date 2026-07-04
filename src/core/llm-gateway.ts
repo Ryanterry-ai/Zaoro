@@ -1,6 +1,5 @@
 import * as path from 'path';
-import { ASTPatch, LLMContext, LLMConfig, LLMProvider, TokenMetrics } from '../types/index.js';
-import { calculateUsageMetrics } from './llm-router.js';
+import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
 import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
 import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
@@ -27,28 +26,12 @@ export class LLMGateway {
   private router?: LLMRouter;
   private research?: ContentResearchResult;
   private skillRecommendations?: DesignRecommendation;
-  private accumulatedMetrics: TokenMetrics = { promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 };
 
   constructor(config: LLMConfig) {
     this.provider = config.provider;
     this.apiKey = config.apiKey;
     this.model = config.model || this.defaultModel(config.provider);
     this.architect = new ArchitectAgent();
-  }
-
-  getMetrics(): TokenMetrics {
-    return { ...this.accumulatedMetrics };
-  }
-
-  resetMetrics(): void {
-    this.accumulatedMetrics = { promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 };
-  }
-
-  private trackUsage(usage?: { prompt_tokens: number; completion_tokens: number }): void {
-    const metrics = calculateUsageMetrics(usage);
-    this.accumulatedMetrics.promptTokens += metrics.promptTokens;
-    this.accumulatedMetrics.completionTokens += metrics.completionTokens;
-    this.accumulatedMetrics.estimatedCostUsd += metrics.estimatedCostUsd;
   }
 
   static createWithRouter(): LLMGateway {
@@ -112,10 +95,6 @@ export class LLMGateway {
         maxTokens: options?.maxTokens,
         responseFormat: options?.responseFormat,
       });
-      // Track token usage from adapter response
-      if (result.usage) {
-        this.trackUsage(result.usage);
-      }
       return result.content;
     } finally {
       // Restore env vars

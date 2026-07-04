@@ -1,17 +1,4 @@
-import { LLMProvider, TokenMetrics } from '../types/index.js';
-
-export function calculateUsageMetrics(usage?: { prompt_tokens: number; completion_tokens: number }): TokenMetrics {
-  const promptTokens = usage?.prompt_tokens ?? 0;
-  const completionTokens = usage?.completion_tokens ?? 0;
-
-  // Cost formulas:
-  // GPT-4o pricing: $5.00 / 1M input tokens, $15.00 / 1M output tokens
-  const inputCost = promptTokens * 0.000005;
-  const outputCost = completionTokens * 0.000015;
-  const estimatedCostUsd = parseFloat((inputCost + outputCost).toFixed(6));
-
-  return { promptTokens, completionTokens, estimatedCostUsd };
-}
+import { LLMProvider } from '../types/index.js';
 
 export interface LLMProviderConfig {
   provider: LLMProvider;

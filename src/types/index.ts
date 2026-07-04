@@ -125,15 +125,3 @@ export interface GenerationResult {
   error?: string;
   duration: number;
 }
-
-export interface TokenMetrics {
-  promptTokens: number;
-  completionTokens: number;
-  estimatedCostUsd: number;
-}
-
-export interface GenerationSummary {
-  workspaceId: string;
-  status: string;
-  metrics: TokenMetrics;
-}
