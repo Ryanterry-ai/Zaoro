@@ -40,6 +40,9 @@ export class SandboxEngine {
     return [
       { path: path.join(root, 'package.json'), relativePath: 'package.json' },
       { path: path.join(root, 'tsconfig.json'), relativePath: 'tsconfig.json' },
+      { path: path.join(root, 'tailwind.config.js'), relativePath: 'tailwind.config.js' },
+      { path: path.join(root, 'postcss.config.js'), relativePath: 'postcss.config.js' },
+      { path: path.join(root, 'next.config.js'), relativePath: 'next.config.js' },
       { path: path.join(root, 'src', 'app', 'layout.tsx'), relativePath: 'src/app/layout.tsx' },
       { path: path.join(root, 'src', 'app', 'page.tsx'), relativePath: 'src/app/page.tsx' },
     ];
@@ -143,13 +146,17 @@ export class SandboxEngine {
           "next": "14.2.29",
           "react": "18.3.1",
           "react-dom": "18.3.1",
-          "lucide-react": "0.344.0"
+          "lucide-react": "0.344.0",
+          "motion": "11.18.0"
         },
         devDependencies: {
           "typescript": "5.4.5",
           "@types/node": "20.14.2",
           "@types/react": "18.3.3",
-          "@types/react-dom": "18.3.0"
+          "@types/react-dom": "18.3.0",
+          "tailwindcss": "3.4.17",
+          "autoprefixer": "10.4.20",
+          "postcss": "8.4.49"
         }
       };
       fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonTemplate, null, 2));
@@ -208,6 +215,40 @@ export default function Home() {
 }
 `;
       fs.writeFileSync(pagePath, pageTemplate.trim());
+    }
+
+    // tailwind.config.js — required for next build with Tailwind classes
+    const tailwindConfigPath = path.join(root, 'tailwind.config.js');
+    if (!fs.existsSync(tailwindConfigPath)) {
+      fs.writeFileSync(
+        tailwindConfigPath,
+        `/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  theme: { extend: {} },
+  plugins: [],
+};\n`,
+      );
+    }
+
+    // postcss.config.js — required for Tailwind processing
+    const postcssConfigPath = path.join(root, 'postcss.config.js');
+    if (!fs.existsSync(postcssConfigPath)) {
+      fs.writeFileSync(
+        postcssConfigPath,
+        `module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };\n`,
+      );
+    }
+
+    // next.config.js — clean, no warnings
+    const nextConfigPath = path.join(root, 'next.config.js');
+    if (!fs.existsSync(nextConfigPath)) {
+      fs.writeFileSync(
+        nextConfigPath,
+        `/** @type {import('next').NextConfig} */
+const nextConfig = {};
+module.exports = nextConfig;\n`,
+      );
     }
   }
 }
