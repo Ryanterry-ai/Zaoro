@@ -340,6 +340,26 @@ const SECTION_REGISTRY: Record<string, string> = {
   'supplement-shipping': 'CheckoutForm',
   'supplement-returns': 'FeatureGrid',
   'supplement-support': 'ContactForm',
+
+  // Industry template specific sections (from industry-templates.ts)
+  'info': 'FeatureGrid',
+  'practice-areas': 'FeatureGrid',
+  'case-results': 'StatsCards',
+  'reminders': 'DataTable',
+  'featured-work': 'ProductGrid',
+  'featured-vehicles': 'ProductGrid',
+  'featured-events': 'ProductGrid',
+  'packages': 'PricingTable',
+  'availability': 'CalendarWidget',
+  'publications': 'DataTable',
+  'featured-cases': 'ProductGrid',
+  'case-grid': 'ProductGrid',
+  'screenshots': 'Gallery',
+  'featured-collection': 'ProductGrid',
+  'size-guide': 'DataTable',
+  'shop-the-look': 'ProductGrid',
+  'values': 'FeatureGrid',
+  'eta': 'StatsCards',
 };
 
 // ─── Section Name Normalization ──────────────────────────────────────────────
