@@ -1,5 +1,6 @@
 import * as path from 'path';
-import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
+import { ASTPatch, LLMContext, LLMConfig, LLMProvider, TokenMetrics } from '../types/index.js';
+import { calculateUsageMetrics } from './llm-router.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
 import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
 import { evaluateGeneratedContent } from '../generation/self-evaluator.js';
@@ -26,12 +27,28 @@ export class LLMGateway {
   private router?: LLMRouter;
   private research?: ContentResearchResult;
   private skillRecommendations?: DesignRecommendation;
+  private accumulatedMetrics: TokenMetrics = { promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 };
 
   constructor(config: LLMConfig) {
     this.provider = config.provider;
     this.apiKey = config.apiKey;
     this.model = config.model || this.defaultModel(config.provider);
     this.architect = new ArchitectAgent();
+  }
+
+  getMetrics(): TokenMetrics {
+    return { ...this.accumulatedMetrics };
+  }
+
+  resetMetrics(): void {
+    this.accumulatedMetrics = { promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 };
+  }
+
+  private trackUsage(usage?: { prompt_tokens: number; completion_tokens: number }): void {
+    const metrics = calculateUsageMetrics(usage);
+    this.accumulatedMetrics.promptTokens += metrics.promptTokens;
+    this.accumulatedMetrics.completionTokens += metrics.completionTokens;
+    this.accumulatedMetrics.estimatedCostUsd += metrics.estimatedCostUsd;
   }
 
   static createWithRouter(): LLMGateway {
@@ -95,6 +112,10 @@ export class LLMGateway {
         maxTokens: options?.maxTokens,
         responseFormat: options?.responseFormat,
       });
+      // Track token usage from adapter response
+      if (result.usage) {
+        this.trackUsage(result.usage);
+      }
       return result.content;
     } finally {
       // Restore env vars
@@ -193,17 +214,15 @@ export class LLMGateway {
    * Clone-specific: generate raw TSX code (no AST patch wrapping, no architect pipeline).
    * Returns the raw code string from the LLM.
    */
-  public async generateRawCode(prompt: string, customSystemPrompt?: string): Promise<string> {
+  public async generateRawCode(prompt: string): Promise<string> {
     if (!this.apiKey || this.apiKey.trim() === '') {
       throw new Error('No API key for raw code generation');
     }
 
-    const defaultSystemPrompt = `You are an expert Next.js/React developer. Generate COMPLETE, production-quality React components.
+    const systemPrompt = `You are an expert Next.js/React developer. Generate COMPLETE, production-quality React components.
 Output ONLY valid TSX/JSX code. No explanations, no markdown, no code fences — just the raw component code.
 Use Tailwind CSS for styling. Use 'use client' directive if the component has interactivity (useState, onClick, etc.).
 The component must be self-contained with all data inline — no external API calls.`;
-
-    const systemPrompt = customSystemPrompt?.trim() || defaultSystemPrompt;
 
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {

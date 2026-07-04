@@ -1388,47 +1388,28 @@ try {
   if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/deploy$/)) {
     const id = url.pathname.split('/')[3]!;
     const wsDir = path.join(WORKSPACE_BASE, id);
-
-    const vercelToken = process.env.VERCEL_TOKEN;
-    if (!vercelToken) {
-      return json(res, {
-        error: 'VERCEL_TOKEN not configured',
-        message: 'Add VERCEL_TOKEN to your Render environment variables.',
-        docs: 'https://vercel.com/account/tokens',
-        status: 'not_configured',
-      }, 501);
-    }
-
-    if (!fs.existsSync(wsDir)) {
-      return json(res, { error: 'Workspace not found' }, 404);
-    }
+    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
 
     try {
+      // Generate deploy configs
       const { execSync } = await import('child_process');
       const deployCodegen = path.join(ENGINE_ROOT, 'tools', 'deploy-codegen', 'index.cjs');
+      execSync(`node "${deployCodegen}" tier-standard "${wsDir}" --platform vercel`, { timeout: 10000 });
 
-      // Only run deploy-codegen if the tool exists
-      if (fs.existsSync(deployCodegen)) {
-        execSync(`node "${deployCodegen}" tier-standard "${wsDir}" --platform vercel`, {
-          timeout: 15000, stdio: 'pipe',
-        });
-      }
-
-      const output = execSync(
-        `npx --no-install vercel deploy --prod -y --token ${vercelToken} 2>&1`,
-        { cwd: wsDir, timeout: 120000, stdio: 'pipe' },
-      ).toString();
-
-      const urlMatch = output.match(/(https:\/\/[^\s]+\.vercel\.app)/);
-      const deployUrl = urlMatch?.[1] ?? null;
-
-      return json(res, {
-        status: 'deployed',
-        url: deployUrl,
-        output: output.slice(0, 500),
+      // Run vercel deploy in workspace directory
+      const buf = execSync('npx vercel deploy --prod -y --scope upgraded-ai-factory-s-projects 2>&1', {
+        cwd: wsDir,
+        timeout: 120000,
+        env: { ...process.env, VERCEL_PROJECT_ID: undefined }, // let vercel create new project
       });
+
+      const output = Buffer.isBuffer(buf) ? buf.toString('utf-8') : String(buf);
+      const urlMatch = output.match(/(https:\/\/[^\s]+\.vercel\.app)/);
+      const deployUrl = urlMatch ? urlMatch[1] : output.trim();
+
+      return json(res, { success: true, url: deployUrl, output });
     } catch (e: any) {
-      return json(res, { error: e.message, status: 'deploy_failed' }, 500);
+      return json(res, { error: e.message, stderr: e.stderr?.toString() || '' }, 500);
     }
   }
 
@@ -1506,6 +1487,29 @@ try {
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
+  // GET /health — infrastructure health check
+  if (method === 'GET' && url.pathname === '/health') {
+    let storageHealthy = false;
+    try {
+      // Assert that the workspace staging base is readable and writable
+      fs.accessSync(WORKSPACE_BASE, fs.constants.R_OK | fs.constants.W_OK);
+      storageHealthy = true;
+    } catch (err) {
+      storageHealthy = false;
+    }
+
+    const payload = {
+      status: storageHealthy ? 'healthy' : 'unhealthy',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      services: {
+        sandboxFileSystem: storageHealthy ? 'OK' : 'ERROR',
+      },
+    };
+
+    return json(res, payload, storageHealthy ? 200 : 503);
+  }
+
   // GET /api/projects/:id/workspace
   if (method === 'GET' && url.pathname.match(/^\/api\/projects\/[^/]+\/workspace$/)) {
     const id = url.pathname.split('/')[3]!;
@@ -1532,7 +1536,31 @@ try {
   json(res, { error: 'Not found' }, 404);
 });
 
+// ─── Graceful Shutdown ─────────────────────────────────────────────
+
+export function registerShutdownHooks(serverInstance: http.Server) {
+  const handleShutdown = (signal: string) => {
+    console.log(`\nReceived ${signal}. Initiating graceful engine shutdown lifecycle...`);
+
+    // Set a fail-safe active connection drain timeout boundary
+    const forceKillTimeout = setTimeout(() => {
+      console.error('Forced shutdown boundary crossed. Exiting immediately.');
+      process.exit(1);
+    }, 10000);
+
+    serverInstance.close(() => {
+      console.log('All active network sockets drained cleanly. System offline.');
+      clearTimeout(forceKillTimeout);
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
+}
+
 server.listen(PORT, '::', () => {
   console.log(`Engine server running on http://[::]:${PORT} (IPv4+IPv6)`);
   console.log(`Workspace base: ${WORKSPACE_BASE}`);
+  registerShutdownHooks(server);
 });

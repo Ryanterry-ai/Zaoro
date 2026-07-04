@@ -1,4 +1,17 @@
-import { LLMProvider } from '../types/index.js';
+import { LLMProvider, TokenMetrics } from '../types/index.js';
+
+export function calculateUsageMetrics(usage?: { prompt_tokens: number; completion_tokens: number }): TokenMetrics {
+  const promptTokens = usage?.prompt_tokens ?? 0;
+  const completionTokens = usage?.completion_tokens ?? 0;
+
+  // Cost formulas:
+  // GPT-4o pricing: $5.00 / 1M input tokens, $15.00 / 1M output tokens
+  const inputCost = promptTokens * 0.000005;
+  const outputCost = completionTokens * 0.000015;
+  const estimatedCostUsd = parseFloat((inputCost + outputCost).toFixed(6));
+
+  return { promptTokens, completionTokens, estimatedCostUsd };
+}
 
 export interface LLMProviderConfig {
   provider: LLMProvider;
@@ -115,79 +128,62 @@ export class LLMRouter {
 export function createRouterFromEnv(): LLMRouter {
   const configs: LLMProviderConfig[] = [];
 
-  // 1. OPENCODE_LLM_KEY (dedicated instance token — highest priority)
-  const opencodeKey = process.env.OPENCODE_LLM_KEY;
-  const opencodeProvider = (process.env.LLM_PROVIDER || 'openai') as LLMProvider;
-  const opencodeModel = process.env.LLM_MODEL || 'gpt-4o';
-  if (opencodeKey) {
+  // Groq (primary) - Fast inference, free tier, excellent code gen
+  const groqKey = process.env.GROQ_API_KEY || (process.env.LLM_PROVIDER === 'groq' ? process.env.LLM_API_KEY : undefined);
+  if (groqKey) {
     configs.push({
-      provider: opencodeProvider,
-      apiKey: opencodeKey,
-      model: opencodeModel,
-      capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation', 'image-generation'],
+      provider: 'groq',
+      apiKey: groqKey,
+      model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
+      capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation'],
       priority: 1,
       temperature: 0.3,
       maxTokens: 8192,
     });
   }
 
-  // 2. Groq — Fast inference, free tier, excellent code gen
-  const groqKey = process.env.GROQ_API_KEY || (process.env.LLM_PROVIDER === 'groq' ? process.env.LLM_API_KEY : undefined);
-  if (groqKey && !opencodeKey) {
-    configs.push({
-      provider: 'groq',
-      apiKey: groqKey,
-      model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
-      capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation'],
-      priority: opencodeKey ? 5 : 2,
-      temperature: 0.3,
-      maxTokens: 8192,
-    });
-  }
-
-  // 3. Gemini — Good for analysis when credits available
+  // Gemini (fallback) - Good for analysis when credits available
   const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey && !opencodeKey) {
+  if (geminiKey) {
     configs.push({
       provider: 'gemini',
       apiKey: geminiKey,
       model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       capabilities: ['analysis', 'summarization', 'translation', 'image-generation', 'code-generation'],
-      priority: opencodeKey ? 6 : 3,
+      priority: 2,
     });
   }
 
-  // 4. Anthropic — Best reasoning but expensive
+  // Anthropic (fallback) - Best reasoning but expensive
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (anthropicKey && !opencodeKey) {
+  if (anthropicKey) {
     configs.push({
       provider: 'anthropic',
       apiKey: anthropicKey,
       model: process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-20250219',
       capabilities: ['code-generation', 'reasoning', 'analysis'],
-      priority: opencodeKey ? 7 : 4,
+      priority: 3,
     });
   }
 
-  // 5. OpenAI (standard platform flag — last resort)
+  // OpenAI (last resort)
   const openaiKey = process.env.OPENAI_API_KEY;
-  if (openaiKey && !opencodeKey) {
+  if (openaiKey) {
     configs.push({
       provider: 'openai',
       apiKey: openaiKey,
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       capabilities: ['code-generation', 'reasoning', 'analysis', 'image-generation'],
-      priority: opencodeKey ? 8 : 5,
+      priority: 4,
     });
   }
 
-  // 6. Fallback: LLM_API_KEY alone (without provider-specific key)
-  if (configs.length === 0 && process.env.LLM_API_KEY) {
-    const provider = (process.env.LLM_PROVIDER || 'openai') as LLMProvider;
+  // Fallback: if only Gemini key exists without provider指定
+  if (configs.length === 0 && geminiKey) {
     configs.push({
-      provider,
-      apiKey: process.env.LLM_API_KEY,
-      model: process.env.LLM_MODEL || 'gpt-4o',
+      provider: 'gemini',
+      apiKey: geminiKey,
+      model: 'gemini-2.5-flash',
       capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation', 'image-generation'],
       priority: 1,
     });

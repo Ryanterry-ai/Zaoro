@@ -105,7 +105,6 @@ export interface GenerationIntent {
   domain?: string;
   businessType?: string;
   strategy?: 'full-clone' | 'structure-clone' | 'style-clone';
-  systemPrompt?: string;
 }
 
 export interface PageBuildResult {
@@ -125,4 +124,16 @@ export interface GenerationResult {
   warnings?: string[];
   error?: string;
   duration: number;
+}
+
+export interface TokenMetrics {
+  promptTokens: number;
+  completionTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface GenerationSummary {
+  workspaceId: string;
+  status: string;
+  metrics: TokenMetrics;
 }
