@@ -223,6 +223,20 @@ try {
   await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
   writeProgress('compile', 'info', 'Compilation finished', { duration: Date.now() - tBi });
 
+  // ═══ SELF-HEALING: Auto-repair TypeScript errors ═══════════════════════
+  try {
+    const { SelfHealingEngine } = await import('./src/engine/self-healing-engine.js');
+    const { LLMGateway } = await import('./src/core/llm-gateway.js');
+    const healer = new SelfHealingEngine(3, 20);
+    const gw = new LLMGateway({ provider: config.provider, apiKey: config.apiKey });
+    const result = await healer.heal(wsDir, gw, payload.prompt, (iter, errs, msg) => {
+      writeProgress('self-heal', 'info', 'SelfHealing iteration ' + iter + ': ' + errs + ' errors — ' + msg);
+    });
+    writeProgress('self-heal', 'completed', 'SelfHealing: ' + result.fixed + ' errors fixed in ' + result.iterations + ' iterations');
+  } catch (healErr) {
+    writeProgress('self-heal', 'warning', 'SelfHealing skipped: ' + (healErr.message || '').slice(0, 200));
+  }
+
   // ═══ FAST PATH: Preview first (20-40s) ═══════════════════════════════════════
   // Generate preview immediately so the user sees their app ASAP.
   // Quality gates run in background after preview is delivered.

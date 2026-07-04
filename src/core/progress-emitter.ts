@@ -123,11 +123,18 @@ export class ProgressEmitter {
   }
 
   /**
-   * Flush events to disk.
+   * Flush events to disk — read-merge-write to avoid clobbering concurrent writers.
    */
   private flush(): void {
     try {
-      fs.writeFileSync(this.filePath, JSON.stringify(this.events), 'utf-8');
+      let existing: ProgressEvent[] = [];
+      try {
+        const raw = fs.readFileSync(this.filePath, 'utf-8');
+        existing = JSON.parse(raw);
+      } catch {}
+      const seen = new Set(existing.map(e => `${e.ts}|${e.step}|${e.message}`));
+      const newEvents = this.events.filter(e => !seen.has(`${e.ts}|${e.step}|${e.message}`));
+      fs.writeFileSync(this.filePath, JSON.stringify([...existing, ...newEvents]), 'utf-8');
     } catch {}
   }
 

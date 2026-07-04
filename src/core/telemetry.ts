@@ -30,10 +30,7 @@ function getSupabaseConfig(): { url: string; serviceRoleKey: string } | null {
 function ensureSentry(): void {
   if (sentryInitialized) return;
   const dsn = getSentryDsn();
-  if (!dsn) {
-    console.warn('[telemetry] SENTRY_DSN not set — Sentry disabled');
-    return;
-  }
+  if (!dsn) return;
   Sentry.init({
     dsn,
     environment: process.env.NODE_ENV || 'development',
@@ -41,22 +38,17 @@ function ensureSentry(): void {
     integrations: [],
   });
   sentryInitialized = true;
-  console.log('[telemetry] Sentry initialized');
 }
 
 function ensurePostHog(): PostHog | null {
   if (posthogClient) return posthogClient;
   const config = getPostHogConfig();
-  if (!config) {
-    console.warn('[telemetry] POSTHOG_API_KEY not set — PostHog disabled');
-    return null;
-  }
+  if (!config) return null;
   posthogClient = new PostHog(config.apiKey, {
     host: config.host,
     flushAt: 1,
     flushInterval: 0,
   });
-  console.log('[telemetry] PostHog initialized');
   return posthogClient;
 }
 
@@ -73,10 +65,7 @@ function safePostHogCapture(event: { distinctId: string; event: string; properti
 function ensureSupabase(): SupabaseClient | null {
   if (supabaseClient) return supabaseClient;
   const config = getSupabaseConfig();
-  if (!config) {
-    console.warn('[telemetry] SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY not set — Supabase disabled');
-    return null;
-  }
+  if (!config) return null;
   // Supabase realtime-js requires native WebSocket (Node 22+) or the "ws" package.
   // Since we only use Supabase for data inserts (not realtime), skip if WebSocket
   // is unavailable to avoid crashing on Node 20.
@@ -84,7 +73,6 @@ function ensureSupabase(): SupabaseClient | null {
     supabaseClient = createClient(config.url, config.serviceRoleKey, {
       auth: { persistSession: false },
     });
-    console.log('[telemetry] Supabase initialized');
     return supabaseClient;
   } catch (err: any) {
     console.warn(`[telemetry] Supabase init failed (WebSocket unavailable): ${err.message}`);
@@ -187,7 +175,6 @@ export const TelemetryLayer = {
         created_at: new Date().toISOString(),
       }).then(({ error }) => {
         if (error) console.warn('[telemetry] Supabase insert failed:', error.message);
-        else console.log('[telemetry] Supabase: build run synced');
       });
     }
   },
@@ -240,6 +227,5 @@ export const TelemetryLayer = {
       posthogClient = null;
     }
     supabaseClient = null;
-    console.log('[telemetry] All telemetry flushed');
   },
 };
