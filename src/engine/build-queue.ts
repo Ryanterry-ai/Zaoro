@@ -242,7 +242,7 @@ try {
         globalName: '__preview',
         target: 'es2020',
         jsx: 'transform',
-        loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
+        loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'empty', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
         external: ['react', 'react-dom'],
         write: false,
         alias: { '@': path.join(wsDir, 'src') },
@@ -419,7 +419,7 @@ try {
     const buildLogPath = path.join(wsDir, '.build-debug.log');
     const engineLogPath = path.join(engineRoot, `.build-debug-${job.id}.log`);
     child = exec(
-      `npx tsx .build-temp-${job.id}.ts`,
+      `npx tsx "${scriptPath}"`,
       { cwd: engineRoot, timeout: this.config.jobTimeoutMs + 10000, env: { ...process.env, NODE_NO_WARNINGS: '1' } }
     );
     job.pid = child.pid;
@@ -462,10 +462,13 @@ try {
       clearTimeout(timeout);
       clearInterval(memCheck);
 
-      // Cleanup temp files
-      try { fs.unlinkSync(scriptPath); } catch {}
-      try { fs.unlinkSync(configPath); } catch {}
-      try { fs.unlinkSync(promptPath); } catch {}
+      // Cleanup temp files after delay — tsx ESM resolution is async,
+      // deleting immediately causes ERR_MODULE_NOT_FOUND race condition.
+      setTimeout(() => {
+        try { fs.unlinkSync(scriptPath); } catch {}
+        try { fs.unlinkSync(configPath); } catch {}
+        try { fs.unlinkSync(promptPath); } catch {}
+      }, 5000);
 
       if (!this.running.has(job.id)) return;
 

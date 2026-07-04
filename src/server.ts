@@ -773,7 +773,7 @@ const server = http.createServer(async (req, res) => {
         globalName: '__preview',
         target: 'es2020',
         jsx: 'transform',
-        loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
+        loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'empty', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.gif': 'dataurl' },
         external: ['react', 'react-dom'],
         write: false,
         alias: {
