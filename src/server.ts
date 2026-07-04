@@ -1388,28 +1388,47 @@ try {
   if (method === 'POST' && url.pathname.match(/^\/api\/workspace\/[^/]+\/deploy$/)) {
     const id = url.pathname.split('/')[3]!;
     const wsDir = path.join(WORKSPACE_BASE, id);
-    if (!fs.existsSync(wsDir)) return json(res, { error: 'Workspace not found' }, 404);
+
+    const vercelToken = process.env.VERCEL_TOKEN;
+    if (!vercelToken) {
+      return json(res, {
+        error: 'VERCEL_TOKEN not configured',
+        message: 'Add VERCEL_TOKEN to your Render environment variables.',
+        docs: 'https://vercel.com/account/tokens',
+        status: 'not_configured',
+      }, 501);
+    }
+
+    if (!fs.existsSync(wsDir)) {
+      return json(res, { error: 'Workspace not found' }, 404);
+    }
 
     try {
-      // Generate deploy configs
       const { execSync } = await import('child_process');
       const deployCodegen = path.join(ENGINE_ROOT, 'tools', 'deploy-codegen', 'index.cjs');
-      execSync(`node "${deployCodegen}" tier-standard "${wsDir}" --platform vercel`, { timeout: 10000 });
 
-      // Run vercel deploy in workspace directory
-      const buf = execSync('npx vercel deploy --prod -y --scope upgraded-ai-factory-s-projects 2>&1', {
-        cwd: wsDir,
-        timeout: 120000,
-        env: { ...process.env, VERCEL_PROJECT_ID: undefined }, // let vercel create new project
-      });
+      // Only run deploy-codegen if the tool exists
+      if (fs.existsSync(deployCodegen)) {
+        execSync(`node "${deployCodegen}" tier-standard "${wsDir}" --platform vercel`, {
+          timeout: 15000, stdio: 'pipe',
+        });
+      }
 
-      const output = Buffer.isBuffer(buf) ? buf.toString('utf-8') : String(buf);
+      const output = execSync(
+        `npx --no-install vercel deploy --prod -y --token ${vercelToken} 2>&1`,
+        { cwd: wsDir, timeout: 120000, stdio: 'pipe' },
+      ).toString();
+
       const urlMatch = output.match(/(https:\/\/[^\s]+\.vercel\.app)/);
-      const deployUrl = urlMatch ? urlMatch[1] : output.trim();
+      const deployUrl = urlMatch?.[1] ?? null;
 
-      return json(res, { success: true, url: deployUrl, output });
+      return json(res, {
+        status: 'deployed',
+        url: deployUrl,
+        output: output.slice(0, 500),
+      });
     } catch (e: any) {
-      return json(res, { error: e.message, stderr: e.stderr?.toString() || '' }, 500);
+      return json(res, { error: e.message, status: 'deploy_failed' }, 500);
     }
   }
 
