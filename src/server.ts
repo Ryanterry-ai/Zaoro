@@ -1510,6 +1510,71 @@ try {
     } catch (e: any) { return json(res, { error: e.message }, 500); }
   }
 
+  // GET /api/workspace/:id/events — SSE progress stream
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/events$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    const progressFile = path.join(wsDir, '.progress');
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    let lastCount = 0;
+    const flush = () => {
+      try {
+        if (!fs.existsSync(progressFile)) return;
+        const events: unknown[] = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
+        if (events.length <= lastCount) return;
+        const newEvents = events.slice(lastCount);
+        lastCount = events.length;
+        for (const ev of newEvents) {
+          res.write(`data: ${JSON.stringify(ev)}\n\n`);
+        }
+      } catch { /* file not ready yet — skip */ }
+    };
+
+    flush(); // send any already-written events immediately
+    const timer = setInterval(flush, 500);
+    req.on('close', () => clearInterval(timer));
+    return;
+  }
+
+  // GET /api/workspace/:id/inspect — IR replay artifacts
+  if (method === 'GET' && url.pathname.match(/^\/api\/workspace\/[^/]+\/inspect$/)) {
+    const id = url.pathname.split('/')[3]!;
+    const wsDir = path.join(WORKSPACE_BASE, id);
+    const replayDir = path.join(wsDir, '.replay');
+
+    const artifact = url.searchParams.get('artifact');
+
+    if (!fs.existsSync(replayDir)) {
+      return json(res, { artifacts: [], replayDir: null, error: null });
+    }
+
+    if (artifact) {
+      const artifactPath = path.join(replayDir, path.basename(artifact)); // basename: no path traversal
+      if (!fs.existsSync(artifactPath)) return json(res, { error: 'Artifact not found' }, 404);
+      try {
+        const content = JSON.parse(fs.readFileSync(artifactPath, 'utf-8'));
+        return json(res, content);
+      } catch { return json(res, { error: 'Failed to parse artifact' }, 500); }
+    }
+
+    try {
+      const files = fs.readdirSync(replayDir).filter(f => f.endsWith('.json'));
+      const artifacts = files.map(f => {
+        const stat = fs.statSync(path.join(replayDir, f));
+        return { name: f, size: stat.size, mtime: stat.mtime.toISOString() };
+      });
+      return json(res, { artifacts });
+    } catch (e: any) { return json(res, { error: e.message }, 500); }
+  }
+
   // GET /api/workspaces — list all workspaces for the homepage recent-builds panel
   if (method === 'GET' && url.pathname === '/api/workspaces') {
     try {

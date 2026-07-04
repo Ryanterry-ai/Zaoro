@@ -9,21 +9,23 @@ export async function GET(
 ) {
   const { id } = await params;
   const engineUrl = getEngineUrl();
+  const artifact = new URL(req.url).searchParams.get('artifact');
 
-  const upstream = await fetch(`${engineUrl}/api/workspace/${id}/inspect`, {
-    headers: {
-      Accept: 'text/event-stream',
-      'ngrok-skip-browser-warning': 'true',
-    },
-    signal: req.signal,
-  });
+  const upstreamUrl = artifact
+    ? `${engineUrl}/api/workspace/${id}/inspect?artifact=${encodeURIComponent(artifact)}`
+    : `${engineUrl}/api/workspace/${id}/inspect`;
 
-  return new Response(upstream.body, {
-    status: upstream.status,
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'X-Accel-Buffering': 'no',
-    },
-  });
+  try {
+    const upstream = await fetch(upstreamUrl, {
+      headers: {
+        Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      signal: req.signal,
+    });
+    const data = await upstream.json();
+    return Response.json(data, { status: upstream.status });
+  } catch (e: any) {
+    return Response.json({ error: 'Engine unreachable', details: e.message }, { status: 502 });
+  }
 }
