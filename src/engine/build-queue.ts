@@ -199,7 +199,7 @@ function interceptConsole(prefix, type) {
       writeProgress('compile', 'healing', clean);
     } else if (clean.includes('[domain]') && clean.includes('hasFunction')) {
       // Skip noisy per-file domain checks — only log summary
-    } else if (clean.includes('[telemetry]')) {
+    } else if (clean.includes('[telemetry]') || clean.includes('PostHog') || clean.includes('posthog') || clean.includes('Sentry') || clean.includes('sentry')) {
       // Skip telemetry warnings — they're non-blocking and pollute build progress
     } else if (clean.includes('Error') || clean.includes('error')) {
       writeProgress('error', 'warning', clean.slice(0, 200));
@@ -234,7 +234,7 @@ try {
     const result = await healer.heal(wsDir, gw, payload.prompt, (iter, errs, msg) => {
       writeProgress('self-heal', 'info', 'SelfHealing iteration ' + iter + ': ' + errs + ' errors — ' + msg);
     });
-    writeProgress('self-heal', 'completed', 'SelfHealing: ' + result.fixed + ' errors fixed in ' + result.iterations + ' iterations');
+    writeProgress('self-heal', 'completed', 'SelfHealing: ' + result.errorsFixed + ' errors fixed in ' + result.iterations + ' iterations');
   } catch (healErr) {
     writeProgress('self-heal', 'warning', 'SelfHealing skipped: ' + (healErr.message || '').slice(0, 200));
   }
