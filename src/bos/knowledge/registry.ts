@@ -7,6 +7,7 @@ import type { CompliancePack } from '../schemas/knowledge/compliance-pack.schema
 import { LUXURY_DARK_OPULENCE } from './design-profiles/luxury-dark-opulence.js';
 import { SAAS_MODERN } from './design-profiles/saas-modern.js';
 import { HEALTHCARE_CLEAN, ECOMMERCE_MODERN } from './design-profiles/healthcare-clean.js';
+import { SUPPLEMENT_MARKETPLACE } from './design-profiles/supplement-marketplace.js';
 import {
   RESTAURANT_WARM,
   FITNESS_ENERGETIC,
@@ -59,6 +60,7 @@ export const DESIGN_PROFILES: DesignProfile[] = [
   SAAS_MODERN,
   HEALTHCARE_CLEAN,
   ECOMMERCE_MODERN,
+  SUPPLEMENT_MARKETPLACE,
   RESTAURANT_WARM,
   FITNESS_ENERGETIC,
   EDUCATION_FRIENDLY,
@@ -288,6 +290,25 @@ export const COMPLIANCE_PACKS: CompliancePack[] = [
     ],
     applicableIndustries: ['healthcare', 'hospital', 'dental', 'pharmacy', 'medical-device'],
     applicableBusinessModels: ['subscription', 'direct-sales'],
+  },
+  {
+    id: 'compliance.fssai', version: '1.0.0', status: 'active',
+    createdAt: '2026-07-01T00:00:00+00:00', updatedAt: '2026-07-01T00:00:00+00:00',
+    evidenceRefs: [], kind: 'CompliancePack', name: 'FSSAI',
+    description: 'Food Safety and Standards Authority of India',
+    jurisdiction: 'IN',
+    category: 'industry',
+    rules: [
+      { rule: 'FSSAI license number must be displayed on every product', severity: 'must' },
+      { rule: 'Product ingredient list must be visible and accurate', severity: 'must' },
+      { rule: 'Nutritional information per serving must be displayed', severity: 'must' },
+      { rule: 'Health supplement disclaimer text required', severity: 'must' },
+      { rule: 'Not a medicine disclaimer must appear prominently', severity: 'must' },
+      { rule: 'Batch number and manufacturing date must be stored', severity: 'must' },
+      { rule: 'Best before date must be displayed', severity: 'must' },
+    ],
+    applicableIndustries: ['ecommerce', 'ecommerce-supplement', 'food', 'beverage'],
+    applicableBusinessModels: ['direct-sales', 'marketplace'],
   },
 ];
 

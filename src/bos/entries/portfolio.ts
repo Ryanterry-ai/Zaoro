@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { PORTFOLIO_BI } from '../knowledge/bi-profiles/portfolio.js';
 
 const PortfolioEntry: BOSEntry = {
   id: 'portfolio.creative',
@@ -32,6 +33,7 @@ const PortfolioEntry: BOSEntry = {
   ],
   entities: ['Project', 'Skill', 'Testimonial', 'Client', 'Service', 'Blog'],
   revenueModel: ['commission', 'project_fee', 'consulting', 'hourly'],
+  revenueIntelligence: PORTFOLIO_BI,
   compliance: ['Data Privacy', 'IP Rights'],
   priority: 3,
   tags: ['portfolio', 'creative', 'designer', 'artist', 'photographer', 'freelance', 'work']

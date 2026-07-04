@@ -2,6 +2,7 @@
 
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { LUXURY_RETAIL_BI } from '../knowledge/bi-profiles/luxury-retail.js';
 
 const LuxuryRetailEntry: BOSEntry = {
   id: 'luxury.retail',
@@ -66,6 +67,7 @@ const LuxuryRetailEntry: BOSEntry = {
   entities: ['Collection', 'Product', 'Dealer', 'Inquiry', 'VIP', 'Order', 'Service'],
   
   revenueModel: ['direct_sales', 'dealer_network', 'limited_editions', 'services'],
+  revenueIntelligence: LUXURY_RETAIL_BI,
   
   compliance: ['Luxury Goods Regulations', 'Export Controls', 'Authentication'],
   

@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { AGENCY_BI } from '../knowledge/bi-profiles/agency.js';
 
 const AgencyEntry: BOSEntry = {
   id: 'agency.creative',
@@ -32,6 +33,7 @@ const AgencyEntry: BOSEntry = {
   ],
   entities: ['Client', 'Project', 'TeamMember', 'Service', 'CaseStudy', 'Testimonial', 'Invoice'],
   revenueModel: ['project_based', 'retainer', 'hourly', 'value_based', 'productized'],
+  revenueIntelligence: AGENCY_BI,
   compliance: ['NDA', 'IP Assignment', 'Data Protection', 'Contract Law'],
   priority: 2,
   tags: ['agency', 'creative', 'studio', 'portfolio', 'design', 'branding', 'digital', 'marketing']

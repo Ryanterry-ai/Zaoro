@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { ENTERPRISE_SOFTWARE_BI } from '../knowledge/bi-profiles/enterprise-software.js';
 
 const EnterpriseSoftwareEntry: BOSEntry = {
   id: 'enterprise.erp',
@@ -32,6 +33,7 @@ const EnterpriseSoftwareEntry: BOSEntry = {
   ],
   entities: ['Organization', 'Department', 'Employee', 'User', 'Role', 'Report', 'Workflow', 'Integration'],
   revenueModel: ['subscription', 'per_seat', 'enterprise_license', 'implementation_fee', 'support'],
+  revenueIntelligence: ENTERPRISE_SOFTWARE_BI,
   compliance: ['GDPR', 'SOC 2', 'ISO 27001', 'Data Residency', 'Audit Trail', 'RBAC'],
   priority: 1,
   tags: ['enterprise', 'erp', 'business', 'software', 'operations', 'management', 'crm', 'hrm']

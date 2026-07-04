@@ -2,6 +2,8 @@
 // Defines the schema for industry-specific business definitions
 // Used by the Research Swarm and Content Scraper to fetch real data
 
+import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema.js';
+
 /**
  * Reference source for scraping real content from competitor/reference sites
  */
@@ -64,7 +66,10 @@ export interface BOSEntry {
   
   /** Revenue model keywords */
   revenueModel?: string[];
-  
+
+  /** Deep revenue intelligence profile — how this business makes money */
+  revenueIntelligence?: BusinessIntelligenceProfile;
+
   /** Compliance/legal requirements */
   compliance?: string[];
   

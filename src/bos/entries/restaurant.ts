@@ -1,7 +1,6 @@
-// ─── BOS Entry: Restaurant ───────────────────────────────────────────
-
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { HOSPITALITY_RESTAURANT_BI } from '../knowledge/bi-profiles/hospitality-restaurant.js';
 
 const RestaurantEntry: BOSEntry = {
   id: 'hospitality.restaurant',
@@ -65,6 +64,7 @@ const RestaurantEntry: BOSEntry = {
   entities: ['MenuItem', 'Category', 'Order', 'Reservation', 'Table', 'Customer', 'Delivery'],
   
   revenueModel: ['dine_in', 'takeout', 'delivery', 'catering', 'events'],
+  revenueIntelligence: HOSPITALITY_RESTAURANT_BI,
   
   compliance: ['Food Safety', 'Health Permits', 'Alcohol Licensing'],
   

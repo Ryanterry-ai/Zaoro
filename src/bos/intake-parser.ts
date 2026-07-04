@@ -17,6 +17,7 @@
  */
 
 import type { BREContext } from './reasoning/rules-engine.js';
+import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema.js';
 
 interface IndustryMapping {
   industry: string;
@@ -89,13 +90,24 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
       beauty: ['beauty', 'cosmetics', 'skincare', 'makeup', 'fragrance'],
       food_beverage: ['food', 'grocery', 'organic', 'snack', 'beverage', 'wine'],
       marketplace: ['marketplace', 'multi-seller', 'vendor', 'platform'],
+      supplement: ['supplement', 'supplements', 'whey', 'protein', 'protein powder',
+        'vitamin', 'vitamins', 'creatine', 'bcaa', 'pre-workout', 'fish oil',
+        'multivitamin', 'glutamine', 'mass gainer', 'fat burner', 'omega',
+        'calcium', 'iron', 'zinc', 'magnesium', 'probiotic', 'collagen',
+        'ashwagandha', 'saffron', 'shilajit', 'gokhru', 'yohimbine'],
     },
     keywords: ['ecommerce', 'e-commerce', 'shop', 'store', 'sell', 'product', 'cart',
       'buy', 'purchase', 'retail', 'catalog', 'checkout', 'shipping', 'inventory',
-      'marketplace', 'storefront', 'online store', 'dropship', 'fulfillment'],
+      'marketplace', 'storefront', 'online store', 'dropship', 'fulfillment',
+      // Supplement marketplace specific
+      'supplement', 'supplements', 'whey protein', 'protein powder', 'gym supplements',
+      'bodybuilding supplements', 'nutrition store', 'health store', 'health shop',
+      'online supplement', 'supplement store', 'buy supplements',
+    ],
     businessModels: ['direct-sales', 'marketplace'],
-    capabilities: ['commerce', 'payments', 'inventory', 'orders', 'analytics'],
-    entities: ['Product', 'Order', 'Customer', 'Category'],
+    capabilities: ['commerce', 'payments', 'inventory', 'orders', 'analytics', 'search',
+      'ecommerce-supplement', 'indian-payments', 'fssai-compliance', 'multi-vendor', 'customer-reviews'],
+    entities: ['Product', 'Order', 'Customer', 'Category', 'Brand', 'Seller', 'Ingredient'],
     audience: 'b2c',
   },
   {
@@ -625,6 +637,7 @@ function extractAppName(prompt: string): string | undefined {
  * can evaluate match quality without re-running detection.
  */
 export function buildBREContext(prompt: string): BREContext {
+  const lower = prompt.toLowerCase();
   const { mapping: industryMapping, score: industryScore, subIndustry } = detectIndustryWithScore(prompt);
 
   const industry = industryMapping?.industry ?? 'general';
@@ -643,6 +656,18 @@ export function buildBREContext(prompt: string): BREContext {
   if (industry === 'healthcare') compliancePacks.push('compliance.hipaa');
   if (industry === 'fintech') compliancePacks.push('compliance.pci-dss');
   if (industry === 'enterprise-software') compliancePacks.push('compliance.soc2');
+  // FSSAI compliance for Indian supplement/food/health product marketplaces
+  if (country === 'IN' && (
+    subIndustry === 'supplement' ||
+    industry === 'ecommerce-supplement' ||
+    (industry === 'ecommerce' && (
+      lower.includes('supplement') || lower.includes('protein') || lower.includes('vitamin') ||
+      lower.includes('whey') || lower.includes('gym supplement') || lower.includes('nutrition store') ||
+      lower.includes('health store') || lower.includes('fssai')
+    ))
+  )) {
+    compliancePacks.push('compliance.fssai');
+  }
 
   const result: BREContext = {
     industry,
@@ -658,6 +683,22 @@ export function buildBREContext(prompt: string): BREContext {
   if (prompt) result.description = prompt.slice(0, 200);
   if (subIndustry) result.subIndustry = subIndustry;
   if (audience === 'b2b' || audience === 'internal') result.audience = audience;
+
+  // Load revenue intelligence from BOS entry if available
+  try {
+    const { BOSRegistry } = require('./registry.js');
+    const lookupResult = BOSRegistry.lookup({
+      industry: result.industry,
+      subIndustry: result.subIndustry,
+      businessModels: result.businessModels,
+      capabilities: result.capabilities,
+    });
+    if (lookupResult?.entry?.revenueIntelligence) {
+      result.revenueIntelligence = lookupResult.entry.revenueIntelligence;
+    }
+  } catch {
+    // BOS registry not available, skip revenue intelligence
+  }
 
   // Attach raw industry score as a hidden signal for the confidence gate.
   // We use the description field to pass it through without changing BREContext schema.

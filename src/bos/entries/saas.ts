@@ -2,6 +2,7 @@
 
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { SAAS_BI } from '../knowledge/bi-profiles/saas.js';
 
 const SaaSEntry: BOSEntry = {
   id: 'technology.saas',
@@ -64,6 +65,7 @@ const SaaSEntry: BOSEntry = {
   entities: ['User', 'Workspace', 'Project', 'Subscription', 'Team', 'Feature', 'Usage'],
   
   revenueModel: ['subscription', 'freemium', 'tiered_pricing', 'usage_based'],
+  revenueIntelligence: SAAS_BI,
   
   compliance: ['GDPR', 'SOC2', 'Data Processing Agreement'],
   

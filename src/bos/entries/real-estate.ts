@@ -2,6 +2,7 @@
 
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { REAL_ESTATE_BI } from '../knowledge/bi-profiles/real-estate.js';
 
 const RealEstateEntry: BOSEntry = {
   id: 'realestate.agency',
@@ -65,6 +66,7 @@ const RealEstateEntry: BOSEntry = {
   entities: ['Property', 'Agent', 'Inquiry', 'Tour', 'Offer', 'Client', 'Listing'],
   
   revenueModel: ['commission', 'listing_fees', 'referral_fees', 'property_management'],
+  revenueIntelligence: REAL_ESTATE_BI,
   
   compliance: ['Fair Housing', 'MLS Rules', 'Disclosure Requirements'],
   

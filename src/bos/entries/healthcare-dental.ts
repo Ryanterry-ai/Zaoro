@@ -2,6 +2,7 @@
 
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { HEALTHCARE_DENTAL_BI } from '../knowledge/bi-profiles/healthcare-dental.js';
 
 const HealthcareDentalEntry: BOSEntry = {
   id: 'healthcare.dental',
@@ -66,6 +67,7 @@ const HealthcareDentalEntry: BOSEntry = {
   entities: ['Patient', 'Doctor', 'Appointment', 'Treatment', 'Service', 'Insurance', 'Payment'],
   
   revenueModel: ['service_fees', 'insurance_billing', 'membership_plans', 'cosmetic_upsell'],
+  revenueIntelligence: HEALTHCARE_DENTAL_BI,
   
   compliance: ['HIPAA', 'GDPR', 'Medical Records', 'Insurance Verification'],
   

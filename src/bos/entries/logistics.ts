@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { LOGISTICS_BI } from '../knowledge/bi-profiles/logistics.js';
 
 const LogisticsEntry: BOSEntry = {
   id: 'logistics.supplychain',
@@ -32,6 +33,7 @@ const LogisticsEntry: BOSEntry = {
   ],
   entities: ['Shipment', 'Driver', 'Vehicle', 'Route', 'Warehouse', 'Customer', 'Dispatch', 'TrackingEvent'],
   revenueModel: ['shipping_fee', 'subscription', 'warehouse_storage', 'last_mile', 'freight_brokerage'],
+  revenueIntelligence: LOGISTICS_BI,
   compliance: ['GDPR', 'Transport Regulations', 'Insurance', 'Hazmat', 'Customs', 'ELD Mandate'],
   priority: 2,
   tags: ['logistics', 'supply chain', 'shipping', 'delivery', 'fleet', 'warehouse', 'transport', 'dispatch']

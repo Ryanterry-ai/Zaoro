@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { BEAUTY_BI } from '../knowledge/bi-profiles/beauty.js';
 
 const BeautyEntry: BOSEntry = {
   id: 'beauty.salon',
@@ -32,6 +33,7 @@ const BeautyEntry: BOSEntry = {
   ],
   entities: ['Service', 'Stylist', 'Appointment', 'Product', 'Client', 'GiftCard', 'Inventory'],
   revenueModel: ['service_fee', 'product_sales', 'membership', 'gift_cards', 'commission'],
+  revenueIntelligence: BEAUTY_BI,
   compliance: ['Cosmetology License', 'Health Regulations', 'Product Safety', 'Data Privacy'],
   priority: 2,
   tags: ['beauty', 'salon', 'spa', 'hair', 'nails', 'skincare', 'cosmetics', 'stylist']

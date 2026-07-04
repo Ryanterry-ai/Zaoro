@@ -22,6 +22,7 @@ import { BlueprintCompilerV2, type BlueprintCompilerInput } from './reasoning/bl
 import type { ApplicationBlueprint } from './schemas/blueprint/application-blueprint.schema.js';
 import type { DesignProfile } from './schemas/knowledge/design-profile.schema.js';
 import type { Pattern } from './schemas/knowledge/pattern.schema.js';
+import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema.js';
 import {
   KnowledgeRegistry,
   DESIGN_PROFILES,
@@ -42,6 +43,7 @@ export interface BREv2Result {
   selectedPattern: ScoredOption | undefined;
   confidence: number;
   usedLLMPlanning: boolean;
+  revenueIntelligence?: BusinessIntelligenceProfile;
 }
 
 /**
@@ -157,6 +159,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     fullSelectedPattern, // NEW: full Pattern object, not just ScoredOption
     vocabulary,
     knowledgeRefs: [],
+    ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
   };
 
   const blueprint = compiler.compile(input);
@@ -178,5 +181,6 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     selectedPattern,
     confidence: blueprint.confidence,
     usedLLMPlanning,
+    ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
   };
 }

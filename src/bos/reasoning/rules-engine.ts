@@ -1,3 +1,5 @@
+import type { BusinessIntelligenceProfile } from '../schemas/knowledge/business-intelligence.schema.js';
+
 export interface BREContext {
   industry: string;
   subIndustry?: string;
@@ -11,6 +13,8 @@ export interface BREContext {
   audience?: string;
   appName?: string;
   description?: string;
+  /** Deep revenue intelligence profile */
+  revenueIntelligence?: BusinessIntelligenceProfile;
 }
 
 export interface Rule {
@@ -37,7 +41,8 @@ export type RuleAction =
   | { type: 'add_permission'; role: string; resource: string; actions: string[] }
   | { type: 'add_capability'; name: string; features?: string[] }
   | { type: 'add_feature'; name: string; capability: string; uiSections?: string[]; entities?: string[] }
-  | { type: 'add_relationship'; source: string; target: string; relationType?: string; foreignKey?: string };
+  | { type: 'add_relationship'; source: string; target: string; relationType?: string; foreignKey?: string }
+  | { type: 'add_revenue_kpi'; name: string; formula: string; category: string; benchmark?: string };
 
 export interface RuleDecision {
   ruleId: string;
@@ -729,6 +734,42 @@ export function createDefaultRules(): Rule[] {
         { type: 'add_permission', role: 'admin', resource: 'all', actions: ['create', 'read', 'update', 'delete'] },
       ],
       source: 'journey',
+    },
+
+    // ── Revenue Intelligence Rules ───────────────────────────────────────────
+
+    {
+      id: 'rule.revenue.hasBI',
+      name: 'Revenue intelligence profile available — use its KPIs',
+      priority: 22,
+      condition: (ctx) => ctx.revenueIntelligence !== undefined,
+      actions: [
+        // Add a revenue dashboard page
+        { type: 'add_page', path: '/revenue', name: 'Revenue Dashboard', sections: ['stats-cards', 'charts', 'activity-feed'] },
+        // Add BI-specific KPIs
+        ...(ctx => {
+          const bi = ctx.revenueIntelligence;
+          if (!bi) return [];
+          return bi.kpis.map(kpi => ({
+            type: 'add_kpi' as const,
+            name: kpi.name,
+            formula: kpi.formula,
+          }));
+        })({} as BREContext),
+      ],
+      source: 'revenue_intelligence',
+    },
+
+    {
+      id: 'rule.revenue.leadCapture',
+      name: 'Revenue intelligence has lead capture mechanisms',
+      priority: 21,
+      condition: (ctx) => ctx.revenueIntelligence !== undefined && (ctx.revenueIntelligence?.leadCaptureMechanisms?.length ?? 0) > 0,
+      actions: [
+        { type: 'add_page', path: '/signup', name: 'Sign Up', sections: ['auth-form'] },
+        { type: 'add_page', path: '/login', name: 'Login', sections: ['auth-form'] },
+      ],
+      source: 'revenue_intelligence',
     },
   ];
 }

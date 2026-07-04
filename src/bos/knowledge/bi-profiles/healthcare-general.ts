@@ -1,0 +1,83 @@
+import type { BusinessIntelligenceProfile } from '../../schemas/knowledge/business-intelligence.schema.js';
+
+export const HEALTHCARE_GENERAL_BI: BusinessIntelligenceProfile = {
+  id: 'bi.healthcare.general',
+  version: '1.0.0',
+  name: 'Healthcare Practice',
+  description: 'How a healthcare practice makes money: patient acquisition → appointment → consultation → treatment → follow-up → retention',
+  revenueCycle: {
+    name: 'Patient Acquisition → Treatment → Retention',
+    description: 'Patient discovers practice → books appointment → consultation → treatment plan → treatment → follow-up → ongoing care',
+    steps: [
+      { name: 'Patient discovery', action: 'Patient finds practice via referral/insurance/search', conversionRate: 0.15, avgTimeToNext: '1-7 days', revenueImpact: 'high' },
+      { name: 'Appointment booked', action: 'Patient schedules visit', conversionRate: 0.35, avgTimeToNext: '1-3 days', revenueImpact: 'critical' },
+      { name: 'Consultation completed', action: 'Doctor consultation and assessment', conversionRate: 0.85, avgTimeToNext: '0-1 days', revenueImpact: 'high' },
+      { name: 'Treatment plan accepted', action: 'Patient agrees to recommended treatment', conversionRate: 0.60, avgTimeToNext: '1-7 days', revenueImpact: 'critical' },
+      { name: 'Treatment completed', action: 'All scheduled treatments completed', conversionRate: 0.80, avgTimeToNext: '14-90 days', revenueImpact: 'high' },
+      { name: 'Follow-up scheduled', action: 'Patient schedules follow-up visit', conversionRate: 0.55, avgTimeToNext: '30-90 days', revenueImpact: 'medium' },
+    ],
+    avgCycleLength: '14-90 days',
+    avgRevenuePerCustomer: '$200-2,000 per visit',
+  },
+  conversionFunnel: {
+    name: 'Discovery → Appointment → Treatment → Retention',
+    stages: ['Website/Referral', 'Appointment Scheduled', 'Consultation', 'Treatment Plan', 'Treatment Complete', 'Follow-up'],
+    overallConversionRate: '5-8% of inquiries become patients',
+    biggestDropOff: 'Appointment scheduled → Consultation (25% no-show)',
+  },
+  churnSignals: [
+    { name: 'Missed follow-up', detection: 'Patient didn\'t schedule follow-up within 90 days', window: '90 days', severity: 'high' },
+    { name: 'Insurance issue', detection: 'Patient\'s insurance claim denied or changed', window: '30 days', severity: 'critical' },
+    { name: 'Long wait time', detection: 'Patient waited >30 minutes beyond appointment', window: '0 days', severity: 'medium' },
+    { name: 'No-show', detection: 'Patient missed scheduled appointment', window: '0 days', severity: 'high' },
+    { name: 'Competitor switch', detection: 'Patient mentioned trying another provider', window: '30 days', severity: 'high' },
+  ],
+  retentionAutomations: [
+    { name: 'Follow-up reminder', trigger: '7 days before scheduled follow-up', action: 'Send SMS/email reminder', expectedImpact: 'Reduces no-shows by 30%' },
+    { name: 'Wellness check-in', trigger: '90 days since last visit', action: 'Send wellness tips + booking link', expectedImpact: 'Recalls 35% of inactive patients' },
+    { name: 'Patient satisfaction survey', trigger: '24 hours after visit', action: 'Send feedback survey', expectedImpact: 'Identifies issues before they become reviews' },
+    { name: 'Referral program', trigger: 'After positive visit', action: 'Invite to refer friends for credit', expectedImpact: 'Generates 20% new patients from referrals' },
+  ],
+  kpis: [
+    { name: 'Revenue', label: 'Revenue', formula: 'Total collections', benchmark: '$30K-150K/month', unit: '$', category: 'revenue' },
+    { name: 'Patient Volume', label: 'Patients', formula: 'Total patients seen this month', benchmark: '200-800/month', unit: 'count', category: 'operations' },
+    { name: 'No-Show Rate', label: 'No-Shows', formula: 'No-shows / Scheduled appointments × 100', benchmark: '5-15%', unit: '%', category: 'operations' },
+    { name: 'Average Revenue per Patient', label: 'Rev/Patient', formula: 'Total revenue / Total patients', benchmark: '$150-400', unit: '$', category: 'revenue' },
+    { name: 'Patient Retention Rate', label: 'Retention', formula: 'Returning patients / Total patients × 100', benchmark: '60-80%', unit: '%', category: 'retention' },
+    { name: 'Insurance Collection Rate', label: 'Ins Collection', formula: 'Insurance collected / Insurance billed × 100', benchmark: '85-95%', unit: '%', category: 'operations' },
+    { name: 'New Patient Ratio', label: 'New Patients', formula: 'New patients / Total patients × 100', benchmark: '15-25%', unit: '%', category: 'growth' },
+    { name: 'Patient Satisfaction', label: 'NPS', formula: 'Net Promoter Score', benchmark: '50-70', unit: 'score', category: 'engagement' },
+  ],
+  dashboardWidgets: [
+    { name: 'Revenue Dashboard', type: 'chart', description: 'Daily/weekly revenue with collection tracking', kpis: ['Revenue', 'Insurance Collection Rate'], priority: 'primary' },
+    { name: 'Patient Pipeline', type: 'table', description: 'Today\'s appointments and patient status', kpis: ['Patient Volume', 'No-Show Rate'], priority: 'primary' },
+    { name: 'Patient Metrics', type: 'stat-card', description: 'Retention, satisfaction, and new patient stats', kpis: ['Patient Retention Rate', 'Patient Satisfaction'], priority: 'secondary' },
+    { name: 'Follow-up Tracker', type: 'list', description: 'Patients due for follow-up appointments', kpis: ['New Patient Ratio'], priority: 'secondary' },
+  ],
+  leadCaptureMechanisms: [
+    { name: 'New Patient Registration', headline: 'Become a New Patient', fields: ['name', 'phone', 'email', 'insurance'], nextStep: 'Confirmation call + intake forms', conversionRate: '10-15% of visitors' },
+    { name: 'Appointment Request', headline: 'Book Your Appointment', fields: ['name', 'phone', 'preferred_date', 'reason'], nextStep: 'Appointment confirmation', conversionRate: '15-20% of visitors' },
+    { name: 'Telehealth Inquiry', headline: 'Virtual Consultation Available', fields: ['name', 'email', 'concern'], nextStep: 'Telehealth scheduling link', conversionRate: '20-25% of visitors' },
+  ],
+  morningCheck: {
+    primaryMetrics: ['Today\'s appointments', 'Revenue so far', 'No-shows', 'Insurance claims pending'],
+    secondaryMetrics: ['Patient wait times', 'Staff utilization', 'Follow-up due', 'Reviews'],
+    alertConditions: ['No-show rate >20%', 'Revenue <80% target', 'Patient complaint', 'Insurance claim rejections'],
+  },
+  revenueModels: [
+    { name: 'Insurance Claims', description: 'Third-party insurance reimbursements', percentage: 55 },
+    { name: 'Out-of-Pocket', description: 'Direct patient payments', percentage: 25 },
+    { name: 'Telehealth', description: 'Virtual consultation fees', percentage: 10 },
+    { name: 'Procedures', description: 'In-office procedures and tests', percentage: 10 },
+  ],
+  vocabulary: {
+    'customer': 'patient',
+    'product': 'service',
+    'buy': 'schedule',
+    'store': 'practice',
+    'cart': 'treatment plan',
+    'checkout': 'payment',
+    'price': 'fee',
+    'order': 'appointment',
+  },
+};

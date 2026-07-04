@@ -1,0 +1,83 @@
+import type { BusinessIntelligenceProfile } from '../../schemas/knowledge/business-intelligence.schema.js';
+
+export const HEALTHCARE_DENTAL_BI: BusinessIntelligenceProfile = {
+  id: 'bi.healthcare.dental',
+  version: '1.0.0',
+  name: 'Dental Practice',
+  description: 'How a dental practice makes money: new patient acquisition → appointment → treatment plan → case acceptance → retention → referrals',
+  revenueCycle: {
+    name: 'New Patient → Treatment Plan → Case Acceptance → Retention',
+    description: 'Patient discovers practice → books first visit → treatment plan presented → patient accepts → treatment completed → refer friends',
+    steps: [
+      { name: 'Patient discovery', action: 'Patient finds practice via Google/referral', conversionRate: 0.12, avgTimeToNext: '1-7 days', revenueImpact: 'high' },
+      { name: 'First appointment booked', action: 'Patient schedules initial exam', conversionRate: 0.30, avgTimeToNext: '1-3 days', revenueImpact: 'critical' },
+      { name: 'Treatment plan presented', action: 'Dentist presents treatment options', conversionRate: 0.80, avgTimeToNext: '0-1 days', revenueImpact: 'high' },
+      { name: 'Case accepted', action: 'Patient agrees to treatment plan', conversionRate: 0.50, avgTimeToNext: '1-7 days', revenueImpact: 'critical' },
+      { name: 'Treatment completed', action: 'Patient completes all appointments', conversionRate: 0.75, avgTimeToNext: '14-60 days', revenueImpact: 'high' },
+      { name: 'Referral made', action: 'Patient refers family/friends', conversionRate: 0.15, avgTimeToNext: '30-180 days', revenueImpact: 'medium' },
+    ],
+    avgCycleLength: '14-60 days',
+    avgRevenuePerCustomer: '$500-3,000 per case',
+  },
+  conversionFunnel: {
+    name: 'Discovery → First Visit → Treatment → Retention',
+    stages: ['Website Visit', 'Appointment Booked', 'First Visit', 'Treatment Plan', 'Case Accepted', 'Treatment Complete', 'Referral'],
+    overallConversionRate: '3-5% of website visitors become patients',
+    biggestDropOff: 'Appointment booked → First visit (30% no-show)',
+  },
+  churnSignals: [
+    { name: 'Missed follow-up', detection: 'Patient didn\'t schedule next visit after 6 months', window: '180 days', severity: 'high' },
+    { name: 'Treatment incomplete', detection: 'Patient started but didn\'t complete treatment plan', window: '90 days', severity: 'critical' },
+    { name: 'Insurance change', detection: 'Patient\'s insurance coverage changed', window: '30 days', severity: 'medium' },
+    { name: 'Negative experience', detection: 'Patient leaves negative review', window: '7 days', severity: 'critical' },
+    { name: 'Competitor switch', detection: 'Patient mentions trying another practice', window: '30 days', severity: 'high' },
+  ],
+  retentionAutomations: [
+    { name: 'Recall reminder', trigger: '6 months since last cleaning', action: 'Send reminder call/text + online booking link', expectedImpact: 'Recalls 40% of lapsed patients' },
+    { name: 'Treatment follow-up', trigger: '3 days after treatment', action: 'Check-in call + post-care instructions', expectedImpact: 'Reduces complications by 25%' },
+    { name: 'Birthday message', trigger: 'Patient birthday month', action: 'Send birthday greeting + special offer', expectedImpact: 'Increases referrals by 10%' },
+    { name: 'Referral incentive', trigger: 'Patient completes treatment', action: 'Offer referral credit program', expectedImpact: 'Generates 15% new patients from referrals' },
+  ],
+  kpis: [
+    { name: 'Revenue', label: 'Revenue', formula: 'Total collections', benchmark: '$50K-200K/month', unit: '$', category: 'revenue' },
+    { name: 'New Patients', label: 'New Patients', formula: 'Count of new patients this month', benchmark: '20-50/month', unit: 'count', category: 'growth' },
+    { name: 'Case Acceptance Rate', label: 'Case Accept', formula: 'Accepted plans / Presented plans × 100', benchmark: '40-60%', unit: '%', category: 'revenue' },
+    { name: 'Production per Visit', label: 'Prod/Visit', formula: 'Total production / Total visits', benchmark: '$150-400', unit: '$', category: 'revenue' },
+    { name: 'Collection Rate', label: 'Collection', formula: 'Collected / Billed × 100', benchmark: '95-99%', unit: '%', category: 'operations' },
+    { name: 'Recall Rate', label: 'Recall', formula: 'Patients recalled / Total active patients × 100', benchmark: '70-85%', unit: '%', category: 'retention' },
+    { name: 'Patient Satisfaction', label: 'NPS', formula: 'Net Promoter Score', benchmark: '60-80', unit: 'score', category: 'engagement' },
+    { name: 'Insurance vs Out-of-Pocket', label: 'Ins Mix', formula: 'Insurance revenue / Total revenue × 100', benchmark: '50-70%', unit: '%', category: 'revenue' },
+  ],
+  dashboardWidgets: [
+    { name: 'Production Dashboard', type: 'chart', description: 'Daily/weekly production vs collection targets', kpis: ['Revenue', 'Production per Visit'], priority: 'primary' },
+    { name: 'Patient Pipeline', type: 'table', description: 'Today\'s appointments, treatment plans pending', kpis: ['New Patients', 'Case Acceptance Rate'], priority: 'primary' },
+    { name: 'Financial Summary', type: 'stat-card', description: 'AR, collections, insurance claims pending', kpis: ['Collection Rate', 'Insurance vs Out-of-Pocket'], priority: 'secondary' },
+    { name: 'Recall Tracker', type: 'list', description: 'Patients due for recall with contact status', kpis: ['Recall Rate'], priority: 'secondary' },
+  ],
+  leadCaptureMechanisms: [
+    { name: 'New Patient Form', headline: 'Schedule Your First Visit', fields: ['name', 'phone', 'email', 'insurance_provider'], nextStep: 'Confirmation call + intake form', conversionRate: '10-15% of visitors' },
+    { name: 'Emergency Contact', headline: 'Need Urgent Dental Care?', fields: ['name', 'phone', 'description'], nextStep: 'Immediate callback from front desk', conversionRate: '20-30% of visitors' },
+    { name: 'Free Consultation', headline: 'Complimentary Smile Consultation', fields: ['name', 'email', 'phone', 'concern'], nextStep: 'Schedule free consultation', conversionRate: '15-20% of visitors' },
+  ],
+  morningCheck: {
+    primaryMetrics: ['Today\'s production', 'Appointments scheduled', 'Collection rate', 'Treatment plans pending'],
+    secondaryMetrics: ['Recall patients due', 'Insurance claims pending', 'Patient reviews', 'Staff utilization'],
+    alertConditions: ['Production <80% of target', 'No-show rate >20%', 'Insurance claim rejections', 'Patient complaint'],
+  },
+  revenueModels: [
+    { name: 'Insurance Claims', description: 'Third-party insurance reimbursements', percentage: 55 },
+    { name: 'Out-of-Pocket', description: 'Direct patient payments', percentage: 25 },
+    { name: 'Cosmetic/Elective', description: 'Elective procedures (whitening, veneers)', percentage: 12 },
+    { name: 'Emergencies', description: 'Emergency dental services', percentage: 8 },
+  ],
+  vocabulary: {
+    'customer': 'patient',
+    'product': 'procedure',
+    'buy': 'schedule',
+    'store': 'practice',
+    'cart': 'treatment plan',
+    'checkout': 'payment',
+    'price': 'fee',
+    'order': 'appointment',
+  },
+};

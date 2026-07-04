@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { FINTECH_BI } from '../knowledge/bi-profiles/fintech.js';
 
 const FintechEntry: BOSEntry = {
   id: 'fintech.banking',
@@ -32,6 +33,7 @@ const FintechEntry: BOSEntry = {
   ],
   entities: ['Account', 'Transaction', 'Payment', 'User', 'Statement', 'Budget', 'SupportTicket', 'ComplianceReport'],
   revenueModel: ['transaction_fee', 'subscription', 'interest', 'interchange', 'premium_features'],
+  revenueIntelligence: FINTECH_BI,
   compliance: ['PCI DSS', 'KYC', 'AML', 'GDPR', 'PSD2', 'SOX', 'Data Protection'],
   priority: 1,
   tags: ['fintech', 'finance', 'banking', 'payment', 'transaction', 'account', 'financial', 'money']

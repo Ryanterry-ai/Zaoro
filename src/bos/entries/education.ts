@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { EDUCATION_BI } from '../knowledge/bi-profiles/education.js';
 
 const EducationEntry: BOSEntry = {
   id: 'education.course',
@@ -32,6 +33,7 @@ const EducationEntry: BOSEntry = {
   ],
   entities: ['Course', 'Student', 'Instructor', 'Enrollment', 'Lesson', 'Quiz', 'Certificate', 'Category'],
   revenueModel: ['course_sale', 'subscription', 'institution_license', 'certification_fee'],
+  revenueIntelligence: EDUCATION_BI,
   compliance: ['GDPR', 'FERPA', 'Accessibility', 'Data Privacy'],
   priority: 2,
   tags: ['education', 'course', 'learning', 'student', 'training', 'academy', 'online', 'tutorial']

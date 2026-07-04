@@ -24,6 +24,7 @@ import type {
 } from './schemas/blueprint/execution-blueprint.schema.js';
 import type { Pattern } from './schemas/knowledge/pattern.schema.js';
 import type { DesignProfile } from './schemas/knowledge/design-profile.schema.js';
+import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema.js';
 import { stageLogger } from '../core/debug-logger.js';
 
 const log = stageLogger('resolve');
@@ -580,6 +581,8 @@ export interface ContentResolverContext {
   pattern?: Pattern;
   /** The matched design profile — provides styling guidance */
   designProfile?: DesignProfile;
+  /** Deep revenue intelligence — how this business makes money */
+  revenueIntelligence?: BusinessIntelligenceProfile;
 }
 
 /**
@@ -732,20 +735,32 @@ function resolveHeroBanner(
     ? `Start ${ctx.pattern.workflows[0]}`
     : vocab('Get Started', ctx);
 
+  // Use BI lead capture headline if available
+  const leadCapture = ctx.revenueIntelligence?.leadCaptureMechanisms?.[0];
+  const biTitle = leadCapture?.headline;
+  const biSubtitle = ctx.revenueIntelligence?.revenueCycle?.description;
+
+  // Use BI revenue models as hero items if available
+  const biItems = ctx.revenueIntelligence?.revenueModels?.slice(0, 3).map(rm => ({
+    title: rm.name,
+    description: rm.description,
+    icon: 'zap' as const,
+  }));
+
   return {
     type: 'HeroBanner',
     content: {
-      title: { value: ctx.blueprint.name, type: 'text' },
-      subtitle: { value: ctx.blueprint.description ?? `${ctx.blueprint.industry} platform`, type: 'text' },
+      title: { value: biTitle ?? ctx.blueprint.name, type: 'text' },
+      subtitle: { value: biSubtitle ?? ctx.blueprint.description ?? `${ctx.blueprint.industry} platform`, type: 'text' },
       badge: { value: ctx.blueprint.industry, type: 'text' },
     },
-    items: [
+    items: biItems ?? [
       { title: vocab('Reliable', ctx), description: vocab('Enterprise-grade reliability', ctx), icon: 'shield' },
       { title: vocab('Scalable', ctx), description: vocab('Built for growth', ctx), icon: 'trending-up' },
       { title: vocab('Secure', ctx), description: vocab('Data protection first', ctx), icon: 'lock' },
     ],
     actions: [
-      { label: ctaLabel, action: '/signup', style: 'primary' },
+      { label: leadCapture?.name ? `Start ${leadCapture.name}` : ctaLabel, action: '/signup', style: 'primary' },
       { label: vocab('Learn More', ctx), action: '#features', style: 'ghost' },
     ],
     layout: { alignment: 'center', maxWidth: '4xl', padding: 'lg' },
@@ -757,13 +772,20 @@ function resolveFeatureGrid(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  // Use BI dashboard widgets as features if available
+  const biFeatures = ctx.revenueIntelligence?.dashboardWidgets?.slice(0, 6).map(w => ({
+    title: w.name,
+    description: w.description,
+    icon: w.type === 'chart' ? 'bar-chart' : w.type === 'stat-card' ? 'activity' : w.type === 'table' ? 'list' : 'zap',
+  }));
+
   return {
     type: 'FeatureGrid',
     content: {
       title: { value: vocab('Features', ctx), type: 'text' },
       subtitle: { value: vocab('Everything you need', ctx), type: 'text' },
     },
-    items: resolveFeatures(ctx),
+    items: biFeatures ?? resolveFeatures(ctx),
     layout: { alignment: 'center', maxWidth: '7xl' },
   };
 }
@@ -813,10 +835,11 @@ function resolveTestimonials(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
-  // Derive industry-specific role titles from pattern or vocabulary
+  // Use BI vocabulary to create industry-specific role titles
+  const industryName = ctx.revenueIntelligence?.vocabulary?.['customer'] ?? ctx.blueprint.industry;
   const roleTitle = ctx.pattern
     ? ctx.pattern.compatibleIndustries[0]?.charAt(0).toUpperCase() + (ctx.pattern.compatibleIndustries[0]?.slice(1) ?? '')
-    : vocab('User', ctx);
+    : industryName.charAt(0).toUpperCase() + industryName.slice(1);
 
   return {
     type: 'Testimonials',
@@ -842,10 +865,13 @@ function resolveCTASection(
     ? ctx.pattern.workflows[0]
     : vocab('Get Started Free', ctx);
 
+  // Use BI lead capture mechanism if available
+  const leadCapture = ctx.revenueIntelligence?.leadCaptureMechanisms?.[0];
+
   return {
     type: 'CTASection',
     content: {
-      title: { value: vocab('Ready to get started?', ctx), type: 'text' },
+      title: { value: leadCapture?.headline ?? vocab('Ready to get started?', ctx), type: 'text' },
       subtitle: { value: `Join ${ctx.blueprint.name} today`, type: 'text' },
     },
     items: [
@@ -867,6 +893,22 @@ function resolveFAQSection(
   const items: ItemSpec[] = [
     { title: vocab('How do I get started?', ctx), description: 'Simply sign up for a free account and follow the onboarding wizard.' },
   ];
+
+  // Add BI revenue cycle FAQ if available
+  if (ctx.revenueIntelligence?.revenueCycle) {
+    items.push({
+      title: `How does ${ctx.revenueIntelligence.revenueCycle.name.toLowerCase()} work?`,
+      description: ctx.revenueIntelligence.revenueCycle.description,
+    });
+  }
+
+  // Add BI churn signal FAQ if available
+  if (ctx.revenueIntelligence?.churnSignals?.length) {
+    items.push({
+      title: 'How do you prevent customer churn?',
+      description: `We monitor ${ctx.revenueIntelligence.churnSignals.length} churn signals including ${ctx.revenueIntelligence.churnSignals.slice(0, 2).map(s => s.name.toLowerCase()).join(' and ')}.`,
+    });
+  }
 
   // Add workflow-based FAQ from pattern
   if (ctx.pattern) {
@@ -910,6 +952,18 @@ function resolveStatsCards(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  // Use BI profile KPIs if available
+  if (ctx.revenueIntelligence?.kpis?.length) {
+    const stats: StatSpec[] = ctx.revenueIntelligence.kpis.slice(0, 6).map(kpi => ({
+      label: kpi.label,
+      value: kpi.benchmark ?? '0',
+      change: kpi.category === 'revenue' ? '+12%' : kpi.category === 'retention' ? '-2%' : '+5%',
+      trend: kpi.category === 'revenue' || kpi.category === 'growth' ? 'up' : kpi.category === 'retention' ? 'down' : 'neutral',
+    }));
+    return { type: 'StatsCards', stats, layout: { maxWidth: '7xl' } };
+  }
+
+  // Fallback to entity-based stats
   const stats: StatSpec[] = [];
   for (const entity of ctx.blueprint.entities.slice(0, 4)) {
     stats.push({ label: `Total ${entity.name}s`, value: '0', change: '+0%', trend: 'neutral' });
@@ -928,6 +982,33 @@ function resolveChartsPanel(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  // Use BI profile dashboard widgets if available
+  if (ctx.revenueIntelligence?.dashboardWidgets?.length) {
+    const biWidgets = ctx.revenueIntelligence.dashboardWidgets;
+    const charts = biWidgets
+      .filter(w => w.type === 'chart' || w.type === 'gauge')
+      .slice(0, 4)
+      .map(w => ({
+        id: `chart-${w.name.toLowerCase().replace(/\s+/g, '-')}`,
+        type: (w.type === 'gauge' ? 'bar' : w.type) as 'bar' | 'line' | 'pie',
+        title: w.name,
+        series: [],
+        dataEntity: w.kpis[0] ?? 'Analytics',
+      }));
+    if (charts.length === 0) {
+      charts.push(
+        { id: 'chart-overview', type: 'line' as const, title: 'Overview Trend', series: [], dataEntity: 'Analytics' },
+        { id: 'chart-distribution', type: 'pie' as const, title: 'Distribution', series: [], dataEntity: 'Analytics' },
+      );
+    }
+    return {
+      type: 'ChartsPanel',
+      charts,
+      layout: { maxWidth: '7xl' },
+    };
+  }
+
+  // Fallback to entity-based charts
   const entities = ctx.blueprint.entities.map(e => e.name);
   const charts = ctx.blueprint.charts.length > 0
     ? ctx.blueprint.charts
@@ -939,12 +1020,7 @@ function resolveChartsPanel(
 
   return {
     type: 'ChartsPanel',
-    content: { title: { value: vocab('Analytics Dashboard', ctx), type: 'text' } },
-    items: charts.slice(0, 4).map(c => ({
-      title: c.title,
-      description: `${c.type.charAt(0).toUpperCase() + c.type.slice(1)} chart — ${(c as any).dataEntity ?? entities[0] ?? 'data'}`,
-      metadata: { chartType: c.type, dataEntity: (c as any).dataEntity ?? '' },
-    })),
+    charts,
     layout: { maxWidth: '7xl' },
   };
 }

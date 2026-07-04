@@ -2,6 +2,7 @@
 
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { ECOMMERCE_BI } from '../knowledge/bi-profiles/ecommerce.js';
 
 const ECommerceEntry: BOSEntry = {
   id: 'retail.ecommerce',
@@ -65,6 +66,7 @@ const ECommerceEntry: BOSEntry = {
   entities: ['Product', 'Category', 'Order', 'Cart', 'Customer', 'Inventory', 'Payment', 'Shipping'],
   
   revenueModel: ['direct_sales', 'affiliate', 'subscription_boxes', 'upsell'],
+  revenueIntelligence: ECOMMERCE_BI,
   
   compliance: ['PCI DSS', 'GST', 'Consumer Protection'],
   

@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { PROPTECH_BI } from '../knowledge/bi-profiles/proptech.js';
 
 const PropTechEntry: BOSEntry = {
   id: 'proptech.property',
@@ -32,6 +33,7 @@ const PropTechEntry: BOSEntry = {
   ],
   entities: ['Property', 'Unit', 'Tenant', 'Lease', 'MaintenanceRequest', 'Payment', 'Document', 'Vendor'],
   revenueModel: ['rent_collection', 'management_fee', 'late_fees', 'application_fee', 'maintenance_markup'],
+  revenueIntelligence: PROPTECH_BI,
   compliance: ['Fair Housing', 'Rental Laws', 'GDPR', 'Eviction Laws', 'Security Deposit Laws'],
   priority: 2,
   tags: ['real estate', 'property', 'rental', 'tenant', 'lease', 'property management', 'apartment']

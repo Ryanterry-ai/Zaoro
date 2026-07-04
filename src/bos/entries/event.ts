@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { EVENT_BI } from '../knowledge/bi-profiles/event.js';
 
 const EventEntry: BOSEntry = {
   id: 'event.management',
@@ -32,6 +33,7 @@ const EventEntry: BOSEntry = {
   ],
   entities: ['Event', 'Ticket', 'Attendee', 'Speaker', 'Sponsor', 'Venue', 'Schedule'],
   revenueModel: ['ticket_sales', 'sponsorship', 'exhibitor_fee', 'commission', 'premium_listing'],
+  revenueIntelligence: EVENT_BI,
   compliance: ['GDPR', 'Venue Contract', 'Insurance', 'Refund Policy', 'Accessibility'],
   priority: 2,
   tags: ['event', 'tickets', 'conference', 'meetup', 'workshop', 'concert', 'festival', 'registration']

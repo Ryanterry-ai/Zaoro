@@ -1,0 +1,83 @@
+import type { BusinessIntelligenceProfile } from '../../schemas/knowledge/business-intelligence.schema.js';
+
+export const EDUCATION_BI: BusinessIntelligenceProfile = {
+  id: 'bi.education.online',
+  version: '1.0.0',
+  name: 'Online Education Platform',
+  description: 'How an education platform makes money: discovery → enrollment → course completion → certification → upsell → referral',
+  revenueCycle: {
+    name: 'Discovery → Enrollment → Completion → Certification → Upsell',
+    description: 'Student discovers course → enrolls → completes modules → earns certificate → upgrades to advanced course → refers peers',
+    steps: [
+      { name: 'Course discovery', action: 'Student finds course via search/ad/referral', conversionRate: 0.10, avgTimeToNext: '1-7 days', revenueImpact: 'high' },
+      { name: 'Enrollment', action: 'Student enrolls in course', conversionRate: 0.25, avgTimeToNext: '1-3 days', revenueImpact: 'critical' },
+      { name: 'Module completion', action: 'Student completes 50%+ of course', conversionRate: 0.60, avgTimeToNext: '7-30 days', revenueImpact: 'high' },
+      { name: 'Course completion', action: 'Student completes all modules', conversionRate: 0.40, avgTimeToNext: '14-60 days', revenueImpact: 'critical' },
+      { name: 'Certification earned', action: 'Student receives certificate', conversionRate: 0.85, avgTimeToNext: '0-1 days', revenueImpact: 'medium' },
+      { name: 'Advanced course enrollment', action: 'Student enrolls in next level', conversionRate: 0.15, avgTimeToNext: '30-90 days', revenueImpact: 'high' },
+    ],
+    avgCycleLength: '14-60 days',
+    avgRevenuePerCustomer: '$50-500 per course',
+  },
+  conversionFunnel: {
+    name: 'Discovery → Enrollment → Completion → Upsell',
+    stages: ['Website Visit', 'Course View', 'Enrollment', 'Module Progress', 'Course Complete', 'Certification', 'Next Course'],
+    overallConversionRate: '2-4% of visitors enroll',
+    biggestDropOff: 'Enrollment → Module completion (40% abandon)',
+  },
+  churnSignals: [
+    { name: 'Course abandonment', detection: 'Student hasn\'t accessed course for 14+ days', window: '14 days', severity: 'high' },
+    { name: 'Low quiz scores', detection: 'Student scoring below 60% on assessments', window: '7 days', severity: 'medium' },
+    { name: 'No completion', detection: 'Student didn\'t complete within deadline', window: '30 days', severity: 'high' },
+    { name: 'No repeat enrollment', detection: 'Student hasn\'t enrolled in new course within 90 days', window: '90 days', severity: 'medium' },
+    { name: 'Negative feedback', detection: 'Student leaves low rating', window: '7 days', severity: 'critical' },
+  ],
+  retentionAutomations: [
+    { name: 'Progress reminder', trigger: 'No course access for 7 days', action: 'Send progress update + motivational email', expectedImpact: 'Recovers 20% of at-risk students' },
+    { name: 'Deadline reminder', trigger: '3 days before course deadline', action: 'Send deadline reminder with completion tips', expectedImpact: 'Reduces missed deadlines by 30%' },
+    { name: 'Completion celebration', trigger: 'Course completed', action: 'Send certificate + next course recommendation', expectedImpact: 'Increases next course enrollment by 25%' },
+    { name: 'Alumni engagement', trigger: '30 days after certification', action: 'Invite to alumni community + advanced courses', expectedImpact: 'Generates 15% repeat enrollments' },
+  ],
+  kpis: [
+    { name: 'Revenue', label: 'Revenue', formula: 'Total course sales', benchmark: '$10K-100K/month', unit: '$', category: 'revenue' },
+    { name: 'Enrollment Rate', label: 'Enrollment', formula: 'Enrollments / Visitors × 100', benchmark: '2-5%', unit: '%', category: 'growth' },
+    { name: 'Completion Rate', label: 'Completion', formula: 'Completed / Enrolled × 100', benchmark: '30-50%', unit: '%', category: 'engagement' },
+    { name: 'Student Satisfaction', label: 'NPS', formula: 'Net Promoter Score', benchmark: '40-60', unit: 'score', category: 'engagement' },
+    { name: 'Revenue per Student', label: 'Rev/Student', formula: 'Total revenue / Total students', benchmark: '$100-500', unit: '$', category: 'revenue' },
+    { name: 'Course Rating', label: 'Rating', formula: 'Average course rating', benchmark: '4.0-4.5 stars', unit: 'stars', category: 'engagement' },
+    { name: 'Repeat Enrollment Rate', label: 'Repeat', formula: 'Repeat enrollments / Total enrollments × 100', benchmark: '15-30%', unit: '%', category: 'retention' },
+    { name: 'Instructor Rating', label: 'Instr Rating', formula: 'Average instructor rating', benchmark: '4.2-4.7 stars', unit: 'stars', category: 'engagement' },
+  ],
+  dashboardWidgets: [
+    { name: 'Revenue Dashboard', type: 'chart', description: 'Course sales and enrollment trends', kpis: ['Revenue', 'Enrollment Rate'], priority: 'primary' },
+    { name: 'Student Pipeline', type: 'table', description: 'Active students and course progress', kpis: ['Completion Rate', 'Student Satisfaction'], priority: 'primary' },
+    { name: 'Course Performance', type: 'chart', description: 'Course ratings and completion rates', kpis: ['Course Rating', 'Instructor Rating'], priority: 'secondary' },
+    { name: 'Engagement Metrics', type: 'stat-card', description: 'Student engagement and retention', kpis: ['Repeat Enrollment Rate', 'Revenue per Student'], priority: 'secondary' },
+  ],
+  leadCaptureMechanisms: [
+    { name: 'Free Course Preview', headline: 'Preview This Course Free', fields: ['email'], nextStep: 'Course preview access + enrollment offer', conversionRate: '15-25% of visitors' },
+    { name: 'Newsletter', headline: 'Learning Tips & Course Updates', fields: ['email'], nextStep: 'Nurture sequence with course recommendations', conversionRate: '20-30% of visitors' },
+    { name: 'Webinar Registration', headline: 'Free Live Webinar', fields: ['name', 'email'], nextStep: 'Webinar invite + course offer', conversionRate: '25-35% of visitors' },
+  ],
+  morningCheck: {
+    primaryMetrics: ['Enrollments today', 'Revenue so far', 'Active students', 'Completion rate'],
+    secondaryMetrics: ['Course ratings', 'Student questions', 'Instructor availability', 'New courses in pipeline'],
+    alertConditions: ['Enrollment drop >20%', 'Low completion rate', 'Negative review', 'Student complaint'],
+  },
+  revenueModels: [
+    { name: 'Course Sales', description: 'One-time course purchases', percentage: 60 },
+    { name: 'Subscriptions', description: 'Monthly/annual access plans', percentage: 25 },
+    { name: 'Certifications', description: 'Certification exam fees', percentage: 10 },
+    { name: 'Enterprise', description: 'Bulk/team licenses', percentage: 5 },
+  ],
+  vocabulary: {
+    'customer': 'student',
+    'product': 'course',
+    'buy': 'enroll',
+    'store': 'academy',
+    'cart': 'learning path',
+    'checkout': 'enrollment',
+    'price': 'tuition',
+    'order': 'enrollment',
+  },
+};

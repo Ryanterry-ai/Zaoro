@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { FITNESS_GYM_BI } from '../knowledge/bi-profiles/fitness-gym.js';
 
 const FitnessEntry: BOSEntry = {
   id: 'fitness.gym',
@@ -33,6 +34,7 @@ const FitnessEntry: BOSEntry = {
   ],
   entities: ['Member', 'Class', 'Trainer', 'Membership', 'Schedule', 'CheckIn', 'Achievement'],
   revenueModel: ['membership', 'drop_in', 'personal_training', 'merchandise', 'nutrition'],
+  revenueIntelligence: FITNESS_GYM_BI,
   compliance: ['Waiver', 'Liability Insurance', 'CPR Certification', 'Data Privacy'],
   priority: 2,
   tags: ['gym', 'fitness', 'workout', 'class', 'trainer', 'membership', 'health', 'exercise']

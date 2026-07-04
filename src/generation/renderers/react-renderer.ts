@@ -472,7 +472,7 @@ ${body}
       `  return (`,
       `    <section className="relative pt-32 pb-20 px-6 overflow-hidden">`,
       `      <div className="max-w-4xl mx-auto text-center space-y-6">`,
-      badge ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">` : '',
+      badge ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">` : '',
       badge ? `          <span>{badge}</span>` : '',
       badge ? `        </div>` : '',
       `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-zinc-50">`,
@@ -486,7 +486,7 @@ ${body}
       `          <div className="flex items-center justify-center gap-8 pt-8">`,
       `            {items?.map((item, i) => (`,
       `              <div key={i} className="flex items-center gap-2 text-sm text-zinc-500">`,
-      `                <span className="text-emerald-400">{item.icon === 'shield' ? '🛡' : item.icon === 'trending-up' ? '📈' : item.icon === 'lock' ? '🔒' : '✓'}</span>`,
+      `                <span className="text-primary">{item.icon === 'shield' ? '🛡' : item.icon === 'trending-up' ? '📈' : item.icon === 'lock' ? '🔒' : '✓'}</span>`,
       `                <span>{item.title}</span>`,
       `              </div>`,
       `            ))}`,
@@ -513,7 +513,7 @@ ${body}
       `        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">`,
       `          {items?.map((feature, i) => (`,
       `            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">`,
-      `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 font-bold text-lg">`,
+      `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-lg">`,
       `                <span>{feature.icon}</span>`,
       `              </div>`,
       `              <h3 className="font-bold text-lg text-zinc-50 mb-2">{feature.title}</h3>`,
@@ -541,7 +541,7 @@ ${body}
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {tiers?.map((tier, i) => (`,
-      `            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-emerald-500 bg-emerald-500/5' : 'bg-zinc-900 border-zinc-800'}\`}>`,
+      `            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-zinc-900 border-zinc-800'}\`}>`,
       `              <h3 className="text-xl font-black text-zinc-50 mb-2">{tier.name}</h3>`,
       `              <div className="mb-6">`,
       `                <span className="text-4xl font-black text-zinc-50">{tier.price}</span>`,
@@ -550,12 +550,12 @@ ${body}
       `              <ul className="space-y-3 mb-8">`,
       `                {tier.features?.map((feature, j) => (`,
       `                  <li key={j} className="flex items-center gap-2 text-sm text-zinc-400">`,
-      `                    <span className="text-emerald-400">✓</span>`,
+      `                    <span className="text-primary">✓</span>`,
       `                    {feature}`,
       `                  </li>`,
       `                ))}`,
       `              </ul>`,
-      `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'}\`}>`,
+      `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-primary hover:bg-primary/90 text-white' : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'}\`}>`,
       `                Get Started`,
       `              </button>`,
       `            </div>`,
@@ -611,7 +611,7 @@ ${body}
       `          <div className="flex items-center justify-center gap-4 mb-6">`,
       `            {items?.map((item, i) => (`,
       `              <div key={i} className="flex items-center gap-1.5 text-xs text-zinc-400">`,
-      `                <span className="text-emerald-400">✓</span>`,
+      `                <span className="text-primary">✓</span>`,
       `                <span>{item.title}</span>`,
       `              </div>`,
       `            ))}`,
@@ -652,7 +652,7 @@ ${body}
       `    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">`,
       `      {stats?.map((stat, i) => (`,
       `        <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">`,
-      `          <div className="text-2xl font-black text-emerald-400 mb-1">{stat.value}</div>`,
+      `          <div className="text-2xl font-black text-primary mb-1">{stat.value}</div>`,
       `          <div className="text-xs text-zinc-500">{stat.label}</div>`,
       `        </div>`,
       `      ))}`,
@@ -674,9 +674,9 @@ ${body}
       `        <form className="space-y-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
       ...(spec.fields ?? []).map(f => `          <div>
             <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition" />
+            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition" />
           </div>`),
-      `          <button type="submit" className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">`,
+      `          <button type="submit" className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition">`,
       `            ${spec.actions?.[0]?.label ?? 'Submit'}`,
       `          </button>`,
       `        </form>`,
@@ -700,13 +700,13 @@ ${body}
       ...(spec.fields ?? []).map(f => f.type === 'textarea'
         ? `          <div>
             <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-            <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={4} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition resize-none" />
+            <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={4} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition resize-none" />
           </div>`
         : `          <div>
             <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition" />
+            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition" />
           </div>`),
-      `          <button type="submit" className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">`,
+      `          <button type="submit" className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition">`,
       `            ${spec.actions?.[0]?.label ?? 'Send Message'}`,
       `          </button>`,
       `        </form>`,
@@ -726,7 +726,7 @@ ${body}
       `      <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-800">`,
       `        <h3 className="font-semibold text-zinc-100">{title}</h3>`,
       `        {actions?.map((action, i) => (`,
-      `          <button key={i} className="px-4 py-2 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">{action.label}</button>`,
+      `          <button key={i} className="px-4 py-2 text-sm rounded-lg bg-primary hover:bg-primary/90 text-white">{action.label}</button>`,
       `        ))}`,
       `      </div>`,
       `      <table className="w-full text-sm">`,
@@ -810,10 +810,10 @@ ${body}
       `        <div className="space-y-6">`,
       `          <div className="grid grid-cols-3 gap-4">`,
       `            {items?.map((slot, i) => (`,
-      `              <button key={i} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-left hover:border-emerald-500/50 transition">`,
+      `              <button key={i} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-left hover:border-primary/50 transition">`,
       `                <div className="font-bold text-zinc-50 mb-1">{slot.title}</div>`,
       `                <div className="text-sm text-zinc-400">{slot.description}</div>`,
-      `                <div className="text-xs text-emerald-400 mt-2">{slot.metadata?.slots} slots available</div>`,
+      `                <div className="text-xs text-primary mt-2">{slot.metadata?.slots} slots available</div>`,
       `              </button>`,
       `            ))}`,
       `          </div>`,
@@ -821,20 +821,20 @@ ${body}
       ...(spec.fields ?? []).map(f => f.type === 'select'
         ? `            <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-              <select name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:border-emerald-500 transition">
+              <select name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:border-primary transition">
                 ${f.options?.map(o => `<option value="${o.value}">${o.label}</option>`).join('\n                ') ?? ''}
               </select>
             </div>`
         : f.type === 'textarea'
         ? `            <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-              <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={3} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition resize-none" />
+              <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={3} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition resize-none" />
             </div>`
         : `            <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-              <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500 transition" />
+              <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition" />
             </div>`),
-      `            <button type="submit" className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">`,
+      `            <button type="submit" className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition">`,
       `              ${spec.actions?.[0]?.label ?? 'Book Now'}`,
       `            </button>`,
       `          </form>`,
@@ -870,7 +870,7 @@ ${body}
       lines.push(`        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">`);
       lines.push(`          {items?.map((item, i) => (`);
       lines.push(`            <div key={i} className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">`);
-      lines.push(`              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">`);
+      lines.push(`              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`);
       lines.push(`                <span className="text-lg font-bold">{item.icon ? '★' : '→'}</span>`);
       lines.push(`              </div>`);
       lines.push(`              <h3 className="text-lg font-semibold text-zinc-100 mb-2">{item.title}</h3>`);
@@ -935,7 +935,7 @@ ${body}
     if (hasTiers) {
       lines.push(`        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">`);
       lines.push(`          {tiers?.map((tier, i) => (`);
-      lines.push(`            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-emerald-500 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900'}\`}>`);
+      lines.push(`            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'border-zinc-800 bg-zinc-900'}\`}>`);
       lines.push(`              <h3 className="text-xl font-bold text-zinc-100">{tier.name}</h3>`);
       lines.push(`              <div className="mt-4 text-4xl font-black text-zinc-50">{tier.price}<span className="text-sm text-zinc-400">{tier.period}</span></div>`);
       lines.push(`              <ul className="mt-6 space-y-3">`);
@@ -1035,7 +1035,7 @@ ${body}
 
     const buttons = (spec.actions ?? []).map(action => {
       const styleClass = action.style === 'primary'
-        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+        ? 'bg-primary hover:bg-primary/90 text-white'
         : action.style === 'ghost'
         ? 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'
         : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300';

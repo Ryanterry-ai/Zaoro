@@ -33,6 +33,9 @@ import { buildApplicationGraph, computeAppGraphStats } from '../bos/graph/applic
 import type { ApplicationGraph, AppGraphStats } from '../bos/graph/application-graph.js';
 import { runPass3CodeGeneration } from './pass3-code-generator.js';
 
+// Knowledge Graph — domain knowledge enrichment
+import { initializeKnowledgeGraph, enrichFromKnowledgeGraph } from '../bos/knowledge/seeds/index.js';
+
 const log = stageLogger('pipeline');
 
 // ─── Pipeline Configuration ──────────────────────────────────────────────────
@@ -69,6 +72,13 @@ export interface PipelineResult {
 
   /** Graph telemetry stats */
   graphStats: AppGraphStats;
+
+  /** Domain knowledge enrichment from Knowledge Graph */
+  knowledgeEnrichment: {
+    additionalCapabilities: string[];
+    vocabulary: Record<string, string>;
+    domainEntities: string[];
+  };
 
   /** Available platforms */
   availablePlatforms: string[];
@@ -116,6 +126,30 @@ export async function runBuildPipeline(
     confidence: breResult.confidence,
     duration: Date.now() - t1,
   });
+
+  // Layer 1a: Knowledge Graph enrichment — domain-specific context
+  let knowledgeCapabilities: string[] = [];
+  let knowledgeVocabulary: Record<string, string> = {};
+  let knowledgeDomainEntities: string[] = [];
+  try {
+    const t1a = Date.now();
+    await initializeKnowledgeGraph();
+    const kgResult = enrichFromKnowledgeGraph(context.industry);
+    knowledgeCapabilities = kgResult.additionalCapabilities;
+    knowledgeVocabulary = kgResult.vocabulary;
+    knowledgeDomainEntities = kgResult.domainEntities;
+    log.info('Layer 1a: Knowledge Graph enrichment complete', {
+      additionalCapabilities: knowledgeCapabilities.length,
+      vocabularyTerms: Object.keys(knowledgeVocabulary).length,
+      domainEntities: knowledgeDomainEntities.length,
+      industry: context.industry,
+      duration: Date.now() - t1a,
+    });
+  } catch (e: unknown) {
+    log.warn('Layer 1a: Knowledge Graph enrichment failed (continuing without)', {
+      error: (e as Error).message,
+    });
+  }
 
   // Layer 1b: Pipeline-v2 enrichment — richer entity, DB, and API detail
   let pipelineV2Entities: EntityDef[] = [];
@@ -222,6 +256,38 @@ export async function runBuildPipeline(
     }
   }
 
+  // Layer 1c: Build ApplicationGraph from pipeline-v2 sub-graphs + business context
+  // This is the canonical IR — built early so all downstream passes can read it.
+  const t1c = Date.now();
+  const databaseEngine = breResult.blueprint.database?.engine ?? 'postgresql';
+  const applicationGraph = buildApplicationGraph({
+    entities: pipelineV2Entities,
+    entityRelations: pipelineV2Relations,
+    tables: pipelineV2Tables,
+    endpoints: pipelineV2Endpoints,
+    workflows: pipelineV2Workflows,
+    pages: pipelineV2Pages,
+    capabilities: pipelineV2Capabilities,
+    features: pipelineV2Features,
+    navItems: pipelineV2NavItems,
+    industry: context.industry,
+    appName: context.appName ?? 'Application',
+    databaseEngine,
+    businessModels: context.businessModels,
+    compliancePacks: context.compliancePacks,
+    ...(context.subIndustry ? { subIndustry: context.subIndustry } : {}),
+    ...(context.country ? { country: context.country } : {}),
+    ...(context.audience ? { audience: context.audience } : {}),
+  });
+  log.info('Layer 1c: ApplicationGraph constructed (canonical IR)', {
+    nodes: applicationGraph.nodes.length,
+    edges: applicationGraph.edges.length,
+    industry: applicationGraph.metadata.industry,
+    country: applicationGraph.metadata.country,
+    businessModels: applicationGraph.metadata.businessModels,
+    duration: Date.now() - t1c,
+  });
+
   // Layer 2: Application Blueprint → Execution Blueprint
   const t2 = Date.now();
   const executionBlueprint = buildExecutionBlueprint(breResult.blueprint);
@@ -245,6 +311,7 @@ export async function runBuildPipeline(
     vocabulary: breResult.blueprint.vocabulary ?? {},
     ...(matchedPattern ? { pattern: matchedPattern } : {}),
     ...(matchedDesignProfile ? { designProfile: matchedDesignProfile } : {}),
+    ...(breResult.revenueIntelligence ? { revenueIntelligence: breResult.revenueIntelligence } : {}),
   });
   log.info('Layer 3: Content Resolution complete', {
     pages: applicationSpec.pages.length,
@@ -266,24 +333,9 @@ export async function runBuildPipeline(
     duration: Date.now() - t4,
   });
 
-  // Layer 5: Build ApplicationGraph + Pass 3 code generation
+  // Layer 5: Pass 3 code generation from the canonical ApplicationGraph
+  // The ApplicationGraph was already built at Layer 1c — Pass 3 reads it as the IR.
   const t5 = Date.now();
-  const databaseEngine = breResult.blueprint.database?.engine ?? 'postgresql';
-  const applicationGraph = buildApplicationGraph({
-    entities: pipelineV2Entities,
-    entityRelations: pipelineV2Relations,
-    tables: pipelineV2Tables,
-    endpoints: pipelineV2Endpoints,
-    workflows: pipelineV2Workflows,
-    pages: pipelineV2Pages,
-    capabilities: pipelineV2Capabilities,
-    features: pipelineV2Features,
-    navItems: pipelineV2NavItems,
-    industry: context.industry,
-    appName: context.appName ?? 'Application',
-    databaseEngine,
-  });
-
   const pass3Result = runPass3CodeGeneration(applicationGraph);
   const graphStats = pass3Result.stats;
 
@@ -318,6 +370,11 @@ export async function runBuildPipeline(
     renderResult,
     applicationGraph,
     graphStats,
+    knowledgeEnrichment: {
+      additionalCapabilities: knowledgeCapabilities,
+      vocabulary: knowledgeVocabulary,
+      domainEntities: knowledgeDomainEntities,
+    },
     availablePlatforms: getRegisteredPlatforms(),
   };
 }

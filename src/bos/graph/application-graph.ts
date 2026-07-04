@@ -115,15 +115,22 @@ export interface GraphEdge {
 
 // ─── ApplicationGraph ────────────────────────────────────────────────────────
 
+export interface AppGraphMetadata {
+  industry: string;
+  subIndustry?: string;
+  appName: string;
+  databaseEngine: string;
+  country?: string;
+  businessModels: string[];
+  compliancePacks: string[];
+  audience?: string;
+  createdAt: string;
+}
+
 export interface ApplicationGraph {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  metadata: {
-    industry: string;
-    appName: string;
-    databaseEngine: string;
-    createdAt: string;
-  };
+  metadata: AppGraphMetadata;
 }
 
 // ─── AppGraphStats ───────────────────────────────────────────────────────────
@@ -157,8 +164,13 @@ export function buildApplicationGraph(opts: {
   features: FeatureDef[];
   navItems: NavItemDef[];
   industry: string;
+  subIndustry?: string;
   appName: string;
   databaseEngine: string;
+  country?: string;
+  businessModels: string[];
+  compliancePacks: string[];
+  audience?: string;
 }): ApplicationGraph {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
@@ -256,16 +268,19 @@ export function buildApplicationGraph(opts: {
     nodes.push({ kind: 'nav-item', id, data: nav });
   }
 
-  return {
-    nodes,
-    edges,
-    metadata: {
-      industry: opts.industry,
-      appName: opts.appName,
-      databaseEngine: opts.databaseEngine,
-      createdAt: new Date().toISOString(),
-    },
+  const metadata: AppGraphMetadata = {
+    industry: opts.industry,
+    appName: opts.appName,
+    databaseEngine: opts.databaseEngine,
+    businessModels: opts.businessModels,
+    compliancePacks: opts.compliancePacks,
+    createdAt: new Date().toISOString(),
   };
+  if (opts.subIndustry) metadata.subIndustry = opts.subIndustry;
+  if (opts.country) metadata.country = opts.country;
+  if (opts.audience) metadata.audience = opts.audience;
+
+  return { nodes, edges, metadata };
 }
 
 // ─── Stats Computation ───────────────────────────────────────────────────────

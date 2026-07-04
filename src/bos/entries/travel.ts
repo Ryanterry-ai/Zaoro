@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { TRAVEL_BI } from '../knowledge/bi-profiles/travel.js';
 
 const TravelEntry: BOSEntry = {
   id: 'travel.tourism',
@@ -32,6 +33,7 @@ const TravelEntry: BOSEntry = {
   ],
   entities: ['Destination', 'Booking', 'Review', 'Itinerary', 'Activity', 'Traveler', 'Payment'],
   revenueModel: ['commission', 'booking_fee', 'premium_listing', 'travel_insurance', 'advertising'],
+  revenueIntelligence: TRAVEL_BI,
   compliance: ['GDPR', 'Travel Insurance', 'Cancellation Policy', 'Consumer Rights'],
   priority: 2,
   tags: ['travel', 'tourism', 'hotel', 'destination', 'vacation', 'booking', 'trip', 'hospitality']

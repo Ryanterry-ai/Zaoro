@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { AUTOMOTIVE_BI } from '../knowledge/bi-profiles/automotive.js';
 
 const AutomotiveEntry: BOSEntry = {
   id: 'automotive.dealership',
@@ -32,6 +33,7 @@ const AutomotiveEntry: BOSEntry = {
   ],
   entities: ['Vehicle', 'Customer', 'TestDrive', 'ServiceRecord', 'TradeIn', 'FinanceApplication', 'Sale'],
   revenueModel: ['vehicle_sale', 'financing', 'service', 'parts', 'trade_in'],
+  revenueIntelligence: AUTOMOTIVE_BI,
   compliance: ['Consumer Protection', 'Financing Disclosure', 'Warranty', 'Data Privacy'],
   priority: 2,
   tags: ['automotive', 'car', 'dealership', 'vehicle', 'inventory', 'service', 'financing', 'auto']

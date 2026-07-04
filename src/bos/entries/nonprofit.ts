@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { NONPROFIT_BI } from '../knowledge/bi-profiles/nonprofit.js';
 
 const NonprofitEntry: BOSEntry = {
   id: 'nonprofit.charity',
@@ -32,6 +33,7 @@ const NonprofitEntry: BOSEntry = {
   ],
   entities: ['Donor', 'Campaign', 'Volunteer', 'Event', 'Donation', 'Impact', 'Newsletter', 'Partner'],
   revenueModel: ['donation', 'grant', 'sponsorship', 'merchandise', 'event_ticket'],
+  revenueIntelligence: NONPROFIT_BI,
   compliance: ['GDPR', 'Donor Privacy', 'Charity Registration', 'Tax Receipt', 'Anti-Money Laundering'],
   priority: 2,
   tags: ['nonprofit', 'charity', 'donation', 'volunteer', 'cause', 'foundation', 'community', 'social']

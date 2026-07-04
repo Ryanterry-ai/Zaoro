@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { MANUFACTURING_BI } from '../knowledge/bi-profiles/manufacturing.js';
 
 const ManufacturingEntry: BOSEntry = {
   id: 'manufacturing.production',
@@ -31,6 +32,7 @@ const ManufacturingEntry: BOSEntry = {
   ],
   entities: ['Product', 'ProductionRun', 'InventoryItem', 'QualityCheck', 'Supplier', 'PurchaseOrder', 'Equipment'],
   revenueModel: ['direct_sales', 'wholesale', 'distribution', 'contract_manufacturing'],
+  revenueIntelligence: MANUFACTURING_BI,
   compliance: ['ISO 9001', 'OSHA', 'Environmental Regulations', 'Product Safety', 'Export Controls'],
   priority: 2,
   tags: ['manufacturing', 'production', 'factory', 'inventory', 'supply chain', 'quality', 'industrial']

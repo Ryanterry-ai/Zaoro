@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { MEDIA_BI } from '../knowledge/bi-profiles/media.js';
 
 const MediaEntry: BOSEntry = {
   id: 'media.publishing',
@@ -32,6 +33,7 @@ const MediaEntry: BOSEntry = {
   ],
   entities: ['Article', 'Author', 'Category', 'Subscriber', 'AdPlacement', 'Comment', 'Analytics'],
   revenueModel: ['subscription', 'advertising', 'sponsored_content', 'affiliate', 'events'],
+  revenueIntelligence: MEDIA_BI,
   compliance: ['GDPR', 'Cookie Consent', 'DMCA', 'Right to Reply', 'Data Privacy'],
   priority: 2,
   tags: ['media', 'publishing', 'news', 'article', 'blog', 'journalism', 'content', 'magazine']

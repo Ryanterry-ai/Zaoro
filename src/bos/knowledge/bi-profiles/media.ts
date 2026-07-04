@@ -1,0 +1,83 @@
+import type { BusinessIntelligenceProfile } from '../../schemas/knowledge/business-intelligence.schema.js';
+
+export const MEDIA_BI: BusinessIntelligenceProfile = {
+  id: 'bi.media.publisher',
+  version: '1.0.0',
+  name: 'Media / Publishing',
+  description: 'How a media business makes money: content discovery → consumption → subscription → engagement → renewal → referral',
+  revenueCycle: {
+    name: 'Discovery → Consumption → Subscription → Engagement → Renewal',
+    description: 'Reader discovers article → reads content → subscribes → engages regularly → renews → refers others',
+    steps: [
+      { name: 'Content discovery', action: 'Reader finds article via search/social', conversionRate: 0.10, avgTimeToNext: '0-1 days', revenueImpact: 'high' },
+      { name: 'First read', action: 'Reader consumes first article', conversionRate: 0.40, avgTimeToNext: '0-1 days', revenueImpact: 'high' },
+      { name: 'Subscription', action: 'Reader subscribes to paid plan', conversionRate: 0.05, avgTimeToNext: '1-7 days', revenueImpact: 'critical' },
+      { name: 'Regular engagement', action: 'Reader accesses content 3+ times per week', conversionRate: 0.60, avgTimeToNext: '7-14 days', revenueImpact: 'high' },
+      { name: 'Renewal', action: 'Reader renews subscription', conversionRate: 0.70, avgTimeToNext: '30-365 days', revenueImpact: 'critical' },
+      { name: 'Referral', action: 'Reader shares content or refers friends', conversionRate: 0.10, avgTimeToNext: '30-180 days', revenueImpact: 'medium' },
+    ],
+    avgCycleLength: '1-7 days',
+    avgRevenuePerCustomer: '$5-20/month',
+  },
+  conversionFunnel: {
+    name: 'Discovery → Read → Subscribe → Renew',
+    stages: ['Page Visit', 'Article Read', 'Paywall Hit', 'Subscription', 'Regular Reader', 'Renewal'],
+    overallConversionRate: '1-3% of visitors subscribe',
+    biggestDropOff: 'Article read → Subscription (95% don\'t subscribe)',
+  },
+  churnSignals: [
+    { name: 'Subscription cancelled', detection: 'Reader cancels paid subscription', window: '0 days', severity: 'critical' },
+    { name: 'Engagement drop', detection: 'Reader hasn\'t accessed content in 14 days', window: '14 days', severity: 'high' },
+    { name: 'Payment failure', detection: 'Subscription payment declined', window: '3 days', severity: 'critical' },
+    { name: 'Content complaint', detection: 'Reader complains about content quality', window: '7 days', severity: 'medium' },
+    { name: 'Competitor switch', detection: 'Reader mentions alternative publications', window: '30 days', severity: 'medium' },
+  ],
+  retentionAutomations: [
+    { name: 'Newsletter digest', trigger: 'Weekly', action: 'Send personalized content digest', expectedImpact: 'Increases engagement by 25%' },
+    { name: 'Win-back offer', trigger: 'No access for 14 days', action: 'Send exclusive content offer', expectedImpact: 'Recovers 15% of at-risk subscribers' },
+    { name: 'Annual plan offer', trigger: '3 months before renewal', action: 'Offer annual plan discount', expectedImpact: 'Increases annual subscriptions by 20%' },
+    { name: 'Refer a friend', trigger: 'After 3 months of active reading', action: 'Invite to referral program', expectedImpact: 'Generates 10% new subscribers from referrals' },
+  ],
+  kpis: [
+    { name: 'Revenue', label: 'Revenue', formula: 'Total subscription + ad revenue', benchmark: '$10K-100K/month', unit: '$', category: 'revenue' },
+    { name: 'Subscribers', label: 'Subscribers', formula: 'Active paid subscribers', benchmark: '5K-50K', unit: 'count', category: 'revenue' },
+    { name: 'Subscriber Retention Rate', label: 'Retention', formula: 'Renewed / Total subscribers × 100', benchmark: '60-80%', unit: '%', category: 'retention' },
+    { name: 'Monthly Active Readers', label: 'MAR', formula: 'Unique readers this month', benchmark: '50K-500K', unit: 'count', category: 'engagement' },
+    { name: 'Articles per Reader', label: 'Articles/Reader', formula: 'Total articles read / Active readers', benchmark: '5-15', unit: 'count', category: 'engagement' },
+    { name: 'Churn Rate', label: 'Churn', formula: 'Cancelled / Total subscribers × 100', benchmark: '3-7%/month', unit: '%', category: 'retention' },
+    { name: 'ARPU', label: 'ARPU', formula: 'Total revenue / Active subscribers', benchmark: '$5-20/month', unit: '$', category: 'revenue' },
+    { name: 'Content Engagement', label: 'Engagement', formula: 'Avg time on page / Pages per session', benchmark: '3-5 min / 2-4 pages', unit: 'metrics', category: 'engagement' },
+  ],
+  dashboardWidgets: [
+    { name: 'Revenue Dashboard', type: 'chart', description: 'Subscription and ad revenue trends', kpis: ['Revenue', 'ARPU'], priority: 'primary' },
+    { name: 'Reader Pipeline', type: 'chart', description: 'Visitor → Reader → Subscriber funnel', kpis: ['Subscribers', 'Subscriber Retention Rate'], priority: 'primary' },
+    { name: 'Content Performance', type: 'table', description: 'Top articles by views and engagement', kpis: ['Content Engagement', 'Monthly Active Readers'], priority: 'secondary' },
+    { name: 'Engagement Metrics', type: 'stat-card', description: 'Reader engagement and retention', kpis: ['Articles per Reader', 'Churn Rate'], priority: 'secondary' },
+  ],
+  leadCaptureMechanisms: [
+    { name: 'Free Article Access', headline: 'Read Free Articles Monthly', fields: ['email'], nextStep: 'Metered paywall after free articles', conversionRate: '10-15% of visitors' },
+    { name: 'Newsletter Signup', headline: 'Daily News in Your Inbox', fields: ['email'], nextStep: 'Newsletter delivery + subscription offer', conversionRate: '15-25% of visitors' },
+    { name: 'Free Trial', headline: '14-Day Free Trial', fields: ['name', 'email', 'payment_method'], nextStep: 'Full access for trial period', conversionRate: '5-10% of visitors' },
+  ],
+  morningCheck: {
+    primaryMetrics: ['Active readers today', 'New subscriptions', 'Content views', 'Revenue so far'],
+    secondaryMetrics: ['Top performing content', 'Subscriber churn', 'Ad impressions', 'Email open rates'],
+    alertConditions: ['Revenue <target', 'Subscriber churn spike', 'Content underperforming', 'Ad fill rate drop'],
+  },
+  revenueModels: [
+    { name: 'Subscriptions', description: 'Monthly/annual subscription fees', percentage: 60 },
+    { name: 'Advertising', description: 'Display and native advertising', percentage: 25 },
+    { name: 'Sponsored Content', description: 'Branded content partnerships', percentage: 10 },
+    { name: 'Events/Webinars', description: 'Paid events and webinars', percentage: 5 },
+  ],
+  vocabulary: {
+    'customer': 'reader',
+    'product': 'article',
+    'buy': 'subscribe',
+    'store': 'publication',
+    'cart': 'reading list',
+    'checkout': 'subscription',
+    'price': 'subscription',
+    'order': 'subscription',
+  },
+};

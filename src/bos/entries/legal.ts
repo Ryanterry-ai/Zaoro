@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { LEGAL_BI } from '../knowledge/bi-profiles/legal.js';
 
 const LegalEntry: BOSEntry = {
   id: 'legal.lawfirm',
@@ -32,6 +33,7 @@ const LegalEntry: BOSEntry = {
   ],
   entities: ['Client', 'Case', 'Attorney', 'Consultation', 'Document', 'Hearing', 'Invoice', 'Practice'],
   revenueModel: ['hourly_billing', 'contingency', 'flat_fee', 'retainer', 'consultation'],
+  revenueIntelligence: LEGAL_BI,
   compliance: ['Attorney-Client Privilege', 'Data Protection', 'Trust Accounting', 'Conflict Check'],
   priority: 2,
   tags: ['legal', 'lawyer', 'attorney', 'law', 'firm', 'case', 'consultation', 'legal services']

@@ -1,0 +1,83 @@
+import type { BusinessIntelligenceProfile } from '../../schemas/knowledge/business-intelligence.schema.js';
+
+export const BEAUTY_BI: BusinessIntelligenceProfile = {
+  id: 'bi.beauty.salon',
+  version: '1.0.0',
+  name: 'Beauty Salon / Spa',
+  description: 'How a beauty business makes money: discovery → booking → first visit → treatment → retail → rebooking → referral',
+  revenueCycle: {
+    name: 'Discovery → Booking → Treatment → Retail → Rebooking',
+    description: 'Client discovers salon → books appointment → first treatment → purchases retail products → rebooks → refers friends',
+    steps: [
+      { name: 'Discovery', action: 'Client finds salon via Google/Instagram/referral', conversionRate: 0.08, avgTimeToNext: '1-7 days', revenueImpact: 'high' },
+      { name: 'Booking', action: 'Client books first appointment', conversionRate: 0.25, avgTimeToNext: '1-3 days', revenueImpact: 'critical' },
+      { name: 'First treatment', action: 'Client receives first treatment', conversionRate: 0.80, avgTimeToNext: '1-7 days', revenueImpact: 'high' },
+      { name: 'Retail purchase', action: 'Client buys take-home products', conversionRate: 0.35, avgTimeToNext: '0-1 days', revenueImpact: 'medium' },
+      { name: 'Rebooking', action: 'Client rebooks before leaving', conversionRate: 0.50, avgTimeToNext: '21-42 days', revenueImpact: 'critical' },
+      { name: 'Referral', action: 'Client refers friends', conversionRate: 0.15, avgTimeToNext: '30-180 days', revenueImpact: 'high' },
+    ],
+    avgCycleLength: '21-42 days',
+    avgRevenuePerCustomer: '$80-300 per visit',
+  },
+  conversionFunnel: {
+    name: 'Discovery → Booking → Treatment → Rebooking',
+    stages: ['Website/Instagram Visit', 'Service View', 'Booking', 'First Visit', 'Retail Purchase', 'Rebooking', 'Referral'],
+    overallConversionRate: '5-10% of visitors book',
+    biggestDropOff: 'Booking → First visit (20% no-show)',
+  },
+  churnSignals: [
+    { name: 'No rebooking', detection: 'Client didn\'t rebook within 6 weeks of last visit', window: '42 days', severity: 'high' },
+    { name: 'Cancellation', detection: 'Client cancelled appointment', window: '0 days', severity: 'medium' },
+    { name: 'No-show', detection: 'Client missed appointment', window: '0 days', severity: 'critical' },
+    { name: 'Service complaint', detection: 'Client expressed dissatisfaction', window: '7 days', severity: 'critical' },
+    { name: 'No retail purchase', detection: 'Client never purchased retail products', window: '90 days', severity: 'low' },
+  ],
+  retentionAutomations: [
+    { name: 'Rebooking reminder', trigger: '3 weeks since last visit', action: 'Send rebooking reminder with stylist preference', expectedImpact: 'Recalls 30% of lapsed clients' },
+    { name: 'Birthday offer', trigger: 'Client birthday month', action: 'Send birthday discount', expectedImpact: 'Increases bookings by 15%' },
+    { name: 'New service alert', trigger: 'New treatment added', action: 'Email relevant clients about new service', expectedImpact: 'Generates 10% new bookings' },
+    { name: 'VIP program', trigger: '10+ visits or $500+ spent', action: 'Enroll in loyalty program with perks', expectedImpact: 'Increases retention by 25%' },
+  ],
+  kpis: [
+    { name: 'Revenue', label: 'Revenue', formula: 'Total service + retail revenue', benchmark: '$10K-50K/month', unit: '$', category: 'revenue' },
+    { name: 'Appointments', label: 'Appointments', formula: 'Total appointments this month', benchmark: '200-600/month', unit: 'count', category: 'operations' },
+    { name: 'Rebooking Rate', label: 'Rebooking', formula: 'Rebooked before leaving / Total visits × 100', benchmark: '40-60%', unit: '%', category: 'retention' },
+    { name: 'Retail Attachment Rate', label: 'Retail', formula: 'Retail purchases / Total visits × 100', benchmark: '20-40%', unit: '%', category: 'revenue' },
+    { name: 'Client Retention Rate', label: 'Retention', formula: 'Returning clients / Total clients × 100', benchmark: '50-70%', unit: '%', category: 'retention' },
+    { name: 'Average Service Value', label: 'Avg Service', formula: 'Total service revenue / Total visits', benchmark: '$60-150', unit: '$', category: 'revenue' },
+    { name: 'No-Show Rate', label: 'No-Shows', formula: 'No-shows / Total appointments × 100', benchmark: '5-15%', unit: '%', category: 'operations' },
+    { name: 'Referral Rate', label: 'Referrals', formula: 'Referral clients / Total clients × 100', benchmark: '15-25%', unit: '%', category: 'growth' },
+  ],
+  dashboardWidgets: [
+    { name: 'Revenue Dashboard', type: 'chart', description: 'Service and retail revenue trends', kpis: ['Revenue', 'Average Service Value'], priority: 'primary' },
+    { name: 'Appointment Book', type: 'table', description: 'Today\'s appointments with stylist/status', kpis: ['Appointments', 'No-Show Rate'], priority: 'primary' },
+    { name: 'Client Metrics', type: 'stat-card', description: 'Retention, rebooking, and referral rates', kpis: ['Client Retention Rate', 'Rebooking Rate'], priority: 'secondary' },
+    { name: 'Retail Performance', type: 'chart', description: 'Top products and retail attachment rate', kpis: ['Retail Attachment Rate'], priority: 'secondary' },
+  ],
+  leadCaptureMechanisms: [
+    { name: 'Book Now', headline: 'Book Your Appointment', fields: ['name', 'phone', 'service', 'preferred_date'], nextStep: 'Confirmation call/text', conversionRate: '10-15% of visitors' },
+    { name: 'New Client Offer', headline: 'First Visit 20% Off', fields: ['name', 'email', 'phone'], nextStep: 'Welcome offer email', conversionRate: '15-20% of visitors' },
+    { name: 'Instagram Follow', headline: 'Follow Us for Inspiration', fields: [], nextStep: 'Social media engagement', conversionRate: '5-10% of visitors' },
+  ],
+  morningCheck: {
+    primaryMetrics: ['Today\'s appointments', 'Revenue so far', 'No-shows', 'Retail sales'],
+    secondaryMetrics: ['Stylist utilization', 'Client wait times', 'Product inventory', 'Online reviews'],
+    alertConditions: ['No-show rate >20%', 'Stylist sick call', 'Product out of stock', 'Negative review'],
+  },
+  revenueModels: [
+    { name: 'Services', description: 'Hair, nail, skin, and body treatments', percentage: 70 },
+    { name: 'Retail Products', description: 'Take-home beauty products', percentage: 15 },
+    { name: 'Packages', description: 'Bundled service packages', percentage: 10 },
+    { name: 'Memberships', description: 'Monthly membership plans', percentage: 5 },
+  ],
+  vocabulary: {
+    'customer': 'client',
+    'product': 'service',
+    'buy': 'book',
+    'store': 'salon',
+    'cart': 'appointment',
+    'checkout': 'checkout',
+    'price': 'service price',
+    'order': 'booking',
+  },
+};

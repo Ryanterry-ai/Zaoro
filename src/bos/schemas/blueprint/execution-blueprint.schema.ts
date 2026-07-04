@@ -144,6 +144,15 @@ export const ComponentSpecSchema = z.object({
   columns: z.array(ColumnSpecSchema).optional(),
   fields: z.array(FormFieldSpecSchema).optional(),
   actions: z.array(ActionSpecSchema).optional(),
+  charts: z.array(z.object({
+    id: z.string(),
+    type: z.enum(['bar', 'line', 'pie', 'area', 'scatter', 'radar', 'doughnut']),
+    title: z.string(),
+    series: z.array(z.any()).optional(),
+    dataEntity: z.string().optional(),
+    xAxis: z.string().optional(),
+    yAxis: z.string().optional(),
+  })).optional(),
   layout: z.object({
     alignment: z.enum(['left', 'center', 'right']).optional(),
     columns: z.number().optional(),

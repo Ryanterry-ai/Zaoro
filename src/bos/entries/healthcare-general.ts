@@ -1,5 +1,6 @@
 import { BOSEntry } from '../types.js';
 import { BOSRegistry } from '../registry.js';
+import { HEALTHCARE_GENERAL_BI } from '../knowledge/bi-profiles/healthcare-general.js';
 
 const HealthcareGeneralEntry: BOSEntry = {
   id: 'healthcare.general',
@@ -32,6 +33,7 @@ const HealthcareGeneralEntry: BOSEntry = {
   ],
   entities: ['Patient', 'Provider', 'Appointment', 'MedicalRecord', 'Prescription', 'Insurance', 'Payment', 'TelehealthSession'],
   revenueModel: ['insurance_billing', 'self_pay', 'subscription', 'telehealth_fee', 'copay'],
+  revenueIntelligence: HEALTHCARE_GENERAL_BI,
   compliance: ['HIPAA', 'HITECH', 'GDPR', 'Medical Records', 'Telehealth Regulations', 'Malpractice'],
   priority: 1,
   tags: ['healthcare', 'medical', 'doctor', 'clinic', 'hospital', 'patient', 'telehealth', 'health']

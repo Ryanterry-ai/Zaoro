@@ -72,5 +72,11 @@ export const PatternSchema = VersionedObject.extend({
   kpis: z.array(z.string()).optional(),
   vocabulary: z.record(z.string()).optional(),
   businessRules: z.array(z.string()).optional(),
+  // Revenue intelligence: how this pattern makes money
+  revenueModel: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    percentage: z.number(),
+  })).optional(),
 });
 export type Pattern = z.infer<typeof PatternSchema>;

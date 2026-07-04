@@ -3,6 +3,7 @@ import type { ConstraintReport } from './constraint-solver.js';
 import type { ScoredOption } from './scorer.js';
 import { DESIGN_PROFILES } from '../knowledge/registry.js';
 import type { Pattern } from '../schemas/knowledge/pattern.schema.js';
+import type { BusinessIntelligenceProfile } from '../schemas/knowledge/business-intelligence.schema.js';
 import type {
   ApplicationBlueprint,
   PagePlan,
@@ -32,11 +33,12 @@ export interface BlueprintCompilerInput {
   fullSelectedPattern?: Pattern | undefined;  // Full Pattern object for page-merging
   vocabulary: Record<string, string>;
   knowledgeRefs: Array<{ id: string; version: string }>;
+  revenueIntelligence?: BusinessIntelligenceProfile;
 }
 
 export class BlueprintCompilerV2 {
   compile(input: BlueprintCompilerInput): ApplicationBlueprint {
-    const { context, decisions, constraintReport, selectedDesignProfile, selectedPattern, fullSelectedPattern, vocabulary, knowledgeRefs } = input;
+    const { context, decisions, constraintReport, selectedDesignProfile, selectedPattern, fullSelectedPattern, vocabulary, knowledgeRefs, revenueIntelligence } = input;
 
     // Merge pattern pages into decisions before compiling pages.
     // This fixes the dead-code bug identified in Phase 3: selectedPattern was
@@ -63,8 +65,8 @@ export class BlueprintCompilerV2 {
     const routes = this.compileRoutes(pages, integrations);
     const layouts = this.compileLayouts(pages);
     const apis = this.compileAPIs(entities, integrations);
-    const dashboardWidgets = this.compileDashboardWidgets(mergedDecisions, entities);
-    const charts = this.compileCharts(mergedDecisions, entities);
+    const dashboardWidgets = this.compileDashboardWidgets(mergedDecisions, entities, revenueIntelligence);
+    const charts = this.compileCharts(mergedDecisions, entities, revenueIntelligence);
     const forms = this.compileForms(entities);
     const tables = this.compileTables(entities);
     const designTokens = this.compileDesignTokens(selectedDesignProfile);
@@ -493,40 +495,71 @@ export class BlueprintCompilerV2 {
     return apis;
   }
 
-  private compileDashboardWidgets(decisions: RuleDecision[], entities: EntityPlan[]): WidgetPlan[] {
+  private compileDashboardWidgets(decisions: RuleDecision[], entities: EntityPlan[], revenueIntelligence?: BusinessIntelligenceProfile): WidgetPlan[] {
     const widgets: WidgetPlan[] = [];
 
     const hasDashboard = decisions.some(d => d.action.type === 'add_page' && d.action.path === '/dashboard');
     if (hasDashboard) {
-      widgets.push(
-        { id: 'widget-stats', type: 'stat', title: 'Overview', size: 'full' },
-        { id: 'widget-chart', type: 'chart', title: 'Trends', size: 'lg' },
-        { id: 'widget-activity', type: 'feed', title: 'Recent Activity', size: 'md' },
-      );
+      // Use BI profile dashboard widgets if available
+      if (revenueIntelligence?.dashboardWidgets?.length) {
+        for (const biWidget of revenueIntelligence.dashboardWidgets.slice(0, 6)) {
+          widgets.push({
+            id: `widget-${biWidget.name.toLowerCase().replace(/\s+/g, '-')}`,
+            type: biWidget.type === 'stat-card' ? 'stat' : biWidget.type === 'chart' ? 'chart' : biWidget.type === 'table' ? 'table' : biWidget.type === 'list' ? 'feed' : biWidget.type === 'gauge' ? 'stat' : 'feed',
+            title: biWidget.name,
+            dataEntity: biWidget.kpis[0] ?? entities[0]?.name,
+            size: biWidget.priority === 'primary' ? 'lg' : biWidget.priority === 'secondary' ? 'md' : 'sm',
+          });
+        }
+      } else {
+        // Fallback to generic widgets
+        widgets.push(
+          { id: 'widget-stats', type: 'stat', title: 'Overview', size: 'full' },
+          { id: 'widget-chart', type: 'chart', title: 'Trends', size: 'lg' },
+          { id: 'widget-activity', type: 'feed', title: 'Recent Activity', size: 'md' },
+        );
 
-      for (const entity of entities.slice(0, 3)) {
-        widgets.push({
-          id: `widget-${entity.slug}-table`,
-          type: 'table',
-          title: `Recent ${entity.name}s`,
-          dataEntity: entity.name,
-          size: 'full',
-        });
+        for (const entity of entities.slice(0, 3)) {
+          widgets.push({
+            id: `widget-${entity.slug}-table`,
+            type: 'table',
+            title: `Recent ${entity.name}s`,
+            dataEntity: entity.name,
+            size: 'full',
+          });
+        }
       }
     }
 
     return widgets;
   }
 
-  private compileCharts(decisions: RuleDecision[], _entities: EntityPlan[]): ChartPlan[] {
+  private compileCharts(decisions: RuleDecision[], _entities: EntityPlan[], revenueIntelligence?: BusinessIntelligenceProfile): ChartPlan[] {
     const charts: ChartPlan[] = [];
 
     const hasDashboard = decisions.some(d => d.action.type === 'add_page' && d.action.path === '/dashboard');
     if (hasDashboard) {
-      charts.push(
-        { id: 'chart-overview', type: 'line', title: 'Overview Trend', dataEntity: 'Analytics', series: [] },
-        { id: 'chart-distribution', type: 'pie', title: 'Distribution', dataEntity: 'Analytics', series: [] },
-      );
+      // Use BI profile dashboard widgets if available
+      if (revenueIntelligence?.dashboardWidgets?.length) {
+        const biCharts = revenueIntelligence.dashboardWidgets
+          .filter(w => w.type === 'chart' || w.type === 'gauge')
+          .slice(0, 4);
+        for (const biChart of biCharts) {
+          charts.push({
+            id: `chart-${biChart.name.toLowerCase().replace(/\s+/g, '-')}`,
+            type: biChart.type === 'gauge' ? 'bar' : biChart.type as 'bar' | 'line' | 'pie',
+            title: biChart.name,
+            dataEntity: biChart.kpis[0] ?? 'Analytics',
+            series: [],
+          });
+        }
+      } else {
+        // Fallback to generic charts
+        charts.push(
+          { id: 'chart-overview', type: 'line', title: 'Overview Trend', dataEntity: 'Analytics', series: [] },
+          { id: 'chart-distribution', type: 'pie', title: 'Distribution', dataEntity: 'Analytics', series: [] },
+        );
+      }
     }
 
     return charts;
