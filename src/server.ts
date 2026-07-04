@@ -751,11 +751,18 @@ const server = http.createServer(async (req, res) => {
     // Cache key includes page route so different pages have separate caches
     const cacheKey = pageRoute.replace(/[^a-zA-Z0-9_-]/g, '_');
     const cacheFile = path.join(workspacePath, `.preview-cache-${cacheKey}.html`);
+    // Also check the root-page cache written by build-queue (no suffix for '/')
+    const rootCacheFile = path.join(workspacePath, '.preview-cache.html');
 
     if (!fs.existsSync(workspacePath)) return html(res, '<html><body style="background:#09090b;color:#a1a1aa;font-family:sans-serif;padding:2rem;"><h3>Preview Server Syncing</h3><p>Sandbox workspace setup is currently building. Please wait...</p></body></html>');
-    if (fs.existsSync(cacheFile)) {
-      const stat = fs.statSync(cacheFile);
-      if (Date.now() - stat.mtimeMs < 600000) return html(res, fs.readFileSync(cacheFile, 'utf-8'));
+
+    // Check keyed cache first, then root cache (written by build-queue during build)
+    const activeCacheFile = fs.existsSync(cacheFile) ? cacheFile
+      : (pageRoute === '/' && fs.existsSync(rootCacheFile)) ? rootCacheFile
+      : null;
+    if (activeCacheFile) {
+      const stat = fs.statSync(activeCacheFile);
+      if (Date.now() - stat.mtimeMs < 600000) return html(res, fs.readFileSync(activeCacheFile, 'utf-8'));
     }
     if (!targetFile) return html(res, `<html><body style="background:#09090b;color:#f43f5e;font-family:sans-serif;padding:2rem;"><h3>Preview Not Available</h3><p>Page ${pageRoute} was not found in the generated project.</p></body></html>`);
 

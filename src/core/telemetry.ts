@@ -57,8 +57,8 @@ function safePostHogCapture(event: { distinctId: string; event: string; properti
   if (!ph) return;
   try {
     ph.capture(event);
-  } catch (err: any) {
-    console.warn(`[telemetry] PostHog capture failed: ${err.message}`);
+  } catch {
+    // Silently ignore — telemetry must never affect build output
   }
 }
 
@@ -174,8 +174,8 @@ export const TelemetryLayer = {
         success: event.success,
         created_at: new Date().toISOString(),
       }).then(
-        ({ error }) => { if (error) console.warn('[telemetry] Supabase insert failed:', error.message); },
-        () => {} // Silently ignore network errors — telemetry must never affect build
+        () => {}, // Silently ignore both success and error — telemetry must never affect build
+        () => {}
       );
     }
   },

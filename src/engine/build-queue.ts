@@ -247,8 +247,9 @@ try {
     const esbuild = await import('esbuild');
     const { chromium } = await import('playwright');
     const targetFile = path.join(wsDir, 'src', 'app', 'page.tsx');
-    // Match server.ts cache key convention: homepage uses '-_' suffix
+    // Write both the keyed cache AND the root cache so server.ts finds it either way
     const cacheFile = path.join(wsDir, '.preview-cache-_.html');
+    const rootCacheFile = path.join(wsDir, '.preview-cache.html');
 
     if (fs.existsSync(targetFile)) {
       const bundleResult = await esbuild.build({
@@ -335,6 +336,7 @@ try {
             }, { timeout: 5000 }).catch(() => {});
             const renderedHtml = await page.content();
             fs.writeFileSync(cacheFile, renderedHtml, 'utf-8');
+            fs.writeFileSync(rootCacheFile, renderedHtml, 'utf-8'); // root cache for server.ts fallback lookup
             writeProgress('preview', 'done', 'Preview rendered — your app is live!');
           } finally {
             await ctx.close().catch(() => {});
