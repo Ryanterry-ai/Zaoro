@@ -199,6 +199,8 @@ function interceptConsole(prefix, type) {
       writeProgress('compile', 'healing', clean);
     } else if (clean.includes('[domain]') && clean.includes('hasFunction')) {
       // Skip noisy per-file domain checks — only log summary
+    } else if (clean.includes('[telemetry]')) {
+      // Skip telemetry warnings — they're non-blocking and pollute build progress
     } else if (clean.includes('Error') || clean.includes('error')) {
       writeProgress('error', 'warning', clean.slice(0, 200));
     }
