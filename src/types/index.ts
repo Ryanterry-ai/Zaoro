@@ -105,6 +105,7 @@ export interface GenerationIntent {
   domain?: string;
   businessType?: string;
   strategy?: 'full-clone' | 'structure-clone' | 'style-clone';
+  systemPrompt?: string;
 }
 
 export interface PageBuildResult {

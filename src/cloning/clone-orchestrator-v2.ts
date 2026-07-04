@@ -104,6 +104,7 @@ export class CloneOrchestrator {
   private state: CloneState;
   private logFn: ((step: string, msg: string, data?: Record<string, unknown>) => void) | undefined;
   private phaseFn: ((step: string, msg: string, data?: Record<string, unknown>) => void) | undefined;
+  private customSystemPrompt: string | undefined;
 
   constructor(
     workspaceRoot: string,
@@ -124,17 +125,23 @@ export class CloneOrchestrator {
     });
   }
 
+  private getActiveSystemPrompt(pageSpecific?: string): string {
+    const defaultSystemPrompt = `You are an expert full-stack engineer. Your task is to reconstruct the target user interface perfectly while ensuring all components are modular, clean, and use Tailwind CSS. ${pageSpecific || ''}`.trim();
+    return this.customSystemPrompt?.trim() || defaultSystemPrompt;
+  }
+
   private log(msg: string) {
     console.log(`[clone-v2] ${msg}`);
   }
 
   // ─── Main entry ───────────────────────────────────────────────
 
-  async clone(targetUrl: string, options?: { maxPages?: number; mode?: HarvestMode }): Promise<CloneResult> {
+  async clone(targetUrl: string, options?: { maxPages?: number; mode?: HarvestMode; systemPrompt?: string }): Promise<CloneResult> {
     const startTime = Date.now();
     let url = targetUrl.trim();
     if (!url.match(/^https?:\/\//i)) url = `https://${url}`;
     this.state.url = url;
+    this.customSystemPrompt = options?.systemPrompt ?? undefined;
 
     // If mode is specified and not 'full-clone', use ContentHarvester for specialized harvesting
     const mode = options?.mode || 'full-clone';
@@ -1226,7 +1233,8 @@ ${page.pagePath === '/' ? 'This is the HOMEPAGE.' : `This is the "${routePath}" 
 
 Generate a complete Next.js App Router page component.`;
 
-    const code = await this.gateway.generateRawCode(prompt);
+    const systemPrompt = this.getActiveSystemPrompt(`Reproduce the page "${page.title}" at route /${routePath || ''} EXACTLY as a Next.js App Router component.`);
+    const code = await this.gateway.generateRawCode(prompt, systemPrompt);
     return [{ action: 'insert', targetFile: page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${routePath}/page.tsx`, codeBlock: code }];
   }
 
@@ -1353,7 +1361,8 @@ Generate:
 
 Self-contained output.`;
 
-    const rawCode = await this.gateway.generateRawCode(prompt);
+    const systemPrompt = this.getActiveSystemPrompt(`Generate layout.tsx and globals.css for the website "${home.title}".`);
+    const rawCode = await this.gateway.generateRawCode(prompt, systemPrompt);
     const patches: ASTPatch[] = [];
 
     if (rawCode.includes('@tailwind') || rawCode.includes(':root') || rawCode.includes('.container')) {

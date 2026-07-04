@@ -193,15 +193,17 @@ export class LLMGateway {
    * Clone-specific: generate raw TSX code (no AST patch wrapping, no architect pipeline).
    * Returns the raw code string from the LLM.
    */
-  public async generateRawCode(prompt: string): Promise<string> {
+  public async generateRawCode(prompt: string, customSystemPrompt?: string): Promise<string> {
     if (!this.apiKey || this.apiKey.trim() === '') {
       throw new Error('No API key for raw code generation');
     }
 
-    const systemPrompt = `You are an expert Next.js/React developer. Generate COMPLETE, production-quality React components.
+    const defaultSystemPrompt = `You are an expert Next.js/React developer. Generate COMPLETE, production-quality React components.
 Output ONLY valid TSX/JSX code. No explanations, no markdown, no code fences — just the raw component code.
 Use Tailwind CSS for styling. Use 'use client' directive if the component has interactivity (useState, onClick, etc.).
 The component must be self-contained with all data inline — no external API calls.`;
+
+    const systemPrompt = customSystemPrompt?.trim() || defaultSystemPrompt;
 
     for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
       try {
