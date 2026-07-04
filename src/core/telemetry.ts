@@ -173,9 +173,10 @@ export const TelemetryLayer = {
         duration_ms: event.duration,
         success: event.success,
         created_at: new Date().toISOString(),
-      }).then(({ error }) => {
-        if (error) console.warn('[telemetry] Supabase insert failed:', error.message);
-      });
+      }).then(
+        ({ error }) => { if (error) console.warn('[telemetry] Supabase insert failed:', error.message); },
+        () => {} // Silently ignore network errors — telemetry must never affect build
+      );
     }
   },
 
