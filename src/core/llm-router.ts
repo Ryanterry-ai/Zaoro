@@ -115,62 +115,79 @@ export class LLMRouter {
 export function createRouterFromEnv(): LLMRouter {
   const configs: LLMProviderConfig[] = [];
 
-  // Groq (primary) - Fast inference, free tier, excellent code gen
-  const groqKey = process.env.GROQ_API_KEY || (process.env.LLM_PROVIDER === 'groq' ? process.env.LLM_API_KEY : undefined);
-  if (groqKey) {
+  // 1. OPENCODE_LLM_KEY (dedicated instance token — highest priority)
+  const opencodeKey = process.env.OPENCODE_LLM_KEY;
+  const opencodeProvider = (process.env.LLM_PROVIDER || 'openai') as LLMProvider;
+  const opencodeModel = process.env.LLM_MODEL || 'gpt-4o';
+  if (opencodeKey) {
     configs.push({
-      provider: 'groq',
-      apiKey: groqKey,
-      model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
-      capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation'],
+      provider: opencodeProvider,
+      apiKey: opencodeKey,
+      model: opencodeModel,
+      capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation', 'image-generation'],
       priority: 1,
       temperature: 0.3,
       maxTokens: 8192,
     });
   }
 
-  // Gemini (fallback) - Good for analysis when credits available
+  // 2. Groq — Fast inference, free tier, excellent code gen
+  const groqKey = process.env.GROQ_API_KEY || (process.env.LLM_PROVIDER === 'groq' ? process.env.LLM_API_KEY : undefined);
+  if (groqKey && !opencodeKey) {
+    configs.push({
+      provider: 'groq',
+      apiKey: groqKey,
+      model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
+      capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation'],
+      priority: opencodeKey ? 5 : 2,
+      temperature: 0.3,
+      maxTokens: 8192,
+    });
+  }
+
+  // 3. Gemini — Good for analysis when credits available
   const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey) {
+  if (geminiKey && !opencodeKey) {
     configs.push({
       provider: 'gemini',
       apiKey: geminiKey,
       model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       capabilities: ['analysis', 'summarization', 'translation', 'image-generation', 'code-generation'],
-      priority: 2,
+      priority: opencodeKey ? 6 : 3,
     });
   }
 
-  // Anthropic (fallback) - Best reasoning but expensive
+  // 4. Anthropic — Best reasoning but expensive
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (anthropicKey) {
+  if (anthropicKey && !opencodeKey) {
     configs.push({
       provider: 'anthropic',
       apiKey: anthropicKey,
       model: process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-20250219',
       capabilities: ['code-generation', 'reasoning', 'analysis'],
-      priority: 3,
+      priority: opencodeKey ? 7 : 4,
     });
   }
 
-  // OpenAI (last resort)
+  // 5. OpenAI (standard platform flag — last resort)
   const openaiKey = process.env.OPENAI_API_KEY;
-  if (openaiKey) {
+  if (openaiKey && !opencodeKey) {
     configs.push({
       provider: 'openai',
       apiKey: openaiKey,
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       capabilities: ['code-generation', 'reasoning', 'analysis', 'image-generation'],
-      priority: 4,
+      priority: opencodeKey ? 8 : 5,
     });
   }
 
-  // Fallback: if only Gemini key exists without provider指定
-  if (configs.length === 0 && geminiKey) {
+  // 6. Fallback: LLM_API_KEY alone (without provider-specific key)
+  if (configs.length === 0 && process.env.LLM_API_KEY) {
+    const provider = (process.env.LLM_PROVIDER || 'openai') as LLMProvider;
     configs.push({
-      provider: 'gemini',
-      apiKey: geminiKey,
-      model: 'gemini-2.5-flash',
+      provider,
+      apiKey: process.env.LLM_API_KEY,
+      model: process.env.LLM_MODEL || 'gpt-4o',
       capabilities: ['code-generation', 'reasoning', 'analysis', 'summarization', 'translation', 'image-generation'],
       priority: 1,
     });
