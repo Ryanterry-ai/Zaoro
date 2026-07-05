@@ -488,13 +488,26 @@ export class ArchitectAgent {
       'tool', 'app', 'website', 'site', 'web', 'digital', 'online',
     ]);
 
+    // Adjectives/descriptors that should never be used as business names
+    const notNames = new Set([
+      'indian', 'american', 'chinese', 'japanese', 'korean', 'french', 'german', 'italian',
+      'british', 'european', 'african', 'asian', 'australian', 'canadian', 'mexican',
+      'spanish', 'russian', 'brazilian', 'thai', 'vietnamese', 'turkish', 'arabic',
+      'global', 'local', 'modern', 'smart', 'fast', 'quick', 'best', 'top', 'good',
+      'great', 'new', 'old', 'first', 'last', 'next', 'full', 'complete', 'simple',
+      'easy', 'advanced', 'basic', 'multi', 'single', 'cross', 'ultra', 'super',
+      'mega', 'micro', 'mini', 'real', 'true', 'false', 'small', 'medium', 'large',
+      'big', 'tiny', 'huge', 'massive', 'fully', 'interactive', 'responsive',
+      'functional', 'dynamic', 'static', 'the', 'a', 'an', 'my', 'your', 'our',
+    ]);
+
     for (const pat of patterns) {
       const m = prompt.match(pat);
       if (m && m[1]) {
         const captured = m[1].trim();
-        // Skip generic words and industry words
+        // Skip generic words, industry words, and adjectives
         const skip = ['a', 'an', 'the', 'with', 'for', 'that', 'and', 'or', 'landing', 'website', 'app', 'page', 'platform', 'dashboard', 'store', 'site'];
-        if (!skip.includes(captured.toLowerCase()) && !industryWords.has(captured.toLowerCase())) {
+        if (!skip.includes(captured.toLowerCase()) && !industryWords.has(captured.toLowerCase()) && !notNames.has(captured.toLowerCase())) {
           // Capitalize first letter
           return captured.charAt(0).toUpperCase() + captured.slice(1);
         }
@@ -517,6 +530,8 @@ export class ArchitectAgent {
       'travel': 'Wanderly', 'booking': 'BookEase', 'hotel': 'Hospita',
       'luxury': 'Chronos', 'watch': 'Chronos', 'timepiece': 'Chronos', 'jewelry': 'Aurum',
       'boutique': 'Atelier', 'premium': 'Apex', 'artisan': 'Atelier',
+      'supplement': 'SuppleFit', 'protein': 'SuppleFit', 'whey': 'SuppleFit',
+      'nutrition': 'NutriShop', 'vitamin': 'NutriShop', 'health store': 'NutriShop',
     };
     for (const [keyword, name] of Object.entries(nameMap)) {
       if (lower.includes(keyword)) return name;

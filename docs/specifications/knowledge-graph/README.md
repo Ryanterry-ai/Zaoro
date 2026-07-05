@@ -1,8 +1,8 @@
 # Knowledge Graph Specification
 
-**Version**: 1.0.0-draft  
-**Status**: Draft  
-**Last Updated**: 2026-07-04
+**Version**: 1.0.0  
+**Status**: Frozen  
+**Last Updated**: 2026-07-05
 
 ---
 

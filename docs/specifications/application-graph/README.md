@@ -1,8 +1,8 @@
 # Application Graph Specification Package
 
-**Version**: 1.0.0-draft  
-**Status**: Draft  
-**Last Updated**: 2026-07-04
+**Version**: 1.0.0  
+**Status**: Frozen  
+**Last Updated**: 2026-07-05
 
 ---
 
@@ -122,6 +122,7 @@ If you're building tools that consume the AG:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0-draft | 2026-07-04 | Initial draft |
+| 1.0.0 | 2026-07-05 | Frozen — reviewed and accepted |
 
 ---
 

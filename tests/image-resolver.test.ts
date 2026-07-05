@@ -17,11 +17,11 @@ describe('image-resolver', () => {
       expect(result.fallback).toBeDefined();
     });
 
-    it('should generate picsum.photos URLs', () => {
+    it('should generate Unsplash URLs', () => {
       const result = resolveDomainImages(['business'], 1, 1);
-      expect(result.hero).toMatch(/^https:\/\/picsum\.photos\/seed\/\d+\/1200\/800$/);
-      expect(result.items[0]).toMatch(/^https:\/\/picsum\.photos\/seed\/\d+\/600\/400$/);
-      expect(result.team[0]).toMatch(/^https:\/\/picsum\.photos\/seed\/\d+\/200\/200$/);
+      expect(result.hero).toMatch(/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?w=1200&h=800&fit=crop$/);
+      expect(result.items[0]).toMatch(/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?w=600&h=400&fit=crop$/);
+      expect(result.team[0]).toMatch(/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?w=200&h=200&fit=crop$/);
     });
 
     it('should generate consistent URLs for same keyword', () => {
@@ -60,14 +60,14 @@ describe('image-resolver', () => {
   });
 
   describe('resolveSingleImage', () => {
-    it('should generate a picsum URL with default dimensions', () => {
+    it('should generate an Unsplash URL with default dimensions', () => {
       const url = resolveSingleImage('coffee');
-      expect(url).toMatch(/^https:\/\/picsum\.photos\/seed\/\d+\/600\/400$/);
+      expect(url).toMatch(/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?w=600&h=400&fit=crop$/);
     });
 
     it('should accept custom dimensions', () => {
       const url = resolveSingleImage('coffee', 800, 600);
-      expect(url).toMatch(/^https:\/\/picsum\.photos\/seed\/\d+\/800\/600$/);
+      expect(url).toMatch(/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?w=800&h=600&fit=crop$/);
     });
 
     it('should be deterministic for same keyword', () => {

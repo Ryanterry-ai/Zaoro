@@ -3,6 +3,8 @@
 // Maps Industry -> Audience -> Brand Personality -> Design Language.
 // Every downstream agent reads from this instead of making its own choices.
 
+import { type DesignRecommendation } from './skill-integrator.js';
+
 // Minimal IntentDNA — only the fields design-dna needs
 interface IntentDNA {
   business_domain: string;
@@ -29,6 +31,7 @@ export interface DesignDNA {
   cards: CardDNA;
   navigation: NavigationDNA;
   layout: LayoutDNA;
+  uxGuidelines: string[];
 }
 
 export type BrandPersonality =
@@ -197,11 +200,11 @@ export interface LayoutDNA {
 // ─── Design DNA Generator ────────────────────────────────────────
 // Single entry point: IntentDNA → full DesignDNA object
 
-export function generateDesignDNA(intent: IntentDNA): DesignDNA {
+export function generateDesignDNA(intent: IntentDNA, skillRec?: DesignRecommendation): DesignDNA {
   const industry = intent.business_domain;
   const personality = inferPersonality(industry, intent.design_style);
-  const style = inferStyle(personality);
-  return {
+  const style = skillRec ? mapStyle(skillRec.colors, skillRec.layout, skillRec.animation) : inferStyle(personality);
+  const dna: DesignDNA = {
     industry, brandPersonality: personality, designStyle: style,
     colors: buildColors(industry, personality),
     typography: buildTypography(personality),
@@ -219,7 +222,32 @@ export function generateDesignDNA(intent: IntentDNA): DesignDNA {
     cards: buildCards(personality),
     navigation: buildNav(industry),
     layout: buildLayout(industry, personality),
+    uxGuidelines: [],
   };
+
+  // Merge UI UX Pro Max skill recommendations when available
+  if (skillRec) {
+    // Layout overrides
+    dna.layout.heroLayout = skillRec.layout.heroLayout === 'full-width' ? 'full-width' : skillRec.layout.heroLayout;
+    dna.layout.container = skillRec.layout.containerMaxWidth;
+    dna.layout.grid = `grid grid-cols-1 sm:grid-cols-${skillRec.layout.gridColumns.sm} lg:grid-cols-${skillRec.layout.gridColumns.lg} gap-6`;
+    dna.layout.sectionSpacing = skillRec.layout.sectionSpacing;
+
+    // Typography overrides
+    dna.typography.heading = skillRec.typography.headingFont ? skillRec.typography.headingFont + ', system-ui, sans-serif' : dna.typography.heading;
+    dna.typography.body = skillRec.typography.bodyFont ? skillRec.typography.bodyFont + ', system-ui, sans-serif' : dna.typography.body;
+
+    // UX guidelines
+    dna.uxGuidelines = skillRec.uxGuidelines;
+  }
+
+  return dna;
+}
+
+function mapStyle(colors: DesignRecommendation['colors'], layout: DesignRecommendation['layout'], animation: DesignRecommendation['animation']): DesignStyle {
+  if (animation.library === 'framer-motion') return 'gradient';
+  if (layout.heroLayout === 'full-width') return 'bold';
+  return 'flat';
 }
 
 function inferPersonality(industry: string, ds?: string): BrandPersonality {
@@ -577,7 +605,7 @@ function buildPhotography(industry: string, personality: BrandPersonality): Phot
     queryTemplates: iq[industry.toLowerCase()] ?? iq.saas ?? ['modern workspace', 'team collaboration', 'technology'],
     style: personality === 'luxury' ? 'editorial' : personality === 'tech' ? 'futuristic' : 'lifestyle',
     moodKeywords: mk[personality] ?? mk.professional ?? ['professional', 'clean'],
-    fallbackSource: 'picsum',
+    fallbackSource: 'unsplash',
     heroStrategy: personality === 'luxury' ? 'split' : personality === 'tech' ? 'gradient' : 'photo',
     treatment: {
       overlay: personality !== 'minimal',

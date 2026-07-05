@@ -32,6 +32,7 @@ import { evaluateConfidence } from './confidence-gate.js';
 import { runLLMPlanning } from './llm-planning-agent.js';
 import type { LLMConfig } from '../types/index.js';
 import { stageLogger } from '../core/debug-logger.js';
+import { ContentScraper } from '../generation/content-scraper.js';
 
 const log = stageLogger('bre');
 
@@ -58,6 +59,31 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     entities: ctx.entities,
     appName: ctx.appName,
   });
+
+  // Step 0: Web intelligence — scrape real business data if we have a name
+  const t0 = Date.now();
+  if (ctx.appName && ctx.appName !== 'MyApp' && ctx.appName !== 'BrandName') {
+    const workspaceRoot = process.cwd();
+    try {
+      const scraper = new ContentScraper(workspaceRoot);
+      const scraped = await scraper.scrapePromptData(ctx.appName, ctx.industry, ctx.country, ctx.description);
+      if (scraped && (scraped.heroHeadline || scraped.aboutText || scraped.prices.length > 0)) {
+        const profile = scraper.scrapedToBusinessProfile(scraped, ctx.industry, ctx.appName);
+        ctx = { ...ctx, revenueIntelligence: profile as BusinessIntelligenceProfile };
+        log.info('Web intelligence gathered', {
+          source: scraped.sourceUrl,
+          headline: scraped.heroHeadline?.substring(0, 60),
+          prices: scraped.prices.length,
+          testimonials: scraped.testimonials.length,
+        });
+      } else {
+        log.info('No web data found, using deterministic pools');
+      }
+    } catch (err: any) {
+      log.warn('Web scraping failed, continuing deterministically', err.message);
+    }
+  }
+  log.info('Web intelligence done', { duration: Date.now() - t0 });
 
   const rulesEngine = new RulesEngine();
   const constraintSolver = new ConstraintSolver();

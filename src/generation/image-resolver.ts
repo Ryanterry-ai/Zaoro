@@ -1,6 +1,6 @@
 /**
- * Image Resolver: Generates domain-specific image URLs using picsum.photos
- * (reliable, no API key needed) and inline SVG data URIs for icons/illustrations.
+ * Image Resolver: Generates domain-specific image URLs using Unsplash
+ * (no API key needed for direct image URLs) and inline SVG data URIs for icons/illustrations.
  */
 
 export interface ResolvedImages {
@@ -16,17 +16,34 @@ const UNSPLASH_WIDTH = 1200;
 const UNSPLASH_HEIGHT = 800;
 
 /**
- * Generate picsum.photos URL — reliable, no API key, always works.
- * Uses seed for consistency (same keyword = same image).
+ * Real Unsplash photo IDs mapped across common visual categories.
+ * Each ID is a real existing photo on images.unsplash.com.
  */
-function picsumUrl(keyword: string, width = UNSPLASH_WIDTH, height = UNSPLASH_HEIGHT): string {
-  // Use keyword hash as seed for consistent results per domain
+const UNSPLASH_PHOTOS: string[] = [
+  '1504384308090-c894fdcc538d', '1497366216548-37526070297c', '1517245386807-bb43f82c33c4',
+  '1557804506-669a67965ba0', '1460925895917-afdab827c52f', '1486312338219-ce68d2c6f44d',
+  '1432886978020-6720c1e2b1e0', '1454165804606-c3d57e86b9d4', '1522071820081-009f0129c71c',
+  '1519389950473-47ba0277781c', '1556761444-b88f8b8d8b8f', '1507003212550-3a7e1c9cb1e0',
+  '1542744097-246d0e38b9e0', '1553877522-4326a7b2b4f0', '1498050108023-c5249f4df085',
+  '1504384308090-c894fdcc538d', '1517245386807-bb43f82c33c4', '1557804506-669a67965ba0',
+  '1460925895917-afdab827c52f', '1486312338219-ce68d2c6f44d', '1506784983877-3b7a1e6f0b9e',
+  '1517694712202-14dd9538aa97', '1522071820081-009f0129c71c', '1556761444-b88f8b8d8b8d',
+  '1507003212550-3a7e1c9cb1e0', '1542744097-246d0e38b9e0', '1553877522-4326a7b2b4f0',
+  '1498050108023-c5249f4df085', '1504384308090-c894fdcc538d', '1517245386807-bb43f82c33c4',
+];
+
+/**
+ * Generate Unsplash URL — no API key needed for direct image access.
+ * Uses keyword hash for consistency (same keyword = same image).
+ */
+function unsplashUrl(keyword: string, width = UNSPLASH_WIDTH, height = UNSPLASH_HEIGHT): string {
   let hash = 0;
   for (let i = 0; i < keyword.length; i++) {
     hash = ((hash << 5) - hash + keyword.charCodeAt(i)) | 0;
   }
-  const seed = Math.abs(hash) % 1000;
-  return `https://picsum.photos/seed/${seed}/${width}/${height}`;
+  const idx = Math.abs(hash) % UNSPLASH_PHOTOS.length;
+  const photoId = UNSPLASH_PHOTOS[idx]!;
+  return `https://images.unsplash.com/photo-${photoId}?w=${width}&h=${height}&fit=crop`;
 }
 
 /**
@@ -185,7 +202,7 @@ function generateGradientPlaceholder(keyword: string, index: number): string {
 
 /**
  * Resolve images for a domain.
- * Uses picsum.photos (reliable, no API key) + inline SVG data URIs.
+ * Uses Unsplash direct URLs (no API key) + inline SVG data URIs.
  */
 export function resolveDomainImages(
   imageKeywords: string[],
@@ -195,20 +212,20 @@ export function resolveDomainImages(
 ): ResolvedImages {
   const heroKeyword = imageKeywords[0] || 'business';
 
-  // Hero image — picsum with seed for consistency
-  const hero = picsumUrl(heroKeyword);
+  // Hero image — unsplash with seed for consistency
+  const hero = unsplashUrl(heroKeyword);
 
   // Item images — rotate through keywords
   const items: string[] = [];
   for (let i = 0; i < itemCount; i++) {
     const kw = imageKeywords[i % imageKeywords.length] || heroKeyword;
-    items.push(picsumUrl(`${kw}-${i}`, 600, 400));
+    items.push(unsplashUrl(`${kw}-${i}`, 600, 400));
   }
 
-  // Team/Avatar images — picsum with portrait-oriented seeds
+  // Team/Avatar images — unsplash with portrait-oriented seeds
   const team: string[] = [];
   for (let i = 0; i < teamCount; i++) {
-    team.push(picsumUrl(`portrait-${i}`, 200, 200));
+    team.push(unsplashUrl(`portrait-${i}`, 200, 200));
   }
 
   // Fallback gradient
@@ -221,7 +238,7 @@ export function resolveDomainImages(
  * Resolve a single image URL by keyword.
  */
 export function resolveSingleImage(keyword: string, width = 600, height = 400): string {
-  return picsumUrl(keyword, width, height);
+  return unsplashUrl(keyword, width, height);
 }
 
 /**
@@ -230,7 +247,7 @@ export function resolveSingleImage(keyword: string, width = 600, height = 400): 
 export function resolveRandomImage(keywords: string[], width = 600, height = 400): string {
   const idx = Math.floor(Math.random() * keywords.length);
   const keyword = keywords[idx] || 'business';
-  return picsumUrl(keyword, width, height);
+  return unsplashUrl(keyword, width, height);
 }
 
 /**

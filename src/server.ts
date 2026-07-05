@@ -713,6 +713,11 @@ const server = http.createServer(async (req, res) => {
     if (normalized.startsWith('..') || path.isAbsolute(normalized)) return json(res, { error: 'Invalid path' }, 400);
     const fullPath = path.join(WORKSPACE_BASE, id, normalized);
     if (!fs.existsSync(fullPath)) return json(res, { error: 'File not found' }, 404);
+    const ext = path.extname(normalized).toLowerCase();
+    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico', '.tiff', '.avif'];
+    if (imageExts.includes(ext)) {
+      return json(res, { error: `Cannot read "${normalized}" — this is an image file` }, 400);
+    }
     return json(res, { content: fs.readFileSync(fullPath, 'utf-8'), path: normalized });
   }
 
@@ -798,9 +803,17 @@ const server = http.createServer(async (req, res) => {
       } as any);
 
       const bundledCode = bundleResult.outputFiles?.[0]?.text ?? '';
-      // Escape </script> in bundled code to prevent premature HTML script tag closure
-      const safeBundledCode = bundledCode.split('<' + '/script>').join('<' + '/script' + '>');
+      // Escape </script> in bundled code to prevent premature HTML script tag closure.
+      // Need TWO backslashes in the temp file so the replacement STRING VALUE
+      // is <\/script> (backslash + /script>) — this prevents the HTML parser
+      // from seeing </script> as a close-tag, while JS evaluates \/ as /.
+      // Template literal + JS string nesting: source \\\\ → template \\ → JS \.
+      const safeBundledCode = bundledCode.replace(/<\/script>/gi, '<\\\\/script>');
       const SCRIPT_END = '<' + '/script>';
+      // Read vendor scripts to inline them (avoids URL resolution issues from about:blank)
+      const vendorTailwind = fs.readFileSync(path.join(VENDOR_DIR, 'tailwind-cdn.min.js'), 'utf-8');
+      const vendorReact = fs.readFileSync(path.join(VENDOR_DIR, 'react.production.min.js'), 'utf-8');
+      const vendorReactDom = fs.readFileSync(path.join(VENDOR_DIR, 'react-dom.production.min.js'), 'utf-8');
 
       const previewHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -808,7 +821,7 @@ const server = http.createServer(async (req, res) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Preview — ${pageRoute}</title>
-  <script src="/_vendor/tailwind-cdn.min.js">${SCRIPT_END}</script>
+  <script>${vendorTailwind}</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
@@ -817,8 +830,8 @@ const server = http.createServer(async (req, res) => {
 </head>
 <body>
   <div id="preview-root"></div>
-  <script src="/_vendor/react.production.min.js">${SCRIPT_END}</script>
-  <script src="/_vendor/react-dom.production.min.js">${SCRIPT_END}</script>
+  <script>${vendorReact}</script>
+  <script>${vendorReactDom}</script>
   <script>
     window.__previewLog = [];
     function _log(msg) { window.__previewLog.push(msg); }

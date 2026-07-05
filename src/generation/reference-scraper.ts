@@ -336,7 +336,7 @@ export class ReferenceScraper {
     if (lower.includes('price') || lower.includes('cost') || lower.includes('amount')) return 99.99 + index * 10;
     if (lower.includes('id')) return `id-${index + 1}`;
     if (lower.includes('url') || lower.includes('link') || lower.includes('href')) return `https://example.com/${fieldName}/${index + 1}`;
-    if (lower.includes('image') || lower.includes('img') || lower.includes('photo') || lower.includes('avatar')) return `/assets/images/${fieldName}-${index + 1}.jpg`;
+    if (lower.includes('image') || lower.includes('img') || lower.includes('photo') || lower.includes('avatar')) return `https://picsum.photos/seed/${fieldName}${index + 1}/400/300`;
     if (lower.includes('email')) return `user${index + 1}@example.com`;
     if (lower.includes('phone')) return `+1-555-000-${1000 + index}`;
     if (lower.includes('date') || lower.includes('time') || lower.includes('created') || lower.includes('updated')) return new Date(Date.now() - index * 86400000).toISOString();

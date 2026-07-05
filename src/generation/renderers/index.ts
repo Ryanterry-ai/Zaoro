@@ -8,7 +8,7 @@
  *   const result = renderWith(applicationSpec, 'react', context);
  */
 
-export type { Renderer, RenderContext, RenderedFile, RenderResult } from './renderer.js';
+export type { Renderer, RenderContext, RenderedFile, RenderResult, ComponentSourceRec } from './renderer.js';
 export { registerRenderer, getRenderer, getRegisteredPlatforms, renderWith } from './renderer.js';
 export { ReactRenderer } from './react-renderer.js';
 export { FlutterRenderer } from './flutter-renderer.js';

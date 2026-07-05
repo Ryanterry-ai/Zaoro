@@ -70,6 +70,21 @@ export interface Renderer {
 }
 
 /**
+ * ComponentSourceRec — describes an external component to import.
+ * Renders generate import statements + add dependencies when source is non-'custom'.
+ */
+export interface ComponentSourceRec {
+  /** Component type name matching ComponentSpec.type (e.g. 'HeroBanner') */
+  type: string;
+  /** Source registry: 'custom' means inline generation, '21st' / 'shadcn' means external import */
+  source: 'custom' | '21st' | 'shadcn';
+  /** npm package name to install (e.g. '@21st-dev/hero-banner') */
+  packageName: string;
+  /** Named export to import from the package (defaults to component type) */
+  exportName?: string;
+}
+
+/**
  * RenderContext — shared context for all render operations.
  */
 export interface RenderContext {
@@ -84,6 +99,9 @@ export interface RenderContext {
 
   /** Output directory path */
   outputDir: string;
+
+  /** External component sources — renderers generate import statements for these */
+  componentSources?: ComponentSourceRec[];
 }
 
 // ─── Renderer Registry ───────────────────────────────────────────────────────

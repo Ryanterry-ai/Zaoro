@@ -45,8 +45,7 @@ export class GitHubTool implements MCPTool {
 
       for (const file of files) {
         const relativePath = path.relative(workspacePath, file).replace(/\\/g, '/');
-        const content = fs.readFileSync(file, 'utf-8');
-        const encodedContent = Buffer.from(content).toString('base64');
+        const encodedContent = fs.readFileSync(file).toString('base64');
 
         const sha = await this.getExistingFileSha(config, relativePath, branch);
 

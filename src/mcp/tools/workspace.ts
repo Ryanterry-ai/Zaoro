@@ -45,6 +45,16 @@ export class WorkspaceTool implements MCPTool {
           if (!fs.existsSync(fullPath)) {
             return { content: [{ type: 'text', text: `File not found: ${filePath}` }], isError: true };
           }
+
+          const ext = path.extname(filePath).toLowerCase();
+          const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico', '.tiff', '.avif'];
+          if (imageExts.includes(ext)) {
+            return {
+              content: [{ type: 'text', text: `Cannot read "${filePath}" — this is an image file. This tool only supports reading text-based files.` }],
+              isError: true,
+            };
+          }
+
           const content = fs.readFileSync(fullPath, 'utf-8');
           return {
             content: [{ type: 'text', text: content }],

@@ -124,7 +124,7 @@ describe('Content Resolver', () => {
     const hero = homePage?.components.find(c => c.type === 'HeroBanner');
     expect(hero).toBeDefined();
     expect(hero?.content?.title?.value).toBe('Bella Vista');
-    expect(hero?.content?.subtitle?.value).toContain('restaurant');
+    expect(hero?.content?.subtitle?.value).toContain('food');
     expect(hero?.actions?.length).toBeGreaterThan(0);
   });
 

@@ -620,11 +620,74 @@ function extractAppName(prompt: string): string | undefined {
     // Capital-letter multi-word after "for": "ERP for HospitalOS"
     /(?:for|called|named)\s+([A-Z][A-Za-z0-9]{1,20}(?:\s+[A-Z][A-Za-z0-9]{1,20}){0,2})/,
   ];
+
+  // Words that are NOT business names — adjectives, descriptors, generic nouns
+  const notNames = new Set([
+    'indian', 'american', 'chinese', 'japanese', 'korean', 'french', 'german', 'italian',
+    'british', 'european', 'african', 'asian', 'australian', 'canadian', 'mexican',
+    'spanish', 'russian', 'brazilian', 'thai', 'vietnamese', 'turkish', 'arabic',
+    'global', 'local', 'online', 'digital', 'modern', 'smart', 'fast', 'quick',
+    'best', 'top', 'good', 'great', 'new', 'old', 'first', 'last', 'next',
+    'full', 'complete', 'simple', 'easy', 'advanced', 'premium', 'basic',
+    'multi', 'single', 'cross', 'ultra', 'super', 'mega', 'micro', 'mini',
+    'real', 'true', 'false', 'yes', 'no', 'all', 'any', 'every', 'each',
+    'fully', 'interactive', 'responsive', 'functional', 'dynamic', 'static',
+    'small', 'medium', 'large', 'big', 'tiny', 'huge', 'massive',
+    'the', 'a', 'an', 'this', 'that', 'these', 'those', 'my', 'your', 'our',
+  ]);
+
   for (const pat of patterns) {
     const m = prompt.match(pat);
-    if (m?.[1] && m[1].length > 1) return m[1].trim().slice(0, 60);
+    if (m?.[1] && m[1].length > 1) {
+      const candidate = m[1].trim().slice(0, 60);
+      // Reject if the captured name is just an adjective/descriptor
+      if (notNames.has(candidate.toLowerCase())) continue;
+      return candidate;
+    }
   }
   return undefined;
+}
+
+/**
+ * Generate a brand name from context when no explicit name is provided.
+ * Combines industry keywords with market keywords to create plausible brand names.
+ */
+function generateAppName(prompt: string, industry: string, country?: string): string {
+  const lower = prompt.toLowerCase();
+
+  // Industry + market keyword combinations
+  const brandMap: Record<string, Record<string, string>> = {
+    ecommerce: {
+      supplement: 'SuppleFit', protein: 'SuppleFit', whey: 'SuppleFit',
+      nutrition: 'NutriShop', vitamin: 'NutriShop', health: 'NutriShop',
+      fashion: 'StyleHub', clothing: 'StyleHub', apparel: 'StyleHub',
+      electronics: 'TechMart', gadget: 'TechMart',
+      grocery: 'FreshBasket', organic: 'FreshBasket',
+      _default: 'ShopFlow',
+    },
+    fitness: { _default: 'FitForge' },
+    healthcare: { dental: 'SmileCare', _default: 'MedConnect' },
+    restaurant: { _default: 'Savora' },
+    education: { _default: 'LearnHub' },
+    saas: { _default: 'Nexus' },
+    realestate: { _default: 'HomeVista' },
+  };
+
+  // Find matching brand name from keywords
+  const industryBrands = brandMap[industry] ?? brandMap['_default'] ?? {};
+  for (const [keyword, name] of Object.entries(industryBrands)) {
+    if (keyword !== '_default' && lower.includes(keyword)) return name;
+  }
+  if (industryBrands['_default']) return industryBrands['_default'];
+
+  // Country-specific suffixes
+  if (country === 'IN') {
+    if (lower.includes('supplement') || lower.includes('protein') || lower.includes('nutrition')) return 'SuppleFit';
+    if (lower.includes('food') || lower.includes('restaurant') || lower.includes('cafe')) return 'TasteHub';
+    if (lower.includes('fashion') || lower.includes('clothing')) return 'StyleIndia';
+  }
+
+  return 'YourBrand';
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────
@@ -645,7 +708,7 @@ export function buildBREContext(prompt: string): BREContext {
   const capabilities = detectCapabilities(prompt, industryMapping);
   const journeys = detectJourneys(prompt, industryMapping);
   const country = detectCountry(prompt);
-  const appName = extractAppName(prompt);
+  const appName = extractAppName(prompt) ?? generateAppName(prompt, industry, country);
   const entities = industryMapping?.entities ?? ['User'];
   const audience = industryMapping?.audience ?? 'mixed';
 

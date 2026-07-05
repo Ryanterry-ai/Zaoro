@@ -278,28 +278,37 @@ try {
       if (!bundledCode.trim()) {
         writeProgress('preview', 'warning', 'Esbuild produced empty output, skipping preview');
       } else {
-        // Escape </script> in bundled code to prevent premature HTML script tag closure
-        const safeBundledCode = bundledCode.split('<' + '/script>').join('<' + '/script' + '>');
+        // Escape </script> in bundled code to prevent premature HTML script tag closure.
+        // Need TWO backslashes in the temp file so the replacement STRING VALUE
+        // is <\/script> (backslash + /script>) — this prevents the HTML parser
+        // from seeing </script> as a close-tag, while JS evaluates \/ as /.
+        // Template literal + JS string nesting: source \\\\ → template \\ → JS \.
+        const safeBundledCode = bundledCode.replace(/<\\\/script>/gi, '<\\\\/script>');
         const SCRIPT_END = '<' + '/script>';
+        // Read vendor scripts to inline them (avoids URL resolution issues from about:blank)
+        const vendorDir = path.join(process.cwd(), 'static', 'vendor');
+        const vendorTailwind = fs.readFileSync(path.join(vendorDir, 'tailwind-cdn.min.js'), 'utf-8');
+        const vendorReact = fs.readFileSync(path.join(vendorDir, 'react.production.min.js'), 'utf-8');
+        const vendorReactDom = fs.readFileSync(path.join(vendorDir, 'react-dom.production.min.js'), 'utf-8');
         const previewHtmlParts = [
           '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>',
-          '<script src="/_vendor/tailwind-cdn.min.js">' + SCRIPT_END,
+          '<script>' + vendorTailwind + SCRIPT_END,
           '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div>',
-          '<script src="/_vendor/react.production.min.js">' + SCRIPT_END,
-          '<script src="/_vendor/react-dom.production.min.js">' + SCRIPT_END,
+          '<script>' + vendorReact + SCRIPT_END,
+          '<script>' + vendorReactDom + SCRIPT_END,
           '<script>',
           'window.__previewLog=[];function _log(m){window.__previewLog.push(m)}',
           '_log("Script starting");',
           'try{',
           safeBundledCode,
           '_log("Bundle executed, __preview type="+typeof __preview);',
-          '}catch(be){_log("Bundle error: "+be.message);document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Bundle error: "+be.message+"</div>"}',
+          '}catch(be){_log("Bundle error: "+be.message);document.getElementById("preview-root").innerHTML="<div style=\\'padding:2rem;color:#f43f5e;\\'>Bundle error: "+be.message+"</div>"}',
           'try{var _mod=typeof __preview!=="undefined"?__preview:{};_log("Module keys: "+Object.keys(_mod).join(", "));var _comp=_mod.default||null;_log("default export: "+typeof _comp);',
           'if(!_comp||typeof _comp!=="function"){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;_log("Found React component: "+_keys[i]);break;}}}',
           'if(!_comp||typeof _comp!=="function"){var _best=null,_bestScore=-1;var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){var _name=_keys2[j];var _sc=_name[0]===_name[0].toUpperCase()&&_name[0]!=="_"?10:0;if(_sc>_bestScore){_bestScore=_sc;_best=_mod[_keys2[j]];_log("Candidate function: "+_name);}}}if(_best){_comp=_best;}}',
           'if(_comp&&typeof _comp==="function"){_log("Rendering: "+(_comp.name||"anon"));var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp));_log("React.render called");}',
-          'else{_log("No component found");document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">No renderable component. Keys: "+Object.keys(_mod).join(", ")+"</div>"}',
-          '}catch(e){_log("Render error: "+e.message);document.getElementById("preview-root").innerHTML="<div style=\\"padding:2rem;color:#f43f5e;\\">Render error: "+e.message+"</div>"}',
+          'else{_log("No component found");document.getElementById("preview-root").innerHTML="<div style=\\'padding:2rem;color:#f43f5e;\\'>No renderable component. Keys: "+Object.keys(_mod).join(", ")+"</div>"}',
+          '}catch(e){_log("Render error: "+e.message);document.getElementById("preview-root").innerHTML="<div style=\\'padding:2rem;color:#f43f5e;\\'>Render error: "+e.message+"</div>"}',
           SCRIPT_END + '</body></html>'
         ];
         const previewHtml = previewHtmlParts.join('');
@@ -411,9 +420,23 @@ try {
     const scriptPath = path.join(engineRoot, `.build-temp-${job.id}.ts`);
     fs.writeFileSync(scriptPath, buildScript, 'utf-8');
 
+    const tempFiles = [scriptPath, configPath, promptPath];
+
     const { exec } = await import('child_process');
 
     let child: ChildProcess;
+
+    const cleanup = () => {
+      for (const fp of tempFiles) {
+        try {
+          if (fp.endsWith('.ts') && fs.existsSync(fp)) {
+            const debugCopy = fp.replace('.ts', '.debug.ts');
+            fs.copyFileSync(fp, debugCopy);
+          }
+        } catch {}
+        try { fs.unlinkSync(fp); } catch { /* already gone — fine */ }
+      }
+    };
 
     // Set up timeout
     const timeout = setTimeout(() => {
@@ -421,6 +444,7 @@ try {
         console.error(`[queue] Build ${job.id} timed out after ${this.config.jobTimeoutMs}ms`);
         job.status = 'timeout';
         job.error = `Build timed out after ${this.config.jobTimeoutMs / 1000}s`;
+        cleanup();
         this.finishJob(job);
         if (child.pid) {
           try { process.kill(child.pid, 'SIGTERM'); } catch {}
@@ -468,6 +492,7 @@ try {
     child.on('error', (err) => {
       clearTimeout(timeout);
       clearInterval(memCheck);
+      cleanup();
       console.error(`[queue] Build ${job.id} child error:`, err.message);
       if (this.running.has(job.id)) {
         job.status = 'crashed';
@@ -480,13 +505,11 @@ try {
       clearTimeout(timeout);
       clearInterval(memCheck);
 
-      // Cleanup temp files after delay — tsx ESM resolution is async,
-      // deleting immediately causes ERR_MODULE_NOT_FOUND race condition.
-      setTimeout(() => {
-        try { fs.unlinkSync(scriptPath); } catch {}
-        try { fs.unlinkSync(configPath); } catch {}
-        try { fs.unlinkSync(promptPath); } catch {}
-      }, 5000);
+      // Cleanup temp files only after child has fully exited.
+      // tsx ESM resolution is async — deleting before the child reads the file
+      // causes ERR_MODULE_NOT_FOUND. The cleanup() call here is safe because
+      // the child process has already terminated.
+      cleanup();
 
       if (!this.running.has(job.id)) return;
 
@@ -600,12 +623,19 @@ try {
         }
       }
 
-      // Clean up stale workspace temp files
+      // Clean up stale workspace temp files (only for non-running jobs)
       try {
         const engineRoot = path.resolve(this.workspaceBase, '..');
+        const runningIds = new Set<string>();
+        for (const j of this.running.values()) runningIds.add(j.id);
+        for (const j of this.queue) runningIds.add(j.id);
         const files = fs.readdirSync(engineRoot);
         for (const f of files) {
           if (f.startsWith('.build-temp-') || f.startsWith('.build-config-') || f.startsWith('.build-prompt-')) {
+            // Extract job id from filename: .build-temp-{id}.ts → {id}
+            const match = f.match(/\.build-(?:temp|config|prompt)-(.+)\.(?:ts|json)$/);
+            const fileJobId = match?.[1];
+            if (fileJobId && runningIds.has(fileJobId)) continue; // skip — build still active
             const fp = path.join(engineRoot, f);
             const stat = fs.statSync(fp);
             if (Date.now() - stat.mtimeMs > 10 * 60 * 1000) {

@@ -18,11 +18,12 @@ import type { RenderResult } from './renderers/renderer.js';
 import { runBREV2Pipeline, type BREv2Result } from '../bos/bre-v2-pipeline.js';
 import { buildExecutionBlueprint } from '../bos/execution-planner.js';
 import { resolveContent } from '../bos/content-resolver.js';
-import { registerRenderer, renderWith, getRegisteredPlatforms } from './renderers/index.js';
+import { registerRenderer, renderWith, getRegisteredPlatforms, type ComponentSourceRec } from './renderers/index.js';
 import { ReactRenderer } from './renderers/react-renderer.js';
 import { FlutterRenderer } from './renderers/flutter-renderer.js';
 import { PATTERNS, DESIGN_PROFILES } from '../bos/knowledge/registry.js';
 import { stageLogger, debugLog } from '../core/debug-logger.js';
+import { SkillIntegrator } from './skill-integrator.js';
 
 // Pipeline-v2 enrichment — provides richer entity, DB, and API detail
 import { runNormalizedPipeline } from '../bos/pipeline-v2/pipeline.js';
@@ -321,11 +322,68 @@ export async function runBuildPipeline(
 
   // Layer 4: Application Spec → Platform Code
   const t4 = Date.now();
+
+  // Gather component source recommendations from skill integrator
+  let componentSources: ComponentSourceRec[] | undefined;
+  try {
+    // Map skill-integrator section names → renderer component type names
+    const SECTION_TO_COMPONENT_TYPE: Record<string, string> = {
+      'Navbar': 'Navbar',
+      'Hero': 'HeroBanner',
+      'Features': 'FeatureGrid',
+      'Pricing': 'PricingTable',
+      'Testimonials': 'Testimonials',
+      'Cta': 'CTASection',
+      'Footer': 'Footer',
+      'Contact': 'ContactForm',
+      'Faq': 'FAQSection',
+      'Stats': 'StatsCards',
+      'Booking': 'BookingCalendar',
+      'Auth': 'AuthForm',
+      'Gallery': 'DataTable',
+      'Menu': 'FeatureGrid',
+      'About': 'HeroBanner',
+      'Collections': 'FeatureGrid',
+      'Customizer': 'HeroBanner',
+      'Story': 'HeroBanner',
+      'Craftsmanship': 'FeatureGrid',
+      'Dealers': 'DataTable',
+      'Classes': 'FeatureGrid',
+      'Trainers': 'Testimonials',
+      'Services': 'FeatureGrid',
+      'Doctors': 'Testimonials',
+      'FeaturedProducts': 'FeatureGrid',
+      'Categories': 'FeatureGrid',
+      'Newsletter': 'CTASection',
+      'Reservations': 'BookingCalendar',
+    };
+
+    const integrator = new SkillIntegrator();
+    const recs = integrator.getDesignRecommendations(context.industry, (context as any).productType);
+    componentSources = recs.components
+      .filter(c => c.source !== 'custom')
+      .map(c => {
+        const type = SECTION_TO_COMPONENT_TYPE[c.name] || c.name.replace(/^./, m => m.toUpperCase());
+        const baseName = c.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        return {
+          type,
+          source: c.source as '21st' | 'shadcn',
+          packageName: c.source === '21st' ? `@21st-dev/${baseName}`
+                       : c.source === 'shadcn' ? `@shadcn/${baseName}`
+                       : `@custom/${baseName}`,
+          exportName: c.name,
+        } satisfies ComponentSourceRec;
+      });
+  } catch {
+    componentSources = undefined;
+  }
+
   const renderResult = renderWith(applicationSpec, platform, {
     theme: breResult.blueprint.designTokens as Record<string, unknown>,
     includeComments,
     includeTests,
     outputDir,
+    ...(componentSources ? { componentSources } : {}),
   });
   log.info('Layer 4: Rendering complete', {
     files: renderResult.files.length,

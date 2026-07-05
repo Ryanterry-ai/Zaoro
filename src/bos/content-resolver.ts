@@ -29,6 +29,55 @@ import { stageLogger } from '../core/debug-logger.js';
 
 const log = stageLogger('resolve');
 
+// ─── Localization Helpers ────────────────────────────────────────────────────
+
+/**
+ * Get the currency symbol for a country code.
+ */
+function getCurrencySymbol(country?: string): string {
+  if (country === 'IN') return '\u20B9';
+  if (country === 'EU' || country === 'DE' || country === 'FR') return '\u20AC';
+  if (country === 'GB') return '\u00A3';
+  return '$';
+}
+
+/**
+ * Get localized testimonial data based on country context.
+ */
+function getLocalizedTestimonials(ctx: ContentResolverContext): Array<{ name: string; role: string; quote: string }> {
+  const country = ctx.blueprint.country;
+  const industryName = ctx.revenueIntelligence?.vocabulary?.['customer'] ?? ctx.blueprint.industry;
+  const roleTitle = ctx.pattern
+    ? ctx.pattern.compatibleIndustries[0]?.charAt(0).toUpperCase() + (ctx.pattern.compatibleIndustries[0]?.slice(1) ?? '')
+    : industryName.charAt(0).toUpperCase() + industryName.slice(1);
+
+  const testimonialPool: Record<string, Array<{ name: string; role: string; quote: string }>> = {
+    IN: [
+      { name: 'Arun Sharma', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
+      { name: 'Priya Patel', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
+      { name: 'Rahul Verma', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
+    ],
+    GB: [
+      { name: 'Oliver Davies', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
+      { name: 'Emily Watson', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
+      { name: 'James Clarke', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
+    ],
+    EU: [
+      { name: 'Claire Dubois', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
+      { name: 'Marcus Weber', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
+      { name: 'Sofia Rossi', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
+    ],
+  };
+
+  const pool = (country ? testimonialPool[country] : undefined) ?? [
+    { name: 'Alex Rivera', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
+    { name: 'Jordan Lee', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
+    { name: 'Sam Patel', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
+  ];
+
+  return pool;
+}
+
 // ─── Vocabulary Helper ────────────────────────────────────────────────────────
 
 /**
@@ -314,7 +363,7 @@ function getAboutItems(ctx: ContentResolverContext): ItemSpec[] {
   };
 
   const items = aboutData[industry] ?? aboutData['saas'] ?? [
-    { title: 'Our Story', description: ctx.blueprint.description ?? 'Built with a vision to transform the industry', icon: 'flag' },
+    { title: 'Our Story', description: generateAboutDescription(ctx), icon: 'flag' },
     { title: 'Our Mission', description: 'Delivering exceptional value through innovative solutions', icon: 'target' },
     { title: 'Our Impact', description: 'Trusted by customers across the globe', icon: 'trending-up' },
   ];
@@ -740,6 +789,9 @@ function resolveHeroBanner(
   const biTitle = leadCapture?.headline;
   const biSubtitle = ctx.revenueIntelligence?.revenueCycle?.description;
 
+  // Generate a proper hero subtitle — never use raw prompt text
+  const heroSubtitle = generateHeroSubtitle(ctx);
+
   // Use BI revenue models as hero items if available
   const biItems = ctx.revenueIntelligence?.revenueModels?.slice(0, 3).map(rm => ({
     title: rm.name,
@@ -747,12 +799,19 @@ function resolveHeroBanner(
     icon: 'zap' as const,
   }));
 
+  // Industry-aware hero badge
+  const industry = ctx.blueprint.industry;
+  const country = ctx.blueprint.country;
+  const badgeText = country === 'IN'
+    ? `India's ${industry === 'ecommerce' ? 'Online Store' : industry === 'fitness' ? 'Fitness Platform' : 'Platform'}`
+    : ctx.blueprint.industry;
+
   return {
     type: 'HeroBanner',
     content: {
       title: { value: biTitle ?? ctx.blueprint.name, type: 'text' },
-      subtitle: { value: biSubtitle ?? ctx.blueprint.description ?? `${ctx.blueprint.industry} platform`, type: 'text' },
-      badge: { value: ctx.blueprint.industry, type: 'text' },
+      subtitle: { value: heroSubtitle, type: 'text' },
+      badge: { value: badgeText, type: 'text' },
     },
     items: biItems ?? [
       { title: vocab('Reliable', ctx), description: vocab('Enterprise-grade reliability', ctx), icon: 'shield' },
@@ -765,6 +824,103 @@ function resolveHeroBanner(
     ],
     layout: { alignment: 'center', maxWidth: '4xl', padding: 'lg' },
   };
+}
+
+/**
+ * Generate a hero subtitle that is a value proposition, not the raw prompt.
+ * Uses industry, country, and business context to create meaningful copy.
+ */
+function generateHeroSubtitle(ctx: ContentResolverContext): string {
+  const industry = ctx.blueprint.industry;
+  const country = ctx.blueprint.country;
+  const subIndustry = ctx.blueprint.description?.toLowerCase() ?? '';
+
+  // Supplement / nutrition stores
+  if (subIndustry.includes('supplement') || subIndustry.includes('protein') || subIndustry.includes('nutrition') || subIndustry.includes('vitamin')) {
+    if (country === 'IN') return 'Premium supplements from top brands, delivered across India';
+    return 'Premium supplements from top brands, delivered to your door';
+  }
+
+  // Ecommerce general
+  if (industry === 'ecommerce' || subIndustry.includes('store') || subIndustry.includes('shop')) {
+    if (country === 'IN') return 'Shop from thousands of products with fast delivery across India';
+    return 'Shop from thousands of products with fast, free delivery';
+  }
+
+  // Restaurant / food
+  if (industry === 'restaurant' || subIndustry.includes('restaurant') || subIndustry.includes('cafe') || subIndustry.includes('food')) {
+    return 'Fresh, delicious food prepared with love and delivered to your table';
+  }
+
+  // Fitness / gym
+  if (industry === 'fitness' || subIndustry.includes('gym') || subIndustry.includes('yoga') || subIndustry.includes('fitness')) {
+    return 'Transform your body with expert-led programs and world-class facilities';
+  }
+
+  // Healthcare
+  if (industry === 'healthcare' || subIndustry.includes('health') || subIndustry.includes('dental') || subIndustry.includes('medical')) {
+    return 'Compassionate care with modern technology for your whole family';
+  }
+
+  // SaaS
+  if (industry === 'saas' || subIndustry.includes('saas') || subIndustry.includes('software')) {
+    return 'Streamline your workflow with powerful, easy-to-use tools';
+  }
+
+  // Real estate
+  if (industry === 'realestate' || subIndustry.includes('property') || subIndustry.includes('real estate')) {
+    return 'Find your perfect property with expert guidance and local insights';
+  }
+
+  // Education
+  if (industry === 'education' || subIndustry.includes('course') || subIndustry.includes('learn')) {
+    return 'Learn from industry experts and advance your career at your own pace';
+  }
+
+  // Portfolio / agency
+  if (industry === 'agency' || industry === 'portfolio' || subIndustry.includes('portfolio')) {
+    return 'Creative solutions that drive results and elevate your brand';
+  }
+
+  // Fallback: generic value proposition
+  return `Everything you need, built for you`;
+}
+
+/**
+ * Generate an about section description from context — never the raw prompt.
+ */
+function generateAboutDescription(ctx: ContentResolverContext): string {
+  const industry = ctx.blueprint.industry;
+  const country = ctx.blueprint.country;
+  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
+
+  if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition')) {
+    return country === 'IN'
+      ? 'India\'s trusted destination for genuine supplements from top international and Indian brands'
+      : 'Your trusted destination for genuine supplements from top brands';
+  }
+  if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('food')) {
+    return 'A passion for great food, fresh ingredients, and unforgettable dining experiences';
+  }
+  if (desc.includes('fitness') || desc.includes('gym') || desc.includes('yoga')) {
+    return 'Empowering your fitness journey with expert coaching and state-of-the-art facilities';
+  }
+  if (desc.includes('store') || desc.includes('shop') || industry === 'ecommerce') {
+    return 'Curating quality products with a seamless shopping experience from browse to delivery';
+  }
+  if (desc.includes('portfolio') || desc.includes('agency')) {
+    return 'Crafting creative solutions that push boundaries and deliver measurable results';
+  }
+  if (desc.includes('property') || desc.includes('real estate')) {
+    return 'Connecting people with their dream properties through expertise and trust';
+  }
+  if (desc.includes('course') || desc.includes('learn') || industry === 'education') {
+    return 'Making quality education accessible and engaging for learners everywhere';
+  }
+  if (industry === 'healthcare' || desc.includes('health') || desc.includes('dental')) {
+    return 'Delivering compassionate, modern healthcare with a patient-first approach';
+  }
+  return `Built with a vision to deliver the best ${industry} experience`;
 }
 
 function resolveFeatureGrid(
@@ -835,11 +991,7 @@ function resolveTestimonials(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
-  // Use BI vocabulary to create industry-specific role titles
-  const industryName = ctx.revenueIntelligence?.vocabulary?.['customer'] ?? ctx.blueprint.industry;
-  const roleTitle = ctx.pattern
-    ? ctx.pattern.compatibleIndustries[0]?.charAt(0).toUpperCase() + (ctx.pattern.compatibleIndustries[0]?.slice(1) ?? '')
-    : industryName.charAt(0).toUpperCase() + industryName.slice(1);
+  const testimonials = getLocalizedTestimonials(ctx);
 
   return {
     type: 'Testimonials',
@@ -847,11 +999,11 @@ function resolveTestimonials(
       title: { value: vocab('What Our Users Say', ctx), type: 'text' },
       subtitle: { value: vocab('Trusted by thousands', ctx), type: 'text' },
     },
-    items: [
-      { title: 'Alex Rivera', description: `${roleTitle} Owner`, metadata: { quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` } },
-      { title: 'Jordan Lee', description: `Operations Lead`, metadata: { quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` } },
-      { title: 'Sam Patel', description: `Manager`, metadata: { quote: `Our team productivity increased by 40% since switching.` } },
-    ],
+    items: testimonials.map(t => ({
+      title: t.name,
+      description: t.role,
+      metadata: { quote: t.quote },
+    })),
     layout: { alignment: 'center', maxWidth: '7xl' },
   };
 }
@@ -969,9 +1121,10 @@ function resolveStatsCards(
     stats.push({ label: `Total ${entity.name}s`, value: '0', change: '+0%', trend: 'neutral' });
   }
   if (stats.length < 4) {
+    const currency = getCurrencySymbol(ctx.blueprint.country);
     stats.push(
       { label: vocab('Active Users', ctx), value: '0', change: '+0%', trend: 'neutral' },
-      { label: vocab('Revenue', ctx), value: '$0', change: '+0%', trend: 'neutral' },
+      { label: vocab('Revenue', ctx), value: `${currency}0`, change: '+0%', trend: 'neutral' },
     );
   }
   return { type: 'StatsCards', stats, layout: { maxWidth: '7xl' } };
@@ -1121,7 +1274,7 @@ function resolveFooter(
     type: 'Footer',
     content: {
       companyName: { value: ctx.blueprint.name, type: 'text' },
-      tagline: { value: ctx.blueprint.description ?? '', type: 'text' },
+      tagline: { value: generateAboutDescription(ctx), type: 'text' },
     },
     items: ctx.blueprint.navigation.items.map(i => ({
       title: i.label,
@@ -1237,11 +1390,17 @@ function resolveCheckoutForm(
       { name: 'city', label: 'City', type: 'text', required: true },
       { name: 'state', label: 'State', type: 'text', required: true },
       { name: 'zip', label: 'ZIP Code', type: 'text', required: true },
-      { name: 'country', label: 'Country', type: 'select', required: true, options: [
-        { label: 'United States', value: 'US' },
-        { label: 'Canada', value: 'CA' },
-        { label: 'United Kingdom', value: 'GB' },
-      ]},
+      { name: 'country', label: 'Country', type: 'select', required: true, options: ctx.blueprint.country === 'IN'
+        ? [
+          { label: 'India', value: 'IN' },
+          { label: 'United States', value: 'US' },
+          { label: 'United Kingdom', value: 'GB' },
+        ]
+        : [
+          { label: 'United States', value: 'US' },
+          { label: 'Canada', value: 'CA' },
+          { label: 'United Kingdom', value: 'GB' },
+        ]},
     ],
     actions: [
       { label: vocab('Place Order', ctx), action: '/api/checkout', style: 'primary' },
@@ -1255,16 +1414,20 @@ function resolveOrderSummary(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  const currency = getCurrencySymbol(ctx.blueprint.country);
+  const zero = `${currency}0`;
+  const isIN = ctx.blueprint.country === 'IN';
+
   return {
     type: 'OrderSummary',
     content: {
       title: { value: vocab('Order Summary', ctx), type: 'text' },
     },
     items: [
-      { title: vocab('Subtotal', ctx), metadata: { value: '$0.00' } },
-      { title: vocab('Shipping', ctx), metadata: { value: 'Free' } },
-      { title: vocab('Tax', ctx), metadata: { value: '$0.00' } },
-      { title: vocab('Total', ctx), metadata: { value: '$0.00', bold: 'true' } },
+      { title: vocab('Subtotal', ctx), metadata: { value: zero } },
+      { title: vocab('Shipping', ctx), metadata: { value: isIN ? 'Free delivery' : 'Free' } },
+      { title: vocab('Tax', ctx), metadata: { value: zero } },
+      { title: vocab('Total', ctx), metadata: { value: zero, bold: 'true' } },
     ],
     layout: { maxWidth: 'md' },
   };
@@ -1380,6 +1543,30 @@ function resolvePaymentForm(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  const isIN = ctx.blueprint.country === 'IN';
+  if (isIN) {
+    return {
+      type: 'PaymentForm',
+      content: {
+        title: { value: vocab('Payment Details', ctx), type: 'text' },
+        subtitle: { value: 'UPI, Card, Net Banking, or COD', type: 'text' },
+      },
+      fields: [
+        { name: 'method', label: 'Payment Method', type: 'select', required: true, options: [
+          { label: 'UPI (GPay / PhonePe / Paytm)', value: 'upi' },
+          { label: 'Credit / Debit Card', value: 'card' },
+          { label: 'Net Banking', value: 'netbanking' },
+          { label: 'Cash on Delivery', value: 'cod' },
+        ]},
+        { name: 'upiId', label: 'UPI ID', type: 'text', required: false, placeholder: 'user@paytm' },
+        { name: 'cardNumber', label: 'Card Number', type: 'text', required: false, placeholder: '1234 5678 9012 3456' },
+        { name: 'cardName', label: 'Name on Card', type: 'text', required: false },
+        { name: 'expiry', label: 'Expiry Date', type: 'text', required: false, placeholder: 'MM/YY' },
+        { name: 'cvv', label: 'CVV', type: 'text', required: false, placeholder: '123' },
+      ],
+      layout: { alignment: 'left', maxWidth: 'sm' },
+    };
+  }
   return {
     type: 'PaymentForm',
     content: {
@@ -1660,13 +1847,23 @@ function resolveBillingSection(
   const primaryEntity = getPrimaryEntityName(ctx);
 
   // Industry-specific billing items
+  const currency = getCurrencySymbol(ctx.blueprint.country);
+  const isIN = ctx.blueprint.country === 'IN';
   const billingItems: Record<string, ItemSpec[]> = {
-    saas: [
+    saas: isIN ? [
+      { title: 'Current Plan', description: 'Pro — \u20B91,999/month', icon: 'credit-card' },
+      { title: 'Next Billing Date', description: 'Renews automatically', icon: 'calendar' },
+      { title: 'Payment Method', description: 'UPI / Net Banking', icon: 'credit-card' },
+    ] : [
       { title: 'Current Plan', description: 'Pro — $29/month', icon: 'credit-card' },
       { title: 'Next Billing Date', description: 'Renews automatically', icon: 'calendar' },
       { title: 'Payment Method', description: 'Visa ending in 4242', icon: 'shield' },
     ],
-    fitness: [
+    fitness: isIN ? [
+      { title: 'Membership', description: 'Monthly Unlimited — \u20B92,499/month', icon: 'credit-card' },
+      { title: 'Next Payment', description: 'Auto-renewal on your renewal date', icon: 'calendar' },
+      { title: 'Payment Method', description: 'UPI / Auto-pay', icon: 'credit-card' },
+    ] : [
       { title: 'Membership', description: 'Monthly Unlimited — $49/month', icon: 'credit-card' },
       { title: 'Next Payment', description: 'Auto-renewal on your renewal date', icon: 'calendar' },
       { title: 'Payment Method', description: 'Visa ending in 4242', icon: 'shield' },
@@ -1676,7 +1873,11 @@ function resolveBillingSection(
       { title: 'Last Payment', description: 'Copay processed at visit', icon: 'credit-card' },
       { title: 'Outstanding Balance', description: '$0.00', icon: 'dollar-sign' },
     ],
-    ecommerce: [
+    ecommerce: isIN ? [
+      { title: 'Payment Method', description: 'UPI / Net Banking / COD', icon: 'credit-card' },
+      { title: 'Default Address', description: 'Update your shipping details', icon: 'truck' },
+      { title: 'Loyalty Points', description: '2,450 points available', icon: 'gift' },
+    ] : [
       { title: 'Payment Method', description: 'Visa ending in 4242', icon: 'credit-card' },
       { title: 'Default Shipping', description: '123 Main St, Anytown, USA', icon: 'truck' },
       { title: 'Loyalty Points', description: '2,450 points available', icon: 'gift' },
@@ -1768,11 +1969,15 @@ function resolveBillingSection(
       ],
   };
 
-  const items = billingItems[industry] ?? [
+  const items = billingItems[industry] ?? (isIN ? [
+    { title: 'Current Plan', description: hasSubscription ? 'Pro Plan' : 'Free Tier', icon: 'credit-card' },
+    { title: 'Payment Status', description: 'Active and current', icon: 'check-circle' },
+    { title: 'Payment Method', description: 'UPI / Cards / Net Banking', icon: 'credit-card' },
+  ] : [
     { title: 'Current Plan', description: hasSubscription ? 'Pro Plan' : 'Free Tier', icon: 'credit-card' },
     { title: 'Payment Status', description: 'Active and current', icon: 'check-circle' },
     { title: 'Payment Method', description: 'Visa ending in 4242', icon: 'shield' },
-  ];
+  ]);
 
   return {
     type: 'BillingSection',
@@ -1929,6 +2134,9 @@ function resolvePlanDetails(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  const currency = getCurrencySymbol(ctx.blueprint.country);
+  const isIN = ctx.blueprint.country === 'IN';
+  const priceLabel = isIN ? `${currency}1,999/mo` : '$29/month';
   return {
     type: 'PlanDetails',
     content: {
@@ -1936,7 +2144,7 @@ function resolvePlanDetails(
     },
     items: [
       { title: vocab('Plan Name', ctx), description: 'Pro', icon: 'package' },
-      { title: vocab('Price', ctx), description: '$29/month', icon: 'dollar-sign' },
+      { title: vocab('Price', ctx), description: priceLabel, icon: 'dollar-sign' },
       { title: vocab('Features Included', ctx), description: vocab('All features, priority support, API access', ctx), icon: 'check-circle' },
     ],
     actions: [
@@ -1971,13 +2179,14 @@ function resolveAddressBook(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  const isIN = ctx.blueprint.country === 'IN';
   return {
     type: 'AddressBook',
     content: {
       title: { value: vocab('Address Book', ctx), type: 'text' },
     },
     items: [
-      { title: vocab('Home', ctx), description: vocab('123 Main St, City, State 12345', ctx), icon: 'home', metadata: { default: 'true' } },
+      { title: vocab('Home', ctx), description: isIN ? vocab('123, MG Road, Mumbai, Maharashtra 400001', ctx) : vocab('123 Main St, City, State 12345', ctx), icon: 'home', metadata: { default: 'true' } },
     ],
     actions: [
       { label: vocab('Add Address', ctx), action: '/account/addresses/add', style: 'primary' },
@@ -2012,11 +2221,12 @@ function resolveAboutSection(
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
+  const biDesc = ctx.revenueIntelligence?.description;
   return {
     type: 'AboutSection',
     content: {
       title: { value: vocab('About Us', ctx), type: 'text' },
-      subtitle: { value: ctx.blueprint.description ?? `Learn more about ${ctx.blueprint.name}`, type: 'text' },
+      subtitle: { value: biDesc ?? generateAboutDescription(ctx), type: 'text' },
     },
     items: getAboutItems(ctx),
     layout: { alignment: 'center', maxWidth: '4xl' },
@@ -2152,6 +2362,46 @@ function resolveGenericComponent(
 
 function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
   const items: ItemSpec[] = [];
+  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
+  const industry = ctx.blueprint.industry;
+  const country = ctx.blueprint.country;
+
+  // Supplement-specific features — highest priority
+  if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition') || industry === 'ecommerce-supplement') {
+    const paymentText = country === 'IN' ? 'UPI, Razorpay, cards, and COD — pay your way' : 'Secure checkout with multiple payment options';
+    return [
+      { title: 'Multi-Brand Catalog', description: 'Browse 500+ supplements from MuscleBlaze, Nutrabay, MyProtein, and more', icon: 'grid' },
+      { title: 'Authentic Products', description: '100% genuine supplements with FSSAI certification and lab reports', icon: 'shield' },
+      { title: 'Fast Delivery', description: country === 'IN' ? 'Free shipping across India with express delivery in metro cities' : 'Free shipping with express delivery available', icon: 'truck' },
+      { title: 'Expert Guidance', description: 'Personalized supplement recommendations based on your fitness goals', icon: 'compass' },
+      { title: 'Easy Returns', description: 'Hassle-free returns within 7 days for unopened products', icon: 'refresh-cw' },
+      { title: 'Secure Payments', description: paymentText, icon: 'credit-card' },
+    ];
+  }
+
+  // Restaurant-specific features
+  if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('food') || industry === 'restaurant') {
+    return [
+      { title: 'Online Ordering', description: 'Order ahead for pickup or delivery in minutes', icon: 'shopping-bag' },
+      { title: 'Table Reservations', description: 'Book your table in real-time, no waiting', icon: 'calendar' },
+      { title: 'Dynamic Menu', description: 'Seasonal specials and daily rotating dishes', icon: 'book-open' },
+      { title: 'Loyalty Rewards', description: 'Earn points on every order, redeem for free meals', icon: 'award' },
+      { title: 'Fresh Ingredients', description: 'Locally sourced, seasonal produce from trusted farms', icon: 'leaf' },
+      { title: 'Gift Cards', description: 'Share the experience with friends and family', icon: 'credit-card' },
+    ];
+  }
+
+  // Fitness-specific features
+  if (desc.includes('fitness') || desc.includes('gym') || desc.includes('yoga') || industry === 'fitness') {
+    return [
+      { title: 'Class Booking', description: 'Reserve your spot in yoga, HIIT, spinning, and more', icon: 'calendar' },
+      { title: 'Personal Training', description: 'One-on-one sessions with certified trainers', icon: 'users' },
+      { title: 'Workout Tracking', description: 'Log exercises, track progress, celebrate milestones', icon: 'activity' },
+      { title: 'Nutrition Plans', description: 'Custom meal plans tailored to your fitness goals', icon: 'heart' },
+      { title: 'Member Community', description: 'Connect with fellow members and share your journey', icon: 'users' },
+      { title: 'Flexible Memberships', description: 'Plans that fit your schedule and budget', icon: 'credit-card' },
+    ];
+  }
 
   // Entity-based features
   for (const entity of ctx.blueprint.entities.slice(0, 4)) {
@@ -2203,24 +2453,51 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
 }
 
 function resolvePricingTiers(ctx: ContentResolverContext): TierSpec[] {
+  // Use scraped revenue models as pricing tiers if available
+  const biModels = ctx.revenueIntelligence?.revenueModels;
+  if (biModels && biModels.length > 0) {
+    const currency = getCurrencySymbol(ctx.blueprint.country);
+    return biModels.slice(0, 3).map((rm, i) => ({
+      name: rm.name,
+      price: i === 2 && biModels.length > 2 ? 'Custom' : `${currency}${(i + 1) * 19}`,
+      period: i === 2 && biModels.length > 2 ? '' : '/month',
+      features: [rm.description, `${vocab('Core', ctx)} ${vocab('features', ctx)}`, 'Email support'],
+      highlighted: i === 1,
+    }));
+  }
+
   const hasSubscription = ctx.blueprint.businessModels.some(m =>
     m.toLowerCase().includes('subscription'),
   );
+  const currency = getCurrencySymbol(ctx.blueprint.country);
+  const country = ctx.blueprint.country;
 
-  const priceWord = vocab('price', ctx);
   const featuresWord = vocab('features', ctx);
 
   if (hasSubscription) {
+    if (country === 'IN') {
+      return [
+        { name: 'Starter', price: `${currency}499`, period: '/mo', features: [`5 users`, `10GB storage`, `Basic ${featuresWord}`, `Email support`], highlighted: false },
+        { name: 'Pro', price: `${currency}1,999`, period: '/mo', features: [`25 users`, `100GB storage`, `Advanced ${featuresWord}`, `Priority support`, `API access`], highlighted: true },
+        { name: 'Enterprise', price: 'Custom', period: '', features: [`Unlimited users`, `Unlimited storage`, `Custom integrations`, `Dedicated support`, `SLA`], highlighted: false },
+      ];
+    }
     return [
-      { name: 'Starter', price: '$9', period: '/month', features: [`5 users`, `10GB storage`, `Basic ${featuresWord}`, `Email support`], highlighted: false },
-      { name: 'Pro', price: '$29', period: '/month', features: [`25 users`, `100GB storage`, `Advanced ${featuresWord}`, `Priority support`, `API access`], highlighted: true },
+      { name: 'Starter', price: `${currency}9`, period: '/month', features: [`5 users`, `10GB storage`, `Basic ${featuresWord}`, `Email support`], highlighted: false },
+      { name: 'Pro', price: `${currency}29`, period: '/month', features: [`25 users`, `100GB storage`, `Advanced ${featuresWord}`, `Priority support`, `API access`], highlighted: true },
       { name: 'Enterprise', price: 'Custom', period: '', features: [`Unlimited users`, `Unlimited storage`, `Custom integrations`, `Dedicated support`, `SLA`], highlighted: false },
     ];
   }
 
+  if (country === 'IN') {
+    return [
+      { name: 'Basic', price: 'Free', period: '', features: [`Core ${featuresWord}`, 'Community support'], highlighted: false },
+      { name: 'Premium', price: `${currency}999`, period: '/mo', features: [`All ${featuresWord}`, 'Priority support', 'API access', 'Custom branding'], highlighted: true },
+    ];
+  }
   return [
     { name: 'Basic', price: 'Free', period: '', features: [`Core ${featuresWord}`, 'Community support'], highlighted: false },
-    { name: 'Premium', price: '$19', period: '/month', features: [`All ${featuresWord}`, 'Priority support', 'API access', 'Custom branding'], highlighted: true },
+    { name: 'Premium', price: `${currency}19`, period: '/month', features: [`All ${featuresWord}`, 'Priority support', 'API access', 'Custom branding'], highlighted: true },
   ];
 }
 

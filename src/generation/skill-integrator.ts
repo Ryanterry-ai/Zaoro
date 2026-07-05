@@ -299,12 +299,17 @@ export class SkillIntegrator {
         pageTransitions: false,
         reasoning: `Framer Motion for React with scroll reveals and stagger animations`,
       },
-      components: template.sections.map(s => ({
-        name: s.charAt(0).toUpperCase() + s.slice(1),
-        source: 'custom' as const,
-        props: [],
-        variants: ['default'],
-      })),
+      components: template.sections.map(s => {
+        const TWENTY_FIRST_SECTIONS = new Set(['cta', 'testimonials', 'footer']);
+        const sectionName = s.charAt(0).toUpperCase() + s.slice(1);
+        const is21st = TWENTY_FIRST_SECTIONS.has(s);
+        return {
+          name: sectionName,
+          source: is21st ? ('21st' as const) : ('custom' as const),
+          props: [],
+          variants: ['default'],
+        };
+      }),
       uxGuidelines: uiuxData.uxGuidelines,
     };
   }

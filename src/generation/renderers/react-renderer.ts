@@ -19,20 +19,80 @@ import type {
   RenderContext,
   RenderedFile,
   RenderResult,
+  ComponentSourceRec,
 } from './renderer.js';
 import { stageLogger } from '../../core/debug-logger.js';
 
 const log = stageLogger('render');
+
+// Inline SVG icons for preview rendering — maps Lucide icon names to SVG paths
+const INLINE_ICONS: Record<string, string> = {
+  'layers': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  'zap': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  'shield': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  'trending-up': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+  'lock': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  'database': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+  'grid': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+  'truck': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+  'calendar': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  'book-open': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  'shopping-bag': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+  'credit-card': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+  'heart': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+  'users': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  'bar-chart': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',
+  'activity': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+  'search': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  'eye': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  'video': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
+  'code': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  'award': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>',
+  'star': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  'check': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  'mail': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+  'phone': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  'map-pin': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  'clock': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  'briefcase': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+  'file-text': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  'map': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  'compass': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+  'chef-hat': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V20H6v-6.13z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>',
+  'leaf': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+  'dollar-sign': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  'package': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  'refresh-cw': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+  'settings': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  'headphones': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>',
+};
+
+function getInlineIcon(name: string): string {
+  const svg = INLINE_ICONS[name] ?? INLINE_ICONS['layers'] ?? '';
+  return svg.replace(/width="\d+"/, 'width="20"').replace(/height="\d+"/, 'height="20"');
+}
 
 export class ReactRenderer implements Renderer {
   readonly platform = 'react';
   readonly componentExtension = '.tsx';
   readonly pageExtension = '.tsx';
 
-  renderComponent(spec: ComponentSpec, _context: RenderContext): RenderedFile {
+  /** External packages collected during rendering for package.json */
+  private externalPackages: Record<string, string> = {};
+
+  renderComponent(spec: ComponentSpec, context: RenderContext): RenderedFile {
     log.debug('Rendering component', { type: spec.type });
     const componentName = spec.type;
-    const code = this.generateComponentCode(spec);
+
+    // Check if this component has an external source recommendation
+    const sourceRec = context.componentSources?.find(
+      (s: ComponentSourceRec) => s.type === spec.type && s.source !== 'custom',
+    );
+    if (sourceRec) {
+      this.externalPackages[sourceRec.packageName] = '^1.0.0';
+    }
+
+    const code = this.generateComponentCode(spec, sourceRec);
     return {
       path: `components/${componentName}.tsx`,
       content: code,
@@ -91,6 +151,63 @@ ${componentRenders}
 
     // Generate shell (config files, CSS, layout) — the runnable scaffolding
     files.push(...this.renderShell(spec, context));
+
+    // Generate Icon helper component for preview rendering
+    files.push({
+      path: 'components/Icon.tsx',
+      content: `'use client';
+
+import React from 'react';
+
+const icons: Record<string, React.ReactNode> = {
+  layers: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+  zap: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  shield: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  'trending-up': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  lock: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+  database: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
+  grid: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+  truck: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  calendar: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  'book-open': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+  'shopping-bag': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+  'credit-card': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+  heart: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  users: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  'bar-chart': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>,
+  activity: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+  search: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  eye: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  video: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>,
+  code: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>,
+  award: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+  star: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  check: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  mail: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  phone: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+  'map-pin': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  clock: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  briefcase: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
+  'file-text': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  map: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>,
+  compass: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>,
+  'chef-hat': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V20H6v-6.13z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>,
+  leaf: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>,
+  'dollar-sign': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  package: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+  'refresh-cw': <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+  settings: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  headphones: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>,
+};
+
+const fallback = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>;
+
+export default function Icon({ name }: { name: string }) {
+  return <>{icons[name] ?? fallback}</>;
+}
+`,
+      type: 'component',
+    });
 
     // Generate components
     const generatedComponents = new Set<string>();
@@ -161,6 +278,25 @@ export type NavItem = (typeof navItems)[number];
   }
 
   private renderPackageJson(appName: string): RenderedFile {
+    const deps: Record<string, string> = {
+      '@prisma/client': '^5.10.2',
+      'autoprefixer': '^10.4.17',
+      'framer-motion': '^11.0.0',
+      'next': '^14.1.0',
+      'postcss': '^8.4.35',
+      'prisma': '^5.10.2',
+      'react': '^18.2.0',
+      'react-dom': '^18.2.0',
+      'tailwindcss': '^3.4.1',
+    };
+
+    // Merge any externally-sourced component packages
+    for (const [pkg, ver] of Object.entries(this.externalPackages)) {
+      if (!deps[pkg]) {
+        deps[pkg] = ver;
+      }
+    }
+
     return {
       path: '../package.json',
       content: JSON.stringify({
@@ -172,16 +308,7 @@ export type NavItem = (typeof navItems)[number];
           build: 'next build',
           start: 'next start',
         },
-        dependencies: {
-          '@prisma/client': '^5.10.2',
-          'autoprefixer': '^10.4.17',
-          'next': '^14.1.0',
-          'postcss': '^8.4.35',
-          'prisma': '^5.10.2',
-          'react': '^18.2.0',
-          'react-dom': '^18.2.0',
-          'tailwindcss': '^3.4.1',
-        },
+        dependencies: deps,
         devDependencies: {
           '@types/node': '^20.11.0',
           '@types/react': '^18.2.0',
@@ -306,7 +433,17 @@ export default config;
     return {
       path: '../next.config.mjs',
       content: `/** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'picsum.photos' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'via.placeholder.com' },
+      { protocol: 'https', hostname: 'placehold.co' },
+    ],
+    unoptimized: true,
+  },
+};
 export default nextConfig;
 `,
       type: 'config',
@@ -338,8 +475,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   // ─── Code Generation Helpers ───────────────────────────────────────────────
 
-  private generateComponentCode(spec: ComponentSpec): string {
+  private generateComponentCode(spec: ComponentSpec, sourceRec?: ComponentSourceRec): string {
     const componentName = spec.type;
+
+    // If this component comes from an external source, generate a re-export wrapper
+    if (sourceRec) {
+      const exportName = sourceRec.exportName || componentName;
+      const propsInterface = this.generatePropsInterface(spec);
+      return `'use client';
+
+import React from 'react';
+import { ${exportName} } from '${sourceRec.packageName}';
+
+${propsInterface}
+
+export default function ${componentName}(${this.hasProps(spec) ? `props: ${componentName}Props` : ''}) {
+  return <${exportName} {...props} />;
+}
+`;
+    }
 
     // Build props interface
     const propsInterface = this.generatePropsInterface(spec);
@@ -350,6 +504,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return `'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
+import Icon from './Icon';
 
 ${propsInterface}
 
@@ -470,7 +626,7 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="relative pt-32 pb-20 px-6 overflow-hidden">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="relative pt-32 pb-20 px-6 overflow-hidden">`,
       `      <div className="max-w-4xl mx-auto text-center space-y-6">`,
       badge ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">` : '',
       badge ? `          <span>{badge}</span>` : '',
@@ -483,17 +639,17 @@ ${body}
       `        </p>`,
       ...this.generateActionButtons(spec),
       `        {items?.length ? (`,
-      `          <div className="flex items-center justify-center gap-8 pt-8">`,
+      `          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }} className="flex items-center justify-center gap-8 pt-8">`,
       `            {items?.map((item, i) => (`,
       `              <div key={i} className="flex items-center gap-2 text-sm text-zinc-500">`,
       `                <span className="text-primary">{item.icon === 'shield' ? '🛡' : item.icon === 'trending-up' ? '📈' : item.icon === 'lock' ? '🔒' : '✓'}</span>`,
       `                <span>{item.title}</span>`,
       `              </div>`,
       `            ))}`,
-      `          </div>`,
+      `          </motion.div>`,
       `        ) : null}`,
       `      </div>`,
-      `    </section>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -504,25 +660,25 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="px-6 pb-20">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
       `      <div className="max-w-6xl mx-auto">`,
       `        <div className="text-center mb-12">`,
       `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
       `          <p className="text-zinc-400">{subtitle}</p>`,
       `        </div>`,
-      `        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">`,
+      `        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, staggerChildren: 0.1 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">`,
       `          {items?.map((feature, i) => (`,
-      `            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">`,
-      `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-lg">`,
-      `                <span>{feature.icon}</span>`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.05 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">`,
+      `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
+      `                <Icon name={feature.icon || 'layers'} />`,
       `              </div>`,
       `              <h3 className="font-bold text-lg text-zinc-50 mb-2">{feature.title}</h3>`,
       `              <p className="text-sm text-zinc-400">{feature.description}</p>`,
-      `            </div>`,
+      `            </motion.div>`,
       `          ))}`,
-      `        </div>`,
+      `        </motion.div>`,
       `      </div>`,
-      `    </section>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -533,7 +689,7 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="px-6 pb-20">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
       `      <div className="max-w-6xl mx-auto">`,
       `        <div className="text-center mb-12">`,
       `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
@@ -541,7 +697,7 @@ ${body}
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {tiers?.map((tier, i) => (`,
-      `            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-zinc-900 border-zinc-800'}\`}>`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-zinc-900 border-zinc-800'}\`}>`,
       `              <h3 className="text-xl font-black text-zinc-50 mb-2">{tier.name}</h3>`,
       `              <div className="mb-6">`,
       `                <span className="text-4xl font-black text-zinc-50">{tier.price}</span>`,
@@ -558,11 +714,11 @@ ${body}
       `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-primary hover:bg-primary/90 text-white' : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'}\`}>`,
       `                Get Started`,
       `              </button>`,
-      `            </div>`,
+      `            </motion.div>`,
       `          ))}`,
       `        </div>`,
       `      </div>`,
-      `    </section>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -573,7 +729,7 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="px-6 pb-20 bg-zinc-900/50">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20 bg-zinc-900/50">`,
       `      <div className="max-w-5xl mx-auto">`,
       `        <div className="text-center mb-12">`,
       `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
@@ -581,18 +737,18 @@ ${body}
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {items?.map((testimonial, i) => (`,
-      `            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
       `              <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
       `              <p className="text-sm text-zinc-400 mb-4">"{testimonial.metadata?.quote}"</p>`,
       `              <div>`,
       `                <div className="font-bold text-zinc-50">{testimonial.title}</div>`,
       `                <div className="text-sm text-zinc-500">{testimonial.description}</div>`,
       `              </div>`,
-      `            </div>`,
+      `            </motion.div>`,
       `          ))}`,
       `        </div>`,
       `      </div>`,
-      `    </section>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -603,8 +759,8 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="px-6 pb-20">`,
-      `      <div className="max-w-xl mx-auto text-center p-8 bg-zinc-900 border border-zinc-800 rounded-2xl">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
+      `      <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="max-w-xl mx-auto text-center p-8 bg-zinc-900 border border-zinc-800 rounded-2xl">`,
       `        <h2 className="text-xl font-black text-zinc-50 mb-3">{title}</h2>`,
       `        <p className="text-sm text-zinc-500 mb-6">{subtitle}</p>`,
       `        {items?.length ? (`,
@@ -618,8 +774,8 @@ ${body}
       `          </div>`,
       `        ) : null}`,
       ...this.generateActionButtons(spec),
-      `      </div>`,
-      `    </section>`,
+      `      </motion.div>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -629,19 +785,19 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="px-6 pb-20">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
       `      <div className="max-w-3xl mx-auto">`,
       `        <h2 className="text-3xl font-black text-zinc-50 text-center mb-12">{title}</h2>`,
-      `        <div className="space-y-4">`,
+      `        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, staggerChildren: 0.08 }} className="space-y-4">`,
       `          {items?.map((faq, i) => (`,
-      `            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: i * 0.05 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
       `              <h3 className="font-bold text-zinc-50 mb-2">{faq.title}</h3>`,
       `              <p className="text-sm text-zinc-400">{faq.description}</p>`,
-      `            </div>`,
+      `            </motion.div>`,
       `          ))}`,
-      `        </div>`,
+      `        </motion.div>`,
       `      </div>`,
-      `    </section>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -649,14 +805,14 @@ ${body}
   private generateStatsCardsBody(_spec: ComponentSpec): string[] {
     return [
       `  return (`,
-      `    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">`,
+      `    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.5 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">`,
       `      {stats?.map((stat, i) => (`,
-      `        <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">`,
+      `        <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">`,
       `          <div className="text-2xl font-black text-primary mb-1">{stat.value}</div>`,
       `          <div className="text-xs text-zinc-500">{stat.label}</div>`,
-      `        </div>`,
+      `        </motion.div>`,
       `      ))}`,
-      `    </div>`,
+      `    </motion.div>`,
       `  );`,
     ];
   }
@@ -667,8 +823,8 @@ ${body}
 
     return [
       `  return (`,
-      `    <div className="min-h-screen flex items-center justify-center px-6 bg-zinc-950">`,
-      `      <div className="w-full max-w-sm">`,
+      `    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="min-h-screen flex items-center justify-center px-6 bg-zinc-950">`,
+      `      <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="w-full max-w-sm">`,
       `        <h1 className="text-2xl font-black text-zinc-50 text-center mb-2">{title}</h1>`,
       `        <p className="text-zinc-400 text-center mb-8">{subtitle}</p>`,
       `        <form className="space-y-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
@@ -680,8 +836,8 @@ ${body}
       `            ${spec.actions?.[0]?.label ?? 'Submit'}`,
       `          </button>`,
       `        </form>`,
-      `      </div>`,
-      `    </div>`,
+      `      </motion.div>`,
+      `    </motion.div>`,
       `  );`,
     ];
   }
@@ -692,8 +848,8 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="px-6 pb-16">`,
-      `      <div className="max-w-2xl mx-auto">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-16">`,
+      `      <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }} className="max-w-2xl mx-auto">`,
       `        <h2 className="text-3xl font-black text-zinc-50 text-center mb-3">{title}</h2>`,
       `        <p className="text-zinc-400 text-center mb-8">{subtitle}</p>`,
       `        <form className="space-y-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
@@ -710,8 +866,8 @@ ${body}
       `            ${spec.actions?.[0]?.label ?? 'Send Message'}`,
       `          </button>`,
       `        </form>`,
-      `      </div>`,
-      `    </section>`,
+      `      </motion.div>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -722,13 +878,13 @@ ${body}
 
     return [
       `  return (`,
-      `    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">`,
-      `      <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-800">`,
+      `    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.5 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">`,
+      `      <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: 0.1 }} className="px-4 py-3 flex items-center justify-between border-b border-zinc-800">`,
       `        <h3 className="font-semibold text-zinc-100">{title}</h3>`,
       `        {actions?.map((action, i) => (`,
       `          <button key={i} className="px-4 py-2 text-sm rounded-lg bg-primary hover:bg-primary/90 text-white">{action.label}</button>`,
       `        ))}`,
-      `      </div>`,
+      `      </motion.div>`,
       `      <table className="w-full text-sm">`,
       `        <thead>`,
       `          <tr className="border-b border-zinc-800 text-zinc-400">`,
@@ -743,7 +899,7 @@ ${body}
       `          ))}`,
       `        </tbody>`,
       `      </table>`,
-      `    </div>`,
+      `    </motion.div>`,
       `  );`,
     ];
   }
@@ -753,9 +909,9 @@ ${body}
 
     return [
       `  return (`,
-      `    <footer className="border-t border-zinc-800 py-12 px-6 text-center text-sm text-zinc-600">`,
+      `    <motion.footer initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="border-t border-zinc-800 py-12 px-6 text-center text-sm text-zinc-600">`,
       `      <p>© 2024 {${companyName}}. All rights reserved.</p>`,
-      `    </footer>`,
+      `    </motion.footer>`,
       `  );`,
     ];
   }
@@ -766,13 +922,13 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-16 px-6">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="py-16 px-6">`,
       `      <div className="max-w-2xl mx-auto">`,
       `        <div className="text-center mb-8">`,
       `          <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
       `          <p className="text-zinc-400">{subtitle}</p>`,
       `        </div>`,
-      `        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `        <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.4 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
       `          <div className="flex items-center justify-between mb-4">`,
       `            <button className="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 transition">← {actions?.[0]?.label ?? 'Prev'}</button>`,
       `            <span className="text-sm font-bold text-zinc-50">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>`,
@@ -788,9 +944,9 @@ ${body}
       `              </button>`,
       `            ))}`,
       `          </div>`,
-      `        </div>`,
+      `        </motion.div>`,
       `      </div>`,
-      `    </section>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -801,20 +957,20 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="py-16 px-6">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="py-16 px-6">`,
       `      <div className="max-w-2xl mx-auto">`,
       `        <div className="text-center mb-8">`,
       `          <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
       `          <p className="text-zinc-400">{subtitle}</p>`,
       `        </div>`,
-      `        <div className="space-y-6">`,
-      `          <div className="grid grid-cols-3 gap-4">`,
+      `        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, staggerChildren: 0.08 }} className="space-y-6">`,
+      `          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }} className="grid grid-cols-3 gap-4">`,
       `            {items?.map((slot, i) => (`,
-      `              <button key={i} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-left hover:border-primary/50 transition">`,
+      `              <motion.button key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: i * 0.05 }} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-left hover:border-primary/50 transition">`,
       `                <div className="font-bold text-zinc-50 mb-1">{slot.title}</div>`,
       `                <div className="text-sm text-zinc-400">{slot.description}</div>`,
       `                <div className="text-xs text-primary mt-2">{slot.metadata?.slots} slots available</div>`,
-      `              </button>`,
+      `              </motion.button>`,
       `            ))}`,
       `          </div>`,
       `          <form className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">`,
@@ -838,9 +994,9 @@ ${body}
       `              ${spec.actions?.[0]?.label ?? 'Book Now'}`,
       `            </button>`,
       `          </form>`,
-      `        </div>`,
-      `      </div>`,
-      `    </section>`,
+      `        </motion.div>`,
+      `      </motion.div>`,
+      `    </motion.section>`,
       `  );`,
     ];
   }
@@ -856,8 +1012,8 @@ ${body}
 
     const lines: string[] = [
       `  return (`,
-      `    <section className="py-16">`,
-      `      <div className="max-w-7xl mx-auto px-6">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="py-16">`,
+      `      <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="max-w-7xl mx-auto px-6">`,
       `        <h2 className="text-2xl font-bold">${title}</h2>`,
     ];
 
@@ -946,8 +1102,8 @@ ${body}
       lines.push(`        </div>`);
     }
 
-    lines.push(`      </div>`);
-    lines.push(`    </section>`);
+    lines.push(`      </motion.div>`);
+    lines.push(`    </motion.section>`);
     lines.push(`  );`);
 
     return lines;
