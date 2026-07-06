@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const result = await engineFetch('/api/create', {
     method: 'POST',
     body: JSON.stringify({ prompt }),
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
   });
 
   if (result.ok) {

@@ -1,0 +1,13 @@
+version: "3"
+agent:
+  authtoken: 3FU6iEXrjCluebBphcB5JEFj0fM_4f2DsgLVeedZc7To4pwvY
+tunnels:
+  engine:
+    proto: http
+    addr: 3001
+    inspect: false
+    policies:
+      - id: rewrite-host
+        request_header:
+          action: remove
+          name: "X-Forwarded-Host"

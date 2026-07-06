@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const result = await engineFetch('/api/clone', {
     method: 'POST',
     body: JSON.stringify({ id, prompt, url: parsed?.url }),
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
     timeoutMs: 300000,
   });
 

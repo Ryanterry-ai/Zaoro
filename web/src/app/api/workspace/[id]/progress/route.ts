@@ -6,6 +6,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const result = await engineFetch(`/api/workspace/${id}/progress`);
+  const result = await engineFetch(`/api/workspace/${id}/progress`, {
+    headers: { 'ngrok-skip-browser-warning': 'true' },
+  });
   return Response.json(result.data, { status: result.status });
 }

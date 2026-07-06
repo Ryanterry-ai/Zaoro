@@ -33,16 +33,74 @@ const UNSPLASH_PHOTOS: string[] = [
 ];
 
 /**
+ * Supplement/health/nutrition-specific Unsplash photo IDs.
+ * Used when the keyword relates to fitness, supplements, nutrition, or wellness.
+ */
+const SUPPLEMENT_UNSPLASH_PHOTOS: string[] = [
+  '1517838273290-5e5d5f6e57e6', '1534438327276-14d5305f2f7b', '1571907482756-4e5f7e0e8b0a',
+  '1571019613452-4ceb4e9d1b09', '1593096581203-8f3e7d2a5b1e', '1518310383802-6404c8f0b4c2',
+  '1534254548952-0ab66e4a5e0c', '1540492519252-5f4d9a4e4b0c', '1517457373958-b7bdd4583485',
+  '1571907482756-4e5f7e0e8b0a',
+];
+
+/**
+ * Beauty/salon-specific Unsplash photo IDs.
+ */
+const BEAUTY_UNSPLASH_PHOTOS: string[] = [
+  '1522337360784-2b0b1e0b4a0c', '1487419918572-0b2f4f0e0b4a', '1554151228-0b2f4f0e0b4a',
+  '1522337360784-2b0b1e0b4a0c',
+];
+
+/**
+ * Food/restaurant-specific Unsplash photo IDs.
+ */
+const FOOD_UNSPLASH_PHOTOS: string[] = [
+  '1504674900247-0877df9cc836', '1414235077428-338989a2e8c0', '1476124369491-e7addf5dc371',
+  '1540189549336-e6e99c3679fe', '1565299624946-b28f40a0ae38', '1504674900247-0877df9cc836',
+];
+
+/**
+ * Map keyword patterns to category-specific Unsplash photo pools.
+ * When a keyword matches a key in this map, photos are drawn from the
+ * corresponding pool instead of the default pool, ensuring semantically
+ * relevant imagery for the domain.
+ */
+const KEYWORD_POOL_MAP: Array<{ patterns: string[]; pool: string[] }> = [
+  {
+    patterns: ['supplement', 'nutrition', 'protein', 'whey', 'vitamin', 'fitness', 'gym', 'workout', 'health supplement', 'wellness'],
+    pool: SUPPLEMENT_UNSPLASH_PHOTOS,
+  },
+  {
+    patterns: ['beauty', 'salon', 'hair', 'cosmetic', 'skincare', 'makeup', 'facial', 'nail'],
+    pool: BEAUTY_UNSPLASH_PHOTOS,
+  },
+  {
+    patterns: ['food', 'restaurant', 'cooking', 'chef', 'cuisine', 'dining', 'gourmet', 'grocery'],
+    pool: FOOD_UNSPLASH_PHOTOS,
+  },
+];
+
+/**
  * Generate Unsplash URL — no API key needed for direct image access.
  * Uses keyword hash for consistency (same keyword = same image).
+ * Selects from a category-specific photo pool when the keyword matches
+ * known domain patterns, falling back to the general business pool.
  */
 function unsplashUrl(keyword: string, width = UNSPLASH_WIDTH, height = UNSPLASH_HEIGHT): string {
   let hash = 0;
   for (let i = 0; i < keyword.length; i++) {
     hash = ((hash << 5) - hash + keyword.charCodeAt(i)) | 0;
   }
-  const idx = Math.abs(hash) % UNSPLASH_PHOTOS.length;
-  const photoId = UNSPLASH_PHOTOS[idx]!;
+  const lowerKw = keyword.toLowerCase();
+  let pool = UNSPLASH_PHOTOS;
+  for (const entry of KEYWORD_POOL_MAP) {
+    if (entry.patterns.some(p => lowerKw.includes(p))) {
+      pool = entry.pool;
+      break;
+    }
+  }
+  const idx = Math.abs(hash) % pool.length;
+  const photoId = pool[idx]!;
   return `https://images.unsplash.com/photo-${photoId}?w=${width}&h=${height}&fit=crop`;
 }
 
@@ -125,6 +183,11 @@ export const SVG_ICONS: Record<string, (color?: string) => string> = {
   book: (c = '#60a5fa') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>`,
   coffee: (c = '#fb923c') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
   palette: (c = '#c084fc') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="11.5" r="2.5"/><circle cx="6" cy="12.5" r="2.5"/><circle cx="17" cy="18.5" r="2.5"/><circle cx="8.5" cy="18.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>`,
+  pill: (c = '#a78bfa') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5l10-10a4.95 4.95 0 10-7-7l-10 10a4.95 4.95 0 107 7z"/><path d="M8.5 8.5l7 7"/></svg>`,
+  badge: (c = '#22c55e') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`,
+  truck: (c = '#fb923c') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  activity: (c = '#f472b6') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  award: (c = '#facc15') => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>`,
 };
 
 /** Map common feature icon keywords to SVG icon names */
@@ -158,6 +221,11 @@ const ICON_KEYWORD_MAP: Record<string, string> = {
   'docs': 'book', 'documentation': 'book', 'guide': 'book', 'learning': 'book',
   'onboarding': 'coffee', 'welcome': 'coffee',
   'design': 'palette', 'creative': 'palette', 'ui': 'palette',
+  'supplement': 'pill', 'capsule': 'pill', 'tablet': 'pill',
+  'certified': 'badge', 'badge': 'badge', 'certification': 'badge', 'fssai': 'badge', 'genuine': 'badge',
+  'delivery': 'truck', 'shipping': 'truck', 'dispatch': 'truck', 'courier': 'truck',
+  'muscle': 'activity', 'strength': 'activity', 'fitness': 'activity',
+  'quality': 'award', 'guarantee': 'award', 'warranty': 'award',
 };
 
 /** Resolve icon keyword to inline SVG string */

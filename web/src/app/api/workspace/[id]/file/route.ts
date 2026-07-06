@@ -9,6 +9,8 @@ export async function GET(
   const url = new URL(req.url);
   const filePath = url.searchParams.get('path');
   const qs = filePath ? `?path=${encodeURIComponent(filePath)}` : '';
-  const result = await engineFetch(`/api/workspace/${id}/file${qs}`);
+  const result = await engineFetch(`/api/workspace/${id}/file${qs}`, {
+    headers: { 'ngrok-skip-browser-warning': 'true' },
+  });
   return Response.json(result.data, { status: result.status });
 }

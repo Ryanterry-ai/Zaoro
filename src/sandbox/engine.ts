@@ -143,13 +143,26 @@ export class SandboxEngine {
           "next": "14.2.29",
           "react": "18.3.1",
           "react-dom": "18.3.1",
-          "lucide-react": "0.344.0"
+          "framer-motion": "11.11.0",
+          "lucide-react": "0.344.0",
+          "clsx": "2.1.1",
+          "tailwind-merge": "2.5.4",
+          "class-variance-authority": "0.7.1",
+          "@radix-ui/react-dialog": "1.1.2",
+          "@radix-ui/react-dropdown-menu": "2.1.2",
+          "@radix-ui/react-slot": "1.1.0",
+          "@radix-ui/react-accordion": "1.2.1",
+          "@radix-ui/react-tabs": "1.1.0",
+          "@radix-ui/react-label": "2.1.0"
         },
         devDependencies: {
           "typescript": "5.4.5",
           "@types/node": "20.14.2",
           "@types/react": "18.3.3",
-          "@types/react-dom": "18.3.0"
+          "@types/react-dom": "18.3.0",
+          "tailwindcss": "3.4.15",
+          "autoprefixer": "10.4.20",
+          "postcss": "8.4.49"
         }
       };
       fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonTemplate, null, 2));

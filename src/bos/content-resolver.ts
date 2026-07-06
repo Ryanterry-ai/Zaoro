@@ -833,57 +833,88 @@ function resolveHeroBanner(
 function generateHeroSubtitle(ctx: ContentResolverContext): string {
   const industry = ctx.blueprint.industry;
   const country = ctx.blueprint.country;
-  const subIndustry = ctx.blueprint.description?.toLowerCase() ?? '';
+  const promptText = ctx.blueprint.description?.toLowerCase() ?? '';
+  const promptOrName = ctx.blueprint.description ?? ctx.blueprint.name ?? '';
+
+  // Guard: detect if the raw build prompt text is being used as content.
+  // Build prompts contain certain meta-keywords that should never appear in output.
+  const buildKeywords = ['build', 'create', 'make', 'generate', 'fully functional',
+    'interactive', 'responsive', 'full stack', 'website for', 'web app', 'application'];
+  const isBuildPrompt = buildKeywords.some(kw => promptText.includes(kw));
+
+  // Always prefer industry-specific value propositions over prompt echo
 
   // Supplement / nutrition stores
-  if (subIndustry.includes('supplement') || subIndustry.includes('protein') || subIndustry.includes('nutrition') || subIndustry.includes('vitamin')) {
-    if (country === 'IN') return 'Premium supplements from top brands, delivered across India';
+  if (promptText.includes('supplement') || promptText.includes('protein') || promptText.includes('nutrition') || promptText.includes('vitamin')) {
+    if (country === 'IN') return 'Premium supplements from top brands, delivered across India — lab-tested, 100% genuine';
     return 'Premium supplements from top brands, delivered to your door';
   }
 
   // Ecommerce general
-  if (industry === 'ecommerce' || subIndustry.includes('store') || subIndustry.includes('shop')) {
+  if (industry === 'ecommerce' || promptText.includes('store') || promptText.includes('shop') || promptText.includes('marketplace')) {
     if (country === 'IN') return 'Shop from thousands of products with fast delivery across India';
     return 'Shop from thousands of products with fast, free delivery';
   }
 
   // Restaurant / food
-  if (industry === 'restaurant' || subIndustry.includes('restaurant') || subIndustry.includes('cafe') || subIndustry.includes('food')) {
+  if (industry === 'restaurant' || promptText.includes('restaurant') || promptText.includes('cafe') || promptText.includes('food')) {
     return 'Fresh, delicious food prepared with love and delivered to your table';
   }
 
   // Fitness / gym
-  if (industry === 'fitness' || subIndustry.includes('gym') || subIndustry.includes('yoga') || subIndustry.includes('fitness')) {
+  if (industry === 'fitness' || promptText.includes('gym') || promptText.includes('yoga') || promptText.includes('fitness')) {
     return 'Transform your body with expert-led programs and world-class facilities';
   }
 
   // Healthcare
-  if (industry === 'healthcare' || subIndustry.includes('health') || subIndustry.includes('dental') || subIndustry.includes('medical')) {
+  if (industry === 'healthcare' || promptText.includes('health') || promptText.includes('dental') || promptText.includes('medical')) {
     return 'Compassionate care with modern technology for your whole family';
   }
 
-  // SaaS
-  if (industry === 'saas' || subIndustry.includes('saas') || subIndustry.includes('software')) {
+  // SaaS / enterprise
+  if (industry === 'saas' || industry === 'enterprise-software' || promptText.includes('saas') || promptText.includes('software')) {
     return 'Streamline your workflow with powerful, easy-to-use tools';
   }
 
   // Real estate
-  if (industry === 'realestate' || subIndustry.includes('property') || subIndustry.includes('real estate')) {
+  if (industry === 'realestate' || promptText.includes('property') || promptText.includes('real estate')) {
     return 'Find your perfect property with expert guidance and local insights';
   }
 
   // Education
-  if (industry === 'education' || subIndustry.includes('course') || subIndustry.includes('learn')) {
+  if (industry === 'education' || promptText.includes('course') || promptText.includes('learn')) {
     return 'Learn from industry experts and advance your career at your own pace';
   }
 
   // Portfolio / agency
-  if (industry === 'agency' || industry === 'portfolio' || subIndustry.includes('portfolio')) {
+  if (industry === 'agency' || industry === 'portfolio' || promptText.includes('portfolio')) {
     return 'Creative solutions that drive results and elevate your brand';
+  }
+
+  // If the prompt text is a build instruction (meta keywords), never echo it.
+  // Generate a context-aware value proposition from whatever we know.
+  if (isBuildPrompt) {
+    const city = extractCity(promptText);
+    const cityStr = city ? ` in ${city}` : '';
+    const industryLabel = industry.charAt(0).toUpperCase() + industry.slice(1);
+    return `The best ${industryLabel} experience${cityStr}`;
   }
 
   // Fallback: generic value proposition
   return `Everything you need, built for you`;
+}
+
+/** Extract city name from a description string. */
+function extractCity(text: string): string | undefined {
+  const match = text.match(/\bin\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b/);
+  if (match && match[1]) {
+    const city = match[1];
+    const adjectives = new Set(['Indian', 'American', 'British', 'Chinese', 'French', 'German',
+      'Italian', 'Japanese', 'Korean', 'Spanish', 'European', 'African', 'Asian',
+      'Australian', 'Canadian', 'Mexican', 'Russian', 'Thai', 'Vietnamese', 'Turkish']);
+    if (!adjectives.has(city)) return city;
+  }
+  return undefined;
 }
 
 /**

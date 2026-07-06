@@ -650,44 +650,78 @@ function extractAppName(prompt: string): string | undefined {
 
 /**
  * Generate a brand name from context when no explicit name is provided.
- * Combines industry keywords with market keywords to create plausible brand names.
+ * NEVER returns a single generic adjective ("Indian", "Local", "Modern").
+ * NEVER returns words from the prompt verbatim as a brand name.
+ * Combines location + industry keyword creatively to produce brand-sounding names.
  */
 function generateAppName(prompt: string, industry: string, country?: string): string {
-  const lower = prompt.toLowerCase();
+  const lower = prompt.toLowerCase()
 
-  // Industry + market keyword combinations
-  const brandMap: Record<string, Record<string, string>> = {
-    ecommerce: {
-      supplement: 'SuppleFit', protein: 'SuppleFit', whey: 'SuppleFit',
-      nutrition: 'NutriShop', vitamin: 'NutriShop', health: 'NutriShop',
-      fashion: 'StyleHub', clothing: 'StyleHub', apparel: 'StyleHub',
-      electronics: 'TechMart', gadget: 'TechMart',
-      grocery: 'FreshBasket', organic: 'FreshBasket',
-      _default: 'ShopFlow',
-    },
-    fitness: { _default: 'FitForge' },
-    healthcare: { dental: 'SmileCare', _default: 'MedConnect' },
-    restaurant: { _default: 'Savora' },
-    education: { _default: 'LearnHub' },
-    saas: { _default: 'Nexus' },
-    realestate: { _default: 'HomeVista' },
-  };
-
-  // Find matching brand name from keywords
-  const industryBrands = brandMap[industry] ?? brandMap['_default'] ?? {};
-  for (const [keyword, name] of Object.entries(industryBrands)) {
-    if (keyword !== '_default' && lower.includes(keyword)) return name;
-  }
-  if (industryBrands['_default']) return industryBrands['_default'];
-
-  // Country-specific suffixes
-  if (country === 'IN') {
-    if (lower.includes('supplement') || lower.includes('protein') || lower.includes('nutrition')) return 'SuppleFit';
-    if (lower.includes('food') || lower.includes('restaurant') || lower.includes('cafe')) return 'TasteHub';
-    if (lower.includes('fashion') || lower.includes('clothing')) return 'StyleIndia';
+  // Strategy 1: Check for explicit business name in prompt
+  const explicitMatch = prompt.match(
+    /(?:called|named|brand(?:\s+name)?(?:\s+is)?)\s+["']?([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)["']?/i
+  )
+  if (explicitMatch && explicitMatch[1]) {
+    const candidate = explicitMatch[1].trim()
+    // Reject if it's a single adjective
+    const adjectives = new Set(['indian', 'local', 'modern', 'best', 'top', 'great', 'new', 'old',
+      'simple', 'easy', 'fast', 'quick', 'smart', 'premium', 'basic', 'mini', 'mega',
+      'full', 'complete', 'online', 'digital', 'global', 'multi', 'single', 'real'])
+    if (!adjectives.has(candidate.toLowerCase())) return candidate
   }
 
-  return 'YourBrand';
+  // Extract city name if present
+  const cityMatch = prompt.match(/\bin\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b/)
+  const city = cityMatch ? cityMatch[1] : ''
+
+  // Industry-specific brand words
+  const industryNames: Record<string, string[]> = {
+    coffee: ['Brew', 'Roast', 'Grind', 'Press', 'Bean'],
+    restaurant: ['Table', 'Kitchen', 'Feast', 'Plate', 'Spice', 'Savora'],
+    cafe: ['Brew', 'Roast', 'Grind', 'Press', 'Bean'],
+    gym: ['Fit', 'Forge', 'Peak', 'Strong', 'Edge'],
+    fitness: ['Fit', 'Forge', 'Peak', 'Strong', 'Edge'],
+    supplement: ['Nutri', 'Fuel', 'Core', 'Build', 'Vita'],
+    ecommerce: ['Shop', 'Mart', 'Hub', 'Basket', 'Cart', 'Market'],
+    healthcare: ['Med', 'Care', 'Health', 'Life', 'Well', 'Connect'],
+    dental: ['Smile', 'Dent', 'Care', 'Bright', 'White'],
+    salon: ['Glow', 'Style', 'Bloom', 'Lux', 'Aura'],
+    spa: ['Zen', 'Serene', 'Bliss', 'Pure', 'Tranquil'],
+    retail: ['Shop', 'Store', 'Market', 'Hub', 'Point'],
+    education: ['Learn', 'Edu', 'Academy', 'Skill', 'Mind'],
+    saas: ['Nexus', 'Flow', 'Stack', 'Sync', 'Core', 'Pulse'],
+    realestate: ['Home', 'Estates', 'Vista', 'Haven', 'Key'],
+    legal: ['Lex', 'Law', 'Legal', 'Justice', 'Rights'],
+    agency: ['Studio', 'Lab', 'House', 'Collective', 'Group'],
+    media: ['Press', 'Media', 'Pulse', 'Daily', 'Scope'],
+    travel: ['Voyage', 'Travel', 'Trips', 'Go', 'Wander'],
+    technology: ['Tech', 'Digital', 'Sys', 'Net', 'Logic'],
+  }
+
+  const words = industryNames[industry] || ['Studio', 'Hub', 'Works', 'Space', 'Co']
+  // Deterministic selection — hash the prompt to pick a word index
+  const hash = [...lower].reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
+  const word = words[Math.abs(hash) % words.length]
+
+  if (country === 'IN' || lower.includes('india') || lower.includes('indian') || lower.includes('rupee') || lower.includes('₹')) {
+    if (lower.includes('supplement') || lower.includes('protein') || lower.includes('nutrition')) return 'NutriMart'
+    if (lower.includes('food') || lower.includes('restaurant') || lower.includes('cafe') || lower.includes('tiffin')) return 'TasteHub'
+    if (lower.includes('fashion') || lower.includes('clothing') || lower.includes('wear')) return 'StyleIndia'
+    if (lower.includes('fitness') || lower.includes('gym') || lower.includes('workout')) return 'FitIndia'
+    return city ? `${city}${word}` : `${word}India`
+  }
+
+  // Combine city + industry word
+  if (city && city.length > 2) {
+    const adjectives = new Set(['indian', 'indonesian', 'american', 'british', 'chinese', 'french',
+      'german', 'italian', 'spanish', 'european', 'african', 'asian', 'australian',
+      'japanese', 'korean', 'mexican', 'russian', 'thai', 'vietnamese', 'turkish'])
+    if (!adjectives.has(city.toLowerCase())) {
+      return `${city}${word}`
+    }
+  }
+
+  return `${word} Co`
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────

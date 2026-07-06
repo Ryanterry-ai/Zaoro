@@ -158,6 +158,7 @@ export async function loadAllEntries(): Promise<void> {
     () => import('./entries/restaurant.js'),
     () => import('./entries/real-estate.js'),
     () => import('./entries/luxury-retail.js'),
+    () => import('./entries/supplement-marketplace.js'),
   ];
   
   for (const loadModule of entryModules) {

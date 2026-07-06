@@ -281,12 +281,16 @@ export type NavItem = (typeof navItems)[number];
     const deps: Record<string, string> = {
       '@prisma/client': '^5.10.2',
       'autoprefixer': '^10.4.17',
+      'class-variance-authority': '^0.7.1',
+      'clsx': '^2.1.1',
       'framer-motion': '^11.0.0',
+      'lucide-react': '^0.468.0',
       'next': '^14.1.0',
       'postcss': '^8.4.35',
       'prisma': '^5.10.2',
       'react': '^18.2.0',
       'react-dom': '^18.2.0',
+      'tailwind-merge': '^2.5.4',
       'tailwindcss': '^3.4.1',
     };
 

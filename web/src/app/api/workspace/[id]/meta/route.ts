@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const result = await engineFetch(`/api/workspace/${id}/meta`, { timeoutMs: 5000 });
+  const result = await engineFetch(`/api/workspace/${id}/meta`, { timeoutMs: 5000, headers: { 'ngrok-skip-browser-warning': 'true' } });
   if (!result.ok) {
     return Response.json({ id, type: 'build', exists: false });
   }

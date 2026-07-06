@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const result = await engineFetch('/api/bi/run', {
     method: 'POST',
     body: JSON.stringify({ prompt }),
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
     timeoutMs: 300000,
   });
 

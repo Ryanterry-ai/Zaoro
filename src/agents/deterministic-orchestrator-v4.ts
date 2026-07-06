@@ -31,6 +31,7 @@ import { saveIR, loadIR } from '../bos/ir-persistence.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { E2ETester } from '../testing/e2e-tester.js';
 
 export class DeterministicOrchestratorV4 {
   private sandbox: SandboxEngine;
@@ -156,9 +157,10 @@ export class DeterministicOrchestratorV4 {
     const pipelineResult = await runBuildPipeline(breContext, {
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
+      workspaceDir: workspace.rootPath,
     }, llmConfig);
 
-    const { breResult, executionBlueprint, applicationSpec, renderResult, applicationGraph, graphStats } = pipelineResult;
+    const { breResult, executionBlueprint, applicationSpec, renderResult, applicationGraph, graphStats, componentSpecManifest, assemblyResult, usedWorktrees } = pipelineResult;
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
 
@@ -176,6 +178,16 @@ export class DeterministicOrchestratorV4 {
     console.log(`[orchestrator] ApplicationGraph: ${graphStats.nodes} nodes, ${graphStats.edges} edges (${graphStats.entityCount} entities, ${graphStats.tableCount} tables, ${graphStats.endpointCount} endpoints)`);
     console.log(`[orchestrator] Execution blueprint: ${executionBlueprint.pages.length} pages, ${executionBlueprint.pages.reduce((s, p) => s + p.slots.length, 0)} slots`);
     console.log(`[orchestrator] Application spec: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s: number, p: any) => s + (p.components ?? []).length, 0)} components`);
+
+    if (componentSpecManifest) {
+      console.log(`[orchestrator] Component spec manifest: ${componentSpecManifest.totalComponents} components, ${componentSpecManifest.totalPages} pages`);
+    }
+    if (assemblyResult) {
+      console.log(`[orchestrator] Assembly: ${assemblyResult.mergedFiles.size} files, ${assemblyResult.conflicts.length} conflicts, ${assemblyResult.specFilesProcessed} specs`);
+    }
+    if (usedWorktrees?.length) {
+      console.log(`[orchestrator] Used worktrees: ${usedWorktrees.join(', ')}`);
+    }
 
     if (renderResult.warnings.length > 0) {
       console.warn(`[orchestrator] Renderer warnings: ${renderResult.warnings.join(', ')}`);
@@ -312,6 +324,28 @@ export class DeterministicOrchestratorV4 {
     } catch (auditErr) {
       progress.emit('repair', 'warning', `TS audit failed: ${(auditErr as Error).message}`);
       console.warn('[orchestrator] TS audit/healing failed:', (auditErr as Error).message);
+    }
+
+    // Phase 14c: Optional E2E browser verification (only when E2E_TEST=1 is set)
+    // Requires Playwright browsers installed and port availability on 4567.
+    if (process.env.E2E_TEST === '1') {
+      progress.emit('e2e', 'started', 'Running E2E browser verification...');
+      const tE2E = Date.now();
+      try {
+        const pageUrls = blueprint.pages.map((p: { path: string }) => `http://localhost:4567${p.path}`);
+        const e2eTester = new E2ETester(workspace.rootPath);
+        const e2eResult = await e2eTester.run(pageUrls);
+        if (e2eResult.passed) {
+          progress.emit('e2e', 'completed', `E2E passed: score=${e2eResult.score.toFixed(2)}, ${e2eResult.verification?.summary.passed ?? 0}/${e2eResult.verification?.summary.totalChecks ?? 0} checks (${Date.now() - tE2E}ms)`);
+          console.log(`[orchestrator] E2E verification passed: score=${e2eResult.score.toFixed(2)}`);
+        } else {
+          progress.emit('e2e', 'warning', `E2E failed: score=${e2eResult.score.toFixed(2)}, errors=${e2eResult.errors.length}`);
+          console.warn(`[orchestrator] E2E verification failed: score=${e2eResult.score.toFixed(2)}, errors=${e2eResult.errors.join('; ')}`);
+        }
+      } catch (e2eErr) {
+        progress.emit('e2e', 'warning', `E2E verification error: ${(e2eErr as Error).message}`);
+        console.warn('[orchestrator] E2E verification error:', (e2eErr as Error).message);
+      }
     }
 
     // Mark all pages as succeeded (they come from the renderer, not LLM)
@@ -608,6 +642,7 @@ Rules:
     const pipelineResult = await runBuildPipeline(breContext, {
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
+      workspaceDir: workspace.rootPath,
     }, llmConfig);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;

@@ -36,6 +36,12 @@ import { runPass3CodeGeneration } from './pass3-code-generator.js';
 
 // Knowledge Graph — domain knowledge enrichment
 import { initializeKnowledgeGraph, enrichFromKnowledgeGraph } from '../bos/knowledge/seeds/index.js';
+import * as path from 'path';
+
+// Spec-first + worktree parallel pipeline
+import { writeComponentSpecManifest, loadComponentSpecManifest } from './component-spec-writer.js';
+import { WorktreeManager } from './worktree-manager.js';
+import { assembleRenderResults, writeAssemblyResult } from './assembly-gate.js';
 
 const log = stageLogger('pipeline');
 
@@ -53,6 +59,9 @@ export interface PipelineConfig {
 
   /** Output directory path */
   outputDir?: string;
+
+  /** Workspace root directory for spec/worktree artifacts */
+  workspaceDir?: string;
 }
 
 export interface PipelineResult {
@@ -83,6 +92,15 @@ export interface PipelineResult {
 
   /** Available platforms */
   availablePlatforms: string[];
+
+  /** Serialized component spec manifest from spec-lock layer */
+  componentSpecManifest?: import('./component-spec-writer.js').ComponentSpecManifest;
+
+  /** Assembly result from parallel worktree build */
+  assemblyResult?: import('./assembly-gate.js').AssemblyResult;
+
+  /** Worktree names used in the parallel build */
+  usedWorktrees?: string[];
 }
 
 // ─── Pipeline Execution ──────────────────────────────────────────────────────
@@ -105,6 +123,7 @@ export async function runBuildPipeline(
     includeComments = true,
     includeTests = false,
     outputDir = './workspace/src',
+    workspaceDir,
   } = config;
 
   log.info('Pipeline started', {
@@ -320,74 +339,115 @@ export async function runBuildPipeline(
     duration: Date.now() - t3,
   });
 
-  // Layer 4: Application Spec → Platform Code
+  // Layer 4: Spec-lock + worktree parallel build
   const t4 = Date.now();
+  let componentSources: ComponentSourceRec[] | undefined = [];
+  let renderResult: RenderResult;
+  let usedWorktrees: string[] | undefined;
+  let componentSpecManifest: import('./component-spec-writer.js').ComponentSpecManifest | undefined;
+  let assemblyResult: import('./assembly-gate.js').AssemblyResult | undefined;
 
-  // Gather component source recommendations from skill integrator
-  let componentSources: ComponentSourceRec[] | undefined;
-  try {
-    // Map skill-integrator section names → renderer component type names
-    const SECTION_TO_COMPONENT_TYPE: Record<string, string> = {
-      'Navbar': 'Navbar',
-      'Hero': 'HeroBanner',
-      'Features': 'FeatureGrid',
-      'Pricing': 'PricingTable',
-      'Testimonials': 'Testimonials',
-      'Cta': 'CTASection',
-      'Footer': 'Footer',
-      'Contact': 'ContactForm',
-      'Faq': 'FAQSection',
-      'Stats': 'StatsCards',
-      'Booking': 'BookingCalendar',
-      'Auth': 'AuthForm',
-      'Gallery': 'DataTable',
-      'Menu': 'FeatureGrid',
-      'About': 'HeroBanner',
-      'Collections': 'FeatureGrid',
-      'Customizer': 'HeroBanner',
-      'Story': 'HeroBanner',
-      'Craftsmanship': 'FeatureGrid',
-      'Dealers': 'DataTable',
-      'Classes': 'FeatureGrid',
-      'Trainers': 'Testimonials',
-      'Services': 'FeatureGrid',
-      'Doctors': 'Testimonials',
-      'FeaturedProducts': 'FeatureGrid',
-      'Categories': 'FeatureGrid',
-      'Newsletter': 'CTASection',
-      'Reservations': 'BookingCalendar',
-    };
+  // Spec-lock phase: write component spec manifest
+  if (workspaceDir) {
+    log.info('Layer 4a: Writing component spec manifest', {
+      workspaceDir,
+      pages: applicationSpec.pages.length,
+      components: applicationSpec.pages.reduce((s, p) => s + p.components.length, 0),
+    });
+    console.log(`[spec-writer] Writing component spec manifest to ${workspaceDir}`);
+    componentSpecManifest = writeComponentSpecManifest(applicationSpec, workspaceDir);
+    console.log(`[spec-writer] Manifest written: ${componentSpecManifest.totalComponents} components across ${componentSpecManifest.totalPages} pages`);
 
-    const integrator = new SkillIntegrator();
-    const recs = integrator.getDesignRecommendations(context.industry, (context as any).productType);
-    componentSources = recs.components
-      .filter(c => c.source !== 'custom')
-      .map(c => {
-        const type = SECTION_TO_COMPONENT_TYPE[c.name] || c.name.replace(/^./, m => m.toUpperCase());
-        const baseName = c.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        return {
-          type,
-          source: c.source as '21st' | 'shadcn',
-          packageName: c.source === '21st' ? `@21st-dev/${baseName}`
-                       : c.source === 'shadcn' ? `@shadcn/${baseName}`
-                       : `@custom/${baseName}`,
-          exportName: c.name,
-        } satisfies ComponentSourceRec;
-      });
-  } catch {
-    componentSources = undefined;
+    // Distribute specs across worktrees
+    const specFilenames = componentSpecManifest.records.map((r, i) => {
+      const safePath = r.pagePath.replace(/[\\/:*?"<>|]/g, '_');
+      return `${safePath}__${r.componentIndex}__${r.contentHash.slice(0, 12)}.spec.json`;
+    });
+
+    const wtManager = new WorktreeManager({
+      repoPath: process.cwd(),
+      worktreeBase: path.join(workspaceDir, '.worktrees'),
+      maxWorktrees: 4,
+    });
+    wtManager.init();
+
+    const groups = wtManager.distributeSpecs(specFilenames, undefined);
+
+    for (const [groupName, specs] of groups) {
+      const wt = await wtManager.createWorktree(groupName, specs);
+      console.log(`[worktree] Created worktree '${wt.name}' at ${wt.path} with ${specs.length} specs`);
+      usedWorktrees = usedWorktrees || [];
+      usedWorktrees.push(wt.name);
+    }
+
+    // Each worktree runs renderWith independently on its assigned page group
+    const groupEntries = Array.from(groups.entries());
+    const assemblyInputs: import('./assembly-gate.js').AssemblyInput[] = [];
+
+    for (const [groupName, _specs] of groupEntries) {
+      const wtSpec = wtManager.getWorktree(groupName);
+      if (!wtSpec) continue;
+      const wtPages = applicationSpec.pages.filter(p =>
+        _specs.some(s => s.includes(p.path.replace(/[\\/:*?"<>|]/g, '_'))),
+      );
+      const wtAppSpec = { ...applicationSpec, pages: wtPages };
+
+      try {
+        const wtResult = renderWith(wtAppSpec, platform, {
+          theme: breResult.blueprint.designTokens as Record<string, unknown>,
+          includeComments,
+          includeTests,
+          outputDir: path.join(wtSpec.path, 'src'),
+          componentSources: [],
+        });
+        wtManager.markReady(groupName);
+        console.log(`[worktree] Worktree '${groupName}' completed: ${wtResult.files.length} files`);
+
+        assemblyInputs.push({
+          sourceName: groupName,
+          files: wtResult.files,
+          errors: wtResult.warnings.map(w => `warning: ${w}`),
+        });
+      } catch (wtErr) {
+        const msg = (wtErr as Error).message;
+        wtManager.markFailed(groupName, msg);
+        console.error(`[worktree] Worktree '${groupName}' failed: ${msg}`);
+
+        assemblyInputs.push({
+          sourceName: groupName,
+          files: [],
+          errors: [msg],
+        });
+      }
+    }
+
+    // Assembly phase: merge worktree results
+    console.log(`[assembly] Assembling ${assemblyInputs.length} worktree results`);
+    assemblyResult = assembleRenderResults(assemblyInputs);
+    console.log(`[assembly] Assembly complete: ${assemblyResult.mergedFiles.size} files, ${assemblyResult.conflicts.length} conflicts`);
+
+    // Write final assembly to the workspace output dir
+    renderResult = writeAssemblyResult(assemblyResult, outputDir, workspaceDir);
+
+    // Clean up worktrees
+    await wtManager.removeAll();
+    console.log(`[assembly] Worktrees cleaned up`);
+  } else {
+    // Fallback: original single-thread render
+    componentSources = [];
+    renderResult = renderWith(applicationSpec, platform, {
+      theme: breResult.blueprint.designTokens as Record<string, unknown>,
+      includeComments,
+      includeTests,
+      outputDir,
+      componentSources: [],
+    });
   }
 
-  const renderResult = renderWith(applicationSpec, platform, {
-    theme: breResult.blueprint.designTokens as Record<string, unknown>,
-    includeComments,
-    includeTests,
-    outputDir,
-    ...(componentSources ? { componentSources } : {}),
-  });
   log.info('Layer 4: Rendering complete', {
     files: renderResult.files.length,
     warnings: renderResult.warnings.length,
+    usedWorktrees: usedWorktrees?.length ?? 0,
     duration: Date.now() - t4,
   });
 
@@ -434,6 +494,9 @@ export async function runBuildPipeline(
       domainEntities: knowledgeDomainEntities,
     },
     availablePlatforms: getRegisteredPlatforms(),
+    ...(componentSpecManifest ? { componentSpecManifest } : {}),
+    ...(assemblyResult ? { assemblyResult } : {}),
+    ...(usedWorktrees ? { usedWorktrees } : {}),
   };
 }
 

@@ -9,7 +9,7 @@ export async function POST(
   const result = await engineFetch(`/api/workspace/${id}/build`, {
     method: 'POST',
     body: '{}',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
     timeoutMs: 30000,
   });
 

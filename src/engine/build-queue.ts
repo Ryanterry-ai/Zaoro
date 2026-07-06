@@ -195,6 +195,15 @@ function interceptConsole(prefix, type) {
       writeProgress('bi', 'info', clean);
     } else if (clean.includes('[BOS]') || clean.includes('[bre-v2]')) {
       writeProgress('architect', 'info', clean);
+    } else if (clean.includes('[spec-writer]')) {
+      writeProgress('compile', 'info', clean);
+    } else if (clean.includes('[worktree]')) {
+      if (clean.includes('completed')) writeProgress('compile', 'success', clean);
+      else if (clean.includes('failed')) writeProgress('compile', 'failed', clean);
+      else writeProgress('compile', 'info', clean);
+    } else if (clean.includes('[assembly]')) {
+      if (clean.includes('complete') || clean.includes('cleaned')) writeProgress('compile', 'success', clean);
+      else writeProgress('compile', 'info', clean);
     } else if (clean.includes('[self-heal]') || clean.includes('[ast-patch]')) {
       writeProgress('compile', 'healing', clean);
     } else if (clean.includes('[domain]') && clean.includes('hasFunction')) {
