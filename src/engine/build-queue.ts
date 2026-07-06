@@ -268,8 +268,8 @@ try {
           setup(build) {
             build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'globals' }));
             build.onResolve({ filter: /^react-dom$/ }, () => ({ path: 'react-dom', namespace: 'globals' }));
-            build.onLoad({ filter: /^react$/, namespace: 'globals' }, () => ({ contents: 'module.exports = React;' }));
-            build.onLoad({ filter: /^react-dom$/, namespace: 'globals' }, () => ({ contents: 'module.exports = ReactDOM;' }));
+            build.onLoad({ filter: /^react$/, namespace: 'globals' }, () => ({ contents: 'module.exports = window.React;' }));
+            build.onLoad({ filter: /^react-dom$/, namespace: 'globals' }, () => ({ contents: 'module.exports = window.ReactDOM;' }));
           },
         }],
       } as any);
@@ -295,7 +295,9 @@ try {
           '<script>' + vendorTailwind + SCRIPT_END,
           '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%;overflow-x:hidden}body{background:#09090b;color:#f4f4f5;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}</style></head><body><div id="preview-root"></div>',
           '<script>' + vendorReact + SCRIPT_END,
+          '<script>window.React = React;</script>',
           '<script>' + vendorReactDom + SCRIPT_END,
+          '<script>window.ReactDOM = ReactDOM;</script>',
           '<script>',
           'window.__previewLog=[];function _log(m){window.__previewLog.push(m)}',
           '_log("Script starting");',
@@ -304,9 +306,9 @@ try {
           '_log("Bundle executed, __preview type="+typeof __preview);',
           '}catch(be){_log("Bundle error: "+be.message);document.getElementById("preview-root").innerHTML="<div style=\\'padding:2rem;color:#f43f5e;\\'>Bundle error: "+be.message+"</div>"}',
           'try{var _mod=typeof __preview!=="undefined"?__preview:{};_log("Module keys: "+Object.keys(_mod).join(", "));var _comp=_mod.default||null;_log("default export: "+typeof _comp);',
-          'if(!_comp||typeof _comp!=="function"){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&_val.prototype&&(_val.prototype.isReactComponent||_val.$$typeof)){_comp=_val;_log("Found React component: "+_keys[i]);break;}}}',
+          'if(!_comp||typeof _comp!=="function"){var _keys=Object.keys(_mod);for(var i=0;i<_keys.length;i++){var _val=_mod[_keys[i]];if(typeof _val==="function"&&(_val.prototype&&(_val.prototype.isReactComponent||_val.$typeof)||(_val.name&&_val.name[0]===_val.name[0].toUpperCase()&&_val.name[0]!=="_"))){_comp=_val;_log("Found component: "+_val.name);break;}}}',
           'if(!_comp||typeof _comp!=="function"){var _best=null,_bestScore=-1;var _keys2=Object.keys(_mod);for(var j=0;j<_keys2.length;j++){if(typeof _mod[_keys2[j]]==="function"){var _name=_keys2[j];var _sc=_name[0]===_name[0].toUpperCase()&&_name[0]!=="_"?10:0;if(_sc>_bestScore){_bestScore=_sc;_best=_mod[_keys2[j]];_log("Candidate function: "+_name);}}}if(_best){_comp=_best;}}',
-          'if(_comp&&typeof _comp==="function"){_log("Rendering: "+(_comp.name||"anon"));var root=ReactDOM.createRoot(document.getElementById("preview-root"));root.render(React.createElement(_comp));_log("React.render called");}',
+          'if(_comp&&typeof _comp==="function"){_log("Rendering: "+(_comp.name||"anon"));var root=window.ReactDOM.createRoot(document.getElementById("preview-root"));root.render(window.React.createElement(_comp));_log("React.render called");}',
           'else{_log("No component found");document.getElementById("preview-root").innerHTML="<div style=\\'padding:2rem;color:#f43f5e;\\'>No renderable component. Keys: "+Object.keys(_mod).join(", ")+"</div>"}',
           '}catch(e){_log("Render error: "+e.message);document.getElementById("preview-root").innerHTML="<div style=\\'padding:2rem;color:#f43f5e;\\'>Render error: "+e.message+"</div>"}',
           SCRIPT_END + '</body></html>'
