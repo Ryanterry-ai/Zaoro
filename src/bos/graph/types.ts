@@ -39,7 +39,12 @@ export type NodeType =
   | 'RevenueModel'    // Business model (subscription, marketplace, freemium)
   | 'Vocabulary'      // Term mapping (product→timepiece for luxury)
   | 'DesignPattern'   // Visual/interaction pattern (minimal, bold, corporate)
-  | 'Primitive';      // Atomic building block (compose into higher-level nodes)
+  | 'Role'            // User role in the system (admin, customer, manager)
+  | 'Kpi'             // Key performance indicator (conversion-rate, churn)
+  | 'Primitive'       // Atomic building block (compose into higher-level nodes)
+  | 'TechnologyStack' // Recommended tech combination for an industry
+  | 'ProviderCapability' // What an LLM provider excels at
+  | 'ArchitecturalPattern'; // Common architecture pattern with适用场景
 
 // ─── Typed Node Interfaces ────────────────────────────────────────
 
@@ -188,6 +193,93 @@ export interface PrimitiveNode extends BaseNode {
   };
 }
 
+export interface RoleNode extends BaseNode {
+  type: 'Role';
+  properties: {
+    name: string;                    // "Admin", "Customer", "Manager"
+    slug: string;
+    description: string;
+    permissions: string[];           // "read:orders", "write:products"
+    capabilities: NodeId[];          // What this role can do
+    parentRole?: NodeId;             // Inherits permissions from
+  };
+}
+
+export interface KpiNode extends BaseNode {
+  type: 'Kpi';
+  properties: {
+    name: string;                    // "Conversion Rate", "Avg Order Value"
+    slug: string;
+    description: string;
+    formula: string;                 // "revenue / visitors"
+    category: 'growth' | 'financial' | 'engagement' | 'operational' | 'satisfaction';
+    targetValue?: number;
+    unit?: string;                   // "%", "$", "count"
+  };
+}
+
+export interface RoleNode extends BaseNode {
+  type: 'Role';
+  properties: {
+    name: string;
+    slug: string;
+    description: string;
+    permissions: string[];
+    capabilities: NodeId[];
+    parentRole?: NodeId;
+  };
+}
+
+export interface KpiNode extends BaseNode {
+  type: 'Kpi';
+  properties: {
+    name: string;
+    slug: string;
+    description: string;
+    formula: string;
+    category: 'growth' | 'financial' | 'engagement' | 'operational' | 'satisfaction';
+    targetValue?: number;
+    unit?: string;
+  };
+}
+
+export interface TechnologyStackNode extends BaseNode {
+  type: 'TechnologyStack';
+  properties: {
+    name: string;
+    frontend: string[];
+    backend: string[];
+    database: string[];
+    hosting: string[];
+    industry: string;
+    maturity: 'emerging' | 'growth' | 'mature';
+  };
+}
+
+export interface ProviderCapabilityNode extends BaseNode {
+  type: 'ProviderCapability';
+  properties: {
+    provider: string;
+    taskTypes: string[];
+    strengths: string[];
+    latency: 'low' | 'medium' | 'high';
+    costTier: 'low' | 'medium' | 'high';
+    maxTokens: number;
+  };
+}
+
+export interface ArchitecturalPatternNode extends BaseNode {
+  type: 'ArchitecturalPattern';
+  properties: {
+    name: string;
+    description: string;
+    complexity: 'simple' | 'moderate' | 'complex';
+    scalability: 'low' | 'medium' | 'high';
+    industries: string[];
+    components: string[];
+  };
+}
+
 // ─── Edge Types ───────────────────────────────────────────────────
 
 export type EdgeType =
@@ -201,7 +293,13 @@ export type EdgeType =
   | 'extends'        // A extends B (SubIndustry → Industry)
   | 'depends_on'     // A depends on B (Service → DataStore)
   | 'overrides'      // A overrides B (Vocabulary → default term)
-  | 'related_to';    // General relationship
+  | 'governs_entity' // Pattern defines/owns an Entity (DesignPattern → Entity)
+  | 'defines_role'   // Pattern defines a Role (DesignPattern → Role)
+  | 'measures_kpi'   // Pattern tracks a KPI (DesignPattern → Kpi)
+  | 'related_to'      // General relationship
+  | 'recommended_for' // TechnologyStack → Industry
+  | 'performs_well_for' // ProviderCapability → task type (via properties)
+  | 'suited_for';     // ArchitecturalPattern → Industry
 
 export interface Edge {
   id: string;

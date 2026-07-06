@@ -102,6 +102,9 @@ export interface RenderContext {
 
   /** External component sources — renderers generate import statements for these */
   componentSources?: ComponentSourceRec[];
+
+  /** Skip singleton files (shell, layout, Icon, nav-data) — used by worktree groups after the first */
+  skipSingletons?: boolean;
 }
 
 // ─── Renderer Registry ───────────────────────────────────────────────────────

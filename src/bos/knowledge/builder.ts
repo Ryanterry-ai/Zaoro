@@ -425,4 +425,11 @@ export class KnowledgeQuery {
   stats() {
     return this.graph.stats();
   }
+
+  /**
+   * Get the underlying KnowledgeGraph for direct access.
+   */
+  getGraph(): KnowledgeGraph {
+    return this.graph;
+  }
 }

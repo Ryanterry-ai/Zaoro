@@ -29,7 +29,8 @@ export class KnowledgeGraph {
       'Industry', 'SubIndustry', 'Capability', 'Feature', 'Workflow',
       'Entity', 'UISection', 'Component', 'Service', 'DataStore',
       'Integration', 'ComplianceRule', 'RevenueModel', 'Vocabulary',
-      'DesignPattern', 'Primitive',
+      'DesignPattern', 'Primitive', 'Role', 'Kpi',
+      'TechnologyStack', 'ProviderCapability', 'ArchitecturalPattern',
     ];
     for (const t of nodeTypes) {
       this.nodeIndex.set(t, new Set());
@@ -39,6 +40,7 @@ export class KnowledgeGraph {
     const edgeTypes: EdgeType[] = [
       'contains', 'requires', 'implements', 'uses', 'triggers',
       'displays', 'composes', 'extends', 'depends_on', 'overrides', 'related_to',
+      'recommended_for', 'performs_well_for', 'suited_for',
     ];
     for (const t of edgeTypes) {
       this.edgeIndex.set(t, new Set());
@@ -498,6 +500,78 @@ export class KnowledgeGraph {
       if (nodeProps[key] !== value) return false;
     }
     return true;
+  }
+
+  // ─── Decision Graph Queries ───────────────────────────────────
+
+  /**
+   * Get technology stack recommendations for an industry.
+   */
+  getRecommendationsForIndustry(industryId: string): BaseNode[] {
+    const results: BaseNode[] = [];
+    const outgoing = this.adjacencyOut.get(industryId);
+    if (!outgoing) return results;
+
+    for (const edgeId of outgoing) {
+      const edge = this.edges.get(edgeId);
+      if (edge && edge.type === 'recommended_for') {
+        const node = this.nodes.get(edge.source);
+        if (node && node.type === 'TechnologyStack') results.push(node);
+      }
+    }
+
+    const incoming = this.adjacencyIn.get(industryId);
+    if (incoming) {
+      for (const edgeId of incoming) {
+        const edge = this.edges.get(edgeId);
+        if (edge && edge.type === 'recommended_for') {
+          const node = this.nodes.get(edge.source);
+          if (node && node.type === 'TechnologyStack') results.push(node);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get provider capabilities for a task type.
+   */
+  getProvidersForTaskType(taskType: string): BaseNode[] {
+    const results: BaseNode[] = [];
+    const providerIds = this.nodeIndex.get('ProviderCapability');
+    if (!providerIds) return results;
+
+    for (const id of providerIds) {
+      const node = this.nodes.get(id);
+      if (node && node.type === 'ProviderCapability') {
+        const props = node.properties as { taskTypes?: string[] };
+        if (props.taskTypes?.includes(taskType)) {
+          results.push(node);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get architectural patterns suited for an industry.
+   */
+  getPatternsForIndustry(industryId: string): BaseNode[] {
+    const results: BaseNode[] = [];
+    const incoming = this.adjacencyIn.get(industryId);
+    if (!incoming) return results;
+
+    for (const edgeId of incoming) {
+      const edge = this.edges.get(edgeId);
+      if (edge && edge.type === 'suited_for') {
+        const node = this.nodes.get(edge.source);
+        if (node && node.type === 'ArchitecturalPattern') results.push(node);
+      }
+    }
+
+    return results;
   }
 
   // ─── Serialization ────────────────────────────────────────────

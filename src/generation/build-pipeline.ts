@@ -24,6 +24,7 @@ import { FlutterRenderer } from './renderers/flutter-renderer.js';
 import { PATTERNS, DESIGN_PROFILES } from '../bos/knowledge/registry.js';
 import { stageLogger, debugLog } from '../core/debug-logger.js';
 import { SkillIntegrator } from './skill-integrator.js';
+import { ProgressEmitter } from '../core/progress-emitter.js';
 
 // Pipeline-v2 enrichment — provides richer entity, DB, and API detail
 import { runNormalizedPipeline } from '../bos/pipeline-v2/pipeline.js';
@@ -117,6 +118,7 @@ export async function runBuildPipeline(
   config: PipelineConfig = {},
   llmConfig?: import('../types/index.js').LLMConfig,
   industryScore?: number,
+  progress?: ProgressEmitter,
 ): Promise<PipelineResult> {
   const {
     platform = 'react',
@@ -139,7 +141,9 @@ export async function runBuildPipeline(
 
   // Layer 1: BRE v2 → Application Blueprint
   const t1 = Date.now();
-  const breResult = await runBREV2Pipeline(context, llmConfig, industryScore);
+  progress?.emit('bre', 'started', 'Running BRE v2 pipeline...');
+  const breResult = await runBREV2Pipeline(context, llmConfig, industryScore, progress);
+  progress?.emit('bre', 'completed', `BRE v2: ${breResult.blueprint.pages.length} pages, ${breResult.blueprint.entities.length} entities, confidence=${breResult.confidence.toFixed(2)}`, { duration: Date.now() - t1 });
   log.info('Layer 1: BRE v2 complete', {
     pages: breResult.blueprint.pages.length,
     entities: breResult.blueprint.entities.length,
@@ -309,8 +313,10 @@ export async function runBuildPipeline(
   });
 
   // Layer 2: Application Blueprint → Execution Blueprint
+  progress?.emit('architect', 'info', 'Building execution blueprint...');
   const t2 = Date.now();
   const executionBlueprint = buildExecutionBlueprint(breResult.blueprint);
+  progress?.emit('architect', 'info', `Execution blueprint: ${executionBlueprint.pages.length} pages, ${executionBlueprint.pages.reduce((s, p) => s + p.slots.length, 0)} slots`, { duration: Date.now() - t2 });
   log.info('Layer 2: Execution Blueprint complete', {
     pages: executionBlueprint.pages.length,
     totalSlots: executionBlueprint.pages.reduce((s, p) => s + p.slots.length, 0),
@@ -318,6 +324,7 @@ export async function runBuildPipeline(
   });
 
   // Layer 3: Execution Blueprint → Application Spec (content resolution)
+  progress?.emit('compile', 'started', 'Resolving content and generating component specs...');
   const t3 = Date.now();
   const matchedPattern = breResult.selectedPattern
     ? PATTERNS.find(p => p.id === breResult.selectedPattern!.id)
@@ -333,6 +340,7 @@ export async function runBuildPipeline(
     ...(matchedDesignProfile ? { designProfile: matchedDesignProfile } : {}),
     ...(breResult.revenueIntelligence ? { revenueIntelligence: breResult.revenueIntelligence } : {}),
   });
+  progress?.emit('compile', 'completed', `Content resolved: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s, p) => s + p.components.length, 0)} components`, { duration: Date.now() - t3 });
   log.info('Layer 3: Content Resolution complete', {
     pages: applicationSpec.pages.length,
     totalComponents: applicationSpec.pages.reduce((s, p) => s + p.components.length, 0),
@@ -340,6 +348,7 @@ export async function runBuildPipeline(
   });
 
   // Layer 4: Spec-lock + worktree parallel build
+  progress?.emit('compile', 'info', 'Writing component specs and running parallel build...');
   const t4 = Date.now();
   let componentSources: ComponentSourceRec[] | undefined = [];
   let renderResult: RenderResult;
@@ -384,11 +393,14 @@ export async function runBuildPipeline(
     const groupEntries = Array.from(groups.entries());
     const assemblyInputs: import('./assembly-gate.js').AssemblyInput[] = [];
 
-    for (const [groupName, _specs] of groupEntries) {
+    for (let gi = 0; gi < groupEntries.length; gi++) {
+      const entry = groupEntries[gi];
+      if (!entry) continue;
+      const [groupName, _specs] = entry;
       const wtSpec = wtManager.getWorktree(groupName);
       if (!wtSpec) continue;
       const wtPages = applicationSpec.pages.filter(p =>
-        _specs.some(s => s.includes(p.path.replace(/[\\/:*?"<>|]/g, '_'))),
+        _specs.some((s: string) => s.includes(p.path.replace(/[\\/:*?"<>|]/g, '_'))),
       );
       const wtAppSpec = { ...applicationSpec, pages: wtPages };
 
@@ -399,6 +411,8 @@ export async function runBuildPipeline(
           includeTests,
           outputDir: path.join(wtSpec.path, 'src'),
           componentSources: [],
+          // Only the first group generates singleton files (shell, layout, Icon, nav-data)
+          skipSingletons: gi > 0,
         });
         wtManager.markReady(groupName);
         console.log(`[worktree] Worktree '${groupName}' completed: ${wtResult.files.length} files`);
@@ -472,6 +486,7 @@ export async function runBuildPipeline(
   });
 
   const totalDuration = Date.now() - pipelineStart;
+  progress?.emit('compile', 'completed', `Pipeline complete: ${renderResult.files.length} files generated (${totalDuration}ms)`, { duration: totalDuration, files: renderResult.files.length });
   log.info('Pipeline complete', {
     totalDuration,
     files: renderResult.files.length,

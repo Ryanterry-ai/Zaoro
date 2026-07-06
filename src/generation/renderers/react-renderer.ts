@@ -148,14 +148,18 @@ ${componentRenders}
     const t = Date.now();
     const files: RenderedFile[] = [];
     const warnings: string[] = [];
+    const skipSingletons = context.skipSingletons === true;
 
     // Generate shell (config files, CSS, layout) — the runnable scaffolding
-    files.push(...this.renderShell(spec, context));
+    if (!skipSingletons) {
+      files.push(...this.renderShell(spec, context));
+    }
 
     // Generate Icon helper component for preview rendering
-    files.push({
-      path: 'components/Icon.tsx',
-      content: `'use client';
+    if (!skipSingletons) {
+      files.push({
+        path: 'components/Icon.tsx',
+        content: `'use client';
 
 import React from 'react';
 
@@ -208,6 +212,7 @@ export default function Icon({ name }: { name: string }) {
 `,
       type: 'component',
     });
+    }
 
     // Generate components
     const generatedComponents = new Set<string>();
@@ -226,7 +231,9 @@ export default function Icon({ name }: { name: string }) {
     }
 
     // Generate nav data
-    files.push(...this.renderNavData(spec, context));
+    if (!skipSingletons) {
+      files.push(...this.renderNavData(spec, context));
+    }
 
     log.info('Application rendered', {
       files: files.length,

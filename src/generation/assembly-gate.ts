@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import type { RenderResult } from './renderers/renderer.js';
 import { loadComponentSpecManifest } from './component-spec-writer.js';
 
@@ -29,15 +30,23 @@ export interface AssemblyConflict {
   /** Groups that contributed to this file */
   sources: string[];
   /** How the conflict was resolved */
-  resolution: 'first-wins' | 'merged';
+  resolution: 'first-wins' | 'deduplicated' | 'merged';
+}
+
+function contentHash(content: string): string {
+  return crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
 }
 
 /**
  * Assemble render results from parallel worktrees/groups into a single
  * unified file set. Detects and reports conflicts.
+ *
+ * For component files with identical content across groups, keeps one copy
+ * (deduplicated). For shell/singleton files that differ, uses first-wins.
  */
 export function assembleRenderResults(inputs: AssemblyInput[]): AssemblyResult {
   const mergedFiles = new Map<string, { content: string; type: string; source: string[] }>();
+  const contentSeen = new Map<string, string>(); // contentHash -> filePath (for dedup)
   const conflicts: AssemblyConflict[] = [];
   let totalErrors = 0;
   let specFilesProcessed = 0;
@@ -54,19 +63,33 @@ export function assembleRenderResults(inputs: AssemblyInput[]): AssemblyResult {
 
       const existing = mergedFiles.get(file.path);
       if (existing) {
-        /* File contributed by multiple groups — first-wins resolution */
-        existing.source.push(input.sourceName);
-        conflicts.push({
-          filePath: file.path,
-          sources: [(existing.source[0] ?? input.sourceName), input.sourceName],
-          resolution: 'first-wins',
-        });
+        const hash = contentHash(file.content);
+        const existingHash = contentHash(existing.content);
+
+        if (hash === existingHash) {
+          /* Identical content — deduplicate silently */
+          existing.source.push(input.sourceName);
+          conflicts.push({
+            filePath: file.path,
+            sources: [existing.source[0]!, input.sourceName],
+            resolution: 'deduplicated',
+          });
+        } else {
+          /* Different content — first-wins */
+          existing.source.push(input.sourceName);
+          conflicts.push({
+            filePath: file.path,
+            sources: [existing.source[0]!, input.sourceName],
+            resolution: 'first-wins',
+          });
+        }
       } else {
         mergedFiles.set(file.path, {
           content: file.content,
           type: file.type,
           source: [input.sourceName],
         });
+        contentSeen.set(contentHash(file.content), file.path);
       }
     }
   }

@@ -28,6 +28,11 @@ import { buildBREContext } from '../bos/intake-parser.js';
 import { runBuildPipeline } from '../generation/build-pipeline.js';
 import { ProgressEmitter } from '../core/progress-emitter.js';
 import { saveIR, loadIR } from '../bos/ir-persistence.js';
+import { saveBuildArtifacts, inspectArtifacts } from '../bos/ir-inspector.js';
+import { connectKnowledgeGraph, getPatternRelationships } from '../bos/graph/connector.js';
+import { initializeKnowledgeGraph } from '../bos/knowledge/seeds/index.js';
+import { KnowledgeRegistry } from '../bos/knowledge/registry.js';
+import { BuildHistoryManager } from '../engine/build-history.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -158,7 +163,7 @@ export class DeterministicOrchestratorV4 {
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
       workspaceDir: workspace.rootPath,
-    }, llmConfig);
+    }, llmConfig, undefined, progress);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult, applicationGraph, graphStats, componentSpecManifest, assemblyResult, usedWorktrees } = pipelineResult;
     const appBlueprint = breResult.blueprint;
@@ -300,29 +305,37 @@ export class DeterministicOrchestratorV4 {
     console.log(`[orchestrator] Dependencies installed.`);
 
     // Phase 14b: Post-render TS audit + self-healing (runs AFTER npm install)
+    // SelfHealingEngine runs its own audit internally — no separate TypeScriptAuditor needed.
+    let healingResult: { success: boolean; iterations: number; errorsFixed: number; remainingErrors: Array<{ file: string; message: string }> } | undefined;
     progress.emit('repair', 'started', 'Auditing generated code for TypeScript errors...');
     const tAudit = Date.now();
     try {
-      const tsAuditor = new TypeScriptAuditor();
-      const tsErrors = tsAuditor.audit(workspace.rootPath);
-      if (tsErrors.length > 0) {
-        progress.emit('repair', 'info', `Found ${tsErrors.length} TypeScript errors, attempting self-healing...`);
-        console.log(`[orchestrator] TS audit found ${tsErrors.length} errors, running SelfHealingEngine...`);
-        const healingEngine = new SelfHealingEngine();
-        const healingResult = await healingEngine.heal(
-          workspace.rootPath,
-          llmConfig ? new LLMGateway(llmConfig) : undefined as any,
-          prompt,
-          (iteration, errors, msg) => progress.emit('repair', 'info', `[${iteration + 1}] ${msg}`),
-        );
-        progress.emit('repair', 'completed', `Self-healing: ${healingResult.errorsFixed} fixed, ${healingResult.remainingErrors} remaining (${Date.now() - tAudit}ms)`);
-        console.log(`[orchestrator] Self-healing complete: ${healingResult.errorsFixed} fixed, ${healingResult.remainingErrors} remaining`);
-      } else {
-        progress.emit('repair', 'completed', `TS audit passed — 0 errors (${Date.now() - tAudit}ms)`);
-        console.log(`[orchestrator] TS audit passed — 0 errors`);
+      const healingEngine = new SelfHealingEngine(3, 15);
+      const llmGateway = llmConfig ? new LLMGateway(llmConfig) : undefined;
+      if (!llmGateway) {
+        progress.emit('repair', 'info', 'No LLM config — deterministic fixes only');
+        console.log('[orchestrator] No LLM gateway — running deterministic-only self-healing');
       }
+      const engineResult = await healingEngine.heal(
+        workspace.rootPath,
+        llmGateway as any,
+        prompt,
+        (iteration, errors, msg) => progress.emit('repair', 'info', `[${iteration + 1}] ${msg}`),
+      );
+      healingResult = {
+        success: engineResult.success,
+        iterations: engineResult.iterations,
+        errorsFixed: engineResult.errorsFixed,
+        remainingErrors: engineResult.remainingErrors.map(e => ({ file: e.file, message: e.message })),
+      };
+      if (engineResult.remainingErrors.length === 0) {
+        progress.emit('repair', 'completed', `Self-healing resolved all errors (${Date.now() - tAudit}ms)`);
+      } else {
+        progress.emit('repair', 'completed', `Self-healing: ${engineResult.errorsFixed} fixed, ${engineResult.remainingErrors.length} remaining (${Date.now() - tAudit}ms)`);
+      }
+      console.log(`[orchestrator] TS audit + self-healing: ${engineResult.errorsFixed} fixed, ${engineResult.remainingErrors.length} remaining (${engineResult.iterations} iterations)`);
     } catch (auditErr) {
-      progress.emit('repair', 'warning', `TS audit failed: ${(auditErr as Error).message}`);
+      progress.emit('repair', 'warning', `TS audit/healing failed: ${(auditErr as Error).message}`);
       console.warn('[orchestrator] TS audit/healing failed:', (auditErr as Error).message);
     }
 
@@ -374,49 +387,38 @@ export class DeterministicOrchestratorV4 {
 
     this.snapshot.clearSnapshots(workspace.rootPath);
 
-    // Phase 16: Save replay artifacts
+    // Phase 16: Save .build-artifacts/ for inspection and replay
     try {
-      const replayDir = path.join(workspace.rootPath, '.replay');
-      fs.mkdirSync(replayDir, { recursive: true });
-      const saveArtifact = (name: string, data: unknown) => {
-        fs.writeFileSync(path.join(replayDir, name), JSON.stringify(data, null, 2), 'utf-8');
-      };
-      saveArtifact('manifest.json', {
-        createdAt: new Date().toISOString(),
-        stages: ['bre-context', 'rules-decisions', 'blueprint', 'execution-blueprint', 'application-spec', 'render-result'],
-        totalStages: 6,
-      });
-      saveArtifact('01-bre-context.json', breContext);
-      saveArtifact('02-rules-decisions.json', (breResult.decisions ?? []).map(d => ({
-        ruleId: d.ruleId, ruleName: d.ruleName, action: d.action, confidence: d.confidence, trace: d.trace,
-      })));
-      saveArtifact('03-blueprint.json', {
-        pages: appBlueprint.pages?.length ?? 0,
-        entities: appBlueprint.entities?.length ?? 0,
-        apis: appBlueprint.apis?.length ?? 0,
-        workflows: appBlueprint.workflows?.length ?? 0,
-        database: appBlueprint.database ? { engine: appBlueprint.database.engine, tables: (appBlueprint.database.tables ?? []).length } : null,
-        confidence: appBlueprint.confidence,
-        designTokens: !!appBlueprint.designTokens,
-        vocabulary: appBlueprint.vocabulary,
-      });
-      saveArtifact('04-execution-blueprint.json', {
-        pages: executionBlueprint.pages.map((p: { path: string; [key: string]: unknown }) => ({
-          path: p.path,
-          slots: ((p as any).slots ?? []).length,
-        })),
-      });
-      saveArtifact('05-application-spec.json', {
-        pages: applicationSpec.pages.length,
-        totalComponents: applicationSpec.pages.reduce((s: number, p: any) => s + (p.components ?? []).length, 0),
-        fileCount: renderResult.files.length,
-      });
-      saveArtifact('06-render-result.json', {
-        files: renderResult.files.map((f: { path: string; type: string }) => ({ path: f.path, type: f.type })),
-        warnings: renderResult.warnings,
-      });
+      const artifactFiles = saveBuildArtifacts(
+        workspace.rootPath,
+        prompt,
+        breContext as unknown as Record<string, unknown>,
+        {
+          decisions: breResult.decisions ?? [],
+          constraintReport: breResult.constraintReport,
+          confidence: breResult.confidence,
+          selectedDesignProfile: breResult.selectedDesignProfile,
+          selectedPattern: breResult.selectedPattern,
+          usedLLMPlanning: breResult.usedLLMPlanning ?? false,
+        },
+        {
+          pages: appBlueprint.pages ?? [],
+          entities: appBlueprint.entities ?? [],
+          apis: appBlueprint.apis ?? [],
+          workflows: appBlueprint.workflows ?? [],
+          dataModels: blueprint.dataModels ?? [],
+          confidence: appBlueprint.confidence,
+          warnings: appBlueprint.warnings,
+        },
+        executionBlueprint,
+        applicationSpec,
+        { files: renderResult.files, warnings: renderResult.warnings },
+        graphStats as any,
+        healingResult,
+      );
+      progress.emit('compile', 'info', `${artifactFiles.length} build artifacts saved`);
     } catch (e) {
-      console.warn('[orchestrator] Failed to write replay artifacts:', (e as Error).message);
+      console.warn('[orchestrator] Failed to write build artifacts:', (e as Error).message);
     }
 
     // Phase 16b: Save IR for follow-up builds
@@ -443,6 +445,18 @@ export class DeterministicOrchestratorV4 {
       progress.emit('compile', 'info', 'IR saved for follow-up builds');
     } catch (e) {
       console.warn('[orchestrator] Failed to save IR:', (e as Error).message);
+    }
+
+    // Phase 16c: Enrich Knowledge Graph with typed relationship edges
+    try {
+      const registry = new KnowledgeRegistry();
+      const kg = (await initializeKnowledgeGraph()).getGraph();
+      const connectorResult = connectKnowledgeGraph(kg, registry);
+      if (connectorResult.edgesAdded > 0 || connectorResult.nodesAdded > 0) {
+        progress.emit('architect', 'info', `Knowledge Graph: ${connectorResult.nodesAdded} nodes, ${connectorResult.edgesAdded} typed edges`);
+      }
+    } catch (e) {
+      console.warn('[orchestrator] Knowledge graph enrichment failed:', (e as Error).message);
     }
 
     const succeeded = pageResults.filter(r => r.succeeded).length;
@@ -514,6 +528,32 @@ export class DeterministicOrchestratorV4 {
       console.warn('[orchestrator] Failed to write build report:', (e as Error).message);
     }
 
+    // Phase 17b: Save to persistent build history (.build-history/)
+    try {
+      const historyManager = new BuildHistoryManager(workspace.rootPath);
+      historyManager.saveBuild({
+        id: `${workspaceId}-${Date.now()}`,
+        ts: Date.now(),
+        prompt,
+        industry: breContext.industry,
+        appName: breContext.appName || 'Untitled',
+        confidence: breResult.confidence,
+        filesGenerated: renderResult.files.length,
+        pagesGenerated: blueprint.pages.length,
+        errors: failed.length,
+        warnings: allWarnings,
+        durationMs: result.duration,
+        success: result.success,
+        usedLLM: breResult.usedLLMPlanning ?? false,
+        workspaceId,
+        platform: 'react',
+        ...(graphStats ? { graphStats: { nodes: graphStats.nodes, edges: graphStats.edges, entities: graphStats.entityCount, tables: graphStats.tableCount, endpoints: graphStats.endpointCount } } : {}),
+        ...(healingResult ? { selfHealing: { iterations: healingResult.iterations, errorsFixed: healingResult.errorsFixed, remainingErrors: healingResult.remainingErrors.length } } : {}),
+      });
+    } catch (e) {
+      console.warn('[orchestrator] Failed to save build history:', (e as Error).message);
+    }
+
     TelemetryLayer.reportBuildComplete({
       workspaceId,
       prompt: prompt.slice(0, 200),
@@ -583,7 +623,10 @@ Rules:
 
     // BRE v2: deterministic blueprint for clone scaffold
     const breContext = buildBREContext(prompt);
-    const breResult = await runBREV2Pipeline(breContext, llmConfig);
+    const progress = new ProgressEmitter(workspace.rootPath);
+    progress.emit('bre', 'started', 'Analyzing business intent...');
+    const breResult = await runBREV2Pipeline(breContext, llmConfig, undefined, progress);
+    progress.emit('bre', 'completed', `Business context: ${breContext.industry}, ${breContext.entities.length} entities`);
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
 
@@ -636,14 +679,16 @@ Rules:
 
     // BRE v2: deterministic blueprint for hybrid scaffold
     const breContext = buildBREContext(prompt);
+    const progress = new ProgressEmitter(workspace.rootPath);
 
     // ═══ New 4-layer pipeline ═══
     console.log(`[hybrid] Running 4-layer build pipeline...`);
+    progress.emit('bre', 'started', `Analyzing business context: ${breContext.industry}, ${breContext.entities.length} entities`);
     const pipelineResult = await runBuildPipeline(breContext, {
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
       workspaceDir: workspace.rootPath,
-    }, llmConfig);
+    }, llmConfig, undefined, progress);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;
     const appBlueprint = breResult.blueprint;

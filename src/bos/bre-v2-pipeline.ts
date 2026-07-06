@@ -33,6 +33,7 @@ import { runLLMPlanning } from './llm-planning-agent.js';
 import type { LLMConfig } from '../types/index.js';
 import { stageLogger } from '../core/debug-logger.js';
 import { ContentScraper } from '../generation/content-scraper.js';
+import type { ProgressEmitter } from '../core/progress-emitter.js';
 
 const log = stageLogger('bre');
 
@@ -52,7 +53,8 @@ export interface BREv2Result {
  * Deterministic path for well-covered prompts.
  * LLM escalation path for low-confidence cases (configurable via llmConfig).
  */
-export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, industryScore?: number): Promise<BREv2Result> {
+export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, industryScore?: number, progress?: ProgressEmitter): Promise<BREv2Result> {
+  progress?.emit('bre', 'started', `Analyzing ${ctx.industry} business context: ${ctx.appName}`);
   log.info('Running BRE v2 pipeline', {
     industry: ctx.industry,
     businessModels: ctx.businessModels,
@@ -61,6 +63,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   });
 
   // Step 0: Web intelligence — scrape real business data if we have a name
+  progress?.emit('research', 'started', 'Gathering business intelligence...');
   const t0 = Date.now();
   if (ctx.appName && ctx.appName !== 'MyApp' && ctx.appName !== 'BrandName') {
     const workspaceRoot = process.cwd();
@@ -90,14 +93,20 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   const scorer = new Scorer();
   const compiler = new BlueprintCompilerV2();
 
+  progress?.emit('research', 'completed', 'Business intelligence gathered', { duration: Date.now() - t0 });
+
   // Step 1: Evaluate rules against context
+  progress?.emit('architect', 'info', 'Evaluating business rules...');
   const t1 = Date.now();
   let decisions = rulesEngine.evaluate(ctx);
+  progress?.emit('architect', 'info', `${decisions.length} business rules evaluated`, { duration: Date.now() - t1 });
   log.info('Rules evaluated', { count: decisions.length, duration: Date.now() - t1 });
 
   // Step 2: Check constraints
+  progress?.emit('architect', 'info', 'Checking constraints...');
   const t2 = Date.now();
   let constraintReport = constraintSolver.evaluate(ctx, decisions);
+  progress?.emit('architect', 'info', `Constraints: ${constraintReport.satisfied} satisfied, ${constraintReport.violated} violated`, { duration: Date.now() - t2 });
   log.info('Constraints evaluated', {
     satisfied: constraintReport.satisfied,
     violated: constraintReport.violated,
@@ -129,6 +138,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
 
   // Step 3b: Confidence Gate — evaluate whether the deterministic system
   // adequately understood this prompt, or whether LLM escalation is needed.
+  progress?.emit('architect', 'info', `Best profile: ${selectedDesignProfile?.name ?? 'none'}, best pattern: ${selectedPattern?.name ?? 'none'}`, { duration: Date.now() - t3 });
   const gateResult = evaluateConfidence(
     ctx,
     industryScore ?? 99, // 99 = trusted caller, no penalty for missing score
@@ -140,6 +150,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   let usedLLMPlanning = false;
 
   if (gateResult.shouldEscalate) {
+    progress?.emit('architect', 'warning', `Confidence ${(gateResult.confidence * 100).toFixed(0)}% — escalating to LLM: ${gateResult.reasons[0] ?? ''}`);
     console.log(`[bre-v2] Confidence gate triggered (${(gateResult.confidence * 100).toFixed(0)}%): ${gateResult.reasons[0] ?? 'low confidence'}`);
     console.log(`[bre-v2] Escalating to LLM planning agent...`);
 
@@ -162,6 +173,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   }
 
   // Step 4: Compile blueprint
+  progress?.emit('architect', 'info', `Compiling blueprint (${decisions.length} decisions, ${constraintReport.satisfied} constraints)...`);
   // selectedPattern is now wired into page compilation via mapPatternPagesToBlueprintPages.
   const t4 = Date.now();
   const vocabulary: Record<string, string> = {};
@@ -189,6 +201,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   };
 
   const blueprint = compiler.compile(input);
+  progress?.emit('architect', 'completed', `Blueprint compiled: ${blueprint.pages.length} pages, ${blueprint.entities.length} entities, ${blueprint.apis.length} APIs`, { confidence: blueprint.confidence, duration: Date.now() - t4, usedLLMPlanning });
   log.info('Blueprint compiled', {
     pages: blueprint.pages.length,
     entities: blueprint.entities.length,
