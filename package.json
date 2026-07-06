@@ -21,9 +21,13 @@
         "verify:persistence": "npx tsx scripts/verify-persistence.ts",
         "verify:mcp": "npx tsx scripts/test-mcp-pipeline.ts",
         "verify:all": "npm run verify:generation && npm run verify:multi-file && npm run verify:fullstack && npm run verify:telemetry && npm run verify:intelligence && npm run verify:synthesis && npm run verify:queue && npm run verify:persistence",
-        "test:unit": "vitest run"
+        "test:unit": "vitest run",
+        "test:local": "npx tsx src/testing/local-test-runner.ts",
+        "test:local:one": "npx tsx src/testing/local-test-runner.ts",
+        "test:prompt": "npx tsx src/testing/local-test-runner.ts"
     },
     "dependencies": {
+        "@anthropic-ai/sdk": "^0.110.0",
         "@babel/parser": "^7.24.0",
         "@prisma/client": "5.10.2",
         "@sentry/node": "^10.59.0",
