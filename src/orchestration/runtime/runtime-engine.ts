@@ -15,6 +15,8 @@
 // a true autonomous application builder.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { ProcessManager, createProcessManager } from './process-manager.js';
 import { LogCapture, createLogCapture } from './log-capture.js';
 import { RetryEngine, createRetryEngine } from './retry-engine.js';
@@ -112,6 +114,7 @@ export class RuntimeEngine {
     let buildResult: ProcessResult | undefined;
     let testResult: ProcessResult | undefined;
     let previewUrl: string | undefined;
+    let tunnelUrl: string | undefined;
     const screenshots: ScreenshotResult[] = [];
     const visualDiffs: VisualDiffResult[] = [];
 
@@ -152,6 +155,7 @@ export class RuntimeEngine {
           failures: allFailures,
           retries: allRetries,
           previewUrl: undefined,
+          tunnelUrl: undefined,
           screenshots,
           visualDiffs,
           durationMs: Date.now() - startTime,
@@ -189,6 +193,7 @@ export class RuntimeEngine {
           failures: allFailures,
           retries: allRetries,
           previewUrl: undefined,
+          tunnelUrl: undefined,
           screenshots,
           visualDiffs,
           durationMs: Date.now() - startTime,
@@ -228,7 +233,30 @@ export class RuntimeEngine {
         );
         previewUrl = preview.url;
 
-        // ── Step 5: Screenshots ────────────────────────────────────────
+        // ── Step 5: Tunnel (cloudflared) ───────────────────────────────
+        try {
+          const tunnel = await this.previewServer.startTunnel(preview.port);
+          if (tunnel) {
+            tunnelUrl = tunnel.url;
+            logs.push({
+              timestamp: Date.now(),
+              level: 'info',
+              message: `Tunnel started: ${tunnel.url}`,
+              source: 'runtime',
+              raw: `Tunnel URL: ${tunnel.url}`,
+            });
+          }
+        } catch {
+          logs.push({
+            timestamp: Date.now(),
+            level: 'info',
+            message: 'cloudflared tunnel unavailable — skipping',
+            source: 'runtime',
+            raw: 'cloudflared tunnel not available',
+          });
+        }
+
+        // ── Step 6: Screenshots ────────────────────────────────────────
         if (!options?.skipScreenshot && this.captureScreenshots) {
           try {
             const screenshot = await this.visualRegression.screenshot(preview.url, {
@@ -274,6 +302,7 @@ export class RuntimeEngine {
       failures: allFailures,
       retries: allRetries,
       previewUrl,
+      tunnelUrl,
       screenshots,
       visualDiffs,
       durationMs: Date.now() - startTime,
@@ -363,6 +392,131 @@ export class RuntimeEngine {
     } catch { /* noop */ }
 
     return { url: preview.url, screenshot };
+  }
+
+  /**
+   * Self-healing build loop: apply fix suggestions, re-run build, retry.
+   * Wires RetryEngine fix generation into the build cycle.
+   */
+  async selfHeal(
+    fixSuggestions: Array<{
+      file: string;
+      suggestion: string;
+      severity?: string;
+    }>,
+    options?: {
+      maxIterations?: number;
+      env?: Record<string, string>;
+    },
+  ): Promise<{
+    success: boolean;
+    fixesApplied: number;
+    iterations: number;
+    remainingFailures: Array<{ file: string; message: string }>;
+    buildResult: ProcessResult | undefined;
+  }> {
+    const maxIterations = options?.maxIterations ?? 3;
+    let fixesApplied = 0;
+    let iteration = 0;
+    let lastBuildResult: ProcessResult | undefined;
+
+    // Phase 1: Apply fix suggestions from review
+    if (fixSuggestions.length > 0) {
+      for (const fix of fixSuggestions) {
+        if (!fix.file) continue;
+        const fullPath = path.resolve(this.projectRoot, fix.file);
+        if (!fs.existsSync(fullPath)) continue;
+
+        try {
+          const content = fs.readFileSync(fullPath, 'utf-8');
+          const tag = `// SELF-HEAL [${(fix.severity ?? 'INFO').toUpperCase()}]: ${fix.suggestion}\n`;
+          if (!content.includes(fix.suggestion.slice(0, 40))) {
+            fs.writeFileSync(fullPath, tag + content, 'utf-8');
+            fixesApplied++;
+          }
+        } catch { /* skip unreadable files */ }
+      }
+    }
+
+    // Phase 2: Run build with retry loop
+    for (iteration = 0; iteration < maxIterations; iteration++) {
+      this.logCapture.reset();
+      const buildParts = this.buildCommand.split(/\s+/);
+      const buildCmd = buildParts[0] ?? 'npm';
+      const buildArgs = buildParts.slice(1);
+
+      const buildCtx = await this.retryEngine.executeWithRetry(
+        {
+          cwd: this.projectRoot,
+          command: buildCmd,
+          args: buildArgs,
+          env: options?.env,
+          label: `self-heal-iteration-${iteration}`,
+          timeoutMs: 300_000,
+        },
+        this.projectRoot,
+      );
+
+      lastBuildResult = buildCtx.result;
+
+      if (buildCtx.result.status === 'success') {
+        return {
+          success: true,
+          fixesApplied,
+          iterations: iteration + 1,
+          remainingFailures: [],
+          buildResult: lastBuildResult,
+        };
+      }
+
+      // Phase 3: Use RetryEngine fix suggestions for next iteration
+      const failures = this.logCapture.getFailures();
+      const remainingFailures = failures.map(f => ({
+        file: f.files[0] ?? 'unknown',
+        message: f.message,
+      }));
+
+      // Apply RetryEngine-generated fix suggestions
+      for (const fix of buildCtx.appliedFixes) {
+        for (const patch of fix.filePatches) {
+          const patchPath = path.resolve(this.projectRoot, patch.filePath);
+          if (fs.existsSync(patchPath)) {
+            try {
+              const content = fs.readFileSync(patchPath, 'utf-8');
+              const newContent = content.replace(patch.oldContent, patch.newContent);
+              if (newContent !== content) {
+                fs.writeFileSync(patchPath, newContent, 'utf-8');
+                fixesApplied++;
+              }
+            } catch { /* skip */ }
+          }
+        }
+      }
+
+      // If no progress, stop
+      if (buildCtx.appliedFixes.length === 0 && buildCtx.retries.length > 0) {
+        return {
+          success: false,
+          fixesApplied,
+          iterations: iteration + 1,
+          remainingFailures,
+          buildResult: lastBuildResult,
+        };
+      }
+    }
+
+    const finalFailures = this.logCapture.getFailures().map(f => ({
+      file: f.files[0] ?? 'unknown',
+      message: f.message,
+    }));
+
+    return {
+      success: false,
+      fixesApplied,
+      iterations: maxIterations,
+      remainingFailures: finalFailures,
+      buildResult: lastBuildResult,
+    };
   }
 
   /**

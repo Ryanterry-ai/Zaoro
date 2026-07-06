@@ -269,6 +269,15 @@ export interface RuntimeConfig {
   visualRegression?: boolean | undefined;
 }
 
+// ─── Cloudflared Tunnel ────────────────────────────────────────────────
+
+export interface TunnelInfo {
+  /** Public tunnel URL */
+  url: string;
+  /** Kill the tunnel process */
+  kill: () => Promise<void>;
+}
+
 export interface RuntimeRunResult {
   /** Whether the entire run succeeded */
   success: boolean;
@@ -286,6 +295,8 @@ export interface RuntimeRunResult {
   retries: RuntimeRetryContext[];
   /** Preview URL if available */
   previewUrl: string | undefined;
+  /** Tunnel URL if cloudflared is available */
+  tunnelUrl: string | undefined;
   /** Screenshots captured */
   screenshots: ScreenshotResult[];
   /** Visual diff results */

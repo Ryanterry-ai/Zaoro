@@ -18,13 +18,20 @@ export async function GET(
   try {
     const upstream = await fetch(upstreamUrl, {
       headers: {
-        Accept: 'application/json',
+        Accept: 'text/event-stream',
         'ngrok-skip-browser-warning': 'true',
       },
       signal: req.signal,
     });
-    const data = await upstream.json();
-    return Response.json(data, { status: upstream.status });
+
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch (e: any) {
     return Response.json({ error: 'Engine unreachable', details: e.message }, { status: 502 });
   }

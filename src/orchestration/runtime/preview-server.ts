@@ -4,8 +4,9 @@
 // SPA routing, and port management.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { spawn } from 'node:child_process';
 import { ProcessManager } from './process-manager.js';
-import type { DevServerHandle, PreviewConfig, PreviewResult } from './types.js';
+import type { DevServerHandle, PreviewConfig, PreviewResult, TunnelInfo } from './types.js';
 
 // ─── Port Manager ───────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ function releasePort(port: number): void {
 export class PreviewServer {
   private processManager: ProcessManager;
   private activeServers = new Map<number, DevServerHandle>();
+  private activeTunnel: TunnelInfo | undefined;
 
   constructor(processManager: ProcessManager) {
     this.processManager = processManager;
@@ -51,9 +53,18 @@ export class PreviewServer {
     }));
   }
 
-  /** Kill all active preview servers */
+  /** Get active tunnel URL if one exists */
+  getTunnelUrl(): string | undefined {
+    return this.activeTunnel?.url;
+  }
+
+  /** Kill all active preview servers and tunnel */
   async killAll(): Promise<void> {
     const kills = Array.from(this.activeServers.values()).map((h) => h.kill());
+    if (this.activeTunnel) {
+      kills.push(this.activeTunnel.kill());
+      this.activeTunnel = undefined;
+    }
     await Promise.all(kills);
     this.activeServers.clear();
     usedPorts.clear();
@@ -67,6 +78,81 @@ export class PreviewServer {
       this.activeServers.delete(port);
       releasePort(port);
     }
+  }
+
+  /**
+   * Start a cloudflared tunnel to expose a local port publicly.
+   * Returns the tunnel URL or undefined if cloudflared is not available.
+   */
+  async startTunnel(port: number, retries = 3): Promise<TunnelInfo | undefined> {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        return await this.tryStartTunnel(port);
+      } catch {
+        if (attempt < retries - 1) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        }
+      }
+    }
+    return undefined;
+  }
+
+  private async tryStartTunnel(port: number): Promise<TunnelInfo> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        shell: true,
+        windowsHide: true,
+      });
+
+      let tunnelUrl: string | undefined;
+      const timeout = setTimeout(() => {
+        child.kill();
+        reject(new Error('cloudflared tunnel timed out'));
+      }, 15000);
+
+      const onData = (data: Buffer) => {
+        const text = data.toString();
+        const urlMatch = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
+        if (urlMatch) {
+          tunnelUrl = urlMatch[0];
+          clearTimeout(timeout);
+          child.stdout?.removeListener('data', onData);
+          child.stderr?.removeListener('data', onData);
+
+          const info: TunnelInfo = {
+            url: tunnelUrl,
+            kill: async () => {
+              child.kill();
+              if (child.pid && process.platform === 'win32') {
+                try {
+                  const { execSync } = await import('node:child_process');
+                  execSync(`taskkill /PID ${child.pid} /F 2>nul`, { stdio: 'ignore' });
+                } catch { /* ignore */ }
+              }
+            },
+          };
+
+          this.activeTunnel = info;
+          resolve(info);
+        }
+      };
+
+      child.stdout?.on('data', onData);
+      child.stderr?.on('data', onData);
+
+      child.on('close', (code) => {
+        clearTimeout(timeout);
+        if (!tunnelUrl) {
+          reject(new Error(`cloudflared exited with code ${code ?? 'unknown'} and no tunnel URL found`));
+        }
+      });
+
+      child.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(new Error(`cloudflared failed to start: ${err.message}`));
+      });
+    });
   }
 
   /**

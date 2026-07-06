@@ -100,8 +100,21 @@ export { ApiDesignStage } from './stages/api-design.js';
 export { FrontendDesignStage } from './stages/frontend-design.js';
 export { IntegrationStage } from './stages/integration.js';
 export { QualityAssuranceStage } from './stages/quality-assurance.js';
+export { BuildStage } from './stages/build.js';
+export { ReviewBoardStage } from './stages/review-board.js';
 export { DeploymentStage } from './stages/deployment.js';
 export { DocumentationStage } from './stages/documentation.js';
+
+// ─── Input Adapters ─────────────────────────────────────────────────────────
+
+export { AdapterRegistry, createAdapterRegistry } from './input-adapters/index.js';
+export { WebsiteAdapter } from './input-adapters/website-adapter.js';
+export { FigmaAdapter } from './input-adapters/figma-adapter.js';
+export { PRDAdapter } from './input-adapters/prd-adapter.js';
+export { CodebaseAdapter } from './input-adapters/codebase-adapter.js';
+export { DatabaseAdapter } from './input-adapters/database-adapter.js';
+export { ApiAdapter } from './input-adapters/api-adapter.js';
+export type { InputAdapter, AdapterResult } from './input-adapters/index.js';
 
 // ─── Milestone 1: Intelligence Layer ────────────────────────────────────────
 
@@ -287,4 +300,29 @@ export type {
   VisualDiffResult,
 } from './runtime/types.js';
 
+// ─── Benchmark Suite ────────────────────────────────────────────────────────
+
+export { BenchmarkSuite, createBenchmarkSuite } from './benchmark/benchmark-suite.js';
+export type {
+  BenchmarkApp,
+  BenchmarkResult,
+  BenchmarkSuiteResult,
+  BenchmarkSuiteConfig,
+} from './benchmark/benchmark-suite.js';
+
+// Runtime Context (for StageContext integration)
+export type {
+  RuntimeContext,
+  RuntimeStepResult,
+  RuntimeFullResult,
+} from './types.js';
+
 export type { RetryConfig } from './runtime/retry-engine.js';
+
+// ─── Multi-Agent Review Board ──────────────────────────────────────────────
+
+export type {
+  ReviewIssue,
+  ReviewResult,
+  ReviewBoardResult,
+} from './stages/review-board.js';

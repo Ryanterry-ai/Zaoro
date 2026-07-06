@@ -39,6 +39,9 @@ export interface PlanSnapshot {
 
 export type InspectStatus = "pending" | "connecting" | "connected" | "failed";
 
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_BASE_MS = 2000;
+
 export function usePlanInspect(
   workspaceId: string,
   enabled: boolean,
@@ -51,11 +54,17 @@ export function usePlanInspect(
   const [status, setStatus] = useState<InspectStatus>("pending");
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const reconnectAttempt = useRef(0);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cleanup = useCallback(() => {
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;
+    }
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
     }
   }, []);
 
@@ -65,12 +74,14 @@ export function usePlanInspect(
       setSnapshot(null);
       setStatus("pending");
       setError(null);
+      reconnectAttempt.current = 0;
       return;
     }
 
     let cancelled = false;
 
     const connect = () => {
+      if (cancelled) return;
       const url = `/api/workspace/${workspaceId}/inspect`;
       const es = new EventSource(url);
       esRef.current = es;
@@ -79,6 +90,7 @@ export function usePlanInspect(
         if (cancelled) return;
         setStatus("connected");
         setError(null);
+        reconnectAttempt.current = 0;
       });
 
       es.addEventListener("snapshot", (e: MessageEvent) => {
@@ -99,9 +111,18 @@ export function usePlanInspect(
 
       es.onerror = () => {
         if (cancelled) return;
-        if (es.readyState === EventSource.CLOSED) {
+        es.close();
+        esRef.current = null;
+
+        if (reconnectAttempt.current < MAX_RECONNECT_ATTEMPTS) {
+          const delay = RECONNECT_BASE_MS * Math.pow(1.5, reconnectAttempt.current);
+          reconnectAttempt.current++;
+          setStatus("connecting");
+          setError(`Connection lost, reconnecting in ${(delay / 1000).toFixed(0)}s... (${reconnectAttempt.current}/${MAX_RECONNECT_ATTEMPTS})`);
+          reconnectTimer.current = setTimeout(connect, delay);
+        } else {
           setStatus("failed");
-          setError("Connection lost");
+          setError("Connection lost after retries");
         }
       };
     };

@@ -1,0 +1,62 @@
+{
+  "totalApps": 1,
+  "successful": 0,
+  "failed": 1,
+  "avgDurationMs": 1041,
+  "avgScore": 20,
+  "avgCostUsd": 0,
+  "results": [
+    {
+      "appId": "port-001",
+      "appName": "Agency Website",
+      "industry": "portfolio",
+      "success": false,
+      "durationMs": 1041,
+      "totalLlmCalls": 0,
+      "totalTokens": 0,
+      "estimatedCostUsd": 0,
+      "scores": {
+        "design": 24,
+        "architecture": 10,
+        "security": 20,
+        "performance": 20,
+        "accessibility": 20,
+        "business": 15,
+        "overall": 20
+      },
+      "reviewScore": 20,
+      "reviewIssues": 0,
+      "criticalIssues": 0,
+      "buildSuccess": false,
+      "testSuccess": false,
+      "screenshots": [],
+      "missingBosKnowledge": [
+        "requirements",
+        "architecture",
+        "database-schema",
+        "api-spec",
+        "frontend-spec"
+      ],
+      "reusablePatterns": [],
+      "error": "Pipeline failed",
+      "timestamp": 1783352736558
+    }
+  ],
+  "industryScores": {
+    "portfolio": {
+      "avg": 20,
+      "count": 1
+    }
+  },
+  "topPatterns": [],
+  "weakestAreas": [
+    "architecture (10/100)",
+    "business (15/100)",
+    "security (20/100)"
+  ],
+  "recommendations": [
+    "Improve architecture scoring (currently 10/100)",
+    "High failure rate (100%) — investigate common failure modes"
+  ],
+  "durationMs": 1043
+}

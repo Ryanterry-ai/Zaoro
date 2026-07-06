@@ -288,6 +288,176 @@ export class VisualRegression {
       isNewBaseline: true,
     };
   }
+
+  // ── Baseline Lifecycle Management ────────────────────────────────
+
+  /**
+   * Get the status of all baselines in a directory.
+   */
+  getBaselineStatus(baselineDir: string): {
+    total: number;
+    existing: string[];
+    missing: string[];
+    stale: string[];
+  } {
+    const existing: string[] = [];
+    const stale: string[] = [];
+    const now = Date.now();
+    const staleAfterMs = 7 * 24 * 60 * 60 * 1000;
+
+    if (fs.existsSync(baselineDir)) {
+      for (const file of fs.readdirSync(baselineDir)) {
+        if (file.endsWith('.png') && !file.endsWith('_diff.png')) {
+          const filePath = path.join(baselineDir, file);
+          existing.push(file);
+          const stat = fs.statSync(filePath);
+          if (now - stat.mtimeMs > staleAfterMs) {
+            stale.push(file);
+          }
+        }
+      }
+    }
+
+    return { total: existing.length, existing, missing: [], stale };
+  }
+
+  /**
+   * Capture baselines for all specified viewports if they don't already exist.
+   */
+  async captureMissingBaselines(
+    url: string,
+    baselineDir: string,
+    viewports: Array<{ width: number; height: number }>,
+  ): Promise<string[]> {
+    const captured: string[] = [];
+
+    for (const vp of viewports) {
+      const baselineName = `baseline_${vp.width}x${vp.height}.png`;
+      const baselinePath = path.join(baselineDir, baselineName);
+
+      if (!fs.existsSync(baselinePath)) {
+        const screenshot = await this.screenshot(url, {
+          width: vp.width,
+          height: vp.height,
+          waitForNetworkIdle: true,
+          waitAfterLoad: 2000,
+        });
+
+        if (!fs.existsSync(baselineDir)) {
+          fs.mkdirSync(baselineDir, { recursive: true });
+        }
+        fs.copyFileSync(screenshot.filePath, baselinePath);
+        captured.push(baselineName);
+      }
+    }
+
+    return captured;
+  }
+
+  /**
+   * Update baselines — promote current screenshots to be the new baselines.
+   */
+  async updateBaselines(
+    baselineDir: string,
+    keepBackup: boolean = false,
+  ): Promise<{ updated: number; backups: number }> {
+    let updated = 0;
+    let backups = 0;
+
+    if (!fs.existsSync(baselineDir)) return { updated, backups };
+
+    for (const file of fs.readdirSync(baselineDir)) {
+      if (file.endsWith('.png') && !file.endsWith('_diff.png') && !file.endsWith('.bak.png')) {
+        if (keepBackup) {
+          const backupPath = path.join(baselineDir, file.replace('.png', '.bak.png'));
+          if (!fs.existsSync(backupPath)) {
+            fs.copyFileSync(path.join(baselineDir, file), backupPath);
+            backups++;
+          }
+        }
+        updated++;
+      }
+    }
+
+    return { updated, backups };
+  }
+
+  /**
+   * Run the full baseline lifecycle: capture missing, compare, update.
+   */
+  async runBaselineLifecycle(
+    url: string,
+    baselineDir: string,
+    options?: {
+      viewports?: Array<{ width: number; height: number }>;
+      updateThreshold?: number;
+      autoUpdate?: boolean;
+      screenshotOptions?: ScreenshotOptions;
+    },
+  ): Promise<{
+    status: { total: number; existing: string[]; missing: string[]; stale: string[] };
+    captured: string[];
+    results: Array<{
+      viewport: string;
+      diff: VisualDiffResult | null;
+      match: boolean;
+    }>;
+    updated: number;
+  }> {
+    const viewports = options?.viewports ?? [
+      { width: 1280, height: 800 },
+      { width: 768, height: 1024 },
+      { width: 375, height: 667 },
+    ];
+
+    const status = this.getBaselineStatus(baselineDir);
+    status.missing = viewports
+      .map(vp => `baseline_${vp.width}x${vp.height}.png`)
+      .filter(name => !fs.existsSync(path.join(baselineDir, name)));
+
+    const captured = await this.captureMissingBaselines(url, baselineDir, viewports);
+
+    const results: Array<{
+      viewport: string;
+      diff: VisualDiffResult | null;
+      match: boolean;
+    }> = [];
+
+    for (const vp of viewports) {
+      const baselineName = `baseline_${vp.width}x${vp.height}.png`;
+      const baselinePath = path.join(baselineDir, baselineName);
+
+      if (fs.existsSync(baselinePath)) {
+        const screenshot = await this.screenshot(url, {
+          ...(options?.screenshotOptions ?? {}),
+          width: vp.width,
+          height: vp.height,
+          waitForNetworkIdle: true,
+          waitAfterLoad: 2000,
+        });
+
+        const diff = await this.compare(
+          baselinePath,
+          screenshot.filePath,
+          options?.updateThreshold ?? 0.1,
+        );
+
+        results.push({
+          viewport: baselineName,
+          diff,
+          match: diff.match,
+        });
+      }
+    }
+
+    let updated = 0;
+    if (options?.autoUpdate) {
+      const result = await this.updateBaselines(baselineDir, false);
+      updated = result.updated;
+    }
+
+    return { status, captured, results, updated };
+  }
 }
 
 export function createVisualRegression(outputDir?: string): VisualRegression {

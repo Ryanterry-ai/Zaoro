@@ -1,0 +1,20 @@
+{
+  "totalApps": 0,
+  "successful": 0,
+  "failed": 0,
+  "avgDurationMs": 0,
+  "avgScore": 0,
+  "avgCostUsd": 0,
+  "results": [],
+  "industryScores": {},
+  "topPatterns": [],
+  "weakestAreas": [
+    "design (0/100)",
+    "architecture (0/100)",
+    "security (0/100)"
+  ],
+  "recommendations": [
+    "Improve design scoring (currently 0/100)"
+  ],
+  "durationMs": 1
+}

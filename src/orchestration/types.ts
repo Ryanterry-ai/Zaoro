@@ -174,6 +174,8 @@ export interface StageContext {
   log: StageLogger;
   /** BOS knowledge context (industry-specific data and prompts) */
   bos: BOSContext;
+  /** Runtime engine for build/test/preview (available after build stage) */
+  runtime?: RuntimeContext | undefined;
 }
 
 export interface StageLogger {
@@ -789,6 +791,56 @@ export interface LLMAdapterInterface {
   call(params: LLMCallParams): Promise<LLMCallResult>;
   /** Get total usage stats */
   getTotalUsage(): { calls: number; totalTokens: number; byProvider: Record<string, number> };
+}
+
+// ─── Runtime Context ────────────────────────────────────────────────────────
+
+/**
+ * Runtime context available to stages that need build/test/preview capabilities.
+ * Wraps RuntimeEngine to keep the StageContext decoupled from implementation.
+ */
+export interface RuntimeContext {
+  /** Install dependencies */
+  install: (cwd?: string) => Promise<RuntimeStepResult>;
+  /** Run build command */
+  build: (cwd?: string, command?: string) => Promise<RuntimeStepResult>;
+  /** Run test command */
+  test: (cwd?: string, command?: string) => Promise<RuntimeStepResult>;
+  /** Run full lifecycle (install + build + test + preview) */
+  run: (cwd?: string) => Promise<RuntimeFullResult>;
+  /** Get a human-readable report of the last run */
+  report: () => string;
+  /** Get log capture for error analysis */
+  getFailures: () => Array<{
+    category: string;
+    message: string;
+    suggestedFix?: string | undefined;
+    retryable: boolean;
+  }>;
+}
+
+export interface RuntimeStepResult {
+  status: 'success' | 'failure' | 'timeout' | 'pending' | 'killed' | 'running';
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  durationMs: number;
+  timedOut: boolean;
+}
+
+export interface RuntimeFullResult {
+  success: boolean;
+  install?: RuntimeStepResult | undefined;
+  build?: RuntimeStepResult | undefined;
+  test?: RuntimeStepResult | undefined;
+  previewUrl?: string | undefined;
+  screenshots?: string[];
+  failures: Array<{
+    category: string;
+    message: string;
+    suggestedFix?: string | undefined;
+  }>;
+  durationMs: number;
 }
 
 // ─── Milestone 1: Decision Engine Types ──────────────────────────────────────

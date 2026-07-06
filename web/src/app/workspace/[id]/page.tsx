@@ -148,35 +148,6 @@ export default function WorkspacePage() {
     } catch {}
   }, [id]);
 
-  const pollProgress = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/workspace/${id}/progress`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const newSteps = data.steps || [];
-      const newPhases = data.phases || [];
-      setSteps(newSteps);
-      setPhases(newPhases);
-
-      const allEvents = workspaceType === "clone" ? newPhases : newSteps;
-      const lastEvent = allEvents[allEvents.length - 1];
-      const lastStep = lastEvent?.step || lastEvent?.phase || lastEvent?.phaseStatus || "";
-
-      if (lastStep === "done" || lastEvent?.phaseStatus === "done" && lastEvent?.phase === "complete") {
-        setIsBuilding(false);
-        setBuildDone(true);
-        setBuildError(null);
-        loadFiles();
-        loadPreview();
-        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      } else if (lastStep === "error" || lastEvent?.phaseStatus === "failed") {
-        setIsBuilding(false);
-        setBuildError(lastEvent?.message || "Build failed");
-        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      }
-    } catch {}
-  }, [id, loadFiles, loadPreview, workspaceType]);
-
   const loadFile = useCallback(async (filePath: string) => {
     try {
       const res = await fetch(`/api/workspace/${id}/file?path=${encodeURIComponent(filePath)}`);
@@ -338,15 +309,8 @@ export default function WorkspacePage() {
   }, [id, triggerBuild]);
 
   useEffect(() => {
-    if (!isBuilding) return;
-    pollRef.current = setInterval(pollProgress, workspaceType === "clone" ? 500 : 1000);
-    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
-  }, [isBuilding, pollProgress, workspaceType]);
-
-  useEffect(() => {
     return () => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
 
