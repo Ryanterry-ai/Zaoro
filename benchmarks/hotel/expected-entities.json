@@ -1,0 +1,238 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Hotel staff accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "front_desk", "housekeeping", "manager", "concierge", "maintenance"], "required": true },
+        { "name": "employeeId", "type": "string", "unique": true },
+        { "name": "phone", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Booking" },
+        { "type": "hasMany", "target": "Housekeeping" }
+      ]
+    },
+    {
+      "name": "Guest",
+      "description": "Hotel guests and visitors",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "phone", "type": "string", "required": true },
+        { "name": "idType", "type": "enum", "values": ["passport", "drivers_license", "national_id", "other"] },
+        { "name": "idNumber", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "nationality", "type": "string" },
+        { "name": "dateOfBirth", "type": "date" },
+        { "name": "preferences", "type": "json", "default": "{}" },
+        { "name": "notes", "type": "text" },
+        { "name": "isBlacklisted", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Booking" },
+        { "type": "hasMany", "target": "Review" }
+      ]
+    },
+    {
+      "name": "Room",
+      "description": "Hotel rooms and units",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "roomNumber", "type": "string", "required": true, "unique": true },
+        { "name": "type", "type": "enum", "values": ["single", "double", "twin", "suite", "deluxe", "penthouse", "villa"], "required": true },
+        { "name": "floor", "type": "integer" },
+        { "name": "bedType", "type": "enum", "values": ["king", "queen", "double", "twin", "single", "bunk"], "default": "queen" },
+        { "name": "maxOccupancy", "type": "integer", "required": true },
+        { "name": "sizeSqm", "type": "integer" },
+        { "name": "baseRate", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "amenities", "type": "json", "default": "[]" },
+        { "name": "view", "type": "string" },
+        { "name": "isSmoking", "type": "boolean", "default": false },
+        { "name": "isAccessible", "type": "boolean", "default": false },
+        { "name": "status", "type": "enum", "values": ["available", "occupied", "maintenance", "cleaning", "out_of_order"], "default": "available" },
+        { "name": "images", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Booking" },
+        { "type": "hasMany", "target": "Housekeeping" },
+        { "type": "hasMany", "target": "RoomRate" }
+      ]
+    },
+    {
+      "name": "Booking",
+      "description": "Guest reservations and bookings",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "guestId", "type": "uuid", "required": true },
+        { "name": "roomId", "type": "uuid", "required": true },
+        { "name": "confirmedById", "type": "uuid" },
+        { "name": "bookingCode", "type": "string", "required": true, "unique": true },
+        { "name": "source", "type": "enum", "values": ["direct", "online_ota", "phone", "walk_in", "corporate", "travel_agent"], "default": "direct" },
+        { "name": "checkIn", "type": "date", "required": true },
+        { "name": "checkOut", "type": "date", "required": true },
+        { "name": "adults", "type": "integer", "required": true, "default": 1 },
+        { "name": "children", "type": "integer", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"], "default": "pending" },
+        { "name": "totalAmount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "amountPaid", "type": "decimal", "default": 0 },
+        { "name": "specialRequests", "type": "text" },
+        { "name": "checkInTime", "type": "datetime" },
+        { "name": "checkOutTime", "type": "datetime" },
+        { "name": "cancelledAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Guest" },
+        { "type": "belongsTo", "target": "Room" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Payment" },
+        { "type": "hasMany", "target": "Service" }
+      ]
+    },
+    {
+      "name": "RoomRate",
+      "description": "Dynamic room pricing",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "roomId", "type": "uuid", "required": true },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "rate", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "yieldFactor", "type": "decimal", "default": 1 },
+        { "name": "isAvailable", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Room" }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "Booking payments and deposits",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "bookingId", "type": "uuid", "required": true },
+        { "name": "guestId", "type": "uuid", "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "method", "type": "enum", "values": ["cash", "credit_card", "debit_card", "bank_transfer", "mobile_wallet", "crypto"], "required": true },
+        { "name": "type", "type": "enum", "values": ["deposit", "full_payment", "incidental", "refund"], "required": true },
+        { "name": "status", "type": "enum", "values": ["pending", "authorized", "captured", "refunded", "failed"], "default": "pending" },
+        { "name": "transactionId", "type": "string" },
+        { "name": "processedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Booking" },
+        { "type": "belongsTo", "target": "Guest" }
+      ]
+    },
+    {
+      "name": "Service",
+      "description": "Ancillary services and charges",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "bookingId", "type": "uuid", "required": true },
+        { "name": "guestId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["restaurant", "spa", "laundry", "mini_bar", "room_service", "parking", "airport_transfer", "tour", "other"], "required": true },
+        { "name": "quantity", "type": "integer", "default": 1 },
+        { "name": "unitPrice", "type": "decimal", "required": true },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "notes", "type": "text" },
+        { "name": "orderedAt", "type": "datetime", "required": true },
+        { "name": "servedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Booking" },
+        { "type": "belongsTo", "target": "Guest" }
+      ]
+    },
+    {
+      "name": "Housekeeping",
+      "description": "Room cleaning and maintenance tasks",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "roomId", "type": "uuid", "required": true },
+        { "name": "assignedTo", "type": "uuid" },
+        { "name": "status", "type": "enum", "values": ["pending", "in_progress", "completed", "verified", "skipped"], "default": "pending" },
+        { "name": "type", "type": "enum", "values": ["daily", "deep_clean", "turnover", "maintenance", "inspection"], "default": "daily" },
+        { "name": "priority", "type": "enum", "values": ["low", "normal", "high", "urgent"], "default": "normal" },
+        { "name": "notes", "type": "text" },
+        { "name": "scheduledAt", "type": "date" },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Room" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "description": "Hotel consumable inventory and supplies",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "category", "type": "enum", "values": ["linen", "toiletries", "minibar", "cleaning", "kitchen", "maintenance", "stationery"], "required": true },
+        { "name": "sku", "type": "string", "required": true, "unique": true },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "unit", "type": "string", "required": true },
+        { "name": "reorderLevel", "type": "integer", "default": 10 },
+        { "name": "costPerUnit", "type": "decimal" },
+        { "name": "supplier", "type": "string" },
+        { "name": "location", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ]
+    },
+    {
+      "name": "Review",
+      "description": "Guest reviews and ratings",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "guestId", "type": "uuid", "required": true },
+        { "name": "bookingId", "type": "uuid" },
+        { "name": "rating", "type": "integer", "required": true },
+        { "name": "title", "type": "string" },
+        { "name": "body", "type": "text", "required": true },
+        { "name": "cleanliness", "type": "integer" },
+        { "name": "service", "type": "integer" },
+        { "name": "location", "type": "integer" },
+        { "name": "value", "type": "integer" },
+        { "name": "response", "type": "text" },
+        { "name": "responseAt", "type": "datetime" },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "rejected"], "default": "pending" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Guest" },
+        { "type": "belongsTo", "target": "Booking" }
+      ]
+    }
+  ]
+}

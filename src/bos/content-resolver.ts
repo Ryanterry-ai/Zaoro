@@ -632,6 +632,10 @@ export interface ContentResolverContext {
   designProfile?: DesignProfile;
   /** Deep revenue intelligence — how this business makes money */
   revenueIntelligence?: BusinessIntelligenceProfile;
+  /** Skill recommendations from UI/UX Pro Max, framer-motion, 21st.dev, etc. */
+  skillRecommendations?: import('../generation/skill-integrator.js').DesignRecommendation;
+  /** Design intelligence from DesignIntelligenceEngine (6 sub-engines) */
+  designDecision?: import('../orchestration/design-intelligence/types.js').DesignDecision;
 }
 
 /**

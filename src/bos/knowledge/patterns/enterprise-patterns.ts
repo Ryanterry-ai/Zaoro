@@ -11,6 +11,98 @@
  */
 import type { Pattern } from '../../schemas/knowledge/pattern.schema.js';
 
+// ─── 7. Task / Project Management Tracker ─────────────────────────────────────
+
+export const TASK_TRACKER: Pattern = {
+  id: 'pattern.enterprise.task-tracker',
+  version: '1.0.0',
+  status: 'active',
+  createdAt: '2026-07-01T00:00:00+00:00',
+  updatedAt: '2026-07-01T00:00:00+00:00',
+  evidenceRefs: [],
+  kind: 'Pattern',
+  name: 'Task & Project Management',
+  description: 'Kanban-style task tracker with project management, sprints, team collaboration, time tracking, and reporting',
+  navigation: {
+    style: 'sidebar',
+    sticky: true,
+    logo: true,
+    items: [
+      { label: 'Dashboard', href: '/' },
+      { label: 'Projects', href: '/projects' },
+      { label: 'Board', href: '/board' },
+      { label: 'Tasks', href: '/tasks' },
+      { label: 'Sprints', href: '/sprints' },
+      { label: 'Team', href: '/team' },
+      { label: 'Reports', href: '/reports' },
+      { label: 'Settings', href: '/settings' },
+    ],
+  },
+  pages: [
+    { path: '/', name: 'Dashboard', type: 'dashboard', sections: ['stats-cards', 'charts', 'activity-feed'],
+      description: 'Team overview: tasks completed, active projects, sprint progress, overdue tasks, team velocity' },
+    { path: '/projects', name: 'Projects', type: 'listing', sections: ['project-grid', 'filters', 'stats-cards'],
+      description: 'Project list: name, status, priority, due date, owner, team, progress bar' },
+    { path: '/projects/:id', name: 'Project Detail', type: 'detail', sections: ['profile', 'data-table', 'activity-feed', 'charts'],
+      description: 'Project overview: description, tasks, sprints, team members, timeline, activity log' },
+    { path: '/board', name: 'Board', type: 'dashboard', sections: ['kanban-board', 'drag-and-drop', 'filters'],
+      description: 'Kanban board: To Do → In Progress → Review → Done; drag-and-drop cards between columns' },
+    { path: '/tasks', name: 'Tasks', type: 'listing', sections: ['data-table', 'filters', 'stats-cards'],
+      description: 'Task list: title, assignee, status, priority, due date, project; bulk assign; filter by labels' },
+    { path: '/tasks/:id', name: 'Task Detail', type: 'detail', sections: ['profile', 'data-table', 'activity-feed'],
+      description: 'Task detail: description, comments, attachments, time log, subtasks, linked issues' },
+    { path: '/sprints', name: 'Sprints', type: 'listing', sections: ['data-table', 'calendar', 'stats-cards'],
+      description: 'Sprint planning: backlog, active sprint, completed sprints; burndown chart; capacity planning' },
+    { path: '/team', name: 'Team', type: 'listing', sections: ['team-grid', 'stats-cards'],
+      description: 'Team members: name, role, workload, active tasks, availability' },
+    { path: '/reports', name: 'Reports', type: 'dashboard', sections: ['charts', 'filters', 'data-table'],
+      description: 'Velocity chart, burndown, cycle time, throughput, team workload distribution' },
+    { path: '/settings', name: 'Settings', type: 'page', sections: ['profile', 'billing', 'notifications'],
+      description: 'Project settings: statuses, priorities, labels, custom fields, integrations, team admin' },
+  ],
+  components: ['KanbanBoard', 'TaskCard', 'ProjectCard', 'SprintTimeline', 'BurndownChart', 'TeamMemberCard', 'ActivityFeed', 'TimeTracker', 'LabelBadge'],
+  relationships: [],
+  workflows: [
+    'Create Sprint → Add Backlog Items → Sprint Planning → Start Sprint → Daily Standup → Sprint Review → Retrospective',
+    'Create Task → Assign Team Member → Move to In Progress → Code Review → Move to Done → Log Time',
+    'Project Created → Add Team Members → Create Milestones → Assign Tasks → Track Progress → Project Completion',
+    'Bug Reported → Triage → Assign → Fix → Review → Deploy → Close',
+  ],
+  integrations: [
+    { type: 'auth', name: 'NextAuth.js', config: { provider: 'credentials' }, required: true },
+    { type: 'email', name: 'Resend', config: {}, required: true },
+    { type: 'analytics', name: 'PostHog', config: {}, required: false },
+  ],
+  design: {
+    profileRef: 'design-profile.saas-modern',
+    restrictions: ['professional-aesthetic', 'sidebar-navigation', 'data-dense-views'],
+  },
+  generationRules: [],
+  compatibleIndustries: ['saas', 'project_management', 'task', 'tracker', 'todo', 'kanban', 'productivity', 'project', 'sprint'],
+  compatibleBusinessModels: ['subscription', 'freemium'],
+  roles: ['Project Manager', 'Product Owner', 'Team Lead', 'Developer', 'Designer', 'QA Engineer', 'Scrum Master'],
+  departments: ['Engineering', 'Product', 'Design', 'QA', 'DevOps'],
+  kpis: ['Tasks Completed (week)', 'Sprint Velocity', 'Cycle Time', 'Overdue Tasks', 'Active Projects', 'Team Capacity (%)', 'Bug Resolution Time'],
+  vocabulary: {
+    Customer: 'Team Member',
+    User: 'Assignee',
+    Product: 'Project',
+    Order: 'Sprint',
+    Category: 'Label',
+    Subscription: 'Workspace',
+  },
+  businessRules: [
+    'Tasks cannot be moved to Done without being in Review first (board column progression)',
+    'A task must have at least a title and an assignee before it can be moved from Backlog to To Do',
+    'Sprints cannot overlap; a team can only have one active sprint at a time',
+    'Burndown chart is calculated from remaining story points vs sprint timeline',
+    'Overdue tasks (past due date, not Done) auto-escalate to project owner via email daily',
+    'Projects are marked complete only when all tasks are Done and all sprints are closed',
+    'Task deletion is soft; deleted tasks move to Trash for 30 days before permanent deletion',
+    'Time logging requires a minimum of 15-minute increments',
+  ],
+};
+
 // ─── 1. Hospital Management System ───────────────────────────────────────────
 
 export const HOSPITAL_MANAGEMENT: Pattern = {

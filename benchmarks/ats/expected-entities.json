@@ -1,0 +1,259 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "ATS platform staff and recruiter accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "recruiter", "hiring_manager", "coordinator", "viewer"], "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "department", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasMany", "target": "Job" },
+        { "type": "hasMany", "target": "Interview" }
+      ]
+    },
+    {
+      "name": "Company",
+      "description": "Organizations using the ATS",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "logoUrl", "type": "string" },
+        { "name": "website", "type": "string" },
+        { "name": "industry", "type": "string" },
+        { "name": "size", "type": "enum", "values": ["1-10", "11-50", "51-200", "201-1000", "1001+"] },
+        { "name": "settings", "type": "json", "default": "{}" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" },
+        { "type": "hasMany", "target": "Job" }
+      ]
+    },
+    {
+      "name": "Candidate",
+      "description": "Job applicants and prospects",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "currentCompany", "type": "string" },
+        { "name": "currentTitle", "type": "string" },
+        { "name": "location", "type": "string" },
+        { "name": "linkedinUrl", "type": "string" },
+        { "name": "portfolioUrl", "type": "string" },
+        { "name": "resumeUrl", "type": "string" },
+        { "name": "coverLetterUrl", "type": "string" },
+        { "name": "headline", "type": "string" },
+        { "name": "source", "type": "enum", "values": ["direct", "referral", "linkedin", "indeed", "glassdoor", "career_site", "agency", "event", "other"], "default": "direct" },
+        { "name": "status", "type": "enum", "values": ["active", "passive", "hired", "archived"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Application" },
+        { "type": "belongsToMany", "target": "Skill", "through": "CandidateSkill" }
+      ]
+    },
+    {
+      "name": "Job",
+      "description": "Job requisitions and openings",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "createdById", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "department", "type": "string" },
+        { "name": "location", "type": "string" },
+        { "name": "remote", "type": "enum", "values": ["onsite", "hybrid", "remote"], "default": "onsite" },
+        { "name": "employmentType", "type": "enum", "values": ["full_time", "part_time", "contract", "internship", "freelance"], "required": true },
+        { "name": "seniority", "type": "enum", "values": ["entry", "mid", "senior", "lead", "executive"], "default": "mid" },
+        { "name": "minSalary", "type": "integer" },
+        { "name": "maxSalary", "type": "integer" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "requirements", "type": "json", "default": "[]" },
+        { "name": "benefits", "type": "json", "default": "[]" },
+        { "name": "headcount", "type": "integer", "default": 1 },
+        { "name": "status", "type": "enum", "values": ["draft", "published", "paused", "filled", "cancelled"], "default": "draft" },
+        { "name": "publishedAt", "type": "datetime" },
+        { "name": "closedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Application" },
+        { "type": "hasMany", "target": "Interview" },
+        { "type": "belongsToMany", "target": "Skill", "through": "JobSkill" }
+      ]
+    },
+    {
+      "name": "Application",
+      "description": "Candidate job applications",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "candidateId", "type": "uuid", "required": true },
+        { "name": "jobId", "type": "uuid", "required": true },
+        { "name": "stageId", "type": "uuid", "required": true },
+        { "name": "status", "type": "enum", "values": ["new", "screening", "interviewing", "offer", "hired", "rejected", "withdrawn"], "default": "new" },
+        { "name": "score", "type": "integer" },
+        { "name": "notes", "type": "text" },
+        { "name": "appliedAt", "type": "datetime", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Candidate" },
+        { "type": "belongsTo", "target": "Job" },
+        { "type": "belongsTo", "target": "Stage" },
+        { "type": "hasMany", "target": "Interview" },
+        { "type": "hasMany", "target": "Assessment" }
+      ]
+    },
+    {
+      "name": "Stage",
+      "description": "Pipeline stages in the hiring workflow",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "order", "type": "integer", "required": true },
+        { "name": "type", "type": "enum", "values": ["sourced", "applied", "screened", "interview", "assessment", "offer", "hired", "rejected"], "required": true },
+        { "name": "isDefault", "type": "boolean", "default": false },
+        { "name": "isHiring", "type": "boolean", "default": false },
+        { "name": "color", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasMany", "target": "Application" }
+      ]
+    },
+    {
+      "name": "Interview",
+      "description": "Scheduled interviews with candidates",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "applicationId", "type": "uuid", "required": true },
+        { "name": "jobId", "type": "uuid", "required": true },
+        { "name": "interviewerIds", "type": "json", "required": true },
+        { "name": "type", "type": "enum", "values": ["phone", "video", "onsite", "technical", "panel", "final"], "required": true },
+        { "name": "scheduledAt", "type": "datetime", "required": true },
+        { "name": "duration", "type": "integer", "default": 60 },
+        { "name": "location", "type": "string" },
+        { "name": "meetingLink", "type": "string" },
+        { "name": "notes", "type": "text" },
+        { "name": "feedback", "type": "json" },
+        { "name": "rating", "type": "integer" },
+        { "name": "status", "type": "enum", "values": ["scheduled", "confirmed", "completed", "cancelled", "rescheduled"], "default": "scheduled" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Application" },
+        { "type": "belongsTo", "target": "Job" }
+      ]
+    },
+    {
+      "name": "Offer",
+      "description": "Job offers extended to candidates",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "applicationId", "type": "uuid", "required": true },
+        { "name": "candidateId", "type": "uuid", "required": true },
+        { "name": "baseSalary", "type": "integer", "required": true },
+        { "name": "bonus", "type": "integer" },
+        { "name": "equity", "type": "string" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "status", "type": "enum", "values": ["draft", "sent", "negotiating", "accepted", "declined", "expired", "withdrawn"], "default": "draft" },
+        { "name": "sentAt", "type": "datetime" },
+        { "name": "respondedAt", "type": "datetime" },
+        { "name": "expiresAt", "type": "datetime" },
+        { "name": "notes", "type": "text" },
+        { "name": "documentUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Application" },
+        { "type": "belongsTo", "target": "Candidate" }
+      ]
+    },
+    {
+      "name": "Skill",
+      "description": "Skills taxonomy",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true, "unique": true },
+        { "name": "category", "type": "enum", "values": ["technical", "soft", "domain", "language", "certification"], "default": "technical" },
+        { "name": "aliases", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsToMany", "target": "Candidate", "through": "CandidateSkill" },
+        { "type": "belongsToMany", "target": "Job", "through": "JobSkill" }
+      ]
+    },
+    {
+      "name": "Assessment",
+      "description": "Tests and evaluations for candidates",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "applicationId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["coding", "personality", "skills_test", "writing", "presentation", "case_study"], "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "score", "type": "decimal" },
+        { "name": "maxScore", "type": "decimal" },
+        { "name": "passed", "type": "boolean" },
+        { "name": "invitedAt", "type": "datetime" },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "status", "type": "enum", "values": ["pending", "invited", "in_progress", "completed", "expired"], "default": "pending" },
+        { "name": "results", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Application" }
+      ]
+    },
+    {
+      "name": "Referral",
+      "description": "Employee referrals for candidates",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "candidateId", "type": "uuid", "required": true },
+        { "name": "referrerId", "type": "uuid", "required": true },
+        { "name": "jobId", "type": "uuid" },
+        { "name": "message", "type": "text" },
+        { "name": "rewardAmount", "type": "decimal" },
+        { "name": "rewardPaid", "type": "boolean", "default": false },
+        { "name": "status", "type": "enum", "values": ["submitted", "acknowledged", "rewarded", "declined"], "default": "submitted" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Candidate" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Job" }
+      ]
+    }
+  ]
+}

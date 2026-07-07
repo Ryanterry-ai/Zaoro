@@ -1,0 +1,275 @@
+{
+  "entities": [
+    {
+      "name": "Patient",
+      "description": "Pharmacy patient records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "storeId", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "dateOfBirth", "type": "date", "required": true },
+        { "name": "gender", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string", "required": true },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "allergies", "type": "json", "default": "[]" },
+        { "name": "conditions", "type": "json", "default": "[]" },
+        { "name": "primaryPhysicianId", "type": "uuid" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Store" },
+        { "type": "belongsTo", "target": "Prescriber", "foreignKey": "primaryPhysicianId" },
+        { "type": "hasMany", "target": "Prescription" },
+        { "type": "hasMany", "target": "Claim" },
+        { "type": "hasMany", "target": "Immunization" },
+        { "type": "hasMany", "target": "MTMSession" }
+      ]
+    },
+    {
+      "name": "Store",
+      "description": "Pharmacy store/location",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "npi", "type": "string", "required": true },
+        { "name": "ncpdpId", "type": "string" },
+        { "name": "deaNumber", "type": "string", "required": true },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "phone", "type": "string", "required": true },
+        { "name": "licenseNumber", "type": "string", "required": true },
+        { "name": "timezone", "type": "string", "default": "US/Eastern" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Patient" },
+        { "type": "hasMany", "target": "Prescriber" },
+        { "type": "hasMany", "target": "InventoryItem" },
+        { "type": "hasMany", "target": "POSOrder" },
+        { "type": "hasMany", "target": "Delivery" }
+      ]
+    },
+    {
+      "name": "Prescriber",
+      "description": "Prescribing healthcare providers",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "storeId", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "deaNumber", "type": "string", "unique": true },
+        { "name": "npi", "type": "string", "required": true, "unique": true },
+        { "name": "specialty", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "fax", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Store" },
+        { "type": "hasMany", "target": "Prescription" }
+      ]
+    },
+    {
+      "name": "Prescription",
+      "description": "Prescription orders",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "prescriberId", "type": "uuid", "required": true },
+        { "name": "storeId", "type": "uuid", "required": true },
+        { "name": "rxNumber", "type": "string", "required": true, "unique": true },
+        { "name": "ndc", "type": "string", "required": true },
+        { "name": "drugName", "type": "string", "required": true },
+        { "name": "strength", "type": "string", "required": true },
+        { "name": "dosageForm", "type": "string" },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "refills", "type": "integer", "default": 0 },
+        { "name": "refillsUsed", "type": "integer", "default": 0 },
+        { "name": "daysSupply", "type": "integer", "required": true },
+        { "name": "sigCode", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["new", "refill", "transfer", "compound"], "required": true },
+        { "name": "isControlledSubstance", "type": "boolean", "default": false },
+        { "name": "deaSchedule", "type": "enum", "values": ["2", "3", "4", "5", "non_controlled"] },
+        { "name": "status", "type": "enum", "values": ["received", "entered", "verified", "filled", "sold", "partial", "cancelled", "transfer_out", "hold"], "default": "received" },
+        { "name": "writtenDate", "type": "date", "required": true },
+        { "name": "expiresDate", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "Prescriber" },
+        { "type": "belongsTo", "target": "Store" },
+        { "type": "hasMany", "target": "PrescriptionFill" },
+        { "type": "hasMany", "target": "Claim" }
+      ]
+    },
+    {
+      "name": "Medication",
+      "description": "Drug/medication catalog",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "ndc", "type": "string", "required": true, "unique": true },
+        { "name": "brandName", "type": "string" },
+        { "name": "genericName", "type": "string", "required": true },
+        { "name": "manufacturer", "type": "string" },
+        { "name": "dosageForm", "type": "string" },
+        { "name": "strength", "type": "string" },
+        { "name": "deaSchedule", "type": "enum", "values": ["2", "3", "4", "5", "non_controlled"] },
+        { "name": "requiresRefrigeration", "type": "boolean", "default": false },
+        { "name": "isFormulary", "type": "boolean", "default": true },
+        { "name": "averageWholesalePrice", "type": "decimal" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "InventoryItem" }
+      ]
+    },
+    {
+      "name": "InventoryItem",
+      "description": "Pharmacy stock items",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "storeId", "type": "uuid", "required": true },
+        { "name": "ndc", "type": "string", "required": true },
+        { "name": "lotNumber", "type": "string" },
+        { "name": "expirationDate", "type": "date", "required": true },
+        { "name": "quantityOnHand", "type": "integer", "required": true },
+        { "name": "unitCost", "type": "decimal" },
+        { "name": "sellingPrice", "type": "decimal" },
+        { "name": "reorderPoint", "type": "integer", "default": 10 },
+        { "name": "isControlled", "type": "boolean", "default": false },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Store" },
+        { "type": "belongsTo", "target": "Medication", "foreignKey": "ndc" },
+        { "type": "hasMany", "target": "InventoryTransaction" }
+      ]
+    },
+    {
+      "name": "InsurancePlan",
+      "description": "Insurance/third-party plans",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "bin", "type": "string", "required": true },
+        { "name": "pcn", "type": "string" },
+        { "name": "groupId", "type": "string" },
+        { "name": "planType", "type": "enum", "values": ["commercial", "medicare", "medicaid", "va", "cash"], "required": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Claim" }
+      ]
+    },
+    {
+      "name": "Claim",
+      "description": "Insurance claim submissions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "prescriptionId", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "insurancePlanId", "type": "uuid" },
+        { "name": "claimNumber", "type": "string" },
+        { "name": "ingredientCost", "type": "decimal" },
+        { "name": "dispensingFee", "type": "decimal" },
+        { "name": "salesTax", "type": "decimal" },
+        { "name": "totalAmount", "type": "decimal" },
+        { "name": "patientPayAmount", "type": "decimal" },
+        { "name": "insurancePayAmount", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["pending", "submitted", "paid", "rejected", "reversed"], "default": "pending" },
+        { "name": "rejectCode", "type": "string" },
+        { "name": "submittedAt", "type": "datetime" },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Prescription" },
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "InsurancePlan" }
+      ]
+    },
+    {
+      "name": "CompoundFormula",
+      "description": "Compounding formulas",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "storeId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "ingredients", "type": "json", "required": true },
+        { "name": "directions", "type": "text" },
+        { "name": "beyondUseDays", "type": "integer" },
+        { "name": "storage", "type": "string" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Store" },
+        { "type": "hasMany", "target": "CompoundBatch" }
+      ]
+    },
+    {
+      "name": "ClinicalService",
+      "description": "Clinical service records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "storeId", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["mtm", "immunization", "health_screening", "medication_review", "diabetes_management"], "required": true },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "notes", "type": "text" },
+        { "name": "outcome", "type": "string" },
+        { "name": "billingCode", "type": "string" },
+        { "name": "isBilled", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Store" },
+        { "type": "belongsTo", "target": "Patient" }
+      ]
+    },
+    {
+      "name": "Delivery",
+      "description": "Prescription delivery tracking",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "storeId", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "deliveryRouteId", "type": "uuid" },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "scheduledAt", "type": "datetime" },
+        { "name": "deliveredAt", "type": "datetime" },
+        { "name": "status", "type": "enum", "values": ["scheduled", "in_transit", "delivered", "failed", "cancelled"], "default": "scheduled" },
+        { "name": "signature", "type": "string" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Store" },
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "DeliveryRoute" }
+      ]
+    }
+  ]
+}

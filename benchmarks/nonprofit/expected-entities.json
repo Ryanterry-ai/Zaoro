@@ -1,0 +1,275 @@
+{
+  "entities": [
+    {
+      "name": "Constituent",
+      "description": "Central entity for all constituent types",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "type", "type": "enum", "values": ["individual", "organization", "company"], "default": "individual" },
+        { "name": "source", "type": "string" },
+        { "name": "isDeceased", "type": "boolean", "default": false },
+        { "name": "doNotContact", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasOne", "target": "Donor" },
+        { "type": "hasOne", "target": "Volunteer" },
+        { "type": "hasOne", "target": "Member" },
+        { "type": "hasMany", "target": "Donation" },
+        { "type": "hasMany", "target": "Case" }
+      ]
+    },
+    {
+      "name": "Organization",
+      "description": "Nonprofit organization entity",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "ein", "type": "string", "unique": true },
+        { "name": "type", "type": "enum", "values": ["501c3", "501c4", "501c6", "other"], "required": true },
+        { "name": "address", "type": "json" },
+        { "name": "phone", "type": "string" },
+        { "name": "website", "type": "string" },
+        { "name": "logoUrl", "type": "string" },
+        { "name": "mission", "type": "text" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Constituent" },
+        { "type": "hasMany", "target": "Campaign" },
+        { "type": "hasMany", "target": "Grant" },
+        { "type": "hasMany", "target": "Program" }
+      ]
+    },
+    {
+      "name": "Donation",
+      "description": "Monetary contributions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "constituentId", "type": "uuid", "required": true },
+        { "name": "campaignId", "type": "uuid" },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "type", "type": "enum", "values": ["one_time", "recurring", "pledge", "in_kind", "stock"], "required": true },
+        { "name": "method", "type": "enum", "values": ["credit_card", "ach", "check", "cash", "paypal", "crypto"], "required": true },
+        { "name": "status", "type": "enum", "values": ["pending", "completed", "failed", "refunded"], "default": "pending" },
+        { "name": "donorAdvisedFund", "type": "string" },
+        { "name": "isAnonymous", "type": "boolean", "default": false },
+        { "name": "honoreeName", "type": "string" },
+        { "name": "honoreeNotify", "type": "boolean", "default": false },
+        { "name": "donatedAt", "type": "datetime", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Constituent" },
+        { "type": "belongsTo", "target": "Campaign" },
+        { "type": "belongsTo", "target": "RecurringDonation" }
+      ]
+    },
+    {
+      "name": "Campaign",
+      "description": "Fundraising campaigns",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "goal", "type": "decimal" },
+        { "name": "raised", "type": "decimal", "default": 0 },
+        { "name": "type", "type": "enum", "values": ["general", "capital", "emergency", "event", "peer_to_peer", "recurring"], "required": true },
+        { "name": "startDate", "type": "date" },
+        { "name": "endDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["draft", "active", "paused", "completed", "cancelled"], "default": "draft" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasMany", "target": "Donation" },
+        { "type": "hasMany", "target": "Event" },
+        { "type": "hasMany", "target": "CampaignPage" }
+      ]
+    },
+    {
+      "name": "Event",
+      "description": "Fundraising and community events",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "campaignId", "type": "uuid" },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "location", "type": "json" },
+        { "name": "startAt", "type": "datetime", "required": true },
+        { "name": "endAt", "type": "datetime" },
+        { "name": "capacity", "type": "integer" },
+        { "name": "ticketPrice", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["draft", "published", "cancelled", "completed"], "default": "draft" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "belongsTo", "target": "Campaign" },
+        { "type": "hasMany", "target": "EventRegistration" }
+      ]
+    },
+    {
+      "name": "Grant",
+      "description": "Grant applications and awards",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "funderName", "type": "string", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "amountRequested", "type": "decimal" },
+        { "name": "amountAwarded", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["draft", "submitted", "pending", "awarded", "rejected", "closed"], "default": "draft" },
+        { "name": "submittedAt", "type": "date" },
+        { "name": "decisionAt", "type": "date" },
+        { "name": "startDate", "type": "date" },
+        { "name": "endDate", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasMany", "target": "GrantReport" }
+      ]
+    },
+    {
+      "name": "Volunteer",
+      "description": "Volunteer records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "constituentId", "type": "uuid", "required": true },
+        { "name": "skills", "type": "json", "default": "[]" },
+        { "name": "availability", "type": "json" },
+        { "name": "totalHours", "type": "decimal", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["active", "inactive", "blacklisted"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Constituent" },
+        { "type": "hasMany", "target": "VolunteerHour" },
+        { "type": "hasMany", "target": "VolunteerShift" }
+      ]
+    },
+    {
+      "name": "Program",
+      "description": "Nonprofit programs and services",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "budget", "type": "decimal" },
+        { "name": "startDate", "type": "date" },
+        { "name": "endDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["active", "completed", "suspended"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasMany", "target": "ProgramOutcome" },
+        { "type": "hasMany", "target": "Case" }
+      ]
+    },
+    {
+      "name": "Case",
+      "description": "Constituent case management",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "constituentId", "type": "uuid", "required": true },
+        { "name": "programId", "type": "uuid" },
+        { "name": "assignedToId", "type": "uuid" },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "priority", "type": "enum", "values": ["low", "medium", "high", "urgent"], "default": "medium" },
+        { "name": "status", "type": "enum", "values": ["open", "in_progress", "resolved", "closed"], "default": "open" },
+        { "name": "closedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Constituent" },
+        { "type": "belongsTo", "target": "Program" },
+        { "type": "hasMany", "target": "CaseNote" }
+      ]
+    },
+    {
+      "name": "MembershipLevel",
+      "description": "Membership tiers",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "annualDues", "type": "decimal" },
+        { "name": "benefits", "type": "json", "default": "[]" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasMany", "target": "Member" }
+      ]
+    },
+    {
+      "name": "Member",
+      "description": "Organization members",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "constituentId", "type": "uuid", "required": true },
+        { "name": "membershipLevelId", "type": "uuid", "required": true },
+        { "name": "joinDate", "type": "date", "required": true },
+        { "name": "expiryDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["active", "expired", "lapsed", "cancelled"], "default": "active" },
+        { "name": "autoRenew", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Constituent" },
+        { "type": "belongsTo", "target": "MembershipLevel" },
+        { "type": "hasMany", "target": "MembershipRenewal" }
+      ]
+    },
+    {
+      "name": "AdvocacyAction",
+      "description": "Advocacy campaign actions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "constituentId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["email", "call", "tweet", "petition", "meeting"], "required": true },
+        { "name": "target", "type": "string", "required": true },
+        { "name": "subject", "type": "string" },
+        { "name": "content", "type": "text" },
+        { "name": "takenAt", "type": "datetime", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "belongsTo", "target": "Constituent" }
+      ]
+    }
+  ]
+}

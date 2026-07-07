@@ -1,0 +1,55 @@
+{
+  "workflows": [
+    {
+      "name": "Room Booking Flow",
+      "description": "Guest books a room reservation",
+      "steps": [
+        { "step": 1, "action": "Search Availability", "description": "Check room availability for dates", "entities": ["Room", "RatePlan"], "validations": ["dates valid", "guests within capacity", "rooms available"] },
+        { "step": 2, "action": "Select Room", "description": "Choose room type and rate", "entities": ["Booking", "Room"], "validations": ["rate plan valid", "add-ons selected", "total calculated"] },
+        { "step": 3, "action": "Guest Details", "description": "Enter guest information", "entities": ["Guest", "Booking"], "validations": ["name and contact valid", "ID required if international", "special requests noted"] },
+        { "step": 4, "action": "Process Payment", "description": "Secure payment or deposit", "entities": ["Payment", "Booking"], "validations": ["payment captured", "card authorized", "booking = confirmed"] },
+        { "step": 5, "action": "Confirmation", "description": "Send booking confirmation", "entities": ["Booking"], "validations": ["confirmation number generated", "email sent", "cancellation policy shared"] }
+      ]
+    },
+    {
+      "name": "Check-In Flow",
+      "description": "Guest arrives and checks in at front desk",
+      "steps": [
+        { "step": 1, "action": "Verify Booking", "description": "Find reservation by name or ID", "entities": ["Booking"], "validations": ["booking confirmed", "dates correct", "rate verified"] },
+        { "step": 2, "action": "Collect ID & Card", "description": "Verify ID and collect incidentals card", "entities": ["Guest"], "validations": ["ID verified", "card authorized", "reg card signed"] },
+        { "step": 3, "action": "Assign Room", "description": "Assign specific room number", "entities": ["Booking", "Room"], "validations": ["room clean", "room ready", "preferences met"] },
+        { "step": 4, "action": "Issue Key Cards", "description": "Provide key cards", "entities": ["Booking"], "validations": ["keys encoded", "room number provided", "amenities explained"] }
+      ]
+    },
+    {
+      "name": "Housekeeping Flow",
+      "description": "Manage room cleaning and maintenance",
+      "steps": [
+        { "step": 1, "action": "Flag Room", "description": "Room marked for service", "entities": ["Room", "HousekeepingTask"], "validations": ["check-out rooms priority", "stayover rooms scheduled"] },
+        { "step": 2, "action": "Assign Cleaner", "description": "Assign housekeeping staff", "entities": ["HousekeepingTask"], "validations": ["staff assigned", "workload balanced"] },
+        { "step": 3, "action": "Clean Room", "description": "Room cleaned and inspected", "entities": ["HousekeepingTask"], "validations": ["all areas cleaned", "linens changed", "amenities restocked"] },
+        { "step": 4, "action": "Update Status", "description": "Room set to clean/inspected", "entities": ["Room"], "validations": ["status updated to clean", "maintenance issues reported"] }
+      ]
+    },
+    {
+      "name": "Billing & Check-Out Flow",
+      "description": "Settle charges and check guest out",
+      "steps": [
+        { "step": 1, "action": "Review Charges", "description": "Total room and incidental charges", "entities": ["Invoice", "Booking"], "validations": ["all charges posted", "discounts applied", "tax calculated"] },
+        { "step": 2, "action": "Process Payment", "description": "Charge remaining balance", "entities": ["Payment", "Invoice"], "validations": ["payment captured", "receipt generated"] },
+        { "step": 3, "action": "Release Room", "description": "Room marked for cleaning", "entities": ["Room"], "validations": ["room status = dirty", "mini-bar checked", "lost property checked"] },
+        { "step": 4, "action": "Send Receipt", "description": "Email final invoice", "entities": ["Invoice"], "validations": ["receipt sent", "feedback survey sent"] }
+      ]
+    },
+    {
+      "name": "Loyalty Program Flow",
+      "description": "Manage guest loyalty points and perks",
+      "steps": [
+        { "step": 1, "action": "Enroll Guest", "description": "Guest signs up for loyalty", "entities": ["LoyaltyAccount", "Guest"], "validations": ["email verified", "opt-in confirmed"] },
+        { "step": 2, "action": "Earn Points", "description": "Points credited for stay", "entities": ["LoyaltyAccount", "Booking"], "validations": ["points calculated", "bonus applied", "tier updated"] },
+        { "step": 3, "action": "Redeem Points", "description": "Guest redeems for free night or upgrade", "entities": ["LoyaltyAccount", "Booking"], "validations": ["sufficient balance", "blackout dates checked", "redemption processed"] },
+        { "step": 4, "action": "Apply Perks", "description": "Tier-based benefits applied", "entities": ["LoyaltyAccount"], "validations": ["tier perks active", "upgrade applied", "welcome amenity delivered"] }
+      ]
+    }
+  ]
+}

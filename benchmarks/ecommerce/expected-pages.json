@@ -1,0 +1,172 @@
+{
+  "pages": [
+    {
+      "path": "/",
+      "name": "Homepage",
+      "description": "Hero, featured products, collections, trust signals, newsletter signup",
+      "components": ["Hero", "FeaturedProducts", "Collections", "TrustBadges", "NewsletterSignup", "Footer"]
+    },
+    {
+      "path": "/products",
+      "name": "Product Listing",
+      "description": "Filterable, sortable product grid with pagination",
+      "components": ["ProductFilters", "ProductGrid", "Pagination", "SortOptions"]
+    },
+    {
+      "path": "/products/[handle]",
+      "name": "Product Detail",
+      "description": "Gallery, variants, description, reviews, upsells, add to cart",
+      "components": ["ProductGallery", "ProductInfo", "VariantSelector", "QuantitySelector", "AddToCart", "ProductTabs", "Reviews", "Upsells"]
+    },
+    {
+      "path": "/collections",
+      "name": "Collections Index",
+      "description": "All collections with featured images",
+      "components": ["CollectionGrid"]
+    },
+    {
+      "path": "/collections/[handle]",
+      "name": "Collection Detail",
+      "description": "Filtered products within a collection",
+      "components": ["CollectionHeader", "ProductFilters", "ProductGrid", "Pagination"]
+    },
+    {
+      "path": "/cart",
+      "name": "Shopping Cart",
+      "description": "Cart items, quantity updates, coupon input, shipping estimate, checkout CTA",
+      "components": ["CartItems", "QuantityUpdater", "CouponInput", "ShippingEstimator", "CartSummary", "CheckoutCTA"]
+    },
+    {
+      "path": "/checkout",
+      "name": "Checkout",
+      "description": "Multi-step: contact, shipping, payment, review",
+      "components": ["CheckoutSteps", "ContactForm", "ShippingForm", "PaymentForm", "OrderSummary", "PlaceOrder"]
+    },
+    {
+      "path": "/checkout/success",
+      "name": "Order Confirmation",
+      "description": "Order details, tracking, next steps",
+      "components": ["OrderConfirmation", "OrderDetails", "TrackingInfo", "ContinueShopping"]
+    },
+    {
+      "path": "/account",
+      "name": "Account Dashboard",
+      "description": "Overview of orders, wishlist, loyalty, settings",
+      "components": ["AccountNav", "RecentOrders", "WishlistSummary", "LoyaltySummary", "QuickActions"]
+    },
+    {
+      "path": "/account/orders",
+      "name": "Order History",
+      "description": "Paginated list of past orders with status",
+      "components": ["OrderList", "OrderFilters", "Pagination"]
+    },
+    {
+      "path": "/account/orders/[id]",
+      "name": "Order Detail",
+      "description": "Full order details, timeline, return/exchange actions",
+      "components": ["OrderHeader", "OrderTimeline", "OrderItems", "ShippingInfo", "BillingInfo", "ReturnActions"]
+    },
+    {
+      "path": "/account/addresses",
+      "name": "Address Book",
+      "description": "Manage shipping/billing addresses",
+      "components": ["AddressList", "AddressForm", "DefaultToggle"]
+    },
+    {
+      "path": "/account/wishlist",
+      "name": "Wishlist",
+      "description": "Saved products with move to cart",
+      "components": ["WishlistItems", "MoveToCart", "ShareWishlist"]
+    },
+    {
+      "path": "/account/loyalty",
+      "name": "Loyalty Program",
+      "description": "Points balance, tiers, rewards catalog, referral link",
+      "components": ["PointsBalance", "TierProgress", "RewardsCatalog", "ReferralSection", "EarningHistory"]
+    },
+    {
+      "path": "/account/settings",
+      "name": "Account Settings",
+      "description": "Profile, password, notifications, privacy, deletion",
+      "components": ["ProfileForm", "PasswordForm", "NotificationPreferences", "PrivacySettings", "DeleteAccount"]
+    },
+    {
+      "path": "/search",
+      "name": "Search Results",
+      "description": "Autocomplete, filters, results grid, suggestions",
+      "components": ["SearchInput", "Autocomplete", "SearchFilters", "ProductGrid", "SearchSuggestions"]
+    },
+    {
+      "path": "/blog",
+      "name": "Blog Index",
+      "description": "Articles with categories, pagination",
+      "components": ["ArticleGrid", "CategoryFilter", "Pagination"]
+    },
+    {
+      "path": "/blog/[slug]",
+      "name": "Blog Article",
+      "description": "Full article with related products, author, sharing",
+      "components": ["ArticleHeader", "ArticleContent", "AuthorBio", "RelatedProducts", "SocialShare", "Comments"]
+    },
+    {
+      "path": "/pages/[slug]",
+      "name": "Custom Pages",
+      "description": "About, FAQ, Contact, Policy pages",
+      "components": ["PageContent", "ContactForm", "FAQAccordion"]
+    },
+    {
+      "path": "/admin",
+      "name": "Admin Dashboard",
+      "description": "KPIs, recent orders, low stock, revenue chart",
+      "components": ["KPICards", "RecentOrders", "LowStockAlert", "RevenueChart", "QuickActions"]
+    },
+    {
+      "path": "/admin/dashboard",
+      "name": "Admin Dashboard (alias)",
+      "description": "Same as /admin",
+      "components": ["KPICards", "RecentOrders", "LowStockAlert", "RevenueChart", "QuickActions"]
+    },
+    {
+      "path": "/admin/products",
+      "name": "Product Management",
+      "description": "CRUD products, variants, inventory, SEO",
+      "components": ["ProductTable", "ProductForm", "VariantManager", "InventoryManager", "SEOFields", "BulkActions"]
+    },
+    {
+      "path": "/admin/orders",
+      "name": "Order Management",
+      "description": "Order list, detail, fulfillment, returns, refunds",
+      "components": ["OrderTable", "OrderDetail", "FulfillmentForm", "ReturnManager", "RefundForm", "StatusWorkflow"]
+    },
+    {
+      "path": "/admin/customers",
+      "name": "Customer Management",
+      "description": "Customer list, detail, segments, export",
+      "components": ["CustomerTable", "CustomerDetail", "SegmentBuilder", "ExportTool"]
+    },
+    {
+      "path": "/admin/inventory",
+      "name": "Inventory Management",
+      "description": "Multi-warehouse stock, adjustments, transfers",
+      "components": ["InventoryTable", "StockAdjustment", "TransferForm", "LowStockReport", "ReservationView"]
+    },
+    {
+      "path": "/admin/marketing",
+      "name": "Marketing Tools",
+      "description": "Coupons, campaigns, automations, affiliates",
+      "components": ["CouponManager", "CampaignBuilder", "AutomationFlows", "AffiliateDashboard"]
+    },
+    {
+      "path": "/admin/analytics",
+      "name": "Analytics",
+      "description": "Revenue, conversion, LTV, cohorts, attribution",
+      "components": ["RevenueChart", "ConversionFunnel", "LTVChart", "CohortAnalysis", "AttributionReport", "DateRangePicker"]
+    },
+    {
+      "path": "/admin/settings",
+      "name": "Store Settings",
+      "description": "General, payments, shipping, taxes, domains, integrations",
+      "components": ["SettingsTabs", "GeneralSettings", "PaymentSettings", "ShippingSettings", "TaxSettings", "DomainSettings", "IntegrationSettings"]
+    }
+  ]
+}

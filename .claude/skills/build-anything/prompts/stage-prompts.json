@@ -1,0 +1,63 @@
+{
+  "generator": "Build.Anything",
+  "version": "2.0",
+  "description": "Stage-specific prompt patterns for the Build.Anything pipeline. These are prompt templates for the LLM adapter, not implementation code. The actual prompt construction happens in each stage's execute() method.",
+  "stages": {
+    "intent-router": {
+      "description": "Parse user input into a structured project manifest",
+      "templates": {
+        "prompt": "Analyze the following project request and extract: industry, business model, key entities, target audience, tech stack preferences, constraints, and compliance requirements.\n\nUser request: \"{{prompt}}\"",
+        "system": "You are the Build.Anything intent router. Extract structured project metadata from natural language. Be concise. Output JSON."
+      }
+    },
+    "project-intake": {
+      "description": "Expand the manifest with detailed requirements",
+      "templates": {
+        "prompt": "Given the following project manifest, produce a detailed requirements document with user stories, feature list, and acceptance criteria.\n\nManifest: {{manifest}}",
+        "system": "You are the Build.Anything project intake analyst. Produce structured requirements."
+      }
+    },
+    "research": {
+      "description": "Research the domain and competitive landscape",
+      "templates": {
+        "prompt": "Research the {{industry}} industry for a {{description}} project. Identify: market trends, competitive landscape, common patterns, technology choices, and key design considerations.",
+        "system": "You are the Build.Anything research analyst. Provide domain intelligence."
+      }
+    },
+    "business-analysis": {
+      "description": "Analyze business requirements and map entities",
+      "templates": {
+        "prompt": "For a {{industry}} project with these requirements: {{requirements}}\n\nIdentify: business entities with fields, relationships between entities, business rules, workflows, user journeys, and compliance requirements.",
+        "system": "You are the Build.Anything business analyst. Output structured entity and workflow definitions."
+      }
+    },
+    "architecture": {
+      "description": "Design system architecture",
+      "templates": {
+        "prompt": "For a {{industry}} project with entities: {{entities}}\n\nDesign the system architecture including: component diagram, technology stack decisions, data flow, security boundaries, scalability considerations, and deployment architecture.",
+        "system": "You are the Build.Anything architect. Produce a complete system design."
+      }
+    },
+    "database-design": {
+      "description": "Design database schema",
+      "templates": {
+        "prompt": "For a {{industry}} project with these entities: {{entities}}\n\nDesign the database schema: tables with columns and types, indexes, foreign keys, relationships, migration strategy, and seed data considerations.",
+        "system": "You are the Build.Anything database architect. Output a complete normalized schema."
+      }
+    },
+    "api-design": {
+      "description": "Design API endpoints",
+      "templates": {
+        "prompt": "For a {{industry}} project with database schema: {{schema}}\n\nDesign the REST API: endpoints with methods, request/response schemas, authentication, authorization, error handling, pagination, and rate limiting.",
+        "system": "You are the Build.Anything API designer. Output OpenAPI-compatible endpoint definitions."
+      }
+    },
+    "frontend-design": {
+      "description": "Design frontend component hierarchy",
+      "templates": {
+        "prompt": "For a {{industry}} {{appName}} project with design tokens: {{designTokens}}\n\nDesign the frontend: page layouts, component hierarchy, navigation structure, state management, responsive breakpoints, animation patterns, and accessibility considerations.",
+        "system": "You are the Build.Anything frontend designer. Output a component hierarchy and page specifications."
+      }
+    }
+  }
+}

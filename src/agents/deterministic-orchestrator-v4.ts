@@ -315,25 +315,27 @@ export class DeterministicOrchestratorV4 {
       if (!llmGateway) {
         progress.emit('repair', 'info', 'No LLM config — deterministic fixes only');
         console.log('[orchestrator] No LLM gateway — running deterministic-only self-healing');
-      }
-      const engineResult = await healingEngine.heal(
-        workspace.rootPath,
-        llmGateway as any,
-        prompt,
-        (iteration, errors, msg) => progress.emit('repair', 'info', `[${iteration + 1}] ${msg}`),
-      );
-      healingResult = {
-        success: engineResult.success,
-        iterations: engineResult.iterations,
-        errorsFixed: engineResult.errorsFixed,
-        remainingErrors: engineResult.remainingErrors.map(e => ({ file: e.file, message: e.message })),
-      };
-      if (engineResult.remainingErrors.length === 0) {
-        progress.emit('repair', 'completed', `Self-healing resolved all errors (${Date.now() - tAudit}ms)`);
+        healingResult = { success: true, iterations: 0, errorsFixed: 0, remainingErrors: [] };
       } else {
-        progress.emit('repair', 'completed', `Self-healing: ${engineResult.errorsFixed} fixed, ${engineResult.remainingErrors.length} remaining (${Date.now() - tAudit}ms)`);
+        const engineResult = await healingEngine.heal(
+          workspace.rootPath,
+          llmGateway,
+          prompt,
+          (iteration, errors, msg) => progress.emit('repair', 'info', `[${iteration + 1}] ${msg}`),
+        );
+        healingResult = {
+          success: engineResult.success,
+          iterations: engineResult.iterations,
+          errorsFixed: engineResult.errorsFixed,
+          remainingErrors: engineResult.remainingErrors.map(e => ({ file: e.file, message: e.message })),
+        };
+        if (engineResult.remainingErrors.length === 0) {
+          progress.emit('repair', 'completed', `Self-healing resolved all errors (${Date.now() - tAudit}ms)`);
+        } else {
+          progress.emit('repair', 'completed', `Self-healing: ${engineResult.errorsFixed} fixed, ${engineResult.remainingErrors.length} remaining (${Date.now() - tAudit}ms)`);
+        }
+        console.log(`[orchestrator] TS audit + self-healing: ${engineResult.errorsFixed} fixed, ${engineResult.remainingErrors.length} remaining (${engineResult.iterations} iterations)`);
       }
-      console.log(`[orchestrator] TS audit + self-healing: ${engineResult.errorsFixed} fixed, ${engineResult.remainingErrors.length} remaining (${engineResult.iterations} iterations)`);
     } catch (auditErr) {
       progress.emit('repair', 'warning', `TS audit/healing failed: ${(auditErr as Error).message}`);
       console.warn('[orchestrator] TS audit/healing failed:', (auditErr as Error).message);

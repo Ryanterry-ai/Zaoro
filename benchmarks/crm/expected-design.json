@@ -1,0 +1,102 @@
+{
+  "designSystem": {
+    "name": "CRM Design System",
+    "version": "1.0.0",
+    "colors": {
+      "primitives": {
+        "blue-50": "#EFF6FF",
+        "blue-500": "#3B82F6",
+        "blue-600": "#2563EB",
+        "blue-700": "#1D4ED8",
+        "slate-50": "#F8FAFC",
+        "slate-100": "#F1F5F9",
+        "slate-200": "#E2E8F0",
+        "slate-300": "#CBD5E1",
+        "slate-400": "#94A3B8",
+        "slate-500": "#64748B",
+        "slate-600": "#475569",
+        "slate-700": "#334155",
+        "slate-800": "#1E293B",
+        "slate-900": "#0F172A",
+        "green-500": "#22C55E",
+        "green-600": "#16A34A",
+        "amber-500": "#F59E0B",
+        "amber-600": "#D97706",
+        "red-500": "#EF4444",
+        "red-600": "#DC2626"
+      },
+      "semantic": {
+        "primary": { "light": "{blue-600}", "dark": "{blue-500}" },
+        "success": { "light": "{green-600}", "dark": "{green-500}" },
+        "warning": { "light": "{amber-600}", "dark": "{amber-500}" },
+        "error": { "light": "{red-600}", "dark": "{red-500}" },
+        "background": "{slate-50}",
+        "surface": "white",
+        "text": { "primary": "{slate-900}", "secondary": "{slate-500}" }
+      }
+    },
+    "typography": {
+      "fontFamilies": {
+        "sans": "Inter, system-ui, -apple-system, sans-serif"
+      },
+      "fontSizes": {
+        "xs": "12px",
+        "sm": "14px",
+        "base": "16px",
+        "lg": "18px",
+        "xl": "20px",
+        "2xl": "24px",
+        "3xl": "30px"
+      }
+    },
+    "spacing": {
+      "semantic": {
+        "xs": "4px",
+        "sm": "8px",
+        "md": "16px",
+        "lg": "24px",
+        "xl": "32px",
+        "2xl": "48px"
+      }
+    },
+    "borderRadius": {
+      "sm": "4px",
+      "md": "8px",
+      "lg": "12px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 1px 2px rgba(0,0,0,0.05)",
+      "md": "0 4px 6px -1px rgba(0,0,0,0.1)",
+      "lg": "0 10px 15px -3px rgba(0,0,0,0.1)"
+    }
+  },
+  "components": {
+    "Button": {
+      "variants": ["primary", "secondary", "outline", "ghost", "danger"],
+      "sizes": ["sm", "md", "lg"]
+    },
+    "Card": {
+      "variants": ["default", "elevated", "outlined"]
+    },
+    "Table": {
+      "variants": ["default", "striped"]
+    },
+    "KanbanBoard": {
+      "variants": ["default", "compact"]
+    },
+    "PipelineCard": {
+      "variants": ["default", "compact"]
+    },
+    "ActivityFeed": {
+      "variants": ["default", "compact"]
+    }
+  },
+  "patterns": {
+    "pageLayout": {
+      "maxWidth": "1440px",
+      "sidebarWidth": "280px",
+      "headerHeight": "64px"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Patient Intake Flow",
+      "description": "Register new patients into the system",
+      "steps": [
+        { "step": 1, "action": "Collect Demographics", "description": "Patient provides personal information", "entities": ["Patient"], "validations": ["name and DOB valid", "contact info complete", "address verified"] },
+        { "step": 2, "action": "Insurance Verification", "description": "Verify insurance coverage", "entities": ["Insurance", "Patient"], "validations": ["coverage active", "copay determined", "prior auth if needed"] },
+        { "step": 3, "action": "Medical History", "description": "Record past medical conditions", "entities": ["MedicalRecord"], "validations": ["allergies documented", "medications listed", "conditions recorded"] },
+        { "step": 4, "action": "Consent Forms", "description": "Sign treatment consents", "entities": ["ConsentDocument"], "validations": ["HIPAA signed", "treatment consent signed", "minors have guardian"] }
+      ]
+    },
+    {
+      "name": "Appointment Scheduling Flow",
+      "description": "Book and manage patient appointments",
+      "steps": [
+        { "step": 1, "action": "Find Provider", "description": "Search for available doctors", "entities": ["Provider"], "validations": ["specialty matched", "location set"] },
+        { "step": 2, "action": "Select Time Slot", "description": "Pick available appointment time", "entities": ["Appointment"], "validations": ["slot available", "no double-booking"] },
+        { "step": 3, "action": "Confirm Booking", "description": "Appointment confirmed", "entities": ["Appointment"], "validations": ["patient notified", "provider notified", "reminder scheduled"] },
+        { "step": 4, "action": "Check In", "description": "Patient arrives and checks in", "entities": ["Appointment"], "validations": ["arrival recorded", "forms completed", "copay collected"] }
+      ]
+    },
+    {
+      "name": "Medical Records Flow",
+      "description": "Document and manage clinical records",
+      "steps": [
+        { "step": 1, "action": "Record Vitals", "description": "Nurse records patient vitals", "entities": ["VitalSign"], "validations": ["BP, HR, temp recorded", "abnormal values flagged"] },
+        { "step": 2, "action": "Document Visit", "description": "Provider writes visit notes", "entities": ["VisitNote"], "validations": ["chief complaint noted", "assessment documented", "plan recorded"] },
+        { "step": 3, "action": "Order Tests", "description": "Lab or imaging orders placed", "entities": ["Order"], "validations": ["order type valid", "diagnosis code included"] },
+        { "step": 4, "action": "Review Results", "description": "Provider reviews test results", "entities": ["LabResult"], "validations": ["results received", "abnormal flagged", "patient notified"] }
+      ]
+    },
+    {
+      "name": "Prescription Management Flow",
+      "description": "Prescribe and dispense medications",
+      "steps": [
+        { "step": 1, "action": "Create Prescription", "description": "Provider writes e-prescription", "entities": ["Prescription"], "validations": ["medication valid", "dosage correct", "drug interactions checked"] },
+        { "step": 2, "action": "Transmit to Pharmacy", "description": "Send prescription to pharmacy", "entities": ["Prescription"], "validations": ["pharmacy confirmed", "eRX transmitted"] },
+        { "step": 3, "action": "Verify Insurance", "description": "Pharmacy checks coverage", "entities": ["Prescription", "Insurance"], "validations": ["formulary check", "copay determined", "prior auth if needed"] },
+        { "step": 4, "action": "Dispense Medication", "description": "Medication dispensed to patient", "entities": ["Prescription"], "validations": ["dispensed recorded", "counseling provided", "refill scheduled"] }
+      ]
+    },
+    {
+      "name": "Billing & Claims Flow",
+      "description": "Submit insurance claims and process payments",
+      "steps": [
+        { "step": 1, "action": "Code Encounter", "description": "Assign diagnosis and procedure codes", "entities": ["Claim"], "validations": ["ICD-10 codes valid", "CPT codes correct", "modifiers applied"] },
+        { "step": 2, "action": "Submit Claim", "description": "Send claim to insurance payer", "entities": ["Claim"], "validations": ["claim complete", "submitted electronically", "acknowledgment received"] },
+        { "step": 3, "action": "Adjudicate Claim", "description": "Payer processes claim", "entities": ["Claim"], "validations": ["paid/rejected/denied", "EOB received"] },
+        { "step": 4, "action": "Post Payment", "description": "Apply payment to patient account", "entities": ["Payment", "Claim"], "validations": ["payment posted", "patient balance updated", "write-off if contracted"] }
+      ]
+    }
+  ]
+}

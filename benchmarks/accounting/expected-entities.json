@@ -1,0 +1,267 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Authentication and authorization for staff access",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "accountant", "manager", "viewer"], "required": true },
+        { "name": "twoFactorEnabled", "type": "boolean", "default": false },
+        { "name": "lastLoginAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Invoice" },
+        { "type": "hasMany", "target": "JournalEntry" }
+      ]
+    },
+    {
+      "name": "Client",
+      "description": "Customer or client entity",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "phone", "type": "string" },
+        { "name": "billingAddress", "type": "json", "required": true },
+        { "name": "shippingAddress", "type": "json" },
+        { "name": "taxId", "type": "string" },
+        { "name": "paymentTerms", "type": "enum", "values": ["net15", "net30", "net60", "due_on_receipt"], "default": "net30" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "notes", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["active", "inactive", "archived"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Invoice" },
+        { "type": "hasMany", "target": "Payment" }
+      ]
+    },
+    {
+      "name": "Account",
+      "description": "Chart of accounts — general ledger accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["asset", "liability", "equity", "revenue", "expense"], "required": true },
+        { "name": "subtype", "type": "string" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "openingBalance", "type": "decimal", "default": 0 },
+        { "name": "currentBalance", "type": "decimal", "default": 0 },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Account", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Account", "foreignKey": "parentId" },
+        { "type": "hasMany", "target": "JournalEntry" }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "description": "Billable invoices issued to clients",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "invoiceNumber", "type": "string", "required": true, "unique": true },
+        { "name": "clientId", "type": "uuid", "required": true },
+        { "name": "issueDate", "type": "date", "required": true },
+        { "name": "dueDate", "type": "date", "required": true },
+        { "name": "status", "type": "enum", "values": ["draft", "sent", "overdue", "paid", "cancelled", "credited"], "default": "draft" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "lineItems", "type": "json", "required": true },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "taxRate", "type": "decimal" },
+        { "name": "taxTotal", "type": "decimal", "default": 0 },
+        { "name": "discountTotal", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "amountDue", "type": "decimal", "required": true },
+        { "name": "amountPaid", "type": "decimal", "default": 0 },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Client" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Payment" },
+        { "name": "hasMany", "target": "JournalEntry" }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "Payments received from clients",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "invoiceId", "type": "uuid", "required": true },
+        { "name": "clientId", "type": "uuid", "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "method", "type": "enum", "values": ["cash", "check", "bank_transfer", "credit_card", "crypto", "other"], "required": true },
+        { "name": "reference", "type": "string" },
+        { "name": "paymentDate", "type": "date", "required": true },
+        { "name": "status", "type": "enum", "values": ["pending", "cleared", "bounced", "refunded"], "default": "pending" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Invoice" },
+        { "type": "belongsTo", "target": "Client" },
+        { "type": "hasMany", "target": "JournalEntry" }
+      ]
+    },
+    {
+      "name": "JournalEntry",
+      "description": "Double-entry journal entries",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "entryNumber", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "entryDate", "type": "date", "required": true },
+        { "name": "debits", "type": "json", "required": true },
+        { "name": "credits", "type": "json", "required": true },
+        { "name": "totalDebits", "type": "decimal", "required": true },
+        { "name": "totalCredits", "type": "decimal", "required": true },
+        { "name": "source", "type": "enum", "values": ["manual", "invoice", "payment", "expense", "recurring", "import"], "default": "manual" },
+        { "name": "sourceId", "type": "uuid" },
+        { "name": "isPosted", "type": "boolean", "default": false },
+        { "name": "postedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "FiscalYear" }
+      ]
+    },
+    {
+      "name": "Expense",
+      "description": "Business expenses and receipts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "vendorId", "type": "uuid" },
+        { "name": "category", "type": "enum", "values": ["office", "travel", "utilities", "software", "professional_fees", "rent", "supplies", "meals", "other"], "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "expenseDate", "type": "date", "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "receiptUrl", "type": "string" },
+        { "name": "taxDeductible", "type": "boolean", "default": true },
+        { "name": "billable", "type": "boolean", "default": false },
+        { "name": "clientId", "type": "uuid" },
+        { "name": "paymentMethod", "type": "enum", "values": ["cash", "credit_card", "bank_transfer", "company_card"], "default": "credit_card" },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "reimbursed", "rejected"], "default": "pending" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Vendor" },
+        { "type": "belongsTo", "target": "Client" }
+      ]
+    },
+    {
+      "name": "Vendor",
+      "description": "Suppliers and service providers",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "contactName", "type": "string" },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "taxId", "type": "string" },
+        { "name": "paymentTerms", "type": "string", "default": "net30" },
+        { "name": "category", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["active", "inactive"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Expense" }
+      ]
+    },
+    {
+      "name": "TaxRate",
+      "description": "Sales tax and VAT rates configuration",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "rate", "type": "decimal", "required": true },
+        { "name": "type", "type": "enum", "values": ["sales_tax", "vat", "gst", "service_tax", "withholding"], "required": true },
+        { "name": "jurisdiction", "type": "string", "required": true },
+        { "name": "countryCode", "type": "string", "required": true },
+        { "name": "region", "type": "string" },
+        { "name": "isCompound", "type": "boolean", "default": false },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "effectiveFrom", "type": "date" },
+        { "name": "effectiveTo", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ]
+    },
+    {
+      "name": "Report",
+      "description": "Generated financial reports",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["profit_loss", "balance_sheet", "cash_flow", "trial_balance", "general_ledger", "accounts_receivable", "accounts_payable", "tax_summary", "budget_variance"], "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "parameters", "type": "json", "required": true },
+        { "name": "outputFormat", "type": "enum", "values": ["json", "csv", "pdf", "xlsx"], "default": "json" },
+        { "name": "generatedBy", "type": "uuid" },
+        { "name": "generatedAt", "type": "datetime", "required": true },
+        { "name": "expiresAt", "type": "datetime" },
+        { "name": "data", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ]
+    },
+    {
+      "name": "FiscalYear",
+      "description": "Accounting fiscal year periods",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "endDate", "type": "date", "required": true },
+        { "name": "isClosed", "type": "boolean", "default": false },
+        { "name": "closedAt", "type": "datetime" },
+        { "name": "closedBy", "type": "uuid" },
+        { "name": "openingEquityAccountId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "JournalEntry" }
+      ]
+    },
+    {
+      "name": "Budget",
+      "description": "Budget allocations per account or category",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "fiscalYearId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "accountId", "type": "uuid" },
+        { "name": "category", "type": "string" },
+        { "name": "allocatedAmount", "type": "decimal", "required": true },
+        { "name": "spentAmount", "type": "decimal", "default": 0 },
+        { "name": "period", "type": "enum", "values": ["monthly", "quarterly", "annual"], "default": "monthly" },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "endDate", "type": "date", "required": true },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ]
+    }
+  ]
+}

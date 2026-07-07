@@ -1,0 +1,7 @@
+{
+  "entities": ["User", "Tenant", "Subscription", "Plan", "Feature", "FeatureFlag", "UsageMetric", "UsageEvent", "Invoice", "Payment", "Role", "Permission", "Invitation", "APIKey", "Webhook", "WebhookEvent", "Integration", "MarketplaceApp", "AuditLog", "Notification", "OnboardingFlow", "OnboardingStep"],
+  "pages": ["/", "/dashboard", "/dashboard/overview", "/dashboard/analytics", "/dashboard/users", "/dashboard/settings", "/billing", "/billing/plans", "/billing/subscriptions", "/billing/invoices", "/billing/usage", "/team", "/team/members", "/team/roles", "/team/invitations", "/settings", "/settings/profile", "/settings/security", "/settings/integrations", "/settings/api", "/settings/webhooks", "/settings/feature-flags", "/settings/branding", "/integrations", "/integrations/marketplace", "/integrations/[slug]", "/admin", "/admin/tenants", "/admin/users", "/admin/billing", "/admin/analytics", "/admin/feature-flags", "/admin/audit-logs", "/onboarding", "/onboarding/[step]", "/api-docs"],
+  "features": ["multi-tenancy", "subscription-billing", "usage-metering", "rbac", "feature-flags", "analytics", "integrations-marketplace", "white-labeling", "api-access", "webhooks", "admin-dashboard", "customer-portal", "onboarding-flows", "usage-based-pricing", "audit-logging", "notifications"],
+  "integrations": ["stripe", "paddle", "paddle-billing", "segment", "mixpanel", "amplitude", "posthog", "sendgrid", "slack", "github", "gitlab", "jira", "linear"],
+  "compliance": ["gdpr", "ccpa", "soc2", "iso27001"]
+}

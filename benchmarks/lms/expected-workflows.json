@@ -1,0 +1,55 @@
+{
+  "workflows": [
+    {
+      "name": "Course Creation Flow",
+      "description": "Design and publish online courses",
+      "steps": [
+        { "step": 1, "action": "Create Course Shell", "description": "Set course title, description, and metadata", "entities": ["Course"], "validations": ["title set", "description written", "category assigned"] },
+        { "step": 2, "action": "Build Curriculum", "description": "Add modules, lessons, and quizzes", "entities": ["Module", "Lesson", "Quiz"], "validations": ["modules sequenced", "lessons populated", "quizzes configured"] },
+        { "step": 3, "action": "Upload Content", "description": "Add videos, documents, and resources", "entities": ["ContentAsset"], "validations": ["videos processed", "docs attached", "SCORM valid if used"] },
+        { "step": 4, "action": "Set Pricing", "description": "Configure price or subscription", "entities": ["Course"], "validations": ["price set", "subscription tier if applicable", "coupons if enabled"] },
+        { "step": 5, "action": "Publish Course", "description": "Make course available to learners", "entities": ["Course"], "validations": ["course reviewed", "published status", "catalog updated", "notification sent"] }
+      ]
+    },
+    {
+      "name": "Student Enrollment Flow",
+      "description": "Enroll students in courses and tracks",
+      "steps": [
+        { "step": 1, "action": "Browse Catalog", "description": "Students browse available courses", "entities": ["CourseCatalog"], "validations": ["courses filtered", "search working"] },
+        { "step": 2, "action": "Select Course", "description": "Choose course to enroll", "entities": ["Enrollment"], "validations": ["prerequisites met", "capacity check", "payment if required"] },
+        { "step": 3, "action": "Confirm Enrollment", "description": "Enrollment activated", "entities": ["Enrollment"], "validations": ["enrollment confirmed", "course added to dashboard", "welcome message sent"] },
+        { "step": 4, "action": "Pre-Assessment", "description": "Baseline knowledge test", "entities": ["Assessment"], "validations": ["pre-test completed", "baseline scored"] }
+      ]
+    },
+    {
+      "name": "Lesson Progression Flow",
+      "description": "Learners progress through course content",
+      "steps": [
+        { "step": 1, "action": "Start Lesson", "description": "Learner begins lesson", "entities": ["LessonProgress"], "validations": ["lesson unlocked", "prerequisites met"] },
+        { "step": 2, "action": "Complete Content", "description": "Learner views or completes content", "entities": ["LessonProgress"], "validations": ["video watched > threshold", "document viewed", "progress tracked"] },
+        { "step": 3, "action": "Take Quiz", "description": "End-of-lesson assessment", "entities": ["QuizAttempt"], "validations": ["quiz submitted", "score calculated", "passing threshold checked"] },
+        { "step": 4, "action": "Unlock Next", "description": "Next lesson becomes available", "entities": ["LessonProgress"], "validations": ["lesson completed", "next lesson unlocked", "course progress updated"] }
+      ]
+    },
+    {
+      "name": "Assessment & Grading Flow",
+      "description": "Create and grade assessments",
+      "steps": [
+        { "step": 1, "action": "Create Assessment", "description": "Instructor creates exam or assignment", "entities": ["Assessment"], "validations": ["questions valid", "passing score set", "time limit if applicable"] },
+        { "step": 2, "action": "Submit Attempt", "description": "Student submits answers", "entities": ["AssessmentAttempt"], "validations": ["all questions answered", "within time limit", "submitted on time"] },
+        { "step": 3, "action": "Auto-Grade", "description": "System grades objective questions", "entities": ["AssessmentAttempt"], "validations": ["scores calculated", "feedback generated"] },
+        { "step": 4, "action": "Manual Review", "description": "Instructor grades subjective responses", "entities": ["AssessmentAttempt"], "validations": ["rubric applied", "comments added", "final score recorded"] }
+      ]
+    },
+    {
+      "name": "Certification Flow",
+      "description": "Issue certificates upon course completion",
+      "steps": [
+        { "step": 1, "action": "Verify Completion", "description": "Check all requirements met", "entities": ["CourseProgress"], "validations": ["all lessons completed", "quiz passed", "minimum score met"] },
+        { "step": 2, "action": "Generate Certificate", "description": "Create certificate with learner info", "entities": ["Certificate"], "validations": ["learner name correct", "course details accurate", "completion date set"] },
+        { "step": 3, "action": "Issue Certificate", "description": "Make certificate available", "entities": ["Certificate"], "validations": ["certificate published", "downloadable", "linkedIn readiness"] },
+        { "step": 4, "action": "Record Achievement", "description": "Log credential permanently", "entities": ["Certificate"], "validations": ["blockchain hash if applicable", "transcript updated", "badge issued"] }
+      ]
+    }
+  ]
+}

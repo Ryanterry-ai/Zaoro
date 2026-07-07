@@ -111,14 +111,15 @@ export class LLMAdapter {
       });
     }
 
-    // Anthropic
-    if (process.env.ANTHROPIC_API_KEY) {
+    // Anthropic (also check LLM_API_KEY for test harness compatibility)
+    const anthropicKey = process.env.ANTHROPIC_API_KEY || process.env.LLM_API_KEY;
+    if (anthropicKey) {
       this.registerProvider({
         id: 'anthropic',
         name: 'Anthropic',
         baseUrl: 'https://api.anthropic.com/v1',
-        apiKey: process.env.ANTHROPIC_API_KEY,
-        defaultModel: 'claude-sonnet-4-20250514',
+        apiKey: anthropicKey,
+        defaultModel: process.env.LLM_MODEL || 'claude-sonnet-4-20250514',
         priority: 3,
         taskCapabilities: [TaskType.Analysis, TaskType.Creative, TaskType.CodeGeneration, TaskType.Review, TaskType.Planning],
         rateLimit: 10,
@@ -140,6 +141,20 @@ export class LLMAdapter {
         supportsJSON: true,
       });
     }
+  }
+
+  /**
+   * Check if any providers are configured.
+   */
+  hasProviders(): boolean {
+    return this.providers.length > 0;
+  }
+
+  /**
+   * Get the number of configured providers.
+   */
+  getProviderCount(): number {
+    return this.providers.length;
   }
 
   // ─── Call Interface ────────────────────────────────────────────────────

@@ -1,0 +1,364 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "System users with roles",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "manager", "accountant", "warehouse", "production", "sales", "purchasing"], "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "active", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasMany", "target": "JournalEntry" }
+      ]
+    },
+    {
+      "name": "Company",
+      "description": "Legal entities in multi-company setup",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "legalName", "type": "string" },
+        { "name": "taxId", "type": "string" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "fiscalYearStart", "type": "integer", "default": 1 },
+        { "name": "isHoldingCompany", "type": "boolean", "default": false },
+        { "name": "parentCompanyId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" },
+        { "type": "hasMany", "target": "ChartOfAccounts" },
+        { "type": "hasMany", "target": "JournalEntry" },
+        { "type": "hasMany", "target": "Warehouse" },
+        { "type": "belongsTo", "target": "Company", "foreignKey": "parentCompanyId" }
+      ]
+    },
+    {
+      "name": "ChartOfAccounts",
+      "description": "Chart of accounts structure",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "accountCode", "type": "string", "required": true },
+        { "name": "accountName", "type": "string", "required": true },
+        { "name": "accountType", "type": "enum", "values": ["asset", "liability", "equity", "revenue", "cogs", "expense"], "required": true },
+        { "name": "accountSubType", "type": "string" },
+        { "name": "parentAccountId", "type": "uuid" },
+        { "name": "active", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasMany", "target": "JournalEntry" },
+        { "type": "belongsTo", "target": "ChartOfAccounts", "foreignKey": "parentAccountId" }
+      ]
+    },
+    {
+      "name": "JournalEntry",
+      "description": "General ledger journal entries",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "entryNumber", "type": "string", "required": true },
+        { "name": "entryDate", "type": "date", "required": true },
+        { "name": "description", "type": "string", "required": true },
+        { "name": "reference", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["draft", "posted", "voided"], "default": "draft" },
+        { "name": "createdBy", "type": "uuid", "required": true },
+        { "name": "postedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "createdBy" },
+        { "type": "hasMany", "target": "JournalEntryLine" }
+      ]
+    },
+    {
+      "name": "JournalEntryLine",
+      "description": "Individual lines in journal entry",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "journalEntryId", "type": "uuid", "required": true },
+        { "name": "accountId", "type": "uuid", "required": true },
+        { "name": "debit", "type": "decimal", "default": 0 },
+        { "name": "credit", "type": "decimal", "default": 0 },
+        { "name": "description", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "JournalEntry" },
+        { "type": "belongsTo", "target": "ChartOfAccounts" }
+      ]
+    },
+    {
+      "name": "InventoryItem",
+      "description": "Items in inventory",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "itemCode", "type": "string", "required": true },
+        { "name": "itemName", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "itemType", "type": "enum", "values": ["finished_good", "raw_material", "component", "tool"], "required": true },
+        { "name": "unitOfMeasure", "type": "string", "required": true },
+        { "name": "weight", "type": "decimal" },
+        { "name": "category", "type": "string" },
+        { "name": "costingMethod", "type": "enum", "values": ["fifo", "lifo", "average"], "default": "average" },
+        { "name": "standardCost", "type": "decimal" },
+        { "name": "reorderPoint", "type": "integer" },
+        { "name": "reorderQty", "type": "integer" },
+        { "name": "trackLots", "type": "boolean", "default": false },
+        { "name": "trackSerials", "type": "boolean", "default": false },
+        { "name": "active", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "InventoryLevel" },
+        { "type": "hasMany", "target": "BillOfMaterials" },
+        { "type": "hasMany", "target": "StockMovement" }
+      ]
+    },
+    {
+      "name": "Warehouse",
+      "description": "Warehouse locations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "warehouseCode", "type": "string", "required": true },
+        { "name": "warehouseName", "type": "string", "required": true },
+        { "name": "address", "type": "json" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasMany", "target": "InventoryLevel" }
+      ]
+    },
+    {
+      "name": "InventoryLevel",
+      "description": "Stock levels per item/warehouse",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "itemId", "type": "uuid", "required": true },
+        { "name": "warehouseId", "type": "uuid", "required": true },
+        { "name": "quantityOnHand", "type": "integer", "default": 0 },
+        { "name": "quantityReserved", "type": "integer", "default": 0 },
+        { "name": "quantityOnOrder", "type": "integer", "default": 0 },
+        { "name": "binLocation", "type": "string" },
+        { "name": "lastCountedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "InventoryItem" },
+        { "type": "belongsTo", "target": "Warehouse" }
+      ]
+    },
+    {
+      "name": "StockMovement",
+      "description": "Inventory transactions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "itemId", "type": "uuid", "required": true },
+        { "name": "warehouseId", "type": "uuid", "required": true },
+        { "name": "movementType", "type": "enum", "values": ["receipt", "issue", "adjustment", "transfer", "assembly", "disassembly"], "required": true },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "lotNumber", "type": "string" },
+        { "name": "serialNumber", "type": "string" },
+        { "name": "referenceType", "type": "string" },
+        { "name": "referenceId", "type": "uuid" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdBy", "type": "uuid", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "InventoryItem" },
+        { "type": "belongsTo", "target": "Warehouse" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "createdBy" }
+      ]
+    },
+    {
+      "name": "PurchaseOrder",
+      "description": "Purchase orders to vendors",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "poNumber", "type": "string", "required": true },
+        { "name": "vendorId", "type": "uuid", "required": true },
+        { "name": "warehouseId", "type": "uuid", "required": true },
+        { "name": "orderDate", "type": "date", "required": true },
+        { "name": "expectedDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["draft", "submitted", "approved", "received", "closed", "cancelled"], "default": "draft" },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "taxAmount", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "notes", "type": "text" },
+        { "name": "createdBy", "type": "uuid", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Vendor" },
+        { "type": "belongsTo", "target": "Warehouse" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "createdBy" },
+        { "type": "hasMany", "target": "PurchaseOrderLine" }
+      ]
+    },
+    {
+      "name": "Vendor",
+      "description": "Vendor/supplier records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "vendorCode", "type": "string", "required": true },
+        { "name": "vendorName", "type": "string", "required": true },
+        { "name": "contactName", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "paymentTerms", "type": "string" },
+        { "name": "creditLimit", "type": "decimal" },
+        { "name": "taxId", "type": "string" },
+        { "name": "active", "type": "boolean", "default": true },
+        { "name": "rating", "type": "integer", "default": 3 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "PurchaseOrder" },
+        { "type": "hasMany", "target": "AccountPayable" }
+      ]
+    },
+    {
+      "name": "BillOfMaterials",
+      "description": "Bill of Materials for manufactured items",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "itemId", "type": "uuid", "required": true },
+        { "name": "revision", "type": "string", "default": "A" },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "scrapPercentage", "type": "decimal", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["draft", "active", "obsolete"], "default": "draft" },
+        { "name": "effectiveFrom", "type": "date" },
+        { "name": "effectiveTo", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "InventoryItem" },
+        { "type": "hasMany", "target": "BillOfMaterialsLine" }
+      ]
+    },
+    {
+      "name": "WorkOrder",
+      "description": "Manufacturing work orders",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "workOrderNumber", "type": "string", "required": true },
+        { "name": "itemId", "type": "uuid", "required": true },
+        { "name": "bomId", "type": "uuid" },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "status", "type": "enum", "values": ["draft", "released", "in_progress", "completed", "closed"], "default": "draft" },
+        { "name": "startDate", "type": "date" },
+        { "name": "dueDate", "type": "date" },
+        { "name": "completedDate", "type": "date" },
+        { "name": "routingId", "type": "uuid" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "InventoryItem" },
+        { "type": "belongsTo", "target": "BillOfMaterials" },
+        { "type": "belongsTo", "target": "Routing" },
+        { "type": "hasMany", "target": "WorkOrderMaterial" },
+        { "type": "hasMany", "target": "WorkOrderOperation" }
+      ]
+    },
+    {
+      "name": "SalesOrder",
+      "description": "Customer sales orders",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderNumber", "type": "string", "required": true },
+        { "name": "customerId", "type": "uuid", "required": true },
+        { "name": "orderDate", "type": "date", "required": true },
+        { "name": "requestedDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["quote", "confirmed", "processing", "shipped", "invoiced", "closed", "cancelled"], "default": "quote" },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "taxAmount", "type": "decimal", "default": 0 },
+        { "name": "shippingAmount", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "createdBy", "type": "uuid", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Customer" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "createdBy" },
+        { "type": "hasMany", "target": "SalesOrderLine" },
+        { "type": "hasMany", "target": "Shipment" }
+      ]
+    },
+    {
+      "name": "Customer",
+      "description": "Customer accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "customerCode", "type": "string", "required": true },
+        { "name": "customerName", "type": "string", "required": true },
+        { "name": "contactName", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "paymentTerms", "type": "string" },
+        { "name": "creditLimit", "type": "decimal" },
+        { "name": "taxId", "type": "string" },
+        { "name": "active", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "SalesOrder" },
+        { "type": "hasMany", "target": "AccountReceivable" }
+      ]
+    },
+    {
+      "name": "Employee",
+      "description": "Employee records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeNumber", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "hireDate", "type": "date", "required": true },
+        { "name": "terminationDate", "type": "date" },
+        { "name": "department", "type": "string" },
+        { "name": "position", "type": "string" },
+        { "name": "payType", "type": "enum", "values": ["hourly", "salary"], "required": true },
+        { "name": "payRate", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["active", "inactive"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "TimeEntry" },
+        { "type": "hasMany", "target": "Payroll" }
+      ]
+    }
+  ]
+}

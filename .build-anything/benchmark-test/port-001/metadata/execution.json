@@ -6,10 +6,10 @@
     "project-intake": {
       "stageId": "project-intake",
       "status": "failed",
-      "startedAt": "2026-07-06T15:45:36.532Z",
-      "completedAt": "2026-07-06T15:45:36.533Z",
+      "startedAt": "2026-07-07T08:00:21.974Z",
+      "completedAt": "2026-07-07T08:00:21.975Z",
       "durationMs": 1,
-      "attempt": 14,
+      "attempt": 18,
       "maxAttempts": 2,
       "error": "Validation failed: Stage failed: No project description provided",
       "warnings": [],
@@ -19,7 +19,7 @@
     }
   },
   "startedAt": "2026-07-06T15:12:38.717Z",
-  "updatedAt": "2026-07-06T15:45:36.533Z",
+  "updatedAt": "2026-07-07T08:00:21.975Z",
   "totalDurationMs": 0,
   "checkpoints": {}
 }

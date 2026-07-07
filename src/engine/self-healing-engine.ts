@@ -122,7 +122,16 @@ export class SelfHealingEngine {
         }
       }
 
-      // Step 4: Generate fixes via LLM (batch by file)
+      // Step 4: Generate fixes via LLM (batch by file) — skip if no LLM gateway
+      if (!gateway) {
+        onProgress?.(iteration, errors.length, 'No LLM gateway — deterministic-only self-healing');
+        console.log('[self-heal] No LLM gateway — skipping LLM self-healing after deterministic fixes');
+        const remaining = errors.length;
+        const finalErrors = remaining === 0 ? 0 : remaining;
+        log.push({ iteration, errorsBefore: errors.length, filesAffected: [...fileGroups.keys()], fixApplied: fixesApplied > 0, durationMs: Date.now() - iterStart });
+        if (errors.length === 0) break;
+        continue;
+      }
       onProgress?.(iteration, errors.length, 'Generating fixes via LLM...');
       const fixes = await this.generateFixes(
         workspacePath,
@@ -307,6 +316,10 @@ export class SelfHealingEngine {
     iteration: number,
     totalErrors: number
   ): Promise<ASTPatch[]> {
+    if (!gateway) {
+      console.log('[self-heal] generateFixes called without gateway — returning empty');
+      return [];
+    }
     const allPatches: ASTPatch[] = [];
     let batchCount = 0;
 

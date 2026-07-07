@@ -2,7 +2,7 @@
   "totalApps": 1,
   "successful": 0,
   "failed": 1,
-  "avgDurationMs": 1041,
+  "avgDurationMs": 1047,
   "avgScore": 20,
   "avgCostUsd": 0,
   "results": [
@@ -11,12 +11,12 @@
       "appName": "Agency Website",
       "industry": "portfolio",
       "success": false,
-      "durationMs": 1041,
+      "durationMs": 1047,
       "totalLlmCalls": 0,
       "totalTokens": 0,
       "estimatedCostUsd": 0,
       "scores": {
-        "design": 24,
+        "design": 22,
         "architecture": 10,
         "security": 20,
         "performance": 20,
@@ -39,7 +39,7 @@
       ],
       "reusablePatterns": [],
       "error": "Pipeline failed",
-      "timestamp": 1783352736558
+      "timestamp": 1783411221999
     }
   ],
   "industryScores": {
@@ -58,5 +58,5 @@
     "Improve architecture scoring (currently 10/100)",
     "High failure rate (100%) — investigate common failure modes"
   ],
-  "durationMs": 1043
+  "durationMs": 1048
 }

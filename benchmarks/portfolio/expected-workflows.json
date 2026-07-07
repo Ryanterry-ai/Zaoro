@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Project Showcase Flow",
+      "description": "Add and feature portfolio projects",
+      "steps": [
+        { "step": 1, "action": "Create Project", "description": "Add new project entry", "entities": ["Project"], "validations": ["title set", "description written", "category assigned"] },
+        { "step": 2, "action": "Upload Media", "description": "Add images, videos, or demos", "entities": ["ProjectMedia"], "validations": ["images optimized", "video embedded", "demo link valid"] },
+        { "step": 3, "action": "Set Tags", "description": "Add skills and tech stack tags", "entities": ["Project"], "validations": ["technologies listed", "role defined", "timeline set"] },
+        { "step": 4, "action": "Publish Project", "description": "Project goes live on portfolio", "entities": ["Project"], "validations": ["project published", "thumbnail set", "featured flag if applicable"] }
+      ]
+    },
+    {
+      "name": "Testimonial Collection Flow",
+      "description": "Collect and display client endorsements",
+      "steps": [
+        { "step": 1, "action": "Request Testimonial", "description": "Send testimonial request to client", "entities": ["TestimonialRequest"], "validations": ["client contact valid", "project completed"] },
+        { "step": 2, "action": "Collect Response", "description": "Receive written or video testimonial", "entities": ["Testimonial"], "validations": ["content submitted", "attribution authorized"] },
+        { "step": 3, "action": "Approve Testimonial", "description": "Review and approve content", "entities": ["Testimonial"], "validations": ["quality check passed", "brand safe"] },
+        { "step": 4, "action": "Display on Site", "description": "Publish testimonial on portfolio", "entities": ["Testimonial"], "validations": ["featured placement", "schema markup added", "linked to project"] }
+      ]
+    },
+    {
+      "name": "Contact Inquiry Flow",
+      "description": "Handle potential client inquiries",
+      "steps": [
+        { "step": 1, "action": "Submit Inquiry", "description": "Visitor fills contact form", "entities": ["Inquiry"], "validations": ["name and email valid", "message complete", "honeypot clean"] },
+        { "step": 2, "action": "Send Auto-Reply", "description": "Immediate acknowledgment", "entities": ["Inquiry"], "validations": ["auto-reply sent", "expectation set"] },
+        { "step": 3, "action": "Review Inquiry", "description": "Portfolio owner reviews", "entities": ["Inquiry"], "validations": ["lead qualified", "category identified"] },
+        { "step": 4, "action": "Respond to Client", "description": "Personal follow-up sent", "entities": ["Inquiry"], "validations": ["response sent", "meeting scheduled if qualified", "CRM updated"] }
+      ]
+    },
+    {
+      "name": "Skill Endorsement Flow",
+      "description": "Showcase professional skills and endorsements",
+      "steps": [
+        { "step": 1, "action": "List Skills", "description": "Add professional skills with proficiency", "entities": ["Skill"], "validations": ["skill name set", "proficiency level set", "category assigned"] },
+        { "step": 2, "action": "Add Evidence", "description": "Link skill to project examples", "entities": ["Skill", "Project"], "validations": ["project linked", "skill relevance confirmed"] },
+        { "step": 3, "action": "Receive Endorsement", "description": "Peer or client endorses skill", "entities": ["Endorsement"], "validations": ["endorser verified", "skill matched"] },
+        { "step": 4, "action": "Update Display", "description": "Skill section updated on portfolio", "entities": ["Skill"], "validations": ["endorsement count updated", "featured order set"] }
+      ]
+    },
+    {
+      "name": "Analytics Tracking Flow",
+      "description": "Monitor portfolio performance and engagement",
+      "steps": [
+        { "step": 1, "action": "Track Views", "description": "Record page and project views", "entities": ["AnalyticsEvent"], "validations": ["page tracked", "source recorded"] },
+        { "step": 2, "action": "Track Clicks", "description": "Record CTA and link clicks", "entities": ["AnalyticsEvent"], "validations": ["click recorded", "element identified"] },
+        { "step": 3, "action": "Generate Report", "description": "Weekly/monthly performance report", "entities": ["AnalyticsReport"], "validations": ["views aggregated", "top projects ranked", "referral sources shown"] },
+        { "step": 4, "action": "Optimize Portfolio", "description": "Update based on analytics insights", "entities": ["Project"], "validations": ["low-performing projects refreshed", "CTAs optimized", "featured order adjusted"] }
+      ]
+    }
+  ]
+}

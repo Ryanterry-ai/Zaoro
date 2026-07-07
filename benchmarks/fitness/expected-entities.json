@@ -1,0 +1,251 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Staff accounts for trainers and admins",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "trainer", "manager", "front_desk"], "required": true },
+        { "name": "employeeId", "type": "string", "unique": true },
+        { "name": "phone", "type": "string" },
+        { "name": "hireDate", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Class" },
+        { "type": "hasMany", "target": "Workout" }
+      ]
+    },
+    {
+      "name": "Member",
+      "description": "Gym members and clients",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "phone", "type": "string", "required": true },
+        { "name": "dateOfBirth", "type": "date" },
+        { "name": "gender", "type": "enum", "values": ["male", "female", "other", "prefer_not_to_say"] },
+        { "name": "emergencyContact", "type": "json" },
+        { "name": "healthNotes", "type": "text" },
+        { "name": "photoUrl", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["active", "frozen", "expired", "cancelled"], "default": "active" },
+        { "name": "joinedAt", "type": "datetime", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Membership" },
+        { "type": "hasMany", "target": "Attendance" },
+        { "type": "hasMany", "target": "Goal" },
+        { "type": "hasMany", "target": "Workout" },
+        { "type": "belongsToMany", "target": "Class", "through": "ClassBooking" }
+      ]
+    },
+    {
+      "name": "Membership",
+      "description": "Member subscription plans",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "memberId", "type": "uuid", "required": true },
+        { "name": "planId", "type": "uuid", "required": true },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "endDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["active", "expired", "cancelled", "frozen", "pending"], "default": "active" },
+        { "name": "renewalType", "type": "enum", "values": ["auto", "manual", "none"], "default": "auto" },
+        { "name": "freezeCount", "type": "integer", "default": 0 },
+        { "name": "maxFreezeDays", "type": "integer", "default": 30 },
+        { "name": "checkInsUsed", "type": "integer", "default": 0 },
+        { "name": "checkInLimit", "type": "integer" },
+        { "name": "cancelledAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Member" },
+        { "type": "belongsTo", "target": "MembershipPlan" },
+        { "type": "hasMany", "target": "Payment" }
+      ]
+    },
+    {
+      "name": "MembershipPlan",
+      "description": "Membership plan configurations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "type", "type": "enum", "values": ["monthly", "quarterly", "annual", "pay_per_visit", "class_pack", "personal_training"], "required": true },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "durationDays", "type": "integer" },
+        { "name": "totalSessions", "type": "integer" },
+        { "name": "features", "type": "json", "default": "[]" },
+        { "name": "trialDays", "type": "integer", "default": 0 },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Membership" }
+      ]
+    },
+    {
+      "name": "Class",
+      "description": "Group fitness classes",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "trainerId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "category", "type": "enum", "values": ["yoga", "pilates", "hiit", "spin", "zumba", "strength", "boxing", "dance", "meditation", "aqua", "crossfit"], "required": true },
+        { "name": "difficulty", "type": "enum", "values": ["beginner", "intermediate", "advanced", "all_levels"], "default": "all_levels" },
+        { "name": "duration", "type": "integer", "required": true },
+        { "name": "capacity", "type": "integer", "required": true },
+        { "name": "bookedCount", "type": "integer", "default": 0 },
+        { "name": "location", "type": "string" },
+        { "name": "equipment", "type": "json", "default": "[]" },
+        { "name": "color", "type": "string" },
+        { "name": "imageUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "ClassSchedule" },
+        { "type": "belongsToMany", "target": "Member", "through": "ClassBooking" }
+      ]
+    },
+    {
+      "name": "ClassSchedule",
+      "description": "Recurring class schedules",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "classId", "type": "uuid", "required": true },
+        { "name": "trainerId", "type": "uuid", "required": true },
+        { "name": "dayOfWeek", "type": "integer", "required": true },
+        { "name": "startTime", "type": "time", "required": true },
+        { "name": "endTime", "type": "time", "required": true },
+        { "name": "room", "type": "string" },
+        { "name": "isRecurring", "type": "boolean", "default": true },
+        { "name": "startDate", "type": "date" },
+        { "name": "endDate", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Class" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "ClassBooking" }
+      ]
+    },
+    {
+      "name": "ClassBooking",
+      "description": "Member class registrations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "memberId", "type": "uuid", "required": true },
+        { "name": "classId", "type": "uuid", "required": true },
+        { "name": "scheduleId", "type": "uuid" },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "status", "type": "enum", "values": ["booked", "checked_in", "cancelled", "no_show"], "default": "booked" },
+        { "name": "checkedInAt", "type": "datetime" },
+        { "name": "cancelledAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Member" },
+        { "type": "belongsTo", "target": "Class" },
+        { "type": "belongsTo", "target": "ClassSchedule" }
+      ]
+    },
+    {
+      "name": "Workout",
+      "description": "Personal workout logs and plans",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "memberId", "type": "uuid", "required": true },
+        { "name": "trainerId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["strength", "cardio", "hiit", "flexibility", "circuit", "free_form"], "default": "strength" },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "duration", "type": "integer" },
+        { "name": "caloriesBurned", "type": "integer" },
+        { "name": "exercises", "type": "json", "default": "[]" },
+        { "name": "notes", "type": "text" },
+        { "name": "feeling", "type": "enum", "values": ["easy", "moderate", "hard", "exhausting"] },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Member" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "Goal",
+      "description": "Member fitness goals and tracking",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "memberId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["weight_loss", "muscle_gain", "endurance", "strength", "flexibility", "general_fitness", "habit"], "required": true },
+        { "name": "targetValue", "type": "decimal" },
+        { "name": "currentValue", "type": "decimal" },
+        { "name": "unit", "type": "string" },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "targetDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["active", "achieved", "missed", "abandoned"], "default": "active" },
+        { "name": "progress", "type": "integer", "default": 0 },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Member" }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "description": "Member check-in records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "memberId", "type": "uuid", "required": true },
+        { "name": "checkInTime", "type": "datetime", "required": true },
+        { "name": "checkOutTime", "type": "datetime" },
+        { "name": "method", "type": "enum", "values": ["card", "qr", "pin", "biometric", "manual"], "default": "card" },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Member" }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "Membership and service payments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "memberId", "type": "uuid", "required": true },
+        { "name": "membershipId", "type": "uuid" },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "type", "type": "enum", "values": ["membership", "personal_training", "class_pack", "merchandise", "other"], "required": true },
+        { "name": "method", "type": "enum", "values": ["cash", "card", "bank_transfer", "online", "wallet"], "default": "card" },
+        { "name": "status", "type": "enum", "values": ["pending", "paid", "failed", "refunded", "cancelled"], "default": "pending" },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "receiptUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Member" },
+        { "type": "belongsTo", "target": "Membership" }
+      ]
+    }
+  ]
+}

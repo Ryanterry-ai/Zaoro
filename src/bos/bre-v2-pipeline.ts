@@ -17,8 +17,9 @@
 
 import { RulesEngine, type BREContext, type RuleDecision } from './reasoning/rules-engine.js';
 import { ConstraintSolver, type ConstraintReport } from './reasoning/constraint-solver.js';
-import { Scorer, type ScoredOption, type ScoringContext } from './reasoning/scorer.js';
-import { BlueprintCompilerV2, type BlueprintCompilerInput } from './reasoning/blueprint-compiler-v2.js';
+import { Scorer, shouldUseNoPattern, type ScoredOption, type ScoringContext } from './reasoning/scorer.js';
+import { BlueprintCompilerV2, buildNoPatternBlueprint, type BlueprintCompilerInput } from './reasoning/blueprint-compiler-v2.js';
+import { classify } from './reasoning/application-family-classifier.js';
 import type { ApplicationBlueprint } from './schemas/blueprint/application-blueprint.schema.js';
 import type { DesignProfile } from './schemas/knowledge/design-profile.schema.js';
 import type { Pattern } from './schemas/knowledge/pattern.schema.js';
@@ -88,6 +89,13 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   }
   log.info('Web intelligence done', { duration: Date.now() - t0 });
 
+  // Step 0b: Application family classification — structural app-type detection
+  // This runs before industry-based scoring and provides context that prevents
+  // size-based pattern wins (e.g., CRM beating task-tracker because CRM has more pages).
+  const appFamilyResult = classify(ctx.description ?? ctx.appName ?? '', ctx);
+  ctx.appFamilyResult = appFamilyResult;
+  console.log(`[bre-v2] App family: ${appFamilyResult.family}/${appFamilyResult.appType} (confidence=${appFamilyResult.confidence.toFixed(2)})`);
+
   const rulesEngine = new RulesEngine();
   const constraintSolver = new ConstraintSolver();
   const scorer = new Scorer();
@@ -130,6 +138,15 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   const scoredPatterns = scorer.scorePatterns(scoringContext);
   const selectedDesignProfile = scorer.selectBest(scoredProfiles);
   const selectedPattern = scorer.selectBest(scoredPatterns);
+
+  // Step 3b: Check if we should bypass pattern selection and use NoPatternBlueprint
+  // This fires when family classifier identified a specific app type (task-tracker, etc.)
+  // with high confidence AND the best pattern won on size, not domain relevance.
+  const useNoPattern = shouldUseNoPattern(selectedPattern, appFamilyResult);
+  if (useNoPattern) {
+    console.log(`[bre-v2] NoPattern path: family=${appFamilyResult.family}, type=${appFamilyResult.appType}`);
+  }
+
   log.info('Scoring complete', {
     designProfile: selectedDesignProfile?.name,
     pattern: selectedPattern?.name,
@@ -173,35 +190,45 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   }
 
   // Step 4: Compile blueprint
-  progress?.emit('architect', 'info', `Compiling blueprint (${decisions.length} decisions, ${constraintReport.satisfied} constraints)...`);
-  // selectedPattern is now wired into page compilation via mapPatternPagesToBlueprintPages.
+  // Check NoPattern path first - when useNoPattern is true, bypass pattern-based compilation
+  // and produce a minimal, correct blueprint for the identified app family.
   const t4 = Date.now();
-  const vocabulary: Record<string, string> = {};
-  for (const decision of decisions) {
-    if (decision.action.type === 'set_vocabulary') {
-      vocabulary[decision.action.original] = decision.action.replacement;
+
+  let blueprint: ApplicationBlueprint;
+  if (useNoPattern) {
+    // Build minimal blueprint for cross-industry app types (task-tracker, recipe organiser, etc.)
+    console.log(`[bre-v2] Building NoPatternBlueprint for family=${appFamilyResult.family}`);
+    blueprint = buildNoPatternBlueprint(ctx, appFamilyResult);
+  } else {
+    // Standard pattern-based compilation
+    progress?.emit('architect', 'info', `Compiling blueprint (${decisions.length} decisions, ${constraintReport.satisfied} constraints)...`);
+    const vocabulary: Record<string, string> = {};
+    for (const decision of decisions) {
+      if (decision.action.type === 'set_vocabulary') {
+        vocabulary[decision.action.original] = decision.action.replacement;
+      }
     }
+
+    const fullSelectedPattern = selectedPattern
+      ? PATTERNS.find(p => p.id === selectedPattern.id)
+      : undefined;
+
+    const input: BlueprintCompilerInput = {
+      context: activeCtx,
+      decisions,
+      constraintReport,
+      selectedDesignProfile,
+      selectedPattern,
+      fullSelectedPattern,
+      vocabulary,
+      knowledgeRefs: [],
+      ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
+    };
+
+    blueprint = compiler.compile(input);
   }
 
-  // Resolve the full Pattern object for page-merging (fixes the selectedPattern dead-code bug)
-  const fullSelectedPattern = selectedPattern
-    ? PATTERNS.find(p => p.id === selectedPattern.id)
-    : undefined;
-
-  const input: BlueprintCompilerInput = {
-    context: activeCtx,
-    decisions,
-    constraintReport,
-    selectedDesignProfile,
-    selectedPattern,
-    fullSelectedPattern, // NEW: full Pattern object, not just ScoredOption
-    vocabulary,
-    knowledgeRefs: [],
-    ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
-  };
-
-  const blueprint = compiler.compile(input);
-  progress?.emit('architect', 'completed', `Blueprint compiled: ${blueprint.pages.length} pages, ${blueprint.entities.length} entities, ${blueprint.apis.length} APIs`, { confidence: blueprint.confidence, duration: Date.now() - t4, usedLLMPlanning });
+  progress?.emit('architect', 'completed', `Blueprint compiled: ${blueprint.pages.length} pages, ${blueprint.entities.length} entities, ${blueprint.apis.length} APIs`, { confidence: blueprint.confidence, duration: Date.now() - t4, usedLLMPlanning, noPattern: useNoPattern });
   log.info('Blueprint compiled', {
     pages: blueprint.pages.length,
     entities: blueprint.entities.length,

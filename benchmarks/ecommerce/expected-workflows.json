@@ -1,0 +1,60 @@
+{
+  "workflows": [
+    {
+      "name": "Customer Checkout Flow",
+      "description": "Complete purchase flow from cart to order confirmation",
+      "steps": [
+        { "step": 1, "action": "Add to Cart", "description": "Customer adds product variant to cart", "entities": ["Cart", "CartItem", "ProductVariant"], "validations": ["variant exists", "inventory available", "quantity > 0"] },
+        { "step": 2, "action": "View Cart", "description": "Customer reviews cart contents", "entities": ["Cart", "CartItem"], "validations": ["cart totals calculated", "shipping estimated"] },
+        { "step": 3, "action": "Apply Coupon", "description": "Customer applies discount code", "entities": ["Coupon", "Cart"], "validations": ["coupon valid", "not expired", "usage limit not exceeded", "minimum met"] },
+        { "step": 4, "action": "Proceed to Checkout", "description": "Customer enters contact/shipping info", "entities": ["Order", "Address"], "validations": ["email valid", "address complete", "shipping method selected"] },
+        { "step": 5, "action": "Select Payment", "description": "Customer chooses payment method", "entities": ["Payment"], "validations": ["payment method valid", "amount matches total"] },
+        { "step": 6, "action": "Place Order", "description": "Submit order for processing", "entities": ["Order", "OrderItem", "Payment", "InventoryLevel"], "validations": ["payment authorized", "inventory reserved", "order created", "confirmation sent"] },
+        { "step": 7, "action": "Order Confirmation", "description": "Display success page with order details", "entities": ["Order"], "validations": ["order number shown", "email sent", "inventory decremented"] }
+      ]
+    },
+    {
+      "name": "Order Fulfillment Flow",
+      "description": "Process order from confirmation to delivery",
+      "steps": [
+        { "step": 1, "action": "Order Received", "description": "New order appears in admin", "entities": ["Order"], "validations": ["order status confirmed", "payment captured"] },
+        { "step": 2, "action": "Pick & Pack", "description": "Warehouse picks items", "entities": ["Order", "InventoryLevel", "Shipment"], "validations": ["items available", "inventory reserved", "packing slip printed"] },
+        { "step": 3, "action": "Create Shipment", "description": "Generate shipping label", "entities": ["Shipment", "Order"], "validations": ["carrier selected", "label created", "tracking number assigned"] },
+        { "step": 4, "action": "Ship Order", "description": "Carrier picks up package", "entities": ["Shipment", "Order"], "validations": ["status updated to in_transit", "customer notified", "tracking link provided"] },
+        { "step": 5, "action": "Delivery Confirmation", "description": "Package delivered", "entities": ["Shipment", "Order"], "validations": ["status updated to delivered", "fulfillment status fulfilled", "review request scheduled"] }
+      ]
+    },
+    {
+      "name": "Return/Exchange Flow",
+      "description": "Handle customer returns and exchanges",
+      "steps": [
+        { "step": 1, "action": "Request Return", "description": "Customer initiates return", "entities": ["Order", "Return"], "validations": ["within return window", "items eligible", "reason provided"] },
+        { "step": 2, "action": "Approve Return", "description": "Admin approves return", "entities": ["Return"], "validations": ["return authorized", "RMA issued", "label generated"] },
+        { "step": 3, "action": "Receive Return", "description": "Warehouse receives item", "entities": ["Return", "InventoryLevel"], "validations": ["item inspected", "condition verified", "inventory restocked"] },
+        { "step": 4, "action": "Process Refund/Exchange", "description": "Issue refund or ship exchange", "entities": ["Return", "Payment", "Order", "Shipment"], "validations": ["refund processed", "exchange shipped", "return closed"] }
+      ]
+    },
+    {
+      "name": "Abandoned Cart Recovery",
+      "description": "Automated email/SMS for abandoned carts",
+      "steps": [
+        { "step": 1, "action": "Cart Abandoned", "description": "Cart inactive for threshold time", "entities": ["Cart"], "validations": ["cart has items", "customer identifiable", "no recent order"] },
+        { "step": 2, "action": "Send Reminder 1", "description": "First recovery email (1 hour)", "entities": ["EmailCampaign", "Cart"], "validations": ["email sent", "cart snapshot captured", "discount optional"] },
+        { "step": 3, "action": "Send Reminder 2", "description": "Second recovery email (24 hours)", "entities": ["EmailCampaign", "Cart"], "validations": ["email sent", "stronger incentive", "urgency messaging"] },
+        { "step": 4, "action": "Send Reminder 3", "description": "Final recovery email/SMS (72 hours)", "entities": ["EmailCampaign", "SMSCampaign", "Cart"], "validations": ["email/SMS sent", "final offer", "cart expires soon"] },
+        { "step": 5, "action": "Conversion Tracking", "description": "Track recovery conversion", "entities": ["AnalyticsEvent", "Order"], "validations": ["attribution recorded", "revenue attributed", "campaign stats updated"] }
+      ]
+    },
+    {
+      "name": "Loyalty Points Flow",
+      "description": "Earn and redeem loyalty points",
+      "steps": [
+        { "step": 1, "action": "Order Completed", "description": "Customer order delivered", "entities": ["Order"], "validations": ["order fulfilled", "payment captured"] },
+        { "step": 2, "action": "Calculate Points", "description": "Award points based on spend", "entities": ["LoyaltyAccount", "LoyaltyProgram"], "validations": ["points calculated", "tier multiplier applied", "bonus events checked"] },
+        { "step": 3, "action": "Update Balance", "description": "Add points to account", "entities": ["LoyaltyAccount"], "validations": ["balance updated", "tier progress checked", "tier up notification if applicable"] },
+        { "step": 4, "action": "Redeem Points", "description": "Customer applies points at checkout", "entities": ["LoyaltyAccount", "Order", "Coupon"], "validations": ["sufficient balance", "minimum redemption met", "points deducted", "discount applied"] },
+        { "step": 5, "action": "Points Expiry", "description": "Expire old points per policy", "entities": ["LoyaltyAccount"], "validations": ["expiry checked", "notification sent", "points deducted"] }
+      ]
+    }
+  ]
+}

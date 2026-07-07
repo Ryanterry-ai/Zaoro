@@ -1,0 +1,234 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Team member authentication and profile",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "title", "type": "string" },
+        { "name": "role", "type": "enum", "values": ["admin", "manager", "designer", "developer", "copywriter", "strategist", "viewer"], "required": true },
+        { "name": "billableRate", "type": "decimal" },
+        { "name": "availability", "type": "enum", "values": ["available", "partial", "full", "unavailable"], "default": "available" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Timesheet" },
+        { "type": "hasMany", "target": "Task" },
+        { "type": "belongsToMany", "target": "Project", "through": "ProjectMember" }
+      ]
+    },
+    {
+      "name": "Client",
+      "description": "Agency clients",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "company", "type": "string", "required": true },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "industry", "type": "string" },
+        { "name": "notes", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["lead", "active", "inactive", "archived"], "default": "lead" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Project" },
+        { "type": "hasMany", "target": "Invoice" },
+        { "type": "hasMany", "target": "Contract" }
+      ]
+    },
+    {
+      "name": "Project",
+      "description": "Client projects and engagements",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "clientId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "type", "type": "enum", "values": ["web_design", "development", "branding", "marketing", "strategy", "consulting", "retainer"], "required": true },
+        { "name": "status", "type": "enum", "values": ["brief", "in_progress", "review", "completed", "on_hold", "cancelled"], "default": "brief" },
+        { "name": "priority", "type": "enum", "values": ["low", "medium", "high", "urgent"], "default": "medium" },
+        { "name": "budget", "type": "decimal" },
+        { "name": "hoursEstimated", "type": "integer" },
+        { "name": "hoursLogged", "type": "integer", "default": 0 },
+        { "name": "startDate", "type": "date" },
+        { "name": "deadline", "type": "date" },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Client" },
+        { "type": "belongsToMany", "target": "User", "through": "ProjectMember" },
+        { "type": "hasMany", "target": "Task" },
+        { "type": "hasMany", "target": "Timesheet" },
+        { "type": "hasMany", "target": "Campaign" },
+        { "type": "hasMany", "target": "Asset" }
+      ]
+    },
+    {
+      "name": "Task",
+      "description": "Project tasks and subtasks",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "projectId", "type": "uuid", "required": true },
+        { "name": "assigneeId", "type": "uuid" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["todo", "in_progress", "in_review", "done", "blocked"], "default": "todo" },
+        { "name": "priority", "type": "enum", "values": ["low", "medium", "high", "urgent"], "default": "medium" },
+        { "name": "type", "type": "enum", "values": ["design", "development", "copy", "revision", "meeting", "admin"], "default": "development" },
+        { "name": "estimatedHours", "type": "decimal" },
+        { "name": "loggedHours", "type": "decimal", "default": 0 },
+        { "name": "dueDate", "type": "date" },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Project" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Task", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Task", "foreignKey": "parentId" },
+        { "type": "hasMany", "target": "Timesheet" }
+      ]
+    },
+    {
+      "name": "Timesheet",
+      "description": "Billable and non-billable time entries",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "projectId", "type": "uuid", "required": true },
+        { "name": "taskId", "type": "uuid" },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "duration", "type": "integer", "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "billable", "type": "boolean", "default": true },
+        { "name": "billableRate", "type": "decimal" },
+        { "name": "overtime", "type": "boolean", "default": false },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "rejected"], "default": "pending" },
+        { "name": "approvedBy", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Project" },
+        { "type": "belongsTo", "target": "Task" }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "description": "Agency invoices to clients",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "clientId", "type": "uuid", "required": true },
+        { "name": "projectId", "type": "uuid" },
+        { "name": "invoiceNumber", "type": "string", "required": true, "unique": true },
+        { "name": "status", "type": "enum", "values": ["draft", "sent", "overdue", "paid", "cancelled"], "default": "draft" },
+        { "name": "issueDate", "type": "date", "required": true },
+        { "name": "dueDate", "type": "date", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "lineItems", "type": "json", "required": true },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "taxTotal", "type": "decimal", "default": 0 },
+        { "name": "discountTotal", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "amountPaid", "type": "decimal", "default": 0 },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Client" },
+        { "type": "belongsTo", "target": "Project" },
+        { "type": "hasMany", "target": "Payment" }
+      ]
+    },
+    {
+      "name": "Campaign",
+      "description": "Marketing campaigns run by agency",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "projectId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "channel", "type": "enum", "values": ["google_ads", "facebook", "instagram", "linkedin", "email", "seo", "programmatic", "print"], "required": true },
+        { "name": "objective", "type": "string", "required": true },
+        { "name": "budget", "type": "decimal" },
+        { "name": "spend", "type": "decimal", "default": 0 },
+        { "name": "impressions", "type": "integer", "default": 0 },
+        { "name": "clicks", "type": "integer", "default": 0 },
+        { "name": "conversions", "type": "integer", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["draft", "active", "paused", "completed", "archived"], "default": "draft" },
+        { "name": "startDate", "type": "date" },
+        { "name": "endDate", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Project" },
+        { "type": "hasMany", "target": "Asset" }
+      ]
+    },
+    {
+      "name": "Asset",
+      "description": "Creative assets and deliverables",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "projectId", "type": "uuid", "required": true },
+        { "name": "folderId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["image", "video", "document", "audio", "font", "archive", "other"], "required": true },
+        { "name": "mimeType", "type": "string" },
+        { "name": "size", "type": "integer" },
+        { "name": "url", "type": "string", "required": true },
+        { "name": "thumbnailUrl", "type": "string" },
+        { "name": "altText", "type": "string" },
+        { "name": "version", "type": "integer", "default": 1 },
+        { "name": "tags", "type": "json", "default": "[]" },
+        { "name": "createdById", "type": "uuid", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Project" },
+        { "type": "hasMany", "target": "Asset", "foreignKey": "folderId" },
+        { "type": "belongsTo", "target": "Asset", "foreignKey": "folderId" }
+      ]
+    },
+    {
+      "name": "Contract",
+      "description": "Client contracts and SOWs",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "clientId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["fixed_price", "hourly", "retainer", "performance"], "required": true },
+        { "name": "scope", "type": "text", "required": true },
+        { "name": "value", "type": "decimal" },
+        { "name": "hourlyRate", "type": "decimal" },
+        { "name": "retainerFrequency", "type": "enum", "values": ["weekly", "biweekly", "monthly", "quarterly"] },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "endDate", "type": "date" },
+        { "name": "autoRenew", "type": "boolean", "default": false },
+        { "name": "status", "type": "enum", "values": ["draft", "active", "completed", "terminated"], "default": "draft" },
+        { "name": "documentUrl", "type": "string" },
+        { "name": "terms", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Client" }
+      ]
+    }
+  ]
+}

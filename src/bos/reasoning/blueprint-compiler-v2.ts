@@ -1,6 +1,7 @@
 import type { BREContext, RuleDecision } from './rules-engine.js';
 import type { ConstraintReport } from './constraint-solver.js';
 import type { ScoredOption } from './scorer.js';
+import type { AppFamilyResult } from './application-family-classifier.js';
 import { DESIGN_PROFILES } from '../knowledge/registry.js';
 import type { Pattern } from '../schemas/knowledge/pattern.schema.js';
 import type { BusinessIntelligenceProfile } from '../schemas/knowledge/business-intelligence.schema.js';
@@ -691,4 +692,142 @@ export class BlueprintCompilerV2 {
 
     return Math.max(0, Math.min(1, confidence));
   }
+}
+
+export function buildNoPatternBlueprint(
+  ctx: BREContext,
+  appFamily: AppFamilyResult,
+): ApplicationBlueprint {
+  const primaryEntity = appFamily.primaryEntity ?? 'Item';
+  const appName = ctx.appName ?? 'App';
+  const entityPlural = primaryEntity.endsWith('s') ? primaryEntity : `${primaryEntity}s`;
+  const entityRoute = `/${entityPlural.toLowerCase()}`;
+
+  const pages: PagePlan[] = [
+    {
+      id: 'page-home',
+      path: '/',
+      name: 'Home',
+      type: appFamily.uiMode === 'dashboard' ? 'dashboard' : 'listing',
+      description: `${appName} — main view`,
+      sections: appFamily.uiMode === 'dashboard'
+        ? ['stats-cards', 'data-table', 'filters']
+        : ['data-table', 'filters'],
+      components: [],
+      dataRequirements: [primaryEntity],
+      permissions: [],
+      isEntry: true,
+    },
+  ];
+
+  if (appFamily.complexity !== 'micro') {
+    pages.push({
+      id: `page-${entityPlural.toLowerCase()}-detail`,
+      path: `${entityRoute}/:id`,
+      name: `${primaryEntity} Detail`,
+      type: 'detail',
+      description: `View and edit a ${primaryEntity.toLowerCase()}`,
+      sections: ['profile', 'activity-feed'],
+      components: [],
+      dataRequirements: [primaryEntity],
+      permissions: [],
+      isEntry: false,
+    });
+  }
+
+  const makeField = (name: string, type: 'string' | 'date' | 'number', required: boolean) => ({
+    name, type, required, indexed: false, unique: false,
+  });
+
+  const entities: EntityPlan[] = [
+    {
+      id: `entity-${primaryEntity.toLowerCase()}`,
+      name: primaryEntity,
+      slug: primaryEntity.toLowerCase(),
+      fields: [
+        makeField('id', 'string', true),
+        makeField('title', 'string', true),
+        makeField('description', 'string', false),
+        makeField('status', 'string', true),
+        makeField('createdAt', 'date', true),
+        makeField('updatedAt', 'date', true),
+      ],
+      relationships: [],
+      uiSections: ['data-table', 'filters'],
+      workflows: [`Create ${primaryEntity}`, `Update ${primaryEntity}`, `Delete ${primaryEntity}`],
+      permissions: [],
+    },
+    {
+      id: 'entity-user',
+      name: 'User',
+      slug: 'user',
+      fields: [
+        makeField('id', 'string', true),
+        makeField('email', 'string', true),
+        makeField('name', 'string', false),
+        makeField('createdAt', 'date', true),
+      ],
+      relationships: [],
+      uiSections: [],
+      workflows: [],
+      permissions: [],
+    },
+  ];
+
+  const apis: ApiPlan[] = [
+    { path: entityRoute, method: 'GET', auth: true },
+    { path: entityRoute, method: 'POST', auth: true },
+    { path: `${entityRoute}/:id`, method: 'PUT', auth: true },
+    { path: `${entityRoute}/:id`, method: 'DELETE', auth: true },
+  ];
+
+  const navigation: NavPlan = {
+    style: 'sidebar',
+    sticky: true,
+    logo: true,
+    items: [
+      { label: entityPlural, href: entityRoute, icon: 'list' },
+      ...(appFamily.complexity !== 'micro' ? [{ label: 'Settings', href: '/settings', icon: 'settings' }] : []),
+    ],
+  };
+
+  const now = new Date().toISOString();
+
+  return {
+    id: `blueprint-${ctx.appName?.toLowerCase().replace(/\s+/g, '-') ?? 'app'}`,
+    version: '1.0.0',
+    createdAt: now,
+    name: appName,
+    description: ctx.description ?? `${appName} — ${appFamily.appType}`,
+    industry: ctx.industry,
+    businessModels: ctx.businessModels,
+    country: ctx.country,
+    compliancePacks: ctx.compliancePacks,
+    journeys: ctx.journeys,
+    pages,
+    routes: [],
+    layouts: [],
+    navigation,
+    permissions: [
+      { id: 'perm-user-crud', role: 'user', resource: primaryEntity, actions: ['create', 'read', 'update', 'delete', 'list'], conditions: [] },
+    ],
+    entities,
+    relationships: [],
+    database: { engine: 'postgresql', tables: [] },
+    apis,
+    workflows: [],
+    dashboardWidgets: [],
+    charts: [],
+    forms: [],
+    tables: [],
+    integrations: [
+      { id: 'int-auth', type: 'auth', name: 'NextAuth.js', provider: 'credentials', config: {}, required: true },
+    ],
+    designTokens: {},
+    generationRules: [],
+    provenance: { knowledge: [], compilers: [] },
+    vocabulary: {},
+    confidence: appFamily.confidence,
+    warnings: [],
+  };
 }

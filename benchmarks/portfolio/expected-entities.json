@@ -1,0 +1,267 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Portfolio owner accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["owner", "collaborator", "admin"], "default": "owner" },
+        { "name": "emailVerified", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasOne", "target": "Portfolio" },
+        { "type": "hasMany", "target": "Collaborator" },
+        { "type": "hasMany", "target": "Subscription" }
+      ]
+    },
+    {
+      "name": "Portfolio",
+      "description": "Personal portfolio/site configuration",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "username", "type": "string", "required": true, "unique": true },
+        { "name": "displayName", "type": "string", "required": true },
+        { "name": "tagline", "type": "string" },
+        { "name": "bio", "type": "text" },
+        { "name": "avatarUrl", "type": "string" },
+        { "name": "coverUrl", "type": "string" },
+        { "name": "location", "type": "string" },
+        { "name": "availability", "type": "enum", "values": ["available", "busy", "not_looking"], "default": "available" },
+        { "name": "socialLinks", "type": "json" },
+        { "name": "isPublic", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Theme" },
+        { "type": "hasMany", "target": "Project" },
+        { "type": "hasMany", "target": "CaseStudy" },
+        { "type": "hasMany", "target": "BlogPost" },
+        { "type": "hasMany", "target": "ContactForm" },
+        { "type": "hasMany", "target": "Client" },
+        { "type": "hasOne", "target": "CustomDomain" }
+      ]
+    },
+    {
+      "name": "Project",
+      "description": "Portfolio projects",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "role", "type": "string" },
+        { "name": "year", "type": "integer" },
+        { "name": "technologies", "type": "json", "default": "[]" },
+        { "name": "liveUrl", "type": "string" },
+        { "name": "githubUrl", "type": "string" },
+        { "name": "featured", "type": "boolean", "default": false },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "password", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["draft", "published", "private"], "default": "draft" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" },
+        { "type": "hasMany", "target": "ProjectMedia" },
+        { "type": "hasOne", "target": "PasswordProtection" }
+      ]
+    },
+    {
+      "name": "CaseStudy",
+      "description": "In-depth project case studies",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "projectId", "type": "uuid" },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "client", "type": "string" },
+        { "name": "industry", "type": "string" },
+        { "name": "challenge", "type": "text" },
+        { "name": "approach", "type": "text" },
+        { "name": "solution", "type": "text" },
+        { "name": "results", "type": "json" },
+        { "name": "status", "type": "enum", "values": ["draft", "published"], "default": "draft" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" },
+        { "type": "belongsTo", "target": "Project" },
+        { "type": "hasMany", "target": "CaseStudySection" }
+      ]
+    },
+    {
+      "name": "BlogPost",
+      "description": "Portfolio blog articles",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "excerpt", "type": "text" },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "featuredImageUrl", "type": "string" },
+        { "name": "categoryId", "type": "uuid" },
+        { "name": "tags", "type": "json", "default": "[]" },
+        { "name": "status", "type": "enum", "values": ["draft", "published"], "default": "draft" },
+        { "name": "publishedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" },
+        { "type": "belongsTo", "target": "BlogCategory" }
+      ]
+    },
+    {
+      "name": "Client",
+      "description": "Client relationships",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "company", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "notes", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["lead", "active", "past", "archived"], "default": "lead" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" },
+        { "type": "hasOne", "target": "ClientPortal" },
+        { "type": "hasMany", "target": "ContactSubmission" }
+      ]
+    },
+    {
+      "name": "Theme",
+      "description": "Portfolio theme and styling",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "isPublic", "type": "boolean", "default": false },
+        { "name": "previewUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasOne", "target": "ThemeSettings" },
+        { "type": "hasMany", "target": "Portfolio" }
+      ]
+    },
+    {
+      "name": "ThemeSettings",
+      "description": "Theme customization values",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "themeId", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "primaryColor", "type": "string", "default": "#000000" },
+        { "name": "fontHeading", "type": "string" },
+        { "name": "fontBody", "type": "string" },
+        { "name": "layout", "type": "enum", "values": ["grid", "masonry", "list", "fullscreen"], "default": "grid" },
+        { "name": "darkMode", "type": "boolean", "default": true },
+        { "name": "animations", "type": "json" },
+        { "name": "customCss", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Theme" },
+        { "type": "belongsTo", "target": "Portfolio" }
+      ]
+    },
+    {
+      "name": "CustomDomain",
+      "description": "Custom domain mapping",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "domain", "type": "string", "required": true, "unique": true },
+        { "name": "status", "type": "enum", "values": ["pending", "active", "failed", "removed"], "default": "pending" },
+        { "name": "sslStatus", "type": "boolean", "default": false },
+        { "name": "verifiedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" }
+      ]
+    },
+    {
+      "name": "Collaborator",
+      "description": "Team collaborators",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "role", "type": "enum", "values": ["editor", "viewer"], "required": true },
+        { "name": "permissions", "type": "json", "default": "[]" },
+        { "name": "invitedAt", "type": "datetime", "required": true },
+        { "name": "acceptedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "ContactForm",
+      "description": "Contact form configurations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "default": "Contact" },
+        { "name": "fields", "type": "json", "required": true },
+        { "name": "emailTo", "type": "string", "required": true },
+        { "name": "successMessage", "type": "string" },
+        { "name": "recaptchaEnabled", "type": "boolean", "default": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" },
+        { "type": "hasMany", "target": "ContactSubmission" }
+      ]
+    },
+    {
+      "name": "Product",
+      "description": "Shop products (prints, digital goods)",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "portfolioId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "compareAtPrice", "type": "decimal" },
+        { "name": "type", "type": "enum", "values": ["physical", "digital", "service"], "required": true },
+        { "name": "images", "type": "json", "default": "[]" },
+        { "name": "inventory", "type": "integer" },
+        { "name": "status", "type": "enum", "values": ["active", "draft", "archived"], "default": "draft" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Portfolio" },
+        { "type": "hasMany", "target": "OrderItem" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,275 @@
+{
+  "entities": [
+    {
+      "name": "Property",
+      "description": "Real estate property listings",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "mlsNumber", "type": "string", "unique": true },
+        { "name": "status", "type": "enum", "values": ["active", "pending", "sold", "off_market", "coming_soon"], "default": "active" },
+        { "name": "type", "type": "enum", "values": ["single_family", "condo", "townhouse", "multi_family", "land", "commercial"], "required": true },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "latitude", "type": "decimal" },
+        { "name": "longitude", "type": "decimal" },
+        { "name": "bedrooms", "type": "integer" },
+        { "name": "bathrooms", "type": "decimal" },
+        { "name": "squareFeet", "type": "integer" },
+        { "name": "lotSize", "type": "decimal" },
+        { "name": "yearBuilt", "type": "integer" },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "features", "type": "json", "default": "[]" },
+        { "name": "hoaDues", "type": "decimal" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Brokerage" },
+        { "type": "belongsTo", "target": "Agent" },
+        { "type": "hasMany", "target": "ListingPhoto" },
+        { "type": "hasOne", "target": "VirtualTour" },
+        { "type": "hasMany", "target": "Showing" },
+        { "type": "hasMany", "target": "Offer" },
+        { "type": "hasMany", "target": "Lead" }
+      ]
+    },
+    {
+      "name": "Agent",
+      "description": "Real estate agent profiles",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "brokerageId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "licenseNumber", "type": "string", "required": true, "unique": true },
+        { "name": "phone", "type": "string" },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "bio", "type": "text" },
+        { "name": "photoUrl", "type": "string" },
+        { "name": "specialties", "type": "json", "default": "[]" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Brokerage" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Property" },
+        { "type": "hasMany", "target": "Lead" },
+        { "type": "hasMany", "target": "Transaction" },
+        { "type": "hasMany", "target": "Commission" }
+      ]
+    },
+    {
+      "name": "Brokerage",
+      "description": "Real estate brokerage firms",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "logoUrl", "type": "string" },
+        { "name": "website", "type": "string" },
+        { "name": "licenseNumber", "type": "string" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Agent" },
+        { "type": "hasMany", "target": "Property" },
+        { "type": "hasMany", "target": "Transaction" },
+        { "type": "hasOne", "target": "MLSFeed" }
+      ]
+    },
+    {
+      "name": "Lead",
+      "description": "Real estate leads/inquiries",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "propertyId", "type": "uuid" },
+        { "name": "agentId", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "source", "type": "enum", "values": ["website", "zillow", "realtor", "referral", "open_house", "call", "walk_in"], "required": true },
+        { "name": "type", "type": "enum", "values": ["buyer", "seller", "renter", "investor"], "default": "buyer" },
+        { "name": "status", "type": "enum", "values": ["new", "contacted", "qualified", "tour_scheduled", "negotiating", "closed", "lost"], "default": "new" },
+        { "name": "budget", "type": "decimal" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Property" },
+        { "type": "belongsTo", "target": "Agent" },
+        { "type": "hasMany", "target": "Appointment" }
+      ]
+    },
+    {
+      "name": "Transaction",
+      "description": "Real estate transactions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "propertyId", "type": "uuid", "required": true },
+        { "name": "listingAgentId", "type": "uuid", "required": true },
+        { "name": "buyerAgentId", "type": "uuid" },
+        { "name": "brokerageId", "type": "uuid", "required": true },
+        { "name": "buyerName", "type": "string", "required": true },
+        { "name": "sellerName", "type": "string", "required": true },
+        { "name": "salePrice", "type": "decimal", "required": true },
+        { "name": "listingPrice", "type": "decimal" },
+        { "name": "commissionTotal", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["under_contract", "pending", "closed", "cancelled"], "default": "under_contract" },
+        { "name": "contractDate", "type": "date" },
+        { "name": "closeDate", "type": "date" },
+        { "name": "escrowNumber", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Property" },
+        { "type": "belongsTo", "target": "Agent", "foreignKey": "listingAgentId" },
+        { "type": "belongsTo", "target": "Agent", "foreignKey": "buyerAgentId" },
+        { "type": "belongsTo", "target": "Brokerage" },
+        { "type": "hasMany", "target": "TransactionDocument" },
+        { "type": "hasMany", "target": "Commission" }
+      ]
+    },
+    {
+      "name": "Showing",
+      "description": "Property showing appointments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "propertyId", "type": "uuid", "required": true },
+        { "name": "agentId", "type": "uuid", "required": true },
+        { "name": "leadId", "type": "uuid" },
+        { "name": "scheduledAt", "type": "datetime", "required": true },
+        { "name": "duration", "type": "integer", "default": 30 },
+        { "name": "status", "type": "enum", "values": ["scheduled", "completed", "cancelled", "no_show"], "default": "scheduled" },
+        { "name": "feedback", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Property" },
+        { "type": "belongsTo", "target": "Agent" },
+        { "type": "belongsTo", "target": "Lead" }
+      ]
+    },
+    {
+      "name": "Offer",
+      "description": "Purchase offers on properties",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "propertyId", "type": "uuid", "required": true },
+        { "name": "agentId", "type": "uuid", "required": true },
+        { "name": "buyerName", "type": "string", "required": true },
+        { "name": "buyerEmail", "type": "string", "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "deposit", "type": "decimal" },
+        { "name": "contingencies", "type": "json", "default": "[]" },
+        { "name": "closingDate", "type": "date" },
+        { "name": "mortgageApproved", "type": "boolean", "default": false },
+        { "name": "status", "type": "enum", "values": ["submitted", "countered", "accepted", "rejected", "expired", "withdrawn"], "default": "submitted" },
+        { "name": "counterAmount", "type": "decimal" },
+        { "name": "expiresAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Property" },
+        { "type": "belongsTo", "target": "Agent" }
+      ]
+    },
+    {
+      "name": "Commission",
+      "description": "Agent/brokerage commission splits",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "transactionId", "type": "uuid", "required": true },
+        { "name": "agentId", "type": "uuid", "required": true },
+        { "name": "totalCommission", "type": "decimal", "required": true },
+        { "name": "brokerageSplit", "type": "decimal" },
+        { "name": "agentSplit", "type": "decimal" },
+        { "name": "referralFee", "type": "decimal", "default": 0 },
+        { "name": "netToAgent", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["pending", "paid", "disputed"], "default": "pending" },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Transaction" },
+        { "type": "belongsTo", "target": "Agent" }
+      ]
+    },
+    {
+      "name": "MarketingCampaign",
+      "description": "Lead generation campaigns",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "agentId", "type": "uuid" },
+        { "name": "brokerageId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["email", "social", "direct_mail", "open_house", "ppa"], "required": true },
+        { "name": "budget", "type": "decimal" },
+        { "name": "targetAudience", "type": "json" },
+        { "name": "startDate", "type": "date" },
+        { "name": "endDate", "type": "date" },
+        { "name": "leadsGenerated", "type": "integer", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["draft", "active", "paused", "completed"], "default": "draft" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Agent" },
+        { "type": "belongsTo", "target": "Brokerage" }
+      ]
+    },
+    {
+      "name": "MLSFeed",
+      "description": "MLS/IDX integration feeds",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "brokerageId", "type": "uuid", "required": true },
+        { "name": "provider", "type": "string", "required": true },
+        { "name": "feedUrl", "type": "string" },
+        { "name": "lastSyncAt", "type": "datetime" },
+        { "name": "syncInterval", "type": "integer", "default": 3600 },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "mappings", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Brokerage" }
+      ]
+    },
+    {
+      "name": "Appointment",
+      "description": "Agent appointments and tasks",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "agentId", "type": "uuid", "required": true },
+        { "name": "leadId", "type": "uuid" },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["call", "meeting", "showing", "open_house", "closing", "other"], "required": true },
+        { "name": "startAt", "type": "datetime", "required": true },
+        { "name": "endAt", "type": "datetime" },
+        { "name": "notes", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["scheduled", "completed", "cancelled"], "default": "scheduled" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Agent" },
+        { "type": "belongsTo", "target": "Lead" }
+      ]
+    }
+  ]
+}

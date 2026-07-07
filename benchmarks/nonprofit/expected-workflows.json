@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Donor Management Flow",
+      "description": "Track and manage donor relationships",
+      "steps": [
+        { "step": 1, "action": "Capture Donor", "description": "Record donor contact and intent", "entities": ["Donor"], "validations": ["name and email valid", "opt-in confirmed", "communication preferences set"] },
+        { "step": 2, "action": "Record Gift", "description": "Log donation amount and method", "entities": ["Donation"], "validations": ["amount valid", "payment captured", "designation applied"] },
+        { "step": 3, "action": "Send Receipt", "description": "Tax receipt issued", "entities": ["Donation", "Receipt"], "validations": ["receipt emailed", "tax ID shown", "thank-you sent"] },
+        { "step": 4, "action": "Segment Donor", "description": "Categorize for targeted outreach", "entities": ["Donor"], "validations": ["segment assigned", "lifetime value calculated", "next touchpoint scheduled"] }
+      ]
+    },
+    {
+      "name": "Fundraising Campaign Flow",
+      "description": "Create and manage fundraising campaigns",
+      "steps": [
+        { "step": 1, "action": "Create Campaign", "description": "Set campaign goals and details", "entities": ["Campaign"], "validations": ["goal amount set", "start/end dates valid", "story written"] },
+        { "step": 2, "action": "Launch Campaign", "description": "Go live with fundraising page", "entities": ["Campaign"], "validations": ["page published", "donation form active", "social promoted"] },
+        { "step": 3, "action": "Track Progress", "description": "Monitor donations against goal", "entities": ["Campaign", "Donation"], "validations": ["progress tracked", "milestones celebrated", "stretch goal updated"] },
+        { "step": 4, "action": "Close Campaign", "description": "Finalize campaign results", "entities": ["Campaign"], "validations": ["final total calculated", "donors thanked", "impact report generated"] }
+      ]
+    },
+    {
+      "name": "Volunteer Scheduling Flow",
+      "description": "Recruit, schedule, and manage volunteers",
+      "steps": [
+        { "step": 1, "action": "Post Opportunity", "description": "Create volunteer role listing", "entities": ["VolunteerOpportunity"], "validations": ["role described", "time commitment set", "skills needed listed"] },
+        { "step": 2, "action": "Sign Up", "description": "Volunteer registers", "entities": ["Volunteer", "VolunteerOpportunity"], "validations": ["availability matches", "skills align", "screening if needed"] },
+        { "step": 3, "action": "Assign Shift", "description": "Schedule specific shift", "entities": ["VolunteerShift"], "validations": ["shift available", "no double-booking", "confirmation sent"] },
+        { "step": 4, "action": "Track Hours", "description": "Log volunteer time", "entities": ["VolunteerShift"], "validations": ["check-in recorded", "hours logged", "impact summary updated"] }
+      ]
+    },
+    {
+      "name": "Grant Application Flow",
+      "description": "Apply for and manage foundation grants",
+      "steps": [
+        { "step": 1, "action": "Identify Grant", "description": "Find matching grant opportunity", "entities": ["GrantOpportunity"], "validations": ["eligibility confirmed", "deadline noted", "amount range matched"] },
+        { "step": 2, "action": "Write Proposal", "description": "Draft grant application", "entities": ["GrantApplication"], "validations": ["narrative complete", "budget attached", "supporting docs included"] },
+        { "step": 3, "action": "Submit Application", "description": "Send to funder", "entities": ["GrantApplication"], "validations": ["submitted before deadline", "confirmation received"] },
+        { "step": 4, "action": "Report Outcomes", "description": "Submit post-award reports", "entities": ["GrantReport"], "validations": ["funds used per budget", "outcomes measured", "report submitted"] }
+      ]
+    },
+    {
+      "name": "Impact Reporting Flow",
+      "description": "Measure and report program impact",
+      "steps": [
+        { "step": 1, "action": "Collect Data", "description": "Gather program metrics and stories", "entities": ["ProgramMetric"], "validations": ["quantitative data collected", "qualitative stories gathered"] },
+        { "step": 2, "action": "Analyze Impact", "description": "Calculate outcome metrics", "entities": ["ImpactReport"], "validations": ["KPIs measured", "benchmarks compared", "improvement areas identified"] },
+        { "step": 3, "action": "Create Report", "description": "Design impact report", "entities": ["ImpactReport"], "validations": ["data visualized", "stories included", "brand aligned"] },
+        { "step": 4, "action": "Publish Report", "description": "Share with stakeholders", "entities": ["ImpactReport"], "validations": ["board shared", "donors emailed", "public version published"] }
+      ]
+    }
+  ]
+}

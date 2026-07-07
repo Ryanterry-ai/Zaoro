@@ -174,9 +174,23 @@ function buildPlanningPrompt(ctx: BREContext, existingDecisions: RuleDecision[])
     .map(d => d.action.type === 'add_page' ? d.action.path : '')
     .filter(Boolean);
 
+  const appFamily = ctx.appFamilyResult;
+  const familyContext = appFamily && appFamily.family !== 'industry-specific'
+    ? `
+APPLICATION FAMILY CONTEXT (high priority signal):
+- This is a "${appFamily.appType}" — an application of type "${appFamily.family}"
+- Primary data entity: ${appFamily.primaryEntity ?? 'unknown'}
+- Complexity: ${appFamily.complexity} (${appFamily.complexity === 'micro' ? 'keep it minimal — 1-2 pages max' : 'standard feature set'})
+- UI mode: ${appFamily.uiMode}
+- Data model: ${appFamily.dataModel}
+- CRITICAL: DO NOT produce CRM pages (leads, pipeline, accounts, contacts) for this app type.
+- CRITICAL: DO NOT add marketing sections (hero, testimonials, cta) to an operational tool.
+- Produce only the pages needed for the ${appFamily.appType} use case.`
+    : '';
+
   return `Analyze this app-building request and produce the planning JSON.
 
-User request: "${ctx.description ?? ''}"
+User request: "${ctx.description ?? ''}"${familyContext}
 
 What the standard keyword-matching system detected (may be incomplete or wrong):
 - Industry: ${ctx.industry} (confidence: LOW — this is why LLM planning was triggered)

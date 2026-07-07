@@ -1,0 +1,277 @@
+{
+  "entities": [
+    {
+      "name": "Menu",
+      "description": "Restaurant menu groups",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "type", "type": "enum", "values": ["dining", "takeout", "delivery", "bar", "breakfast", "lunch", "dinner", "happy_hour", "seasonal"], "default": "dining" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "hasMany", "target": "MenuCategory" }
+      ]
+    },
+    {
+      "name": "MenuItem",
+      "description": "Individual menu items",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "categoryId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "compareAtPrice", "type": "decimal" },
+        { "name": "cost", "type": "decimal" },
+        { "name": "imageUrl", "type": "string" },
+        { "name": "allergens", "type": "json", "default": "[]" },
+        { "name": "nutrition", "type": "json" },
+        { "name": "isAvailable", "type": "boolean", "default": true },
+        { "name": "isFeatured", "type": "boolean", "default": false },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "MenuCategory" },
+        { "type": "hasMany", "target": "MenuItemModifier" },
+        { "type": "belongsToMany", "target": "Ingredient", "through": "Recipe" }
+      ]
+    },
+    {
+      "name": "MenuCategory",
+      "description": "Menu sections/categories",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "menuId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Menu" },
+        { "type": "hasMany", "target": "MenuItem" }
+      ]
+    },
+    {
+      "name": "Order",
+      "description": "Customer orders (POS, online, kiosk)",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "terminalId", "type": "uuid" },
+        { "name": "tableId", "type": "uuid" },
+        { "name": "customerName", "type": "string" },
+        { "name": "orderNumber", "type": "string", "required": true, "unique": true },
+        { "name": "type", "type": "enum", "values": ["dine_in", "takeout", "delivery", "online", "kiosk"], "required": true },
+        { "name": "status", "type": "enum", "values": ["pending", "preparing", "ready", "served", "completed", "cancelled"], "default": "pending" },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "tax", "type": "decimal", "default": 0 },
+        { "name": "tip", "type": "decimal", "default": 0 },
+        { "name": "discount", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "belongsTo", "target": "Table" },
+        { "type": "hasMany", "target": "OrderItem" },
+        { "type": "hasMany", "target": "Payment" }
+      ]
+    },
+    {
+      "name": "Reservation",
+      "description": "Table reservations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "tableId", "type": "uuid" },
+        { "name": "customerName", "type": "string", "required": true },
+        { "name": "customerPhone", "type": "string" },
+        { "name": "customerEmail", "type": "string" },
+        { "name": "partySize", "type": "integer", "required": true },
+        { "name": "startAt", "type": "datetime", "required": true },
+        { "name": "duration", "type": "integer", "default": 90 },
+        { "name": "specialRequests", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["pending", "confirmed", "seated", "completed", "cancelled", "no_show"], "default": "pending" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "belongsTo", "target": "Table" }
+      ]
+    },
+    {
+      "name": "InventoryItem",
+      "description": "Ingredient/stock inventory",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "sku", "type": "string" },
+        { "name": "category", "type": "enum", "values": ["produce", "meat", "dairy", "dry_goods", "beverage", "supplies"], "required": true },
+        { "name": "unit", "type": "enum", "values": ["lb", "oz", "gal", "qt", "each", "case", "liter", "kg"], "required": true },
+        { "name": "unitCost", "type": "decimal" },
+        { "name": "quantityOnHand", "type": "decimal", "required": true },
+        { "name": "reorderPoint", "type": "decimal", "default": 10 },
+        { "name": "parLevel", "type": "decimal" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "belongsTo", "target": "Vendor" },
+        { "type": "hasMany", "target": "StockCount" },
+        { "type": "hasMany", "target": "PurchaseOrder" },
+        { "type": "belongsToMany", "target": "MenuItem", "through": "Recipe" }
+      ]
+    },
+    {
+      "name": "Employee",
+      "description": "Staff/employee records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "role", "type": "enum", "values": ["server", "cook", "bartender", "host", "manager", "busser", "dishwasher"], "required": true },
+        { "name": "wageType", "type": "enum", "values": ["hourly", "salary"], "default": "hourly" },
+        { "name": "wage", "type": "decimal" },
+        { "name": "hireDate", "type": "date" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "hasMany", "target": "Shift" },
+        { "type": "hasMany", "target": "TimeEntry" }
+      ]
+    },
+    {
+      "name": "Shift",
+      "description": "Employee schedule shifts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeId", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "role", "type": "string" },
+        { "name": "startAt", "type": "datetime", "required": true },
+        { "name": "endAt", "type": "datetime", "required": true },
+        { "name": "status", "type": "enum", "values": ["scheduled", "clocked_in", "clocked_out", "no_show", "cancelled"], "default": "scheduled" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Employee" },
+        { "type": "belongsTo", "target": "Location" }
+      ]
+    },
+    {
+      "name": "Table",
+      "description": "Restaurant table management",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "tableNumber", "type": "integer", "required": true },
+        { "name": "section", "type": "string" },
+        { "name": "capacity", "type": "integer", "required": true },
+        { "name": "status", "type": "enum", "values": ["available", "occupied", "reserved", "cleaning", "out_of_order"], "default": "available" },
+        { "name": "shape", "type": "enum", "values": ["round", "rectangle", "square", "booth"], "default": "rectangle" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "hasMany", "target": "Order" },
+        { "type": "hasMany", "target": "Reservation" }
+      ]
+    },
+    {
+      "name": "LoyaltyProgram",
+      "description": "Customer loyalty/gift card program",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "default": "Standard" },
+        { "name": "pointsPerDollar", "type": "integer", "default": 10 },
+        { "name": "rewardThreshold", "type": "integer" },
+        { "name": "rewardValue", "type": "decimal" },
+        { "name": "birthdayReward", "type": "boolean", "default": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "hasMany", "target": "GiftCard" }
+      ]
+    },
+    {
+      "name": "PurchaseOrder",
+      "description": "Vendor purchase orders",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "vendorId", "type": "uuid", "required": true },
+        { "name": "poNumber", "type": "string", "required": true, "unique": true },
+        { "name": "items", "type": "json", "required": true },
+        { "name": "subtotal", "type": "decimal" },
+        { "name": "total", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["draft", "ordered", "partial", "received", "cancelled"], "default": "draft" },
+        { "name": "orderedAt", "type": "datetime" },
+        { "name": "deliveryDate", "type": "date" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "belongsTo", "target": "Vendor" }
+      ]
+    },
+    {
+      "name": "KitchenDisplay",
+      "description": "Kitchen display system items",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderId", "type": "uuid", "required": true },
+        { "name": "locationId", "type": "uuid", "required": true },
+        { "name": "orderItemId", "type": "uuid" },
+        { "name": "itemName", "type": "string", "required": true },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "modifiers", "type": "json", "default": "[]" },
+        { "name": "station", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["pending", "preparing", "ready", "served", "cancelled"], "default": "pending" },
+        { "name": "receivedAt", "type": "datetime", "required": true },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Order" },
+        { "type": "belongsTo", "target": "Location" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,253 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Platform user accounts for all roles",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "teacher", "student", "parent", "staff"], "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "avatarUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasOne", "target": "Student" },
+        { "type": "hasOne", "target": "Teacher" }
+      ]
+    },
+    {
+      "name": "Student",
+      "description": "Enrolled students",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "studentId", "type": "string", "required": true, "unique": true },
+        { "name": "dateOfBirth", "type": "date" },
+        { "name": "enrollmentDate", "type": "date", "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "suspended", "graduated", "withdrawn"], "default": "active" },
+        { "name": "guardianInfo", "type": "json" },
+        { "name": "emergencyContact", "type": "json" },
+        { "name": "address", "type": "json" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Department" },
+        { "type": "hasMany", "target": "Enrollment" },
+        { "type": "hasMany", "target": "Attendance" },
+        { "type": "hasMany", "target": "Payment" }
+      ]
+    },
+    {
+      "name": "Teacher",
+      "description": "Faculty and instructors",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "employeeId", "type": "string", "required": true, "unique": true },
+        { "name": "qualification", "type": "string" },
+        { "name": "specialization", "type": "string" },
+        { "name": "hireDate", "type": "date", "required": true },
+        { "name": "employmentType", "type": "enum", "values": ["full_time", "part_time", "adjunct", "visiting"], "default": "full_time" },
+        { "name": "officeHours", "type": "json" },
+        { "name": "status", "type": "enum", "values": ["active", "on_leave", "terminated"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Department" },
+        { "type": "hasMany", "target": "Course" },
+        { "type": "hasMany", "target": "Assignment" }
+      ]
+    },
+    {
+      "name": "Department",
+      "description": "Academic departments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true, "unique": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "headId", "type": "uuid" },
+        { "name": "budget", "type": "decimal" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Teacher" },
+        { "type": "hasMany", "target": "Student" },
+        { "type": "hasMany", "target": "Course" }
+      ]
+    },
+    {
+      "name": "Course",
+      "description": "Courses and subjects offered",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "departmentId", "type": "uuid", "required": true },
+        { "name": "teacherId", "type": "uuid", "required": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "credits", "type": "integer", "required": true },
+        { "name": "duration", "type": "enum", "values": ["semester", "quarter", "year", "short"], "default": "semester" },
+        { "name": "maxStudents", "type": "integer" },
+        { "name": "enrolledCount", "type": "integer", "default": 0 },
+        { "name": "syllabusUrl", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["active", "inactive", "archived"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Department" },
+        { "type": "belongsTo", "target": "Teacher" },
+        { "type": "hasMany", "target": "Enrollment" },
+        { "type": "hasMany", "target": "Assignment" },
+        { "type": "hasMany", "target": "Grade" }
+      ]
+    },
+    {
+      "name": "Enrollment",
+      "description": "Student course enrollments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "studentId", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "semester", "type": "string", "required": true },
+        { "name": "academicYear", "type": "string", "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "completed", "dropped", "incomplete"], "default": "active" },
+        { "name": "enrolledAt", "type": "datetime", "required": true },
+        { "name": "droppedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Student" },
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "hasMany", "target": "Grade" },
+        { "type": "hasMany", "target": "Attendance" }
+      ]
+    },
+    {
+      "name": "Assignment",
+      "description": "Course assignments and homework",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "teacherId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "type", "type": "enum", "values": ["homework", "quiz", "project", "exam", "lab", "essay"], "required": true },
+        { "name": "maxScore", "type": "decimal", "required": true },
+        { "name": "weight", "type": "decimal", "default": 1 },
+        { "name": "dueDate", "type": "datetime", "required": true },
+        { "name": "allowedAttempts", "type": "integer", "default": 1 },
+        { "name": "attachmentUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "belongsTo", "target": "Teacher" },
+        { "type": "hasMany", "target": "Grade" }
+      ]
+    },
+    {
+      "name": "Grade",
+      "description": "Student grades and scores",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "enrollmentId", "type": "uuid", "required": true },
+        { "name": "assignmentId", "type": "uuid" },
+        { "name": "studentId", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "score", "type": "decimal" },
+        { "name": "maxScore", "type": "decimal" },
+        { "name": "percentage", "type": "decimal" },
+        { "name": "letterGrade", "type": "string" },
+        { "name": "passed", "type": "boolean" },
+        { "name": "feedback", "type": "text" },
+        { "name": "gradedBy", "type": "uuid" },
+        { "name": "gradedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Enrollment" },
+        { "type": "belongsTo", "target": "Assignment" },
+        { "type": "belongsTo", "target": "Student" },
+        { "type": "belongsTo", "target": "Course" }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "description": "Student attendance records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "studentId", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid" },
+        { "name": "enrollmentId", "type": "uuid" },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "status", "type": "enum", "values": ["present", "absent", "late", "excused"], "required": true },
+        { "name": "checkInTime", "type": "time" },
+        { "name": "checkOutTime", "type": "time" },
+        { "name": "notes", "type": "text" },
+        { "name": "markedById", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Student" },
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "belongsTo", "target": "Enrollment" }
+      ]
+    },
+    {
+      "name": "Classroom",
+      "description": "Physical and virtual classrooms",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "building", "type": "string" },
+        { "name": "roomNumber", "type": "string" },
+        { "name": "capacity", "type": "integer" },
+        { "name": "type", "type": "enum", "values": ["physical", "virtual", "hybrid"], "default": "physical" },
+        { "name": "meetingLink", "type": "string" },
+        { "name": "equipment", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "Tuition and fee payments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "studentId", "type": "uuid", "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "type", "type": "enum", "values": ["tuition", "lab_fee", "library_fee", "activity_fee", "exam_fee", "other"], "required": true },
+        { "name": "semester", "type": "string" },
+        { "name": "academicYear", "type": "string" },
+        { "name": "method", "type": "enum", "values": ["cash", "card", "bank_transfer", "scholarship", "waiver"], "default": "card" },
+        { "name": "status", "type": "enum", "values": ["pending", "paid", "overdue", "refunded", "cancelled"], "default": "pending" },
+        { "name": "dueDate", "type": "date" },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "receiptUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Student" }
+      ]
+    }
+  ]
+}

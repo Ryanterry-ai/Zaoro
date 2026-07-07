@@ -1,0 +1,55 @@
+{
+  "workflows": [
+    {
+      "name": "Content Creation Flow",
+      "description": "Create, edit, and approve articles and media",
+      "steps": [
+        { "step": 1, "action": "Assign Story", "description": "Editor assigns story to writer", "entities": ["Article"], "validations": ["topic assigned", "deadline set", "word count estimated"] },
+        { "step": 2, "action": "Write Draft", "description": "Writer produces first draft", "entities": ["Article"], "validations": ["draft submitted", "sources cited", "word count met"] },
+        { "step": 3, "action": "Edit & Fact Check", "description": "Copy editing and verification", "entities": ["Article"], "validations": ["grammar checked", "facts verified", "style guide followed"] },
+        { "step": 4, "action": "Legal Review", "description": "Legal checks for liability", "entities": ["Article"], "validations": ["libel check passed", "copyright verified", "fair use confirmed"] },
+        { "step": 5, "action": "Publish Content", "description": "Schedule and publish", "entities": ["Article"], "validations": ["SEO metadata set", "featured image added", "published live", "social promoted"] }
+      ]
+    },
+    {
+      "name": "Subscription Management Flow",
+      "description": "Manage reader subscriptions and payments",
+      "steps": [
+        { "step": 1, "action": "Sign Up", "description": "Reader subscribes to plan", "entities": ["Subscription"], "validations": ["email valid", "plan selected", "payment captured"] },
+        { "step": 2, "action": "Grant Access", "description": "Unlock premium content", "entities": ["Subscription"], "validations": ["access granted", "welcome sent", "onboarding started"] },
+        { "step": 3, "action": "Billing Cycle", "description": "Recurring payment processing", "entities": ["Invoice", "Subscription"], "validations": ["invoice generated", "payment collected", "retry on failure"] },
+        { "step": 4, "action": "Cancel Subscription", "description": "Reader cancels plan", "entities": ["Subscription"], "validations": ["cancellation reason collected", "access revoked at period end", "feedback surveyed"] }
+      ]
+    },
+    {
+      "name": "Ad Placement Flow",
+      "description": "Manage ad inventory and campaign delivery",
+      "steps": [
+        { "step": 1, "action": "Create Ad Campaign", "description": "Advertiser creates campaign", "entities": ["AdCampaign"], "validations": ["budget set", "targeting configured", "creative uploaded"] },
+        { "step": 2, "action": "Review Creative", "description": "Editorial review of ad", "entities": ["AdCreative"], "validations": ["brand safe", "format correct", "guidelines met"] },
+        { "step": 3, "action": "Serve Ad", "description": "Deliver ads on site", "entities": ["AdCampaign"], "validations": ["impressions tracked", "targeting active", "frequency capped"] },
+        { "step": 4, "action": "Generate Report", "description": "Campaign performance report", "entities": ["AdReport"], "validations": ["impressions recorded", "clicks measured", "CTR calculated", "revenue attributed"] }
+      ]
+    },
+    {
+      "name": "Breaking News Flow",
+      "description": "Fast-track urgent news publication",
+      "steps": [
+        { "step": 1, "action": "Alert Editorial", "description": "Breaking news alert flagged", "entities": ["NewsAlert"], "validations": ["source verified", "newsworthiness confirmed"] },
+        { "step": 2, "action": "Draft Flash", "description": "Quick draft of breaking story", "entities": ["Article"], "validations": ["key facts included", "preliminary approval"] },
+        { "step": 3, "action": "Publish Rapidly", "description": "Publish initial brief", "entities": ["Article"], "validations": ["published with breaking tag", "push notification sent"] },
+        { "step": 4, "action": "Update Story", "description": "Develop full story as details emerge", "entities": ["Article"], "validations": ["details added", "corrections noted", "full article replaces flash"] }
+      ]
+    },
+    {
+      "name": "Media Asset Management Flow",
+      "description": "Organize and manage photos, videos, and audio",
+      "steps": [
+        { "step": 1, "action": "Upload Asset", "description": "Photographer or editor uploads media", "entities": ["MediaAsset"], "validations": ["format supported", "file size acceptable", "metadata extracted"] },
+        { "step": 2, "action": "Tag & Categorize", "description": "Add keywords and usage rights", "entities": ["MediaAsset"], "validations": ["tags applied", "license type set", "credit line added"] },
+        { "step": 3, "action": "Approve Asset", "description": "Photo editor approves for use", "entities": ["MediaAsset"], "validations": ["quality check passed", "rights cleared"] },
+        { "step": 4, "action": "Associate with Content", "description": "Link asset to articles or galleries", "entities": ["MediaAsset", "Article"], "validations": ["asset embedded", "caption added", "alt text set"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,333 @@
+{
+  "entities": [
+    {
+      "name": "Article",
+      "description": "Core content article entity",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "excerpt", "type": "text" },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "htmlContent", "type": "text" },
+        { "name": "featuredImageUrl", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["draft", "review", "scheduled", "published", "archived"], "default": "draft" },
+        { "name": "publishedAt", "type": "datetime" },
+        { "name": "seoTitle", "type": "string" },
+        { "name": "seoDescription", "type": "string" },
+        { "name": "canonicalUrl", "type": "string" },
+        { "name": "isBreaking", "type": "boolean", "default": false },
+        { "name": "isPremium", "type": "boolean", "default": false },
+        { "name": "viewCount", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Site" },
+        { "type": "belongsTo", "target": "Author" },
+        { "type": "belongsTo", "target": "Category" },
+        { "type": "belongsToMany", "target": "Tag", "through": "ArticleTag" },
+        { "type": "hasMany", "target": "ArticleVersion" },
+        { "type": "hasMany", "target": "Comment" },
+        { "type": "hasMany", "target": "MediaAsset" }
+      ]
+    },
+    {
+      "name": "Site",
+      "description": "Multi-site publishing configuration",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "domain", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "logoUrl", "type": "string" },
+        { "name": "faviconUrl", "type": "string" },
+        { "name": "settings", "type": "json" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasMany", "target": "Article" },
+        { "type": "hasMany", "target": "Category" },
+        { "type": "hasMany", "target": "Author" },
+        { "type": "hasMany", "target": "SubscriptionPlan" }
+      ]
+    },
+    {
+      "name": "User",
+      "description": "System user accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "editor", "author", "subscriber"], "required": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasOne", "target": "Author" },
+        { "type": "hasMany", "target": "Subscription" },
+        { "type": "hasMany", "target": "Comment" }
+      ]
+    },
+    {
+      "name": "Author",
+      "description": "Content authors/contributors",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "displayName", "type": "string", "required": true },
+        { "name": "bio", "type": "text" },
+        { "name": "avatarUrl", "type": "string" },
+        { "name": "socialLinks", "type": "json" },
+        { "name": "email", "type": "string" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Site" },
+        { "type": "hasMany", "target": "Article" }
+      ]
+    },
+    {
+      "name": "Category",
+      "description": "Content categories/sections",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Site" },
+        { "type": "hasMany", "target": "Category", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Category", "foreignKey": "parentId" },
+        { "type": "hasMany", "target": "Article" }
+      ]
+    },
+    {
+      "name": "MediaAsset",
+      "description": "Uploaded media files",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "articleId", "type": "uuid" },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "fileName", "type": "string", "required": true },
+        { "name": "fileUrl", "type": "string", "required": true },
+        { "name": "mimeType", "type": "string", "required": true },
+        { "name": "fileSize", "type": "integer" },
+        { "name": "width", "type": "integer" },
+        { "name": "height", "type": "integer" },
+        { "name": "altText", "type": "string" },
+        { "name": "caption", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Article" },
+        { "type": "belongsTo", "target": "Site" }
+      ]
+    },
+    {
+      "name": "Newsletter",
+      "description": "Newsletter campaigns",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "fromName", "type": "string" },
+        { "name": "fromEmail", "type": "string" },
+        { "name": "frequency", "type": "enum", "values": ["daily", "weekly", "biweekly", "monthly"], "default": "weekly" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "subscriberCount", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Site" },
+        { "type": "hasMany", "target": "NewsletterIssue" },
+        { "type": "hasMany", "target": "Subscriber" }
+      ]
+    },
+    {
+      "name": "SubscriptionPlan",
+      "description": "Paywall subscription plans",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "interval", "type": "enum", "values": ["monthly", "yearly", "lifetime"], "required": true },
+        { "name": "trialDays", "type": "integer", "default": 0 },
+        { "name": "features", "type": "json", "default": "[]" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Site" },
+        { "type": "hasMany", "target": "Subscription" }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "description": "Reader paywall subscriptions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "planId", "type": "uuid", "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "past_due", "cancelled", "expired"], "default": "active" },
+        { "name": "currentPeriodStart", "type": "datetime" },
+        { "name": "currentPeriodEnd", "type": "datetime" },
+        { "name": "cancelledAt", "type": "datetime" },
+        { "name": "stripeSubscriptionId", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "SubscriptionPlan" }
+      ]
+    },
+    {
+      "name": "Comment",
+      "description": "Article comments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "articleId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "authorName", "type": "string" },
+        { "name": "authorEmail", "type": "string" },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "spam", "deleted"], "default": "pending" },
+        { "name": "likes", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Article" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Comment", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Comment", "foreignKey": "parentId" }
+      ]
+    },
+    {
+      "name": "Podcast",
+      "description": "Podcast series",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "coverUrl", "type": "string" },
+        { "name": "language", "type": "string", "default": "en" },
+        { "name": "explicit", "type": "boolean", "default": false },
+        { "name": "rssFeedUrl", "type": "string" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Site" },
+        { "type": "hasMany", "target": "PodcastEpisode" }
+      ]
+    },
+    {
+      "name": "PodcastEpisode",
+      "description": "Individual podcast episodes",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "podcastId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "audioUrl", "type": "string", "required": true },
+        { "name": "duration", "type": "integer" },
+        { "name": "fileSize", "type": "integer" },
+        { "name": "season", "type": "integer" },
+        { "name": "episodeNumber", "type": "integer" },
+        { "name": "status", "type": "enum", "values": ["draft", "scheduled", "published"], "default": "draft" },
+        { "name": "publishedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Podcast" }
+      ]
+    },
+    {
+      "name": "LiveBlog",
+      "description": "Live blogging sessions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "status", "type": "enum", "values": ["upcoming", "live", "ended"], "default": "upcoming" },
+        { "name": "startedAt", "type": "datetime" },
+        { "name": "endedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Site" },
+        { "type": "hasMany", "target": "LiveBlogUpdate" }
+      ]
+    },
+    {
+      "name": "ABTest",
+      "description": "A/B testing for articles",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "articleId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "status", "type": "enum", "values": ["draft", "running", "completed", "cancelled"], "default": "draft" },
+        { "name": "startedAt", "type": "datetime" },
+        { "name": "endedAt", "type": "datetime" },
+        { "name": "winnerVariantId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Article" },
+        { "type": "hasMany", "target": "ABTestVariant" }
+      ]
+    },
+    {
+      "name": "SyndicationTarget",
+      "description": "Content syndication destinations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "siteId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["facebook_instant", "google_amp", "apple_news", "google_news", "rss"], "required": true },
+        { "name": "credentials", "type": "json" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "lastSyncedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Site" }
+      ]
+    }
+  ]
+}

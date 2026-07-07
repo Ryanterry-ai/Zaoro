@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Course Enrollment Flow",
+      "description": "Student registers for courses online",
+      "steps": [
+        { "step": 1, "action": "Search Courses", "description": "Student browses available courses", "entities": ["Course", "CourseCatalog"], "validations": ["courses displayed", "filters available"] },
+        { "step": 2, "action": "Select Course", "description": "Student picks courses to enroll", "entities": ["Course", "Enrollment"], "validations": ["prerequisites met", "seats available", "schedule conflict checked"] },
+        { "step": 3, "action": "Make Payment", "description": "Process tuition or fee payment", "entities": ["Payment", "Enrollment"], "validations": ["payment received", "financial aid applied if applicable"] },
+        { "step": 4, "action": "Confirm Enrollment", "description": "Student enrolled in course", "entities": ["Enrollment"], "validations": ["enrollment confirmed", "schedule updated", "welcome sent"] }
+      ]
+    },
+    {
+      "name": "Assignment Submission Flow",
+      "description": "Submit, grade and return assignments",
+      "steps": [
+        { "step": 1, "action": "Upload Assignment", "description": "Student submits assignment file", "entities": ["Assignment", "Submission"], "validations": ["file format accepted", "size within limit", "plagiarism check triggered"] },
+        { "step": 2, "action": "Late Check", "description": "System checks due date policy", "entities": ["Submission"], "validations": ["late flag set if applicable", "penalty calculated"] },
+        { "step": 3, "action": "Grade Submission", "description": "Instructor marks assignment", "entities": ["Submission", "Grade"], "validations": ["rubric applied", "score recorded", "feedback added"] },
+        { "step": 4, "action": "Return Grade", "description": "Grade released to student", "entities": ["Grade"], "validations": ["grade posted", "student notified", "gradebook updated"] }
+      ]
+    },
+    {
+      "name": "Grading & Reporting Flow",
+      "description": "Calculate final grades and generate transcripts",
+      "steps": [
+        { "step": 1, "action": "Collect Scores", "description": "Gather all assessment scores", "entities": ["Gradebook"], "validations": ["all assignments graded", "weights configured"] },
+        { "step": 2, "action": "Calculate Final Grade", "description": "Compute weighted final grade", "entities": ["Gradebook", "CourseGrade"], "validations": ["weighted average calculated", "curve applied if enabled"] },
+        { "step": 3, "action": "Approve Grades", "description": "Instructor finalizes grades", "entities": ["CourseGrade"], "validations": ["grade distribution reviewed", "exceptions approved"] },
+        { "step": 4, "action": "Generate Transcript", "description": "Official transcript produced", "entities": ["Transcript"], "validations": ["GPA calculated", "credits totaled", "honors noted"] }
+      ]
+    },
+    {
+      "name": "Attendance Tracking Flow",
+      "description": "Record and monitor student attendance",
+      "steps": [
+        { "step": 1, "action": "Mark Attendance", "description": "Instructor records attendance", "entities": ["AttendanceRecord"], "validations": ["course session selected", "students listed"] },
+        { "step": 2, "action": "Excuse Absence", "description": "Student submits excuse with docs", "entities": ["AttendanceRecord"], "validations": ["reason provided", "document attached", "approved if excused"] },
+        { "step": 3, "action": "Generate Report", "description": "Attendance summary report", "entities": ["AttendanceReport"], "validations": ["percentage calculated", "threshold alerts flagged"] },
+        { "step": 4, "action": "Notify Guardian", "description": "Alert parents for excessive absences", "entities": ["AttendanceAlert"], "validations": ["threshold exceeded", "notification sent"] }
+      ]
+    },
+    {
+      "name": "Certificate Issuance Flow",
+      "description": "Issue course completion certificates",
+      "steps": [
+        { "step": 1, "action": "Verify Completion", "description": "Check student met all requirements", "entities": ["CourseGrade", "Enrollment"], "validations": ["passing grade earned", "attendance met", "all assessments completed"] },
+        { "step": 2, "action": "Generate Certificate", "description": "Create digital certificate", "entities": ["Certificate"], "validations": ["student name correct", "course details accurate", "date set"] },
+        { "step": 3, "action": "Issue Certificate", "description": "Make certificate available", "entities": ["Certificate"], "validations": ["certificate published", "download link sent", "blockchain hash if applicable"] },
+        { "step": 4, "action": "Verify Certificate", "description": "Third-party verification endpoint", "entities": ["Certificate"], "validations": ["verification code works", "details match records"] }
+      ]
+    }
+  ]
+}

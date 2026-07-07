@@ -1,4 +1,5 @@
 import type { BusinessIntelligenceProfile } from '../schemas/knowledge/business-intelligence.schema.js';
+import type { AppFamilyResult } from './application-family-classifier.js';
 
 export interface BREContext {
   industry: string;
@@ -15,6 +16,8 @@ export interface BREContext {
   description?: string;
   /** Deep revenue intelligence profile */
   revenueIntelligence?: BusinessIntelligenceProfile;
+  /** Application family classification result — set by bre-v2-pipeline.ts */
+  appFamilyResult?: AppFamilyResult;
 }
 
 export interface Rule {
@@ -304,6 +307,33 @@ export function createDefaultRules(): Rule[] {
         { type: 'add_kpi', name: 'Active Users', formula: 'count(users.activeThisWeek)' },
         { type: 'add_integration', integrationType: 'payment', name: 'Stripe', required: true },
         { type: 'add_skill_pack', packId: 'cap.inventory-lite' },
+      ],
+      source: 'industry',
+    },
+
+    // ── Industry — Task Management ───────────────────────────────────────────
+
+    {
+      id: 'rule.saas.task-management',
+      name: 'Task/project management apps need task-specific entities',
+      priority: 20,
+      condition: (ctx) => !!(is(ctx, 'saas') && hasCap(ctx, 'project_management')) ||
+        !!(ctx.subIndustry === 'project_management') ||
+        !!(ctx.description?.toLowerCase().includes('task')) ||
+        !!(ctx.description?.toLowerCase().includes('todo')) ||
+        !!(ctx.description?.toLowerCase().includes('kanban')) ||
+        !!(ctx.description?.toLowerCase().includes('project management')),
+      actions: [
+        { type: 'add_page', path: '/tasks', name: 'Tasks', sections: ['data-table', 'filters', 'stats-cards'] },
+        { type: 'add_page', path: '/board', name: 'Board', sections: ['kanban-board', 'drag-and-drop'] },
+        { type: 'add_page', path: '/projects', name: 'Projects', sections: ['project-grid', 'stats-cards', 'activity-feed'] },
+        { type: 'add_page', path: '/sprints', name: 'Sprints', sections: ['data-table', 'calendar'] },
+        { type: 'add_entity', name: 'Project', fields: ['name', 'description', 'status', 'priority', 'startDate', 'dueDate', 'ownerId', 'teamMembers'] },
+        { type: 'add_entity', name: 'Task', fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'projectId', 'sprintId', 'dueDate', 'labels'] },
+        { type: 'add_entity', name: 'Sprint', fields: ['name', 'goal', 'startDate', 'endDate', 'status', 'projectId', 'tasks'] },
+        { type: 'add_kpi', name: 'Tasks Completed', formula: 'count(tasks.status=done)' },
+        { type: 'add_kpi', name: 'Velocity', formula: 'avg(pointsPerSprint)' },
+        { type: 'add_kpi', name: 'Overdue Tasks', formula: 'count(tasks.dueDate<today)' },
       ],
       source: 'industry',
     },

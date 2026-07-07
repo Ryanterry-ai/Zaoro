@@ -1,4 +1,5 @@
 import type { RuleDecision } from './rules-engine.js';
+import type { AppFamilyResult } from './application-family-classifier.js';
 import type { DesignProfile } from '../schemas/knowledge/design-profile.schema.js';
 import type { Pattern } from '../schemas/knowledge/pattern.schema.js';
 
@@ -112,10 +113,21 @@ export class Scorer {
       breakdown.modelFit = modelMatch ? 25 : 10;
       total += breakdown.modelFit;
 
-      breakdown.pageCoverage = Math.min(pattern.pages.length * 5, 25);
+      // Size terms are now relevance-gated to prevent page-count bias.
+      // When pattern has no domain relevance (industryFit < 20, modelFit < 20),
+      // size contributes only minimal signal (capped at 5). When relevant,
+      // size contributes moderately (capped at 10). This prevents the largest
+      // pattern from always winning when industry is unknown.
+      const hasRelevance = breakdown.industryFit >= 20 || breakdown.modelFit >= 20;
+
+      breakdown.pageCoverage = hasRelevance
+        ? Math.min(pattern.pages.length * 2, 10)
+        : Math.min(pattern.pages.length * 1, 5);
       total += breakdown.pageCoverage;
 
-      breakdown.componentCount = Math.min(pattern.components.length * 3, 20);
+      breakdown.componentCount = hasRelevance
+        ? Math.min(pattern.components.length * 1, 8)
+        : Math.min(pattern.components.length * 0.5, 3);
       total += breakdown.componentCount;
 
       // HARD GATE: if context requires a specific business model (e.g., wholesale)
@@ -148,4 +160,19 @@ export class Scorer {
   selectBest(options: ScoredOption[]): ScoredOption | undefined {
     return options[0];
   }
+}
+
+export function shouldUseNoPattern(
+  topScore: ScoredOption | undefined,
+  appFamily: AppFamilyResult,
+): boolean {
+  if (appFamily.family === 'industry-specific') return false;
+  if (!topScore) return true;
+
+  const industryFit = topScore.breakdown['industryFit'] ?? 0;
+  if (industryFit >= 20) return false;
+
+  if (appFamily.confidence >= 0.7 && industryFit < 20) return true;
+
+  return false;
 }

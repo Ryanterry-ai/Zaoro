@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Member Onboarding Flow",
+      "description": "Sign up new gym or studio members",
+      "steps": [
+        { "step": 1, "action": "Create Profile", "description": "Member provides personal and health info", "entities": ["Member"], "validations": ["name and contact valid", "emergency contact provided", "health questionnaire completed"] },
+        { "step": 2, "action": "Select Membership", "description": "Choose membership plan", "entities": ["MembershipPlan", "Member"], "validations": ["plan available", "payment method set"] },
+        { "step": 3, "action": "Process Payment", "description": "Initial payment processed", "entities": ["Payment", "Membership"], "validations": ["payment successful", "membership activated"] },
+        { "step": 4, "action": "Orientation Session", "description": "Schedule facility tour and intro", "entities": ["Session", "Member"], "validations": ["tour scheduled", "waiver signed", "access card issued"] }
+      ]
+    },
+    {
+      "name": "Class Booking Flow",
+      "description": "Book and manage fitness classes",
+      "steps": [
+        { "step": 1, "action": "Browse Schedule", "description": "View available class schedule", "entities": ["ClassSchedule"], "validations": ["classes displayed", "filters working"] },
+        { "step": 2, "action": "Book Class", "description": "Reserve spot in class", "entities": ["Booking", "ClassSession"], "validations": ["capacity available", "no schedule conflict", "membership tier eligible"] },
+        { "step": 3, "action": "Check In", "description": "Member checks in for class", "entities": ["Booking"], "validations": ["within check-in window", "booking confirmed", "attendance recorded"] },
+        { "step": 4, "action": "Cancel/Reschedule", "description": "Cancel or change booking", "entities": ["Booking"], "validations": ["within cancel window", "penalty assessed if late", "spot released"] }
+      ]
+    },
+    {
+      "name": "Workout Tracking Flow",
+      "description": "Log and monitor workout activity",
+      "steps": [
+        { "step": 1, "action": "Start Workout", "description": "Begin tracked workout session", "entities": ["WorkoutSession"], "validations": ["member checked in", "equipment available"] },
+        { "step": 2, "action": "Log Exercise", "description": "Record sets, reps, and weights", "entities": ["WorkoutSet"], "validations": ["exercise valid", "metrics recorded", "form logged"] },
+        { "step": 3, "action": "Complete Workout", "description": "End and save session", "entities": ["WorkoutSession"], "validations": ["duration calculated", "volume computed", "session saved"] },
+        { "step": 4, "action": "View Progress", "description": "Review historical workout data", "entities": ["WorkoutSession"], "validations": ["progress charts generated", "PRs highlighted", "trends shown"] }
+      ]
+    },
+    {
+      "name": "Subscription Billing Flow",
+      "description": "Manage recurring membership billing",
+      "steps": [
+        { "step": 1, "action": "Generate Invoice", "description": "Monthly billing cycle starts", "entities": ["Invoice", "Membership"], "validations": ["due date calculated", "amount correct", "proration if mid-cycle"] },
+        { "step": 2, "action": "Process Payment", "description": "Charge saved payment method", "entities": ["Payment", "Invoice"], "validations": ["payment captured", "invoice marked paid"] },
+        { "step": 3, "action": "Handle Failure", "description": "Retry failed payments", "entities": ["Payment"], "validations": ["retry logic triggered", "member notified", "dunning sent"] },
+        { "step": 4, "action": "Update Status", "description": "Suspend or cancel if unresolved", "entities": ["Membership"], "validations": ["status updated", "access revoked if needed", "final notice sent"] }
+      ]
+    },
+    {
+      "name": "Trainer Scheduling Flow",
+      "description": "Book personal training sessions with instructors",
+      "steps": [
+        { "step": 1, "action": "View Trainers", "description": "Browse available trainers", "entities": ["Trainer"], "validations": ["trainer profiles listed", "specialties shown", "availability visible"] },
+        { "step": 2, "action": "Book Session", "description": "Select time and trainer", "entities": ["TrainingSession"], "validations": ["trainer available", "slot open", "package valid"] },
+        { "step": 3, "action": "Confirm Session", "description": "Trainer confirms booking", "entities": ["TrainingSession"], "validations": ["session confirmed", "prep notes added"] },
+        { "step": 4, "action": "Complete Session", "description": "Session delivered and logged", "entities": ["TrainingSession"], "validations": ["check-in recorded", "session notes added", "package session deducted"] }
+      ]
+    }
+  ]
+}

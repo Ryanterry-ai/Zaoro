@@ -1,0 +1,93 @@
+{
+  "entities": [
+    "User",
+    "Lead",
+    "Contact",
+    "Account",
+    "Opportunity",
+    "Activity",
+    "Task",
+    "Pipeline",
+    "Stage",
+    "Email",
+    "Call",
+    "Meeting",
+    "Note",
+    "Attachment",
+    "Forecast",
+    "Territory",
+    "Team"
+  ],
+  "pages": [
+    "/",
+    "/dashboard",
+    "/leads",
+    "/leads/[id]",
+    "/contacts",
+    "/contacts/[id]",
+    "/accounts",
+    "/accounts/[id]",
+    "/deals",
+    "/deals/[id]",
+    "/pipeline",
+    "/activities",
+    "/tasks",
+    "/reports",
+    "/forecast",
+    "/settings",
+    "/settings/users",
+    "/settings/pipelines",
+    "/settings/integrations",
+    "/api-docs"
+  ],
+  "features": [
+    "lead-capture",
+    "pipeline-management",
+    "contact-management",
+    "deal-tracking",
+    "email-integration",
+    "activity-logging",
+    "task-management",
+    "reporting-dashboards",
+    "forecasting",
+    "territory-management",
+    "team-collaboration",
+    "mobile-responsive",
+    "api-access"
+  ],
+  "integrations": [
+    "gmail",
+    "outlook",
+    "calendar",
+    "slack",
+    "zapier",
+    "hubspot",
+    "salesforce",
+    "pipedrive",
+    "mailchimp",
+    "sendgrid",
+    "twilio",
+    "zoom",
+    "calendly",
+    "linkedin",
+    "clearbit"
+  ],
+  "compliance": [
+    "gdpr",
+    "ccpa",
+    "soc2"
+  ],
+  "designTokens": {
+    "colors": {
+      "primary": "#1E40AF",
+      "secondary": "#64748B",
+      "success": "#059669",
+      "warning": "#D97706",
+      "error": "#DC2626",
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "text": "#0F172A",
+      "textMuted": "#64748B"
+    }
+  }
+}

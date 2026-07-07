@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Employee Onboarding Flow",
+      "description": "Bring new hires into the organisation",
+      "steps": [
+        { "step": 1, "action": "Create Employee Record", "description": "HR enters personal and job details", "entities": ["Employee"], "validations": ["personal info complete", "job details set", "manager assigned"] },
+        { "step": 2, "action": "Send Offer Letter", "description": "Generate and send employment contract", "entities": ["OfferLetter"], "validations": ["offer accepted", "contract signed", "start date confirmed"] },
+        { "step": 3, "action": "IT Provisioning", "description": "Set up accounts and hardware", "entities": ["Employee"], "validations": ["email created", "system access granted", "hardware ordered"] },
+        { "step": 4, "action": "Orientation", "description": "Schedule training and introductions", "entities": ["Employee", "TrainingSession"], "validations": ["orientation completed", "policies acknowledged", "benefits enrolled"] }
+      ]
+    },
+    {
+      "name": "Leave Management Flow",
+      "description": "Request, approve, and track employee leave",
+      "steps": [
+        { "step": 1, "action": "Submit Request", "description": "Employee submits leave request", "entities": ["LeaveRequest"], "validations": ["leave type valid", "dates valid", "balance sufficient"] },
+        { "step": 2, "action": "Manager Approval", "description": "Reporting manager reviews", "entities": ["LeaveRequest"], "validations": ["coverage arranged", "business need checked"] },
+        { "step": 3, "action": "HR Review", "description": "HR ensures policy compliance", "entities": ["LeaveRequest"], "validations": ["policy rules met", "balance updated"] },
+        { "step": 4, "action": "Update Calendar", "description": "Leave reflected in team calendar", "entities": ["LeaveRequest"], "validations": ["calendar updated", "team notified", "payroll flagged"] }
+      ]
+    },
+    {
+      "name": "Payroll Processing Flow",
+      "description": "Calculate and process employee payroll",
+      "steps": [
+        { "step": 1, "action": "Collect Data", "description": "Gather attendance, leaves, changes", "entities": ["PayrollRun"], "validations": ["attendance finalized", "new hires included", "terminations excluded"] },
+        { "step": 2, "action": "Calculate Pay", "description": "Compute salaries and deductions", "entities": ["PayrollRun"], "validations": ["gross calculated", "tax withheld", "benefits deducted"] },
+        { "step": 3, "action": "Review Payroll", "description": "Finance/HR review totals", "entities": ["PayrollRun"], "validations": ["totals verified", "budget check", "corrections applied"] },
+        { "step": 4, "action": "Process Payment", "description": "Disburse salaries", "entities": ["PayrollRun", "Payment"], "validations": ["payments initiated", "payslips generated", "GL entries posted"] }
+      ]
+    },
+    {
+      "name": "Performance Review Flow",
+      "description": "Conduct employee performance evaluations",
+      "steps": [
+        { "step": 1, "action": "Set Goals", "description": "Define quarterly/annual objectives", "entities": ["Goal"], "validations": ["goals SMART", "manager approved", "aligned to OKRs"] },
+        { "step": 2, "action": "Self Assessment", "description": "Employee evaluates own performance", "entities": ["PerformanceReview"], "validations": ["self-rating submitted", "achievements documented"] },
+        { "step": 3, "action": "Manager Review", "description": "Manager provides assessment", "entities": ["PerformanceReview"], "validations": ["ratings submitted", "feedback documented", "development plan set"] },
+        { "step": 4, "action": "Compensation Review", "description": "Link to comp changes", "entities": ["PerformanceReview"], "validations": ["merit increase if applicable", "promotion considered", "review finalized"] }
+      ]
+    },
+    {
+      "name": "Employee Offboarding Flow",
+      "description": "Process employee departures smoothly",
+      "steps": [
+        { "step": 1, "action": "Initiate Exit", "description": "Resignation or termination entered", "entities": ["ExitRecord"], "validations": ["reason documented", "last working day set", "notice period checked"] },
+        { "step": 2, "action": "Exit Interview", "description": "Conduct exit interview", "entities": ["ExitRecord"], "validations": ["feedback collected", "knowledge transfer noted"] },
+        { "step": 3, "action": "Asset Recovery", "description": "Collect company assets", "entities": ["Asset"], "validations": ["laptop returned", "access card collected", "keys returned"] },
+        { "step": 4, "action": "System Deactivation", "description": "Revoke access and finalize", "entities": ["Employee"], "validations": ["access revoked", "email forwarded", "final settlement processed", "certificate issued"] }
+      ]
+    }
+  ]
+}

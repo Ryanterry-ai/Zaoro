@@ -255,6 +255,51 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // POST /api/build-anything — Build.Anything orchestrator endpoint
+  if (method === 'POST' && url.pathname === '/api/build-anything') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.prompt || typeof body.prompt !== 'string') {
+        return json(res, { error: 'prompt is required' }, 400);
+      }
+
+      const { Orchestrator } = await import('./orchestration/orchestrator.js');
+
+      const workingDir = body.workingDirectory ?? '.build-anything';
+
+      // Orchestrator auto-creates LLMAdapter from env vars if needed
+      const orchestrator = new Orchestrator({
+        workingDirectory: workingDir,
+      });
+
+      const result = await orchestrator.run(body.prompt);
+
+      return json(res, {
+        success: result.success,
+        result: {
+          success: result.success,
+          artifacts: Object.keys(result.artifacts),
+          stageCount: result.stageResults.size,
+          failedStages: [...result.stageResults.entries()]
+            .filter(([, sr]) => !sr.success)
+            .map(([id, sr]) => ({ id, error: sr.error })),
+          gateResults: result.gateResults.map(g => ({
+            gate: g.gateId,
+            passed: g.passed,
+            errors: g.errors,
+            warnings: g.warnings,
+          })),
+          durationMs: result.durationMs,
+          totalLlmCalls: result.totalLlmCalls,
+          totalTokens: result.totalTokens,
+        },
+      });
+    } catch (err: any) {
+      console.error('[build-anything] Error:', err.message);
+      return json(res, { error: err.message }, 500);
+    }
+  }
+
   // POST /api/create
   if (method === 'POST' && url.pathname === '/api/create') {
     try {

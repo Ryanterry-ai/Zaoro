@@ -400,14 +400,38 @@ try {
     writeProgress('content-gate', 'started', 'Running content quality gate...');
     var cgOutput = execSync('node "' + contentGateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 60000, encoding: 'utf-8' });
     var cgResult = JSON.parse(cgOutput.trim());
+    if (cgResult.pass === undefined || cgResult.pass === null) {
+      // Malformed output — treat as failure
+      writeProgress('content-gate', 'failed', 'Content quality gate returned invalid response');
+      throw new Error('Content quality gate returned malformed output: missing "pass" field');
+    }
     if (cgResult.pass) {
       writeProgress('content-gate', 'passed', 'Content quality gate passed');
     } else {
-      writeProgress('content-gate', 'warning', 'Content quality gate: ' + cgResult.generic + '/' + cgResult.components + ' generic (' + Math.round(cgResult.genericRatio * 100) + '%)');
+      const pct = Math.round(cgResult.genericRatio * 100);
+      writeProgress('content-gate', 'failed', 'Content quality gate FAILED: ' + cgResult.generic + '/' + cgResult.components + ' generic (' + pct + '%). Build requires real, business-specific content.');
+
+      // Write fix details to file so Claude Desktop can read and regenerate
+      const fixDetails = {
+        timestamp: Date.now(),
+        workspacePath: wsDir,
+        totalComponents: cgResult.components,
+        genericCount: cgResult.generic,
+        genericRatio: cgResult.genericRatio,
+        threshold: cgResult.threshold,
+        componentsToFix: cgResult.details || [],
+        instructions: 'Read this file, regenerate each component with real business-specific content, then re-run the content quality gate.',
+      };
+      const fixFile = path.join(wsDir, '.content-fixes-needed.json');
+      fs.writeFileSync(fixFile, JSON.stringify(fixDetails, null, 2), 'utf-8');
+
+      throw new Error('CONTENT_QUALITY_GATE_FAILED: ' + cgResult.generic + '/' + cgResult.components + ' components are generic (' + pct + '%). Fix details written to: ' + fixFile + '. Claude Desktop should read this file, regenerate the listed components with real content, then re-run the build.');
     }
   } catch (cgErr) {
-    // Script not found or parse errors — non-blocking
-    writeProgress('content-gate', 'warning', 'Content quality gate: could not run, continuing');
+    // Script not found or parse errors — fail the build
+    const msg = cgErr.message || String(cgErr);
+    writeProgress('content-gate', 'failed', 'Content quality gate could not run: ' + msg.slice(0, 300));
+    throw new Error('Content quality gate failed to execute: ' + msg.slice(0, 200) + '. Build cannot proceed without content quality validation.');
   }
 
   writeProgress('done', 'completed', 'Build completed! Your application is ready.');

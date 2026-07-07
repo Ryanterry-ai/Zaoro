@@ -1,0 +1,7 @@
+{
+  "entities": ["User", "Vendor", "Product", "Category", "Order", "OrderItem", "Payment", "Payout", "Review", "Message", "Conversation", "Dispute", "ShippingMethod", "SubscriptionPlan", "CommissionRule", "Coupon", "Wishlist", "Notification", "AnalyticsEvent"],
+  "pages": ["/", "/discover", "/categories", "/categories/[slug]", "/search", "/product/[id]", "/cart", "/checkout", "/checkout/success", "/account", "/account/orders", "/account/wishlist", "/account/messages", "/account/settings", "/vendor/apply", "/vendor/dashboard", "/vendor/products", "/vendor/orders", "/vendor/payouts", "/vendor/analytics", "/vendor/settings", "/admin", "/admin/vendors", "/admin/products", "/admin/orders", "/admin/disputes", "/admin/analytics", "/admin/settings"],
+  "features": ["vendor-onboarding", "product-listings", "search-discovery", "cart-checkout", "split-payments", "reviews-ratings", "messaging", "dispute-resolution", "analytics-dashboard", "subscription-plans", "commission-management", "shipping-integration", "mobile-responsive", "admin-moderation", "coupon-system", "wishlist", "notifications"],
+  "integrations": ["stripe-connect", "paypal", "shippo", "easypost", "sendgrid", "twilio", "algolia", "cloudinary"],
+  "compliance": ["pci-dss", "gdpr", "ccpa", "marketplace-facilitator-laws"]
+}

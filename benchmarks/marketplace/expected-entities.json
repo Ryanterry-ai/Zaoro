@@ -1,0 +1,269 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Platform user accounts (buyers and sellers)",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["buyer", "vendor", "admin"], "required": true },
+        { "name": "emailVerified", "type": "boolean", "default": false },
+        { "name": "phone", "type": "string" },
+        { "name": "avatarUrl", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasOne", "target": "Vendor" },
+        { "type": "hasMany", "target": "Order" },
+        { "type": "hasMany", "target": "Review" },
+        { "type": "hasMany", "target": "Conversation" },
+        { "type": "hasOne", "target": "Wishlist" }
+      ]
+    },
+    {
+      "name": "Vendor",
+      "description": "Marketplace seller/vendor accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "storeName", "type": "string", "required": true, "unique": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "logoUrl", "type": "string" },
+        { "name": "bannerUrl", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["pending", "active", "suspended", "rejected"], "default": "pending" },
+        { "name": "commissionRate", "type": "decimal", "default": 10 },
+        { "name": "payoutAccount", "type": "json" },
+        { "name": "totalSales", "type": "integer", "default": 0 },
+        { "name": "rating", "type": "decimal", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Product" },
+        { "type": "hasMany", "target": "Payout" },
+        { "type": "hasMany", "target": "CommissionRule" }
+      ]
+    },
+    {
+      "name": "Product",
+      "description": "Vendor product listings",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "vendorId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "compareAtPrice", "type": "decimal" },
+        { "name": "quantity", "type": "integer", "default": 1 },
+        { "name": "images", "type": "json", "default": "[]" },
+        { "name": "tags", "type": "json", "default": "[]" },
+        { "name": "status", "type": "enum", "values": ["draft", "active", "sold", "archived"], "default": "draft" },
+        { "name": "categoryId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Vendor" },
+        { "type": "belongsTo", "target": "Category" },
+        { "type": "hasMany", "target": "Review" },
+        { "type": "hasMany", "target": "OrderItem" }
+      ]
+    },
+    {
+      "name": "Category",
+      "description": "Product categories",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "imageUrl", "type": "string" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Category", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Category", "foreignKey": "parentId" },
+        { "type": "hasMany", "target": "Product" }
+      ]
+    },
+    {
+      "name": "Order",
+      "description": "Customer purchase orders",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "buyerId", "type": "uuid", "required": true },
+        { "name": "orderNumber", "type": "string", "required": true, "unique": true },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "commission", "type": "decimal", "default": 0 },
+        { "name": "vendorEarnings", "type": "decimal", "default": 0 },
+        { "name": "shipping", "type": "decimal", "default": 0 },
+        { "name": "tax", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "status", "type": "enum", "values": ["pending", "confirmed", "shipped", "delivered", "cancelled", "refunded"], "default": "pending" },
+        { "name": "shippingAddress", "type": "json" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User", "foreignKey": "buyerId" },
+        { "type": "hasMany", "target": "OrderItem" },
+        { "type": "hasMany", "target": "Payment" },
+        { "type": "hasMany", "target": "Dispute" }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "Payment transactions for orders",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderId", "type": "uuid", "required": true },
+        { "name": "gateway", "type": "string", "required": true },
+        { "name": "gatewayTransactionId", "type": "string" },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "status", "type": "enum", "values": ["pending", "processing", "succeeded", "failed", "refunded"], "default": "pending" },
+        { "name": "paymentMethod", "type": "json" },
+        { "name": "processedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Order" },
+        { "type": "hasMany", "target": "Payout" }
+      ]
+    },
+    {
+      "name": "Payout",
+      "description": "Vendor commission payouts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "vendorId", "type": "uuid", "required": true },
+        { "name": "paymentId", "type": "uuid" },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "commissionDeducted", "type": "decimal", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["pending", "processing", "paid", "failed"], "default": "pending" },
+        { "name": "payoutMethod", "type": "string" },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Vendor" },
+        { "type": "belongsTo", "target": "Payment" }
+      ]
+    },
+    {
+      "name": "Review",
+      "description": "Product reviews and ratings",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "productId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "orderId", "type": "uuid" },
+        { "name": "rating", "type": "integer", "required": true },
+        { "name": "title", "type": "string" },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "images", "type": "json", "default": "[]" },
+        { "name": "isVerified", "type": "boolean", "default": false },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "rejected"], "default": "pending" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Product" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "Message",
+      "description": "Conversation messages",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "conversationId", "type": "uuid", "required": true },
+        { "name": "senderId", "type": "uuid", "required": true },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "attachments", "type": "json", "default": "[]" },
+        { "name": "readAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Conversation" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "senderId" }
+      ]
+    },
+    {
+      "name": "Conversation",
+      "description": "Buyer-vendor messaging threads",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "buyerId", "type": "uuid", "required": true },
+        { "name": "vendorId", "type": "uuid", "required": true },
+        { "name": "productId", "type": "uuid" },
+        { "name": "subject", "type": "string" },
+        { "name": "lastMessageAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User", "foreignKey": "buyerId" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "vendorId" },
+        { "type": "hasMany", "target": "Message" }
+      ]
+    },
+    {
+      "name": "Dispute",
+      "description": "Order dispute resolution",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderId", "type": "uuid", "required": true },
+        { "name": "raisedById", "type": "uuid", "required": true },
+        { "name": "reason", "type": "enum", "values": ["item_not_received", "damaged", "not_as_described", "refund", "other"], "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "evidence", "type": "json", "default": "[]" },
+        { "name": "status", "type": "enum", "values": ["open", "investigating", "resolved_buyer", "resolved_vendor", "cancelled"], "default": "open" },
+        { "name": "resolution", "type": "text" },
+        { "name": "resolvedById", "type": "uuid" },
+        { "name": "resolvedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Order" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "raisedById" }
+      ]
+    },
+    {
+      "name": "CommissionRule",
+      "description": "Commission rate rules",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "vendorId", "type": "uuid" },
+        { "name": "categoryId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["flat", "percentage", "tiered"], "required": true },
+        { "name": "rate", "type": "decimal", "required": true },
+        { "name": "minAmount", "type": "decimal" },
+        { "name": "maxAmount", "type": "decimal" },
+        { "name": "priority", "type": "integer", "default": 0 },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Vendor" },
+        { "type": "belongsTo", "target": "Category" }
+      ]
+    }
+  ]
+}

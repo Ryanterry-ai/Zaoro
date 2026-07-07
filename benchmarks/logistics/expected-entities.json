@@ -1,0 +1,245 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "System user accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "dispatcher", "driver", "manager", "customer"], "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasOne", "target": "Driver" }
+      ]
+    },
+    {
+      "name": "Company",
+      "description": "Carrier/broker company entity",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "dotNumber", "type": "string", "unique": true },
+        { "name": "mcNumber", "type": "string" },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "type", "type": "enum", "values": ["carrier", "broker", "both"], "required": true },
+        { "name": "fleetSize", "type": "integer", "default": 0 },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" },
+        { "type": "hasMany", "target": "Driver" },
+        { "type": "hasMany", "target": "Vehicle" },
+        { "type": "hasMany", "target": "Load" },
+        { "type": "hasMany", "target": "Customer" }
+      ]
+    },
+    {
+      "name": "Driver",
+      "description": "Truck driver records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "licenseNumber", "type": "string", "required": true, "unique": true },
+        { "name": "licenseState", "type": "string", "required": true },
+        { "name": "licenseClass", "type": "enum", "values": ["A", "B", "C"], "required": true },
+        { "name": "endorsements", "type": "json", "default": "[]" },
+        { "name": "phone", "type": "string", "required": true },
+        { "name": "status", "type": "enum", "values": ["available", "on_duty", "driving", "off_duty", "sleeper", "suspended"], "default": "available" },
+        { "name": "hireDate", "type": "date" },
+        { "name": "medicalExpiry", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Dispatch" },
+        { "type": "hasMany", "target": "ELDLog" },
+        { "type": "hasMany", "target": "GPSEvent" }
+      ]
+    },
+    {
+      "name": "Vehicle",
+      "description": "Fleet vehicles/trucks",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "unitNumber", "type": "string", "required": true },
+        { "name": "vin", "type": "string", "required": true, "unique": true },
+        { "name": "licensePlate", "type": "string", "required": true },
+        { "name": "year", "type": "integer" },
+        { "name": "make", "type": "string" },
+        { "name": "model", "type": "string" },
+        { "name": "type", "type": "enum", "values": ["day_cab", "sleeper", "straight", "box_truck"], "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "maintenance", "out_of_service", "retired"], "default": "active" },
+        { "name": "lastOilChange", "type": "integer" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasMany", "target": "MaintenanceRecord" },
+        { "type": "hasMany", "target": "FuelPurchase" },
+        { "type": "hasMany", "target": "GPSEvent" },
+        { "type": "hasMany", "target": "Inspection" }
+      ]
+    },
+    {
+      "name": "Load",
+      "description": "Freight loads",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "customerId", "type": "uuid" },
+        { "name": "loadNumber", "type": "string", "required": true, "unique": true },
+        { "name": "origin", "type": "json", "required": true },
+        { "name": "destination", "type": "json", "required": true },
+        { "name": "pickupDate", "type": "datetime", "required": true },
+        { "name": "deliveryDate", "type": "datetime" },
+        { "name": "weight", "type": "decimal" },
+        { "name": "commodity", "type": "string" },
+        { "name": "equipmentType", "type": "string" },
+        { "name": "rate", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["pending", "dispatched", "in_transit", "delivered", "cancelled"], "default": "pending" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "belongsTo", "target": "Customer" },
+        { "type": "hasMany", "target": "LoadStop" },
+        { "type": "hasOne", "target": "Dispatch" },
+        { "type": "hasOne", "target": "Invoice" }
+      ]
+    },
+    {
+      "name": "Dispatch",
+      "description": "Load dispatch assignments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "loadId", "type": "uuid", "required": true },
+        { "name": "driverId", "type": "uuid", "required": true },
+        { "name": "vehicleId", "type": "uuid", "required": true },
+        { "name": "trailerId", "type": "uuid" },
+        { "name": "dispatchedById", "type": "uuid", "required": true },
+        { "name": "dispatchedAt", "type": "datetime", "required": true },
+        { "name": "instructions", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["assigned", "accepted", "en_route", "loaded", "departed", "delivered"], "default": "assigned" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Load" },
+        { "type": "belongsTo", "target": "Driver" },
+        { "type": "belongsTo", "target": "Vehicle" }
+      ]
+    },
+    {
+      "name": "ELDLog",
+      "description": "Electronic logging device records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "driverId", "type": "uuid", "required": true },
+        { "name": "vehicleId", "type": "uuid", "required": true },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "status", "type": "enum", "values": ["off_duty", "sleeper", "driving", "on_duty"], "required": true },
+        { "name": "startTime", "type": "datetime", "required": true },
+        { "name": "endTime", "type": "datetime" },
+        { "name": "duration", "type": "integer" },
+        { "name": "location", "type": "json" },
+        { "name": "odometer", "type": "integer" },
+        { "name": "engineHours", "type": "integer" },
+        { "name": "isCertified", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Driver" },
+        { "type": "belongsTo", "target": "Vehicle" }
+      ]
+    },
+    {
+      "name": "MaintenanceRecord",
+      "description": "Vehicle maintenance logs",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "vehicleId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["oil_change", "tire", "brake", "engine", "transmission", "inspection", "repair", "other"], "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "vendor", "type": "string" },
+        { "name": "cost", "type": "decimal" },
+        { "name": "odometer", "type": "integer" },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "nextDueDate", "type": "date" },
+        { "name": "nextDueOdometer", "type": "integer" },
+        { "name": "status", "type": "enum", "values": ["scheduled", "in_progress", "completed", "deferred"], "default": "scheduled" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Vehicle" }
+      ]
+    },
+    {
+      "name": "Customer",
+      "description": "Shippers/customers",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "companyId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "contactName", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "billingTerms", "type": "string" },
+        { "name": "creditLimit", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["active", "on_hold", "inactive"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Company" },
+        { "type": "hasMany", "target": "Load" },
+        { "type": "hasMany", "target": "Invoice" }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "description": "Customer invoices",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "loadId", "type": "uuid" },
+        { "name": "customerId", "type": "uuid", "required": true },
+        { "name": "invoiceNumber", "type": "string", "required": true, "unique": true },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "tax", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "status", "type": "enum", "values": ["draft", "sent", "paid", "overdue", "cancelled"], "default": "draft" },
+        { "name": "dueDate", "type": "date", "required": true },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "notes", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Load" },
+        { "type": "belongsTo", "target": "Customer" },
+        { "type": "hasMany", "target": "Payment" }
+      ]
+    }
+  ]
+}

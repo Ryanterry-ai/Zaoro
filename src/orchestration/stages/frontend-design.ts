@@ -5,6 +5,7 @@
 
 import { BaseStage } from './base-stage.js';
 import type { StageMeta, StageContext, StageResult, AgentRole, LLMTaskType } from '../types.js';
+import { SkillIntegrator } from '../../generation/skill-integrator.js';
 
 const meta: StageMeta = {
   id: 'frontend-design',
@@ -32,6 +33,30 @@ export class FrontendDesignStage extends BaseStage {
     const techStack = ctx.getArtifact<Record<string, unknown>>('architecture.tech-stack');
     const endpoints = ctx.getArtifact<unknown>('api.endpoints');
 
+    // Get design recommendations from SkillIntegrator
+    const skillIntegrator = new SkillIntegrator();
+    const industry = (manifest?.industry as string) ?? (manifest?.domain as string) ?? 'saas';
+    const subIndustry = manifest?.subIndustry as string | undefined;
+    const description = (manifest?.description as string) ?? (manifest?.name as string) ?? '';
+
+    let designRecommendations;
+    try {
+      designRecommendations = skillIntegrator.getDesignRecommendations(industry, subIndustry);
+      // Store skill artifacts for CodeWriterStage
+      const artifacts = skillIntegrator.produceArtifacts(industry);
+      ctx.setArtifact('skill.design', artifacts.find(a => a.type === 'design_specification'));
+      ctx.setArtifact('skill.motion', artifacts.find(a => a.type === 'motion_specification'));
+      ctx.setArtifact('skill.components', artifacts.find(a => a.type === 'component_graph'));
+    } catch (e) {
+      // SkillIntegrator failed, continue without
+      ctx.log.warn('SkillIntegrator failed, continuing without design recommendations');
+    }
+
+    // Build prompt with SkillIntegrator recommendations
+    const designPrompt = designRecommendations
+      ? SkillIntegrator.formatForPrompt(designRecommendations)
+      : '';
+
     const prompt = `Design the frontend for this project.
 
 ## Project
@@ -45,6 +70,8 @@ ${techStack ? JSON.stringify(techStack, null, 2) : 'No frontend stack'}
 
 ## API Endpoints
 ${endpoints ? JSON.stringify(endpoints, null, 2) : 'No endpoints defined'}
+
+${designPrompt ? `## Design Recommendations (from UI/UX Pro Max)\n${designPrompt}\n` : ''}
 
 ## Required Output (JSON)
 {

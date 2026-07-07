@@ -42,6 +42,7 @@ import {
   CRM_ENTERPRISE,
   LOGISTICS_PLATFORM,
   MANUFACTURING_ERP,
+  TASK_TRACKER,
 } from './patterns/enterprise-patterns.js';
 // ─── Phase 1B: Enterprise Skill Packs ────────────────────────────────────────
 import {
@@ -108,6 +109,7 @@ export const PATTERNS: Pattern[] = [
   CRM_ENTERPRISE,
   LOGISTICS_PLATFORM,
   MANUFACTURING_ERP,
+  TASK_TRACKER,
 ];
 
 export const SKILL_PACKS: SkillPack[] = [

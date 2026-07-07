@@ -1,0 +1,7 @@
+{
+  "entities": ["User", "Patient", "Provider", "Appointment", "ClinicalNote", "Diagnosis", "Procedure", "Prescription", "Medication", "LabOrder", "LabResult", "InsurancePlan", "Claim", "Payment", "Invoice", "Location", "Department", "Schedule", "TelehealthSession", "Document", "InventoryItem", "Staff", "Role", "AuditLog"],
+  "pages": ["/", "/dashboard", "/patients", "/patients/[id]", "/patients/[id]/chart", "/patients/[id]/appointments", "/patients/[id]/billing", "/schedule", "/schedule/day", "/schedule/week", "/schedule/month", "/providers", "/providers/[id]", "/clinical", "/clinical/notes", "/clinical/prescriptions", "/clinical/labs", "/billing", "/billing/claims", "/billing/payments", "/billing/insurance", "/patient-portal", "/telehealth", "/inventory", "/reports", "/reports/clinical", "/reports/financial", "/reports/operational", "/settings", "/settings/users", "/settings/locations", "/settings/insurance", "/settings/hipaa"],
+  "features": ["patient-registration", "multi-provider-scheduling", "ehr-clinical-notes", "e-prescribing", "billing-claims", "insurance-verification", "patient-portal", "telehealth", "lab-integration", "reporting", "inventory-management", "staff-management", "hipaa-compliance", "audit-logging", "role-based-access", "mobile-responsive"],
+  "integrations": ["surescripts", "labcorp", "quest", "change-healthcare", "availity", "zoom", "twilio-video", "stripe", "plaid"],
+  "compliance": ["hipaa", "hitech", "gdpr", "ccpa", "state-privacy-laws"]
+}

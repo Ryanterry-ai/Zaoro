@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Property Listing Flow",
+      "description": "Create and publish property listings",
+      "steps": [
+        { "step": 1, "action": "Create Listing", "description": "Enter property details and features", "entities": ["Property"], "validations": ["address valid", "property type set", "features documented"] },
+        { "step": 2, "action": "Upload Media", "description": "Add photos, floor plans, and virtual tour", "entities": ["PropertyMedia"], "validations": ["photos uploaded", "floor plan attached", "virtual tour link valid"] },
+        { "step": 3, "action": "Set Price", "description": "Configure listing price and terms", "entities": ["Property"], "validations": ["price valid", "HOA if applicable", "tax info included"] },
+        { "step": 4, "action": "Publish Listing", "description": "List on MLS and portals", "entities": ["Property"], "validations": ["MLS submitted", "portal syndication active", "listing live"] }
+      ]
+    },
+    {
+      "name": "Showing Scheduling Flow",
+      "description": "Schedule and manage property showings",
+      "steps": [
+        { "step": 1, "action": "Request Showing", "description": "Buyer/agent requests viewing", "entities": ["ShowingRequest"], "validations": ["date and time valid", "buyer pre-qualified if required"] },
+        { "step": 2, "action": "Confirm Availability", "description": "Listing agent confirms slot", "entities": ["ShowingRequest"], "validations": ["agent available", "property accessible"] },
+        { "step": 3, "action": "Show Property", "description": "Conduct property tour", "entities": ["Showing"], "validations": ["showing completed", "buyer feedback collected"] },
+        { "step": 4, "action": "Follow Up", "description": "Post-showing engagement", "entities": ["Showing"], "validations": ["feedback recorded", "offer interest noted", "second showing if needed"] }
+      ]
+    },
+    {
+      "name": "Offer Management Flow",
+      "description": "Process purchase offers through closing",
+      "steps": [
+        { "step": 1, "action": "Submit Offer", "description": "Buyer submits purchase offer", "entities": ["Offer"], "validations": ["offer amount set", "terms defined", "pre-approval attached"] },
+        { "step": 2, "action": "Negotiate Terms", "description": "Counter-offers and negotiation", "entities": ["Offer"], "validations": ["counter sent", "responses tracked", "deadline managed"] },
+        { "step": 3, "action": "Accept Offer", "description": "Seller accepts offer", "entities": ["Offer"], "validations": ["offer accepted", "earnest money deposited", "contingency dates set"] },
+        { "step": 4, "action": "Open Escrow", "description": "Initiate escrow and due diligence", "entities": ["Escrow"], "validations": ["escrow opened", "inspections scheduled", "appraisal ordered"] }
+      ]
+    },
+    {
+      "name": "Lease Signing Flow",
+      "description": "Execute rental lease agreements",
+      "steps": [
+        { "step": 1, "action": "Application Review", "description": "Screen tenant application", "entities": ["LeaseApplication"], "validations": ["credit check passed", "background check cleared", "income verified"] },
+        { "step": 2, "action": "Generate Lease", "description": "Draft lease agreement", "entities": ["Lease"], "validations": ["terms correct", "addenda attached", "security deposit noted"] },
+        { "step": 3, "action": "Sign Lease", "description": "Tenant and landlord sign", "entities": ["Lease"], "validations": ["e-signed by both parties", "countersignature complete"] },
+        { "step": 4, "action": "Move In", "description": "Tenant takes possession", "entities": ["Lease"], "validations": ["keys provided", "move-in inspection done", "first month collected"] }
+      ]
+    },
+    {
+      "name": "Closing Flow",
+      "description": "Finalize property sale transaction",
+      "steps": [
+        { "step": 1, "action": "Final Inspection", "description": "Buyer final walkthrough", "entities": ["Escrow"], "validations": ["property condition verified", "repairs completed"] },
+        { "step": 2, "action": "Review Closing Docs", "description": "Prepare and review closing documents", "entities": ["ClosingDocument"], "validations": ["CD signed", "title cleared", "insurance bound"] },
+        { "step": 3, "action": "Fund Transfer", "description": "Transfer funds and record deed", "entities": ["Escrow"], "validations": ["funds wired", "deed recorded", "commissions disbursed"] },
+        { "step": 4, "action": "Close Escrow", "description": "Transaction complete", "entities": ["Escrow"], "validations": ["keys transferred", "utilities transferred", "final accounting sent"] }
+      ]
+    }
+  ]
+}

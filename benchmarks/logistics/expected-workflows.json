@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Shipment Booking Flow",
+      "description": "Book a new shipment for delivery",
+      "steps": [
+        { "step": 1, "action": "Create Shipment", "description": "Enter sender, receiver, and package details", "entities": ["Shipment"], "validations": ["addresses valid", "package dimensions set", "weight recorded"] },
+        { "step": 2, "action": "Select Service", "description": "Choose shipping speed and options", "entities": ["Shipment", "ServiceType"], "validations": ["service available", "rate calculated", "delivery window shown"] },
+        { "step": 3, "action": "Generate Label", "description": "Create shipping label and docs", "entities": ["Shipment"], "validations": ["label generated", "customs doc if international", "tracking number assigned"] },
+        { "step": 4, "action": "Schedule Pickup", "description": "Arrange carrier pickup", "entities": ["PickupRequest"], "validations": ["pickup window set", "address confirmed", "pickup confirmed"] }
+      ]
+    },
+    {
+      "name": "Route Planning Flow",
+      "description": "Optimize delivery routes for drivers",
+      "steps": [
+        { "step": 1, "action": "Load Shipments", "description": "Assign shipments to delivery route", "entities": ["Route", "Shipment"], "validations": ["shipments assigned", "capacity checked"] },
+        { "step": 2, "action": "Optimize Route", "description": "Calculate optimal delivery order", "entities": ["Route"], "validations": ["sequence optimized", "traffic considered", "time windows met"] },
+        { "step": 3, "action": "Assign Driver", "description": "Allocate driver and vehicle", "entities": ["Route", "Driver"], "validations": ["driver available", "vehicle suitable", "license endorsements checked"] },
+        { "step": 4, "action": "Dispatch Route", "description": "Send route to driver app", "entities": ["Route"], "validations": ["route dispatched", "driver notified", "navigation ready"] }
+      ]
+    },
+    {
+      "name": "Package Tracking Flow",
+      "description": "Track shipments through the delivery lifecycle",
+      "steps": [
+        { "step": 1, "action": "Accept Package", "description": "Package scanned at origin", "entities": ["Shipment", "TrackingEvent"], "validations": ["package received", "scan recorded"] },
+        { "step": 2, "action": "In Transit", "description": "Package moves through hubs", "entities": ["TrackingEvent"], "validations": ["location scanned", "timestamp recorded", "estimated delivery updated"] },
+        { "step": 3, "action": "Out for Delivery", "description": "Package on delivery vehicle", "entities": ["TrackingEvent"], "validations": ["driver assigned", "ETA calculated", "recipient notified"] },
+        { "step": 4, "action": "Delivered", "description": "Package delivered to recipient", "entities": ["TrackingEvent", "Shipment"], "validations": ["delivery scanned", "recipient signed", "photo proof captured"] }
+      ]
+    },
+    {
+      "name": "Delivery Confirmation Flow",
+      "description": "Confirm and document successful delivery",
+      "steps": [
+        { "step": 1, "action": "Proof of Delivery", "description": "Capture delivery evidence", "entities": ["ProofOfDelivery"], "validations": ["signature collected", "photo captured", "GPS coordinates recorded"] },
+        { "step": 2, "action": "Update Status", "description": "Mark shipment as delivered", "entities": ["Shipment"], "validations": ["status = delivered", "timestamp set"] },
+        { "step": 3, "action": "Notify Parties", "description": "Send delivery confirmation", "entities": ["Notification"], "validations": ["shipper notified", "receiver notified", "delivery time shared"] },
+        { "step": 4, "action": "Release Payment", "description": "Release payment to carrier", "entities": ["Payment"], "validations": ["payment released", "COD if applicable collected"] }
+      ]
+    },
+    {
+      "name": "Returns Processing Flow",
+      "description": "Handle reverse logistics for returns",
+      "steps": [
+        { "step": 1, "action": "Initiate Return", "description": "Request return authorization", "entities": ["ReturnRequest"], "validations": ["reason valid", "within return window", "item eligible"] },
+        { "step": 2, "action": "Generate RMA", "description": "Return merchandise authorization", "entities": ["ReturnRequest"], "validations": ["RMA number issued", "return label generated"] },
+        { "step": 3, "action": "Receive Return", "description": "Package received at warehouse", "entities": ["ReturnRequest"], "validations": ["item inspected", "condition verified", "restock or dispose"] },
+        { "step": 4, "action": "Process Refund/Replace", "description": "Issue refund or send replacement", "entities": ["ReturnRequest", "Shipment"], "validations": ["refund processed", "replacement shipped", "return closed"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "industry": "crm",
+  "name": "Sales CRM Platform",
+  "prompt": "Build a modern sales CRM for B2B teams. Features: lead capture, pipeline management, contact management, deal tracking, email integration, activity logging, task management, reporting dashboards, forecasting, territory management, team collaboration, mobile app, and API for integrations. Target: sales teams at growing B2B companies.",
+  "expectedEntities": [
+    "User",
+    "Lead",
+    "Contact",
+    "Account",
+    "Opportunity",
+    "Activity",
+    "Task",
+    "Pipeline",
+    "Stage",
+    "Email",
+    "Call",
+    "Meeting",
+    "Note",
+    "Attachment",
+    "Forecast",
+    "Territory",
+    "Team"
+  ],
+  "expectedPages": [
+    "/",
+    "/dashboard",
+    "/leads",
+    "/leads/[id]",
+    "/contacts",
+    "/contacts/[id]",
+    "/accounts",
+    "/accounts/[id]",
+    "/deals",
+    "/deals/[id]",
+    "/pipeline",
+    "/activities",
+    "/tasks",
+    "/reports",
+    "/forecast",
+    "/settings",
+    "/settings/users",
+    "/settings/pipelines",
+    "/settings/integrations",
+    "/api-docs"
+  ],
+  "expectedFeatures": [
+    "lead-capture",
+    "pipeline-management",
+    "contact-management",
+    "deal-tracking",
+    "email-integration",
+    "activity-logging",
+    "task-management",
+    "reporting-dashboards",
+    "forecasting",
+    "territory-management",
+    "team-collaboration",
+    "mobile-responsive",
+    "api-access"
+  ],
+  "requiredIntegrations": [
+    "gmail",
+    "outlook",
+    "calendar",
+    "slack",
+    "zapier"
+  ],
+  "compliance": [
+    "gdpr",
+    "ccpa",
+    "soc2"
+  ],
+  "scoring": {
+    "entityCoverageWeight": 0.25,
+    "pageCoverageWeight": 0.20,
+    "featureCoverageWeight": 0.25,
+    "integrationWeight": 0.15,
+    "complianceWeight": 0.10,
+    "codeQualityWeight": 0.05
+  },
+  "minScore": 75
+}

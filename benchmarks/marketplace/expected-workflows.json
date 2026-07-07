@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Seller Registration Flow",
+      "description": "Onboard new sellers to the marketplace",
+      "steps": [
+        { "step": 1, "action": "Submit Application", "description": "Seller provides business info and documents", "entities": ["Seller"], "validations": ["business name set", "contact info valid", "tax ID provided"] },
+        { "step": 2, "action": "Verify Identity", "description": "KYC and background verification", "entities": ["Seller"], "validations": ["identity verified", "business license checked", "address confirmed"] },
+        { "step": 3, "action": "Set Up Payments", "description": "Configure payout details", "entities": ["Seller", "PayoutAccount"], "validations": ["bank account valid", "payout schedule set", "commission terms agreed"] },
+        { "step": 4, "action": "Approve Seller", "description": "Marketplace activates seller account", "entities": ["Seller"], "validations": ["approval granted", "storefront created", "welcome sent"] }
+      ]
+    },
+    {
+      "name": "Product Listing Flow",
+      "description": "Sellers list products for sale",
+      "steps": [
+        { "step": 1, "action": "Create Listing", "description": "Enter product details and photos", "entities": ["Product"], "validations": ["title set", "description complete", "images uploaded"] },
+        { "step": 2, "action": "Set Price & Inventory", "description": "Configure pricing and stock", "entities": ["Product", "Inventory"], "validations": ["price valid", "stock quantity set", "variants configured if applicable"] },
+        { "step": 3, "action": "Submit for Review", "description": "Marketplace reviews listing", "entities": ["Product"], "validations": ["quality guidelines met", "category correct", "policy compliance checked"] },
+        { "step": 4, "action": "Publish Listing", "description": "Product goes live on marketplace", "entities": ["Product"], "validations": ["listing published", "search indexed", "seller notified"] }
+      ]
+    },
+    {
+      "name": "Order Processing Flow",
+      "description": "Process buyer orders through fulfillment",
+      "steps": [
+        { "step": 1, "action": "Buyer Places Order", "description": "Customer completes purchase", "entities": ["Order"], "validations": ["payment captured", "seller notified"] },
+        { "step": 2, "action": "Seller Confirms", "description": "Seller accepts order", "entities": ["Order"], "validations": ["confirmed within SLA", "inventory committed"] },
+        { "step": 3, "action": "Seller Ships", "description": "Seller marks as shipped", "entities": ["Order", "Shipment"], "validations": ["tracking number provided", "carrier selected"] },
+        { "step": 4, "action": "Buyer Receives", "description": "Delivery confirmed", "entities": ["Order"], "validations": ["delivery confirmed", "buyer notified", "release payment pending"] }
+      ]
+    },
+    {
+      "name": "Dispute Resolution Flow",
+      "description": "Handle buyer-seller disputes",
+      "steps": [
+        { "step": 1, "action": "Open Dispute", "description": "Buyer or seller files dispute", "entities": ["Dispute"], "validations": ["reason valid", "order referenced", "evidence provided"] },
+        { "step": 2, "action": "Review Evidence", "description": "Marketplace reviews both sides", "entities": ["Dispute"], "validations": ["buyer evidence reviewed", "seller evidence reviewed"] },
+        { "step": 3, "action": "Make Decision", "description": "Marketplace issues ruling", "entities": ["Dispute"], "validations": ["decision rendered", "parties notified"] },
+        { "step": 4, "action": "Appeal Resolution", "description": "Option for appeal", "entities": ["Dispute"], "validations": ["appeal window checked", "escalation if needed", "final decision"] }
+      ]
+    },
+    {
+      "name": "Payout Settlement Flow",
+      "description": "Calculate and disburse seller earnings",
+      "steps": [
+        { "step": 1, "action": "Calculate Earnings", "description": "Compute seller revenue minus fees", "entities": ["Payout"], "validations": ["gross sales calculated", "commission deducted", "refunds accounted"] },
+        { "step": 2, "action": "Generate Payout", "description": "Create payout batch", "entities": ["Payout"], "validations": ["amount > threshold", "payout period set"] },
+        { "step": 3, "action": "Process Transfer", "description": "Send funds to seller", "entities": ["Payout"], "validations": ["transfer initiated", "bank confirmed"] },
+        { "step": 4, "action": "Notify Seller", "description": "Payout confirmation sent", "entities": ["Payout"], "validations": ["seller notified", "statement available", "tax form updated"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Invoice-to-Payment Flow",
+      "description": "Create and send invoices then track payment collection",
+      "steps": [
+        { "step": 1, "action": "Create Invoice", "description": "Generate invoice for client services", "entities": ["Invoice", "Client"], "validations": ["client exists", "line items valid", "totals calculated"] },
+        { "step": 2, "action": "Send Invoice", "description": "Deliver invoice to client", "entities": ["Invoice"], "validations": ["email sent", "invoice status = sent"] },
+        { "step": 3, "action": "Record Payment", "description": "Client payment received and recorded", "entities": ["Invoice", "Payment", "JournalEntry"], "validations": ["amount matches", "AR reduced", "payment method recorded"] },
+        { "step": 4, "action": "Reconcile Payment", "description": "Match payment to bank statement", "entities": ["BankTransaction", "Payment"], "validations": ["amount matches", "date within window", "cleared status updated"] }
+      ]
+    },
+    {
+      "name": "Expense Reporting Flow",
+      "description": "Submit, approve, and reimburse employee expenses",
+      "steps": [
+        { "step": 1, "action": "Submit Expense", "description": "Employee submits expense report", "entities": ["ExpenseReport", "ExpenseLine"], "validations": ["receipt attached", "category valid", "amount within policy"] },
+        { "step": 2, "action": "Review Expense", "description": "Manager reviews report", "entities": ["ExpenseReport"], "validations": ["receipts verified", "policy check passed"] },
+        { "step": 3, "action": "Approve Expense", "description": "Manager or finance approves", "entities": ["ExpenseReport"], "validations": ["approval rules met", "budget check passed"] },
+        { "step": 4, "action": "Process Reimbursement", "description": "Employee reimbursed via payroll or ACH", "entities": ["ExpenseReport", "JournalEntry"], "validations": ["reimbursement processed", "GL impact recorded"] }
+      ]
+    },
+    {
+      "name": "Tax Preparation Flow",
+      "description": "Prepare and file tax returns",
+      "steps": [
+        { "step": 1, "action": "Gather Documents", "description": "Collect financial statements and forms", "entities": ["TaxDocument", "FinancialReport"], "validations": ["all required docs present", "fiscal year closed"] },
+        { "step": 2, "action": "Calculate Liability", "description": "Compute tax liability", "entities": ["TaxReturn"], "validations": ["income calculated", "deductions applied", "credits verified"] },
+        { "step": 3, "action": "Review Return", "description": "Senior accountant reviews", "entities": ["TaxReturn"], "validations": ["calculations verified", "compliance checked"] },
+        { "step": 4, "action": "File Return", "description": "Submit to tax authority", "entities": ["TaxReturn"], "validations": ["efile accepted", "filing confirmation received", "payment scheduled"] }
+      ]
+    },
+    {
+      "name": "Payroll Processing Flow",
+      "description": "Calculate wages and disburse employee pay",
+      "steps": [
+        { "step": 1, "action": "Collect Time Data", "description": "Import timesheets and attendance", "entities": ["Timesheet", "Employee"], "validations": ["hours verified", "overtime calculated", "absences accounted"] },
+        { "step": 2, "action": "Calculate Payroll", "description": "Compute gross pay, deductions, net pay", "entities": ["PayrollRun"], "validations": ["wages calculated", "tax withheld", "benefits deducted"] },
+        { "step": 3, "action": "Approve Payroll", "description": "Finance manager approves run", "entities": ["PayrollRun"], "validations": ["totals verified", "cash sufficient", "approval recorded"] },
+        { "step": 4, "action": "Disburse Payments", "description": "Direct deposit and checks issued", "entities": ["PayrollRun", "JournalEntry"], "validations": ["payments sent", "GL entries posted", "payslips available"] }
+      ]
+    },
+    {
+      "name": "Financial Close Flow",
+      "description": "Month-end close process for accurate financials",
+      "steps": [
+        { "step": 1, "action": "Reconcile Accounts", "description": "Match GL to bank statements", "entities": ["Account", "BankTransaction"], "validations": ["all accounts reconciled", "discrepancies resolved"] },
+        { "step": 2, "action": "Accrue Entries", "description": "Post accruals and deferrals", "entities": ["JournalEntry"], "validations": ["accruals calculated", "deferrals posted", "depreciation recorded"] },
+        { "step": 3, "action": "Review Financials", "description": "Review P&L and balance sheet", "entities": ["FinancialReport"], "validations": ["variances explained", "material errors corrected"] },
+        { "step": 4, "action": "Close Period", "description": "Lock period and run closing reports", "entities": ["AccountingPeriod"], "validations": ["period locked", "retained earnings updated", "closing statements generated"] }
+      ]
+    }
+  ]
+}

@@ -50,6 +50,7 @@ export interface ConfidenceSignals {
   industryScore: number;        // Raw keyword-match score from detectIndustry
   patternScore: number;         // Best pattern score from Scorer (0-100)
   patternIndustryFit: boolean;  // Did the winning pattern actually match industry?
+  patternSizeBiasFraction: number; // Fraction of score from size (pageCoverage + componentCount)
   capabilityCount: number;      // Number of capabilities detected
   hasAdminJourney: boolean;     // Did any journey signal produce 'admin'?
   businessModelsEmpty: boolean; // Did business model detection find nothing?
@@ -119,7 +120,22 @@ export function evaluateConfidence(
     );
   }
 
-  // Signal 5: business models were empty (defaulted behavior removed, now honest)
+  // Signal 5: size-bias detection — is the pattern winning on size, not relevance?
+  // This catches the "task tracker → CRM" bug where CRM wins because it has
+  // the most pages/components, not because it's actually a CRM.
+  const sizePoints = (selectedPattern?.breakdown?.['pageCoverage'] ?? 0) +
+                     (selectedPattern?.breakdown?.['componentCount'] ?? 0);
+  const patternSizeBiasFraction = patternScore > 0 ? sizePoints / patternScore : 0;
+  const hasSizeBiasWin = patternSizeBiasFraction > 0.6 && !patternIndustryFit;
+  if (hasSizeBiasWin && selectedPattern) {
+    reasons.push(
+      `Size-based pattern win: "${selectedPattern.name}" scored ${patternScore}/100 but ` +
+      `${Math.round(patternSizeBiasFraction * 100)}% came from page/component count, not domain relevance. ` +
+      `This is a size-based win, not a domain match.`
+    );
+  }
+
+  // Signal 6: business models were empty (defaulted behavior removed, now honest)
   const businessModelsEmpty = ctx.businessModels.length === 0;
 
   // Signal 6: admin journey missing for clearly operational/internal prompts
@@ -141,6 +157,7 @@ export function evaluateConfidence(
   if (!industryScoreOk)     confidence -= 0.25;
   if (!patternScoreOk)      confidence -= 0.20;
   if (!patternIndustryFit)  confidence -= 0.15;
+  if (hasSizeBiasWin)        confidence -= 0.20; // Strong penalty for size-bias wins
   if (isComplexPrompt && capabilityCount === 0) confidence -= 0.20;
   if (isOperational && !hasAdminJourney)        confidence -= 0.15;
   if (businessModelsEmpty)  confidence -= 0.05; // small penalty — can be correct
@@ -153,6 +170,7 @@ export function evaluateConfidence(
     industryScore,
     patternScore,
     patternIndustryFit,
+    patternSizeBiasFraction,
     capabilityCount,
     hasAdminJourney,
     businessModelsEmpty,

@@ -1,0 +1,284 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "System users (sales reps, managers, admins)",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "manager", "rep"], "required": true },
+        { "name": "avatarUrl", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "territoryId", "type": "uuid" },
+        { "name": "teamId", "type": "uuid" },
+        { "name": "active", "type": "boolean", "default": true },
+        { "name": "lastLoginAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Lead" },
+        { "type": "hasMany", "target": "Contact" },
+        { "type": "hasMany", "target": "Opportunity" },
+        { "type": "hasMany", "target": "Activity" },
+        { "type": "hasMany", "target": "Task" },
+        { "type": "belongsTo", "target": "Territory" },
+        { "type": "belongsTo", "target": "Team" }
+      ]
+    },
+    {
+      "name": "Lead",
+      "description": "Prospective customer leads",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "company", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "source", "type": "enum", "values": ["web", "referral", "linkedin", "cold-call", "trade-show", "other"] },
+        { "name": "status", "type": "enum", "values": ["new", "contacted", "qualified", "converted", "lost"], "default": "new" },
+        { "name": "assignedTo", "type": "uuid" },
+        { "name": "accountId", "type": "uuid" },
+        { "name": "convertedToContactId", "type": "uuid" },
+        { "name": "convertedToOpportunityId", "type": "uuid" },
+        { "name": "convertedAt", "type": "datetime" },
+        { "name": "lostReason", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User", "foreignKey": "assignedTo" },
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "hasMany", "target": "Activity" },
+        { "type": "hasMany", "target": "Note" }
+      ]
+    },
+    {
+      "name": "Contact",
+      "description": "Individual contacts at accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "department", "type": "string" },
+        { "name": "accountId", "type": "uuid", "required": true },
+        { "name": "ownerId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "ownerId" },
+        { "type": "hasMany", "target": "Opportunity" },
+        { "type": "hasMany", "target": "Activity" },
+        { "type": "hasMany", "target": "Note" }
+      ]
+    },
+    {
+      "name": "Account",
+      "description": "Company accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "domain", "type": "string" },
+        { "name": "industry", "type": "string" },
+        { "name": "size", "type": "enum", "values": ["1-10", "11-50", "51-200", "201-500", "500+"] },
+        { "name": "type", "type": "enum", "values": ["prospect", "customer", "partner", "competitor"] },
+        { "name": "billingAddress", "type": "json" },
+        { "name": "shippingAddress", "type": "json" },
+        { "name": "phone", "type": "string" },
+        { "name": "website", "type": "string" },
+        { "name": "territoryId", "type": "uuid" },
+        { "name": "ownerId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Contact" },
+        { "type": "hasMany", "target": "Opportunity" },
+        { "type": "hasMany", "target": "Activity" },
+        { "type": "hasMany", "target": "Note" },
+        { "type": "belongsTo", "target": "Territory" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "ownerId" }
+      ]
+    },
+    {
+      "name": "Opportunity",
+      "description": "Sales deals/opportunities",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "accountId", "type": "uuid" },
+        { "name": "contactId", "type": "uuid" },
+        { "name": "ownerId", "type": "uuid", "required": true },
+        { "name": "pipelineId", "type": "uuid", "required": true },
+        { "name": "stageId", "type": "uuid", "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "probability", "type": "integer", "default": 0 },
+        { "name": "expectedCloseDate", "type": "date" },
+        { "name": "actualCloseDate", "type": "date" },
+        { "name": "lostReason", "type": "string" },
+        { "name": "description", "type": "text" },
+        { "name": "source", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["open", "won", "lost"], "default": "open" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "belongsTo", "target": "Contact" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "ownerId" },
+        { "type": "belongsTo", "target": "Pipeline" },
+        { "type": "belongsTo", "target": "Stage" },
+        { "type": "hasMany", "target": "Activity" },
+        { "type": "hasMany", "target": "Note" }
+      ]
+    },
+    {
+      "name": "Pipeline",
+      "description": "Sales pipeline configurations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "string" },
+        { "name": "isDefault", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Stage" },
+        { "type": "hasMany", "target": "Opportunity" }
+      ]
+    },
+    {
+      "name": "Stage",
+      "description": "Pipeline stages",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "pipelineId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "probability", "type": "integer", "default": 0 },
+        { "name": "displayOrder", "type": "integer", "required": true },
+        { "name": "isWon", "type": "boolean", "default": false },
+        { "name": "isLost", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Pipeline" },
+        { "type": "hasMany", "target": "Opportunity" }
+      ]
+    },
+    {
+      "name": "Activity",
+      "description": "Sales activities (calls, meetings, emails, tasks)",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["call", "meeting", "email", "task", "note"], "required": true },
+        { "name": "subject", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "dueDate", "type": "datetime" },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "ownerId", "type": "uuid", "required": true },
+        { "name": "leadId", "type": "uuid" },
+        { "name": "contactId", "type": "uuid" },
+        { "name": "accountId", "type": "uuid" },
+        { "name": "opportunityId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User", "foreignKey": "ownerId" },
+        { "type": "belongsTo", "target": "Lead" },
+        { "type": "belongsTo", "target": "Contact" },
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "belongsTo", "target": "Opportunity" }
+      ]
+    },
+    {
+      "name": "Task",
+      "description": "Action items and to-dos",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "dueDate", "type": "datetime" },
+        { "name": "reminderAt", "type": "datetime" },
+        { "name": "status", "type": "enum", "values": ["pending", "completed"], "default": "pending" },
+        { "name": "ownerId", "type": "uuid", "required": true },
+        { "name": "contactId", "type": "uuid" },
+        { "name": "opportunityId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User", "foreignKey": "ownerId" },
+        { "type": "belongsTo", "target": "Contact" },
+        { "type": "belongsTo", "target": "Opportunity" }
+      ]
+    },
+    {
+      "name": "Territory",
+      "description": "Geographic territories for assignment",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "region", "type": "string" },
+        { "name": "country", "type": "string" },
+        { "name": "state", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" },
+        { "type": "hasMany", "target": "Account" }
+      ]
+    },
+    {
+      "name": "Team",
+      "description": "Sales teams for collaboration",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "string" },
+        { "name": "managerId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" },
+        { "type": "belongsTo", "target": "User", "foreignKey": "managerId" }
+      ]
+    },
+    {
+      "name": "Note",
+      "description": "Notes on entities",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "ownerId", "type": "uuid", "required": true },
+        { "name": "leadId", "type": "uuid" },
+        { "name": "contactId", "type": "uuid" },
+        { "name": "accountId", "type": "uuid" },
+        { "name": "opportunityId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User", "foreignKey": "ownerId" },
+        { "type": "belongsTo", "target": "Lead" },
+        { "type": "belongsTo", "target": "Contact" },
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "belongsTo", "target": "Opportunity" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Prescription Intake Flow",
+      "description": "Receive and verify new prescriptions",
+      "steps": [
+        { "step": 1, "action": "Receive Prescription", "description": "Accept e-prescription or paper script", "entities": ["Prescription"], "validations": ["prescriber valid", "DEA number verified", "patient info matched"] },
+        { "step": 2, "action": "Verify Patient", "description": "Confirm patient identity and profile", "entities": ["Patient"], "validations": ["name and DOB match", "allergies on file", "current meds reviewed"] },
+        { "step": 3, "action": "Check Interactions", "description": "Drug interaction and allergy check", "entities": ["Prescription"], "validations": ["allergy check passed", "drug interaction checked", "duplicate therapy flagged"] },
+        { "step": 4, "action": "Enter Order", "description": "Record in pharmacy system", "entities": ["Prescription"], "validations": ["sig code correct", "quantity dispensed set", "refills configured"] }
+      ]
+    },
+    {
+      "name": "Inventory Management Flow",
+      "description": "Manage pharmacy stock levels and ordering",
+      "steps": [
+        { "step": 1, "action": "Check Stock", "description": "Verify medication availability", "entities": ["Inventory"], "validations": ["stock level sufficient", "expiry date checked", "lot number tracked"] },
+        { "step": 2, "action": "Create Reorder", "description": "Generate purchase order when low", "entities": ["PurchaseOrder"], "validations": ["reorder point triggered", "quantity calculated", "wholesaler selected"] },
+        { "step": 3, "action": "Receive Shipment", "description": "Accept delivery from wholesaler", "entities": ["PurchaseOrder", "Inventory"], "validations": ["items match PO", "expiry dates recorded", "shelf location assigned"] },
+        { "step": 4, "action": "Adjust Inventory", "description": "Record wastage or returns", "entities": ["Inventory"], "validations": ["reason documented", "quantity adjusted", "loss reason coded"] }
+      ]
+    },
+    {
+      "name": "Dispensing Flow",
+      "description": "Prepare and dispense medication to patient",
+      "steps": [
+        { "step": 1, "action": "Prepare Medication", "description": "Pharmacist fills prescription", "entities": ["Prescription"], "validations": ["correct drug selected", "dosage verified", "label printed"] },
+        { "step": 2, "action": "Check Prescription", "description": "Final verification by pharmacist", "entities": ["Prescription"], "validations": ["drug verified", "dose confirmed", "patient identity final check"] },
+        { "step": 3, "action": "Counsel Patient", "description": "Patient consultation", "entities": ["Patient", "Prescription"], "validations": ["directions explained", "side effects discussed", "questions answered"] },
+        { "step": 4, "action": "Complete Dispensing", "description": "Medication handed to patient", "entities": ["Prescription"], "validations": ["logged as dispensed", "signature captured", "medication guide provided"] }
+      ]
+    },
+    {
+      "name": "Insurance Billing Flow",
+      "description": "Submit claims to insurance and process payments",
+      "steps": [
+        { "step": 1, "action": "Verify Coverage", "description": "Check patient insurance eligibility", "entities": ["Insurance"], "validations": ["coverage active", "copay determined", "formulary tier checked"] },
+        { "step": 2, "action": "Submit Claim", "description": "Submit to insurance provider", "entities": ["Claim"], "validations": ["claim format valid", "NDC code correct", "submitted electronically"] },
+        { "step": 3, "action": "Process Adjudication", "description": "Insurance processes claim", "entities": ["Claim"], "validations": ["paid/rejected", "rejection reason captured", "appeal if needed"] },
+        { "step": 4, "action": "Collect Payment", "description": "Process patient copay or balance", "entities": ["Payment"], "validations": ["copay collected", "balance billed if applicable", "receipt provided"] }
+      ]
+    },
+    {
+      "name": "Patient Counseling Flow",
+      "description": "Provide medication guidance and health advice",
+      "steps": [
+        { "step": 1, "action": "Identify Need", "description": "Identify counseling opportunity at pickup", "entities": ["Prescription"], "validations": ["new medication flagged", "complex regimen flagged"] },
+        { "step": 2, "action": "Prepare Info", "description": "Gather relevant medication info", "entities": ["Patient"], "validations": ["medication guide ready", "side effects summary prepared"] },
+        { "step": 3, "action": "Counsel Patient", "description": "One-on-one consultation", "entities": ["Patient", "CounselingSession"], "validations": ["usage explained", "adverse reactions covered", "questions addressed"] },
+        { "step": 4, "action": "Document Session", "description": "Log counseling notes", "entities": ["CounselingSession"], "validations": ["session recorded", "patient acknowledged", "follow-up scheduled if needed"] }
+      ]
+    }
+  ]
+}

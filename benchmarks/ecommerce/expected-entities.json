@@ -1,0 +1,446 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Authentication and authorization entity",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["customer", "admin", "staff"], "required": true },
+        { "name": "emailVerified", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Order" },
+        { "type": "hasMany", "target": "Address" },
+        { "type": "hasMany", "target": "Review" },
+        { "type": "hasOne", "target": "Cart" },
+        { "type": "hasOne", "target": "LoyaltyAccount" }
+      ]
+    },
+    {
+      "name": "Product",
+      "description": "Core product entity with variants",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "handle", "type": "string", "required": true, "unique": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "descriptionHtml", "type": "text" },
+        { "name": "vendor", "type": "string" },
+        { "name": "productType", "type": "string" },
+        { "name": "tags", "type": "json", "default": "[]" },
+        { "name": "status", "type": "enum", "values": ["draft", "active", "archived"], "default": "draft" },
+        { "name": "seoTitle", "type": "string" },
+        { "name": "seoDescription", "type": "string" },
+        { "name": "publishedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "ProductVariant" },
+        { "type": "hasMany", "target": "ProductImage" },
+        { "type": "belongsToMany", "target": "Category", "through": "ProductCategory" },
+        { "type": "belongsToMany", "target": "Collection", "through": "CollectionProduct" },
+        { "type": "hasMany", "target": "Review" }
+      ]
+    },
+    {
+      "name": "ProductVariant",
+      "description": "Product variants (size, color, etc.)",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "productId", "type": "uuid", "required": true },
+        { "name": "sku", "type": "string", "required": true, "unique": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "options", "type": "json", "required": true },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "compareAtPrice", "type": "decimal" },
+        { "name": "cost", "type": "decimal" },
+        { "name": "barcode", "type": "string" },
+        { "name": "weight", "type": "decimal" },
+        { "name": "weightUnit", "type": "string", "default": "g" },
+        { "name": "requiresShipping", "type": "boolean", "default": true },
+        { "name": "taxable", "type": "boolean", "default": true },
+        { "name": "inventoryPolicy", "type": "enum", "values": ["deny", "continue"], "default": "deny" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Product" },
+        { "type": "hasMany", "target": "InventoryLevel" },
+        { "type": "hasMany", "target": "CartItem" },
+        { "type": "hasMany", "target": "OrderItem" }
+      ]
+    },
+    {
+      "name": "Category",
+      "description": "Product categories for navigation",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "handle", "type": "string", "required": true, "unique": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "seoTitle", "type": "string" },
+        { "name": "seoDescription", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Category", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Category", "foreignKey": "parentId" },
+        { "type": "belongsToMany", "target": "Product", "through": "ProductCategory" }
+      ]
+    },
+    {
+      "name": "Collection",
+      "description": "Curated product collections",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "handle", "type": "string", "required": true, "unique": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "imageUrl", "type": "string" },
+        { "name": "sortOrder", "type": "string", "default": "manual" },
+        { "name": "publishedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsToMany", "target": "Product", "through": "CollectionProduct" }
+      ]
+    },
+    {
+      "name": "Cart",
+      "description": "Shopping cart for session/user",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "sessionId", "type": "string" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "CartItem" }
+      ]
+    },
+    {
+      "name": "CartItem",
+      "description": "Items in shopping cart",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "cartId", "type": "uuid", "required": true },
+        { "name": "variantId", "type": "uuid", "required": true },
+        { "name": "quantity", "type": "integer", "required": true, "default": 1 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Cart" },
+        { "type": "belongsTo", "target": "ProductVariant" }
+      ]
+    },
+    {
+      "name": "Order",
+      "description": "Customer order",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderNumber", "type": "string", "required": true, "unique": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "email", "type": "string", "required": true },
+        { "name": "status", "type": "enum", "values": ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"], "default": "pending" },
+        { "name": "financialStatus", "type": "enum", "values": ["pending", "authorized", "paid", "partially_refunded", "refunded", "voided"], "default": "pending" },
+        { "name": "fulfillmentStatus", "type": "enum", "values": ["unfulfilled", "partial", "fulfilled", "restocked"], "default": "unfulfilled" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "taxTotal", "type": "decimal", "required": true },
+        { "name": "shippingTotal", "type": "decimal", "required": true },
+        { "name": "discountTotal", "type": "decimal", "default": 0 },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "shippingAddress", "type": "json", "required": true },
+        { "name": "billingAddress", "type": "json", "required": true },
+        { "name": "notes", "type": "text" },
+        { "name": "cancelledAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "OrderItem" },
+        { "type": "hasMany", "target": "Payment" },
+        { "type": "hasMany", "target": "Shipment" },
+        { "type": "hasMany", "target": "OrderEvent" }
+      ]
+    },
+    {
+      "name": "OrderItem",
+      "description": "Line items in order",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderId", "type": "uuid", "required": true },
+        { "name": "variantId", "type": "uuid", "required": true },
+        { "name": "productTitle", "type": "string", "required": true },
+        { "name": "variantTitle", "type": "string", "required": true },
+        { "name": "sku", "type": "string" },
+        { "name": "quantity", "type": "integer", "required": true },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "total", "type": "decimal", "required": true },
+        { "name": "taxLines", "type": "json", "default": "[]" },
+        { "name": "discountLines", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Order" },
+        { "type": "belongsTo", "target": "ProductVariant" }
+      ]
+    },
+    {
+      "name": "Payment",
+      "description": "Payment transactions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderId", "type": "uuid", "required": true },
+        { "name": "gateway", "type": "string", "required": true },
+        { "name": "gatewayTransactionId", "type": "string" },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "status", "type": "enum", "values": ["pending", "processing", "succeeded", "failed", "cancelled", "refunded"], "default": "pending" },
+        { "name": "paymentMethod", "type": "json" },
+        { "name": "processedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Order" }
+      ]
+    },
+    {
+      "name": "Shipment",
+      "description": "Order fulfillment shipments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "orderId", "type": "uuid", "required": true },
+        { "name": "trackingNumber", "type": "string" },
+        { "name": "carrier", "type": "string" },
+        { "name": "service", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["label_created", "in_transit", "out_for_delivery", "delivered", "exception", "returned"], "default": "label_created" },
+        { "name": "shippedAt", "type": "datetime" },
+        { "name": "deliveredAt", "type": "datetime" },
+        { "name": "trackingUrl", "type": "string" },
+        { "name": "items", "type": "json", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Order" }
+      ]
+    },
+    {
+      "name": "InventoryLevel",
+      "description": "Stock levels per warehouse",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "variantId", "type": "uuid", "required": true },
+        { "name": "warehouseId", "type": "uuid", "required": true },
+        { "name": "available", "type": "integer", "required": true, "default": 0 },
+        { "name": "reserved", "type": "integer", "default": 0 },
+        { "name": "incoming", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "ProductVariant" },
+        { "type": "belongsTo", "target": "Warehouse" }
+      ]
+    },
+    {
+      "name": "Warehouse",
+      "description": "Physical warehouse locations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "isDefault", "type": "boolean", "default": false },
+        { "name": "fulfillmentPriority", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "InventoryLevel" },
+        { "type": "hasMany", "target": "Shipment" }
+      ]
+    },
+    {
+      "name": "Address",
+      "description": "Customer addresses",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["shipping", "billing"], "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "company", "type": "string" },
+        { "name": "address1", "type": "string", "required": true },
+        { "name": "address2", "type": "string" },
+        { "name": "city", "type": "string", "required": true },
+        { "name": "province", "type": "string", "required": true },
+        { "name": "provinceCode", "type": "string" },
+        { "name": "country", "type": "string", "required": true },
+        { "name": "countryCode", "type": "string", "required": true },
+        { "name": "zip", "type": "string", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "isDefault", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "Review",
+      "description": "Product reviews",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "productId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "rating", "type": "integer", "required": true },
+        { "name": "title", "type": "string" },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "verified", "type": "boolean", "default": false },
+        { "name": "helpful", "type": "integer", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "rejected"], "default": "pending" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Product" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "Coupon",
+      "description": "Discount coupons",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "type", "type": "enum", "values": ["percentage", "fixed_amount", "free_shipping", "buy_x_get_y"], "required": true },
+        { "name": "value", "type": "decimal", "required": true },
+        { "name": "minimumAmount", "type": "decimal" },
+        { "name": "maximumAmount", "type": "decimal" },
+        { "name": "usageLimit", "type": "integer" },
+        { "name": "usageCount", "type": "integer", "default": 0 },
+        { "name": "perCustomerLimit", "type": "integer", "default": 1 },
+        { "name": "startsAt", "type": "datetime" },
+        { "name": "endsAt", "type": "datetime" },
+        { "name": "appliesTo", "type": "enum", "values": ["all", "specific_products", "specific_collections", "specific_customers"], "default": "all" },
+        { "name": "targetIds", "type": "json", "default": "[]" },
+        { "name": "status", "type": "enum", "values": ["active", "inactive", "expired"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "CouponUsage" }
+      ]
+    },
+    {
+      "name": "LoyaltyProgram",
+      "description": "Loyalty program configuration",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "pointsPerDollar", "type": "decimal", "default": 1 },
+        { "name": "pointsValue", "type": "decimal", "default": 0.01 },
+        { "name": "minimumRedemption", "type": "integer", "default": 100 },
+        { "name": "pointsExpiryDays", "type": "integer" },
+        { "name": "referralReward", "type": "integer", "default": 500 },
+        { "name": "referralFriendReward", "type": "integer", "default": 200 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "LoyaltyTier" },
+        { "type": "hasMany", "target": "LoyaltyAccount" }
+      ]
+    },
+    {
+      "name": "LoyaltyTier",
+      "description": "Loyalty program tiers",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "programId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "minimumPoints", "type": "integer", "required": true },
+        { "name": "benefits", "type": "json", "default": "[]" },
+        { "name": "multiplier", "type": "decimal", "default": 1 },
+        { "name": "color", "type": "string" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "LoyaltyProgram" }
+      ]
+    },
+    {
+      "name": "EmailCampaign",
+      "description": "Email marketing campaigns",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["broadcast", "automation", "abandoned_cart", "welcome", "post_purchase"], "required": true },
+        { "name": "subject", "type": "string", "required": true },
+        { "name": "previewText", "type": "string" },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "segment", "type": "json" },
+        { "name": "status", "type": "enum", "values": ["draft", "scheduled", "sending", "sent", "cancelled"], "default": "draft" },
+        { "name": "scheduledAt", "type": "datetime" },
+        { "name": "sentAt", "type": "datetime" },
+        { "name": "stats", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ]
+    },
+    {
+      "name": "Affiliate",
+      "description": "Affiliate/referral partners",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "commissionRate", "type": "decimal", "required": true },
+        { "name": "commissionType", "type": "enum", "values": ["percentage", "fixed"], "default": "percentage" },
+        { "name": "status", "type": "enum", "values": ["pending", "active", "suspended", "terminated"], "default": "pending" },
+        { "name": "totalEarnings", "type": "decimal", "default": 0 },
+        { "name": "pendingEarnings", "type": "decimal", "default": 0 },
+        { "name": "paidEarnings", "type": "decimal", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "AffiliateCommission" }
+      ]
+    },
+    {
+      "name": "AnalyticsEvent",
+      "description": "Event tracking for analytics",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "eventName", "type": "string", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "sessionId", "type": "string" },
+        { "name": "properties", "type": "json" },
+        { "name": "timestamp", "type": "datetime", "required": true }
+      ]
+    }
+  ]
+}

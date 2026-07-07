@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md"
+  ],
+  "command": {
+    "build-anything": {
+      "template": "Load the build-anything skill and execute it for this request: $ARGUMENTS\n\nCall the `skill` tool to load it, then follow its instructions to run the full pipeline.",
+      "description": "Design, plan, and generate any software project from a single prompt",
+      "agent": "build"
+    }
+  },
+  "permission": {
+    "skill": {
+      "build-anything": "allow"
+    },
+    "edit": "allow",
+    "write": "allow",
+    "bash": "allow",
+    "read": "allow"
+  }
+}

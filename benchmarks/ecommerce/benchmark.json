@@ -1,0 +1,73 @@
+{
+  "industry": "ecommerce",
+  "name": "Modern Fashion Marketplace",
+  "prompt": "Build a modern fashion marketplace for independent designers. Features: designer onboarding, product catalog with variants, shopping cart, checkout with Stripe, order tracking, designer dashboards with analytics, customer reviews, wishlist, size guides, returns management, and multi-currency support. Target: fashion-forward Gen Z and Millennials.",
+  "expectedEntities": [
+    "User",
+    "Designer",
+    "Product",
+    "Variant",
+    "Category",
+    "Order",
+    "OrderItem",
+    "Cart",
+    "CartItem",
+    "Review",
+    "Wishlist",
+    "Return",
+    "Payout"
+  ],
+  "expectedPages": [
+    "/",
+    "/designers",
+    "/designer/[slug]",
+    "/products/[id]",
+    "/cart",
+    "/checkout",
+    "/orders",
+    "/orders/[id]",
+    "/designer/dashboard",
+    "/designer/products",
+    "/designer/analytics",
+    "/designer/payouts",
+    "/account",
+    "/wishlist",
+    "/returns",
+    "/size-guide",
+    "/about",
+    "/contact"
+  ],
+  "expectedFeatures": [
+    "designer-onboarding",
+    "product-variants",
+    "shopping-cart",
+    "stripe-checkout",
+    "order-tracking",
+    "designer-dashboard",
+    "customer-reviews",
+    "wishlist",
+    "size-guides",
+    "returns-management",
+    "multi-currency"
+  ],
+  "requiredIntegrations": [
+    "stripe",
+    "sendgrid",
+    "cloudinary",
+    "shippo"
+  ],
+  "compliance": [
+    "gdpr",
+    "pci-dss",
+    "consumer-protection"
+  ],
+  "scoring": {
+    "entityCoverageWeight": 0.25,
+    "pageCoverageWeight": 0.20,
+    "featureCoverageWeight": 0.25,
+    "integrationWeight": 0.15,
+    "complianceWeight": 0.10,
+    "codeQualityWeight": 0.05
+  },
+  "minScore": 75
+}

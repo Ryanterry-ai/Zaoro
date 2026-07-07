@@ -1,0 +1,284 @@
+{
+  "entities": [
+    {
+      "name": "Tenant",
+      "description": "Multi-tenant organization accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "logoUrl", "type": "string" },
+        { "name": "primaryColor", "type": "string" },
+        { "name": "planId", "type": "uuid" },
+        { "name": "status", "type": "enum", "values": ["active", "suspended", "cancelled", "trial"], "default": "trial" },
+        { "name": "trialEndsAt", "type": "datetime" },
+        { "name": "settings", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" },
+        { "type": "belongsTo", "target": "Plan" },
+        { "type": "hasOne", "target": "Subscription" },
+        { "type": "hasMany", "target": "FeatureFlag" },
+        { "type": "hasMany", "target": "APIKey" },
+        { "type": "hasMany", "target": "Webhook" }
+      ]
+    },
+    {
+      "name": "User",
+      "description": "Tenant user accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["owner", "admin", "member", "viewer"], "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "invited", "disabled"], "default": "active" },
+        { "name": "lastLoginAt", "type": "datetime" },
+        { "name": "mfaEnabled", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "belongsToMany", "target": "Role", "through": "UserRole" }
+      ]
+    },
+    {
+      "name": "Plan",
+      "description": "Subscription plans/pricing tiers",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true, "unique": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "price", "type": "decimal", "required": true },
+        { "name": "interval", "type": "enum", "values": ["monthly", "yearly", "usage_based"], "required": true },
+        { "name": "trialDays", "type": "integer", "default": 14 },
+        { "name": "features", "type": "json", "default": "[]" },
+        { "name": "maxUsers", "type": "integer" },
+        { "name": "maxStorage", "type": "integer" },
+        { "name": "isPublic", "type": "boolean", "default": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Tenant" },
+        { "type": "hasMany", "target": "Subscription" },
+        { "type": "hasMany", "target": "Feature" }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "description": "Tenant subscription records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "planId", "type": "uuid", "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "past_due", "cancelled", "expired", "trialing"], "default": "trialing" },
+        { "name": "currentPeriodStart", "type": "datetime", "required": true },
+        { "name": "currentPeriodEnd", "type": "datetime", "required": true },
+        { "name": "stripeSubscriptionId", "type": "string" },
+        { "name": "stripeCustomerId", "type": "string" },
+        { "name": "cancelledAt", "type": "datetime" },
+        { "name": "trialEndsAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "belongsTo", "target": "Plan" },
+        { "type": "hasMany", "target": "Invoice" },
+        { "type": "hasMany", "target": "UsageMetric" }
+      ]
+    },
+    {
+      "name": "FeatureFlag",
+      "description": "Feature toggle flags per tenant",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "key", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "enabled", "type": "boolean", "default": false },
+        { "name": "rules", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" }
+      ]
+    },
+    {
+      "name": "UsageMetric",
+      "description": "Usage-based billing metrics",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "subscriptionId", "type": "uuid", "required": true },
+        { "name": "metricKey", "type": "string", "required": true },
+        { "name": "value", "type": "decimal", "required": true },
+        { "name": "unit", "type": "string" },
+        { "name": "recordedAt", "type": "date", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "belongsTo", "target": "Subscription" }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "description": "Billing invoices",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "subscriptionId", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "invoiceNumber", "type": "string", "required": true, "unique": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "status", "type": "enum", "values": ["draft", "open", "paid", "void", "uncollectible"], "default": "draft" },
+        { "name": "periodStart", "type": "date" },
+        { "name": "periodEnd", "type": "date" },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "stripeInvoiceId", "type": "string" },
+        { "name": "lines", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Subscription" },
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "hasMany", "target": "Payment" }
+      ]
+    },
+    {
+      "name": "Role",
+      "description": "RBAC role definitions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "isSystem", "type": "boolean", "default": false },
+        { "name": "permissions", "type": "json", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "belongsToMany", "target": "User", "through": "UserRole" }
+      ]
+    },
+    {
+      "name": "APIKey",
+      "description": "API access keys",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "key", "type": "string", "required": true, "unique": true },
+        { "name": "keyPrefix", "type": "string", "required": true },
+        { "name": "scopes", "type": "json", "default": "[]" },
+        { "name": "lastUsedAt", "type": "datetime" },
+        { "name": "expiresAt", "type": "datetime" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "Webhook",
+      "description": "Outgoing webhook endpoints",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "url", "type": "string", "required": true },
+        { "name": "events", "type": "json", "required": true },
+        { "name": "secret", "type": "string", "required": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "retryCount", "type": "integer", "default": 3 },
+        { "name": "timeout", "type": "integer", "default": 5000 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "hasMany", "target": "WebhookEvent" }
+      ]
+    },
+    {
+      "name": "Integration",
+      "description": "Third-party integrations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "marketplaceAppId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "provider", "type": "string", "required": true },
+        { "name": "credentials", "type": "json" },
+        { "name": "settings", "type": "json" },
+        { "name": "status", "type": "enum", "values": ["connected", "disconnected", "error"], "default": "connected" },
+        { "name": "lastSyncAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "belongsTo", "target": "MarketplaceApp" }
+      ]
+    },
+    {
+      "name": "OnboardingFlow",
+      "description": "Tenant onboarding workflows",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "currentStep", "type": "integer", "default": 0 },
+        { "name": "totalSteps", "type": "integer", "default": 5 },
+        { "name": "completed", "type": "boolean", "default": false },
+        { "name": "data", "type": "json" },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "hasMany", "target": "OnboardingStep" }
+      ]
+    },
+    {
+      "name": "AuditLog",
+      "description": "Security and compliance audit trail",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "tenantId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid" },
+        { "name": "action", "type": "string", "required": true },
+        { "name": "resource", "type": "string", "required": true },
+        { "name": "resourceId", "type": "uuid" },
+        { "name": "details", "type": "json" },
+        { "name": "ipAddress", "type": "string" },
+        { "name": "userAgent", "type": "string" },
+        { "name": "timestamp", "type": "datetime", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Tenant" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    }
+  ]
+}

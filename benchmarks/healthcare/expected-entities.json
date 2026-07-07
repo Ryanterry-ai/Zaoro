@@ -1,0 +1,248 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Healthcare staff authentication",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "doctor", "nurse", "receptionist", "lab_tech", "pharmacist", "billing"], "required": true },
+        { "name": "employeeId", "type": "string", "unique": true },
+        { "name": "departmentId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Department" },
+        { "type": "hasMany", "target": "Appointment" },
+        { "type": "hasMany", "target": "Prescription" }
+      ]
+    },
+    {
+      "name": "Patient",
+      "description": "Patient demographic and contact information",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "patientNumber", "type": "string", "required": true, "unique": true },
+        { "name": "email", "type": "string" },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "dateOfBirth", "type": "date", "required": true },
+        { "name": "gender", "type": "enum", "values": ["male", "female", "other"], "required": true },
+        { "name": "phone", "type": "string", "required": true },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "bloodType", "type": "enum", "values": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
+        { "name": "emergencyContact", "type": "json", "required": true },
+        { "name": "insuranceId", "type": "uuid" },
+        { "name": "allergies", "type": "json", "default": "[]" },
+        { "name": "chronicConditions", "type": "json", "default": "[]" },
+        { "name": "status", "type": "enum", "values": ["active", "inactive", "deceased"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Appointment" },
+        { "type": "hasMany", "target": "MedicalRecord" },
+        { "type": "hasMany", "target": "Prescription" },
+        { "type": "hasMany", "target": "LabResult" },
+        { "type": "hasMany", "target": "Billing" },
+        { "type": "belongsTo", "target": "Insurance" }
+      ]
+    },
+    {
+      "name": "Department",
+      "description": "Medical departments and specializations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true, "unique": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "headId", "type": "uuid" },
+        { "name": "location", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" }
+      ]
+    },
+    {
+      "name": "Appointment",
+      "description": "Patient appointments and visits",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "doctorId", "type": "uuid", "required": true },
+        { "name": "departmentId", "type": "uuid" },
+        { "name": "type", "type": "enum", "values": ["consultation", "follow_up", "emergency", "checkup", "procedure", "telehealth"], "required": true },
+        { "name": "status", "type": "enum", "values": ["scheduled", "confirmed", "in_progress", "completed", "cancelled", "no_show"], "default": "scheduled" },
+        { "name": "scheduledAt", "type": "datetime", "required": true },
+        { "name": "startTime", "type": "datetime" },
+        { "name": "endTime", "type": "datetime" },
+        { "name": "duration", "type": "integer", "default": 30 },
+        { "name": "reason", "type": "text", "required": true },
+        { "name": "notes", "type": "text" },
+        { "name": "cancellationReason", "type": "text" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "MedicalRecord",
+      "description": "Patient medical history and records",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "doctorId", "type": "uuid", "required": true },
+        { "name": "appointmentId", "type": "uuid" },
+        { "name": "type", "type": "enum", "values": ["progress_note", "diagnosis", "treatment_plan", "surgical_report", "discharge_summary", "immunization", "vital_signs"], "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "diagnosis", "type": "json" },
+        { "name": "icdCodes", "type": "json", "default": "[]" },
+        { "name": "attachments", "type": "json", "default": "[]" },
+        { "name": "isConfidential", "type": "boolean", "default": false },
+        { "name": "recordDate", "type": "date", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Appointment" }
+      ]
+    },
+    {
+      "name": "Prescription",
+      "description": "Medication prescriptions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "doctorId", "type": "uuid", "required": true },
+        { "name": "appointmentId", "type": "uuid" },
+        { "name": "prescriptionNumber", "type": "string", "required": true, "unique": true },
+        { "name": "medications", "type": "json", "required": true },
+        { "name": "instructions", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["active", "completed", "cancelled", "expired"], "default": "active" },
+        { "name": "prescribedDate", "type": "date", "required": true },
+        { "name": "refillsRemaining", "type": "integer", "default": 0 },
+        { "name": "expiryDate", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Appointment" }
+      ]
+    },
+    {
+      "name": "LabResult",
+      "description": "Laboratory test results",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "doctorId", "type": "uuid" },
+        { "name": "appointmentId", "type": "uuid" },
+        { "name": "testName", "type": "string", "required": true },
+        { "name": "testCode", "type": "string", "required": true },
+        { "name": "category", "type": "enum", "values": ["blood", "urine", "imaging", "pathology", "genetic", "microbiology"], "required": true },
+        { "name": "result", "type": "text", "required": true },
+        { "name": "referenceRange", "type": "string" },
+        { "name": "isAbnormal", "type": "boolean", "default": false },
+        { "name": "notes", "type": "text" },
+        { "name": "attachmentUrl", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["pending", "in_progress", "completed", "cancelled"], "default": "pending" },
+        { "name": "collectedAt", "type": "datetime" },
+        { "name": "resultedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Appointment" }
+      ]
+    },
+    {
+      "name": "Insurance",
+      "description": "Insurance provider information",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "providerName", "type": "string", "required": true },
+        { "name": "providerCode", "type": "string", "required": true },
+        { "name": "policyNumber", "type": "string", "required": true, "unique": true },
+        { "name": "groupNumber", "type": "string" },
+        { "name": "type", "type": "enum", "values": ["private", "employer", "government", "medicare", "medicaid"], "required": true },
+        { "name": "coverageStart", "type": "date" },
+        { "name": "coverageEnd", "type": "date" },
+        { "name": "copay", "type": "decimal" },
+        { "name": "deductible", "type": "decimal" },
+        { "name": "coveragePercentage", "type": "decimal" },
+        { "name": "status", "type": "enum", "values": ["active", "expired", "cancelled"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Patient" }
+      ]
+    },
+    {
+      "name": "Billing",
+      "description": "Medical billing and invoices",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "patientId", "type": "uuid", "required": true },
+        { "name": "appointmentId", "type": "uuid" },
+        { "name": "invoiceNumber", "type": "string", "required": true, "unique": true },
+        { "name": "charges", "type": "json", "required": true },
+        { "name": "subtotal", "type": "decimal", "required": true },
+        { "name": "insuranceClaimed", "type": "decimal", "default": 0 },
+        { "name": "insurancePaid", "type": "decimal", "default": 0 },
+        { "name": "patientResponsibility", "type": "decimal", "required": true },
+        { "name": "amountPaid", "type": "decimal", "default": 0 },
+        { "name": "balanceDue", "type": "decimal", "default": 0 },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "status", "type": "enum", "values": ["pending", "billed", "partial", "paid", "overdue", "written_off", "in_collections"], "default": "pending" },
+        { "name": "dueDate", "type": "date" },
+        { "name": "paidAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Patient" },
+        { "type": "belongsTo", "target": "Appointment" }
+      ]
+    },
+    {
+      "name": "Schedule",
+      "description": "Doctor shift and availability schedules",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "doctorId", "type": "uuid", "required": true },
+        { "name": "dayOfWeek", "type": "integer" },
+        { "name": "date", "type": "date" },
+        { "name": "startTime", "type": "time", "required": true },
+        { "name": "endTime", "type": "time", "required": true },
+        { "name": "slotDuration", "type": "integer", "default": 30 },
+        { "name": "maxPatients", "type": "integer", "default": 20 },
+        { "name": "isRecurring", "type": "boolean", "default": true },
+        { "name": "isAvailable", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" }
+      ]
+    }
+  ]
+}

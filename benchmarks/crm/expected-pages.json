@@ -1,0 +1,24 @@
+{
+  "pages": [
+    { "path": "/", "name": "Landing", "description": "Marketing landing page", "components": ["Hero", "Features", "Testimonials", "Pricing", "CTA"] },
+    { "path": "/dashboard", "name": "Dashboard", "description": "Sales overview with KPIs, pipeline, activities", "components": ["KPICards", "PipelineChart", "ActivityFeed", "UpcomingTasks", "QuickActions"] },
+    { "path": "/leads", "name": "Leads List", "description": "Filterable, sortable leads table", "components": ["LeadFilters", "LeadTable", "LeadKanban", "BulkActions"] },
+    { "path": "/leads/[id]", "name": "Lead Detail", "description": "Lead info, activities, conversion actions", "components": ["LeadHeader", "ActivityTimeline", "ContactInfo", "ConvertToDeal", "EmailComposer"] },
+    { "path": "/contacts", "name": "Contacts List", "description": "All contacts with search and filters", "components": ["ContactFilters", "ContactTable", "ContactCards"] },
+    { "path": "/contacts/[id]", "name": "Contact Detail", "description": "Contact info, related accounts, deals, activities", "components": ["ContactHeader", "ActivityTimeline", "RelatedDeals", "RelatedAccounts", "EmailComposer"] },
+    { "path": "/accounts", "name": "Accounts List", "description": "Company accounts with hierarchy", "components": ["AccountFilters", "AccountTable", "AccountHierarchy"] },
+    { "path": "/accounts/[id]", "name": "Account Detail", "description": "Account info, contacts, deals, org chart", "components": ["AccountHeader", "ContactList", "DealList", "OrgChart", "ActivityTimeline"] },
+    { "path": "/deals", "name": "Deals List", "description": "All deals with filters", "components": ["DealFilters", "DealTable", "DealKanban"] },
+    { "path": "/deals/[id]", "name": "Deal Detail", "description": "Deal info, stage, probability, activities, products", "components": ["DealHeader", "StageProgress", "ActivityTimeline", "Products", "ForecastInfo", "EmailComposer"] },
+    { "path": "/pipeline", "name": "Pipeline View", "description": "Kanban board with drag-drop stages", "components": ["PipelineBoard", "StageColumns", "DealCards", "StageSummary"] },
+    { "path": "/activities", "name": "Activities", "description": "Log and view all activities", "components": ["ActivityFilters", "ActivityList", "ActivityForm"] },
+    { "path": "/tasks", "name": "Tasks", "description": "Task management with due dates", "components": ["TaskFilters", "TaskList", "TaskForm", "CalendarView"] },
+    { "path": "/reports", "name": "Reports", "description": "Pre-built and custom reports", "components": ["ReportBuilder", "ReportList", "ScheduledReports", "ExportOptions"] },
+    { "path": "/forecast", "name": "Forecasting", "description": "Weighted pipeline forecast", "components": ["ForecastSummary", "TeamForecast", "DealForecast", "HistoricalComparison"] },
+    { "path": "/settings", "name": "Settings", "description": "General settings", "components": ["SettingsTabs"] },
+    { "path": "/settings/users", "name": "User Management", "description": "Team members, roles, permissions", "components": ["UserTable", "InviteUser", "RoleEditor", "PermissionMatrix"] },
+    { "path": "/settings/pipelines", "name": "Pipeline Settings", "description": "Configure pipelines and stages", "components": ["PipelineEditor", "StageEditor", "ProbabilitySettings"] },
+    { "path": "/settings/integrations", "name": "Integrations", "description": "Connected apps and API keys", "components": ["IntegrationList", "OAuthFlows", "APIKeyManager", "WebhookConfig"] },
+    { "path": "/api-docs", "docs", "name": "API Documentation", "description": "REST API reference", "components": ["APIEndpoints", "Authentication", "Webhooks", "SDKs"] }
+  ]
+}

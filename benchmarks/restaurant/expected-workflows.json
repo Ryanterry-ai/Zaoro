@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Table Reservation Flow",
+      "description": "Book and manage guest reservations",
+      "steps": [
+        { "step": 1, "action": "Search Availability", "description": "Check table availability by time and party size", "entities": ["Reservation"], "validations": ["date and time valid", "party size within capacity"] },
+        { "step": 2, "action": "Book Table", "description": "Guest books reservation", "entities": ["Reservation"], "validations": ["table assigned", "contact info captured", "special requests noted"] },
+        { "step": 3, "action": "Send Confirmation", "description": "Reservation confirmed", "entities": ["Reservation"], "validations": ["confirmation sent", "cancellation policy shared"] },
+        { "step": 4, "action": "Manage Walk-In", "description": "Handle guests without reservation", "entities": ["Reservation"], "validations": ["waitlist added", "estimated wait time given", "table notified when ready"] }
+      ]
+    },
+    {
+      "name": "Order Taking Flow",
+      "description": "Take and process customer food orders",
+      "steps": [
+        { "step": 1, "action": "Create Order", "description": "Server or customer creates order", "entities": ["Order", "OrderItem"], "validations": ["items available", "modifications noted", "table/session linked"] },
+        { "step": 2, "action": "Send to Kitchen", "description": "Order sent to KDS", "entities": ["Order"], "validations": ["order routed to correct station", "priority set"] },
+        { "step": 3, "action": "Update Order Status", "description": "Kitchen updates preparation status", "entities": ["Order"], "validations": ["in-progress noted", "ready for pickup flagged"] },
+        { "step": 4, "action": "Serve Order", "description": "Food delivered to table", "entities": ["Order"], "validations": ["items verified", "temperature checked", "guest satisfaction confirmed"] }
+      ]
+    },
+    {
+      "name": "Kitchen Preparation Flow",
+      "description": "Manage kitchen operations and food prep",
+      "steps": [
+        { "step": 1, "action": "Receive Ticket", "description": "Order appears on KDS", "entities": ["OrderItem"], "validations": ["ticket printed", "station assigned"] },
+        { "step": 2, "action": "Prepare Dish", "description": "Chef prepares food", "entities": ["OrderItem"], "validations": ["recipe followed", "ingredients verified", "plating standard met"] },
+        { "step": 3, "action": "Quality Check", "description": "Expeditor checks before serving", "entities": ["OrderItem"], "validations": ["presentation correct", "temperature correct", "allergen check"] },
+        { "step": 4, "action": "Mark Ready", "description": "Dish ready for service", "entities": ["OrderItem"], "validations": ["status updated", "server alerted", "timing tracked"] }
+      ]
+    },
+    {
+      "name": "Billing & Checkout Flow",
+      "description": "Process guest payments and close checks",
+      "steps": [
+        { "step": 1, "action": "Generate Bill", "description": "Compile order charges", "entities": ["Order", "Invoice"], "validations": ["all items included", "tax calculated", "service charge if applicable"] },
+        { "step": 2, "action": "Split Bill", "description": "Divide among guests", "entities": ["Invoice"], "validations": ["split valid", "items allocated correctly"] },
+        { "step": 3, "action": "Process Payment", "description": "Accept card, cash, or digital payment", "entities": ["Payment"], "validations": ["payment captured", "tip included", "receipt printed/emailed"] },
+        { "step": 4, "action": "Close Table", "description": "Table opened for next guests", "entities": ["Table"], "validations": ["table cleared", "payment settled", "status set to available"] }
+      ]
+    },
+    {
+      "name": "Delivery Order Flow",
+      "description": "Process online delivery and takeout orders",
+      "steps": [
+        { "step": 1, "action": "Place Order", "description": "Customer orders online or by phone", "entities": ["Order"], "validations": ["delivery address valid", "minimum order met", "items available"] },
+        { "step": 2, "action": "Assign Driver", "description": "Allocate delivery driver", "entities": ["Delivery"], "validations": ["driver available", "estimated time calculated"] },
+        { "step": 3, "action": "Prepare for Pickup", "description": "Kitchen packs order", "entities": ["Order"], "validations": ["items bagged", "receipt included", "seal verified"] },
+        { "step": 4, "action": "Deliver Order", "description": "Driver delivers to customer", "entities": ["Delivery"], "validations": ["delivered at door", "customer notified", "delivery confirmed"] }
+      ]
+    }
+  ]
+}

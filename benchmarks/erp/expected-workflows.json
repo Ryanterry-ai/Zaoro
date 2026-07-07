@@ -1,0 +1,47 @@
+{
+  "workflows": [
+    {
+      "name": "Purchase to Payment Flow",
+      "description": "Procurement from PO to vendor payment",
+      "steps": [
+        { "step": 1, "action": "Create PO", "description": "Purchase order created and submitted", "entities": ["PurchaseOrder"], "validations": ["vendor valid", "items valid", "totals calculated"] },
+        { "step": 2, "action": "Approve PO", "description": "Manager approves PO", "entities": ["PurchaseOrder"], "validations": ["approval rules", "budget check if applicable"] },
+        { "step": 3, "action": "Receive Goods", "description": "Goods received at warehouse", "entities": ["StockMovement", "PurchaseOrder"], "validations": ["qty matches PO", "inventory updated"] },
+        { "step": 4, "action": "Receive Invoice", "description": "Vendor invoice received", "entities": ["AccountPayable"], "validations": ["invoice matched to PO", "3-way match if enabled"] },
+        { "step": 5, "action": "Process Payment", "description": "Payment processed to vendor", "entities": ["AccountPayable", "JournalEntry"], "validations": ["payment recorded", "AP reduced"] }
+      ]
+    },
+    {
+      "name": "Sales Order to Cash Flow",
+      "description": "Order to customer payment",
+      "steps": [
+        { "step": 1, "action": "Create Quote", "description": "Quote created for customer", "entities": ["Quote"], "validations": ["customer valid", "pricing correct"] },
+        { "step": 2, "action": "Convert to Order", "description": "Quote converted to sales order", "entities": ["SalesOrder", "Quote"], "validations": ["order created", "inventory reserved"] },
+        { "step": 3, "action": "Pick and Pack", "description": "Fulfillment picks items", "entities": ["SalesOrder"], "validations": ["inventory allocated", "pick list generated"] },
+        { "step": 4, "action": "Ship Order", "description": "Order shipped to customer", "entities": ["Shipment", "SalesOrder", "StockMovement"], "validations": ["inventory decremented", "shipment created"] },
+        { "step": 5, "action": "Create Invoice", "description": "Invoice created for shipment", "entities": ["AccountReceivable", "SalesOrder"], "validations": ["AR created", "invoice number generated"] },
+        { "step": 6, "action": "Receive Payment", "description": "Customer payment received", "entities": ["AccountReceivable", "JournalEntry"], "validations": ["AR reduced", "cash GL updated"] }
+      ]
+    },
+    {
+      "name": "Manufacturing Work Order Flow",
+      "description": "Produce finished goods from materials",
+      "steps": [
+        { "step": 1, "action": "Create Work Order", "description": "Work order created from BOM", "entities": ["WorkOrder"], "validations": ["BOM valid", "quantity set"] },
+        { "step": 2, "action": "Issue Materials", "description": "Materials issued to production", "entities": ["WorkOrder", "StockMovement"], "validations": ["inventory decremented", "materials tracked"] },
+        { "step": 3, "action": "Record Operations", "description": "Production operations recorded", "entities": ["WorkOrderOperation"], "validations": ["labor tracked", "time recorded"] },
+        { "step": 4, "action": "Complete Work Order", "description": "Production completed", "entities": ["WorkOrder", "StockMovement"], "validations": ["finished goods received", "variance calculated"] },
+        { "step": 5, "action": "Close Work Order", "description": "Work order closed with final costs", "entities": ["WorkOrder"], "validations": ["costs finalized", "variance analyzed"] }
+      ]
+    },
+    {
+      "name": "Journal Entry Posting Flow",
+      "description": "Create and post journal entries",
+      "steps": [
+        { "step": 1, "action": "Create JE", "description": "Journal entry created in draft", "entities": ["JournalEntry"], "validations": ["debits equal credits", "required fields present"] },
+        { "step": 2, "action": "Review JE", "description": "Manager reviews entry", "entities": ["JournalEntry"], "validations": ["balances verified", "documentation present"] },
+        { "step": 3, "action": "Post JE", "description": "Entry posted to GL", "entities": ["JournalEntry", "ChartOfAccounts"], "validations": ["status = posted", "account balances updated"] }
+      ]
+    }
+  ]
+}

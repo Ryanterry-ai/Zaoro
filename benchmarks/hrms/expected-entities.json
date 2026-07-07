@@ -1,0 +1,292 @@
+{
+  "entities": [
+    {
+      "name": "Employee",
+      "description": "Core employee record",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeNumber", "type": "string", "required": true, "unique": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "phone", "type": "string" },
+        { "name": "dateOfBirth", "type": "date" },
+        { "name": "gender", "type": "enum", "values": ["male", "female", "other", "decline"] },
+        { "name": "maritalStatus", "type": "string" },
+        { "name": "address", "type": "json" },
+        { "name": "hireDate", "type": "date", "required": true },
+        { "name": "terminationDate", "type": "date" },
+        { "name": "employmentType", "type": "enum", "values": ["full_time", "part_time", "contract", "intern", "temporary"], "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "on_leave", "terminated", "suspended"], "default": "active" },
+        { "name": "emergencyContact", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Department" },
+        { "type": "belongsTo", "target": "Position" },
+        { "type": "belongsTo", "target": "Location" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "TimeEntry" },
+        { "type": "hasMany", "target": "TimeOffRequest" },
+        { "type": "hasMany", "target": "PerformanceReview" },
+        { "type": "hasMany", "target": "Goal" },
+        { "type": "hasMany", "target": "SalaryHistory" },
+        { "type": "hasMany", "target": "BenefitEnrollment" }
+      ]
+    },
+    {
+      "name": "Department",
+      "description": "Organizational departments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true, "unique": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "budget", "type": "decimal" },
+        { "name": "headcount", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Department", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Department", "foreignKey": "parentId" },
+        { "type": "hasMany", "target": "Employee" },
+        { "type": "hasMany", "target": "Position" }
+      ]
+    },
+    {
+      "name": "Position",
+      "description": "Job positions/roles",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "level", "type": "string" },
+        { "name": "salaryMin", "type": "decimal" },
+        { "name": "salaryMax", "type": "decimal" },
+        { "name": "payType", "type": "enum", "values": ["salaried", "hourly"], "required": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Department" },
+        { "type": "hasMany", "target": "Employee" }
+      ]
+    },
+    {
+      "name": "User",
+      "description": "System user accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["super_admin", "hr_admin", "manager", "employee"], "required": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "lastLoginAt", "type": "datetime" },
+        { "name": "mfaEnabled", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasOne", "target": "Employee" }
+      ]
+    },
+    {
+      "name": "TimeOffRequest",
+      "description": "Leave and time-off requests",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeId", "type": "uuid", "required": true },
+        { "name": "policyId", "type": "uuid", "required": true },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "endDate", "type": "date", "required": true },
+        { "name": "durationDays", "type": "decimal", "required": true },
+        { "name": "reason", "type": "text" },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "rejected", "cancelled"], "default": "pending" },
+        { "name": "approvedById", "type": "uuid" },
+        { "name": "approvedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Employee" },
+        { "type": "belongsTo", "target": "TimeOffPolicy" }
+      ]
+    },
+    {
+      "name": "TimeOffPolicy",
+      "description": "Leave policy configurations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["vacation", "sick", "personal", "bereavement", "maternity", "paternity", "military", "unpaid"], "required": true },
+        { "name": "accrualRate", "type": "decimal" },
+        { "name": "accrualPeriod", "type": "enum", "values": ["per_paycheck", "monthly", "yearly"] },
+        { "name": "maxAccrual", "type": "decimal" },
+        { "name": "carryoverLimit", "type": "decimal" },
+        { "name": "requiresApproval", "type": "boolean", "default": true },
+        { "name": "minNoticeDays", "type": "integer", "default": 0 },
+        { "name": "isPaid", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "TimeOffRequest" },
+        { "type": "hasMany", "target": "TimeOffBalance" }
+      ]
+    },
+    {
+      "name": "PerformanceReview",
+      "description": "Employee performance evaluations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeId", "type": "uuid", "required": true },
+        { "name": "reviewerId", "type": "uuid", "required": true },
+        { "name": "cycleId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["annual", "quarterly", "probation", "360", "self"], "required": true },
+        { "name": "overallRating", "type": "integer" },
+        { "name": "summary", "type": "text" },
+        { "name": "strengths", "type": "json", "default": "[]" },
+        { "name": "improvements", "type": "json", "default": "[]" },
+        { "name": "status", "type": "enum", "values": ["draft", "in_progress", "completed", "acknowledged"], "default": "draft" },
+        { "name": "submittedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Employee", "foreignKey": "employeeId" },
+        { "type": "belongsTo", "target": "Employee", "foreignKey": "reviewerId" },
+        { "type": "belongsTo", "target": "ReviewCycle" }
+      ]
+    },
+    {
+      "name": "Goal",
+      "description": "Employee goals and OKRs",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "type", "type": "enum", "values": ["goal", "okr_key_result"], "default": "goal" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "startDate", "type": "date" },
+        { "name": "dueDate", "type": "date" },
+        { "name": "progress", "type": "integer", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["not_started", "in_progress", "completed", "cancelled"], "default": "not_started" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Employee" },
+        { "type": "hasMany", "target": "Goal", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Goal", "foreignKey": "parentId" }
+      ]
+    },
+    {
+      "name": "PayrollRun",
+      "description": "Payroll processing cycles",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "periodStart", "type": "date", "required": true },
+        { "name": "periodEnd", "type": "date", "required": true },
+        { "name": "payDate", "type": "date", "required": true },
+        { "name": "frequency", "type": "enum", "values": ["weekly", "biweekly", "semi_monthly", "monthly"], "required": true },
+        { "name": "status", "type": "enum", "values": ["draft", "processing", "completed", "cancelled"], "default": "draft" },
+        { "name": "totalGross", "type": "decimal" },
+        { "name": "totalNet", "type": "decimal" },
+        { "name": "totalTax", "type": "decimal" },
+        { "name": "totalDeductions", "type": "decimal" },
+        { "name": "processedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "PayStub" }
+      ]
+    },
+    {
+      "name": "BenefitPlan",
+      "description": "Employee benefit plans",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["medical", "dental", "vision", "life", "disability", "retirement", "commuter", "wellness"], "required": true },
+        { "name": "provider", "type": "string" },
+        { "name": "description", "type": "text" },
+        { "name": "employerCost", "type": "decimal" },
+        { "name": "employeeCost", "type": "decimal" },
+        { "name": "coveragePeriod", "type": "enum", "values": ["monthly", "yearly"], "default": "monthly" },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "BenefitEnrollment" }
+      ]
+    },
+    {
+      "name": "Location",
+      "description": "Office/work locations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "code", "type": "string", "required": true, "unique": true },
+        { "name": "address", "type": "json", "required": true },
+        { "name": "timezone", "type": "string", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "isHeadquarters", "type": "boolean", "default": false },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Employee" }
+      ]
+    },
+    {
+      "name": "Document",
+      "description": "Employee documents and files",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeId", "type": "uuid", "required": true },
+        { "name": "documentTypeId", "type": "uuid", "required": true },
+        { "name": "fileName", "type": "string", "required": true },
+        { "name": "fileUrl", "type": "string", "required": true },
+        { "name": "fileSize", "type": "integer" },
+        { "name": "mimeType", "type": "string" },
+        { "name": "expiryDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["active", "expired", "archived"], "default": "active" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Employee" },
+        { "type": "belongsTo", "target": "DocumentType" }
+      ]
+    },
+    {
+      "name": "OnboardingTask",
+      "description": "Employee onboarding checklist items",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "employeeId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "assigneeId", "type": "uuid" },
+        { "name": "dueDate", "type": "date" },
+        { "name": "status", "type": "enum", "values": ["pending", "in_progress", "completed", "skipped"], "default": "pending" },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Employee" },
+        { "type": "belongsTo", "target": "Employee", "foreignKey": "assigneeId" }
+      ]
+    }
+  ]
+}

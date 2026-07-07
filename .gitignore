@@ -58,3 +58,19 @@ tunnel-url.txt
 
 # Runtime cache
 .cache/
+
+# Local Test Runtime Outputs
+.build-anything-test/
+.build-anything/artifacts/
+.build-anything/metadata/
+.build-anything/projects/
+.build-anything/e2e-test/
+validation-output/
+
+# Local Test Runtime Outputs
+.build-anything-test/
+.build-anything/artifacts/
+.build-anything/metadata/
+.build-anything/projects/
+.build-anything/e2e-test/
+validation-output/

@@ -1,0 +1,293 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "System user accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "role", "type": "enum", "values": ["admin", "instructor", "learner", "manager"], "required": true },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "hasMany", "target": "Enrollment" },
+        { "type": "hasMany", "target": "Discussion" },
+        { "type": "hasMany", "target": "Attempt" }
+      ]
+    },
+    {
+      "name": "Organization",
+      "description": "Multi-tenant organizations",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "logoUrl", "type": "string" },
+        { "name": "primaryColor", "type": "string" },
+        { "name": "timezone", "type": "string", "default": "UTC" },
+        { "name": "features", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "User" },
+        { "type": "hasMany", "target": "Course" }
+      ]
+    },
+    {
+      "name": "Course",
+      "description": "Learning courses",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "organizationId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "thumbnailUrl", "type": "string" },
+        { "name": "duration", "type": "integer" },
+        { "name": "difficulty", "type": "enum", "values": ["beginner", "intermediate", "advanced"], "default": "beginner" },
+        { "name": "status", "type": "enum", "values": ["draft", "published", "archived"], "default": "draft" },
+        { "name": "price", "type": "decimal" },
+        { "name": "categoryId", "type": "uuid" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Organization" },
+        { "type": "belongsTo", "target": "Category" },
+        { "type": "hasMany", "target": "Module" },
+        { "type": "hasMany", "target": "Enrollment" },
+        { "type": "hasMany", "target": "Certificate" },
+        { "type": "belongsToMany", "target": "Tag", "through": "CourseTag" }
+      ]
+    },
+    {
+      "name": "Module",
+      "description": "Course modules/sections",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "sortOrder", "type": "integer", "required": true },
+        { "name": "isPublished", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "hasMany", "target": "Lesson" },
+        { "type": "hasMany", "target": "Quiz" }
+      ]
+    },
+    {
+      "name": "Lesson",
+      "description": "Individual lessons within modules",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "moduleId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "contentType", "type": "enum", "values": ["video", "article", "slides", "scorm", "xapi", "interactive"], "required": true },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "duration", "type": "integer" },
+        { "name": "videoUrl", "type": "string" },
+        { "name": "sortOrder", "type": "integer", "required": true },
+        { "name": "isFree", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Module" },
+        { "type": "hasMany", "target": "Progress" }
+      ]
+    },
+    {
+      "name": "Quiz",
+      "description": "Module/course quizzes",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "moduleId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "passingScore", "type": "integer", "default": 70 },
+        { "name": "maxAttempts", "type": "integer", "default": 3 },
+        { "name": "timeLimit", "type": "integer" },
+        { "name": "shuffleQuestions", "type": "boolean", "default": false },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Module" },
+        { "type": "hasMany", "target": "Question" },
+        { "type": "hasMany", "target": "Attempt" }
+      ]
+    },
+    {
+      "name": "Question",
+      "description": "Quiz questions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "quizId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["multiple_choice", "true_false", "fill_blank", "essay", "matching", "ordering"], "required": true },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "options", "type": "json" },
+        { "name": "correctAnswer", "type": "text", "required": true },
+        { "name": "points", "type": "integer", "default": 1 },
+        { "name": "explanation", "type": "text" },
+        { "name": "sortOrder", "type": "integer", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Quiz" }
+      ]
+    },
+    {
+      "name": "Enrollment",
+      "description": "User-course enrollments",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "type", "type": "enum", "values": ["self", "assigned", "invited"], "default": "self" },
+        { "name": "status", "type": "enum", "values": ["active", "completed", "expired", "cancelled"], "default": "active" },
+        { "name": "progress", "type": "integer", "default": 0 },
+        { "name": "enrolledAt", "type": "datetime", "required": true },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "expiresAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "hasMany", "target": "Progress" }
+      ]
+    },
+    {
+      "name": "Progress",
+      "description": "Learner lesson/activity progress",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "enrollmentId", "type": "uuid", "required": true },
+        { "name": "lessonId", "type": "uuid", "required": true },
+        { "name": "status", "type": "enum", "values": ["not_started", "in_progress", "completed"], "default": "not_started" },
+        { "name": "score", "type": "integer" },
+        { "name": "timeSpent", "type": "integer", "default": 0 },
+        { "name": "completedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Enrollment" },
+        { "type": "belongsTo", "target": "Lesson" }
+      ]
+    },
+    {
+      "name": "Certificate",
+      "description": "Course completion certificates",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "enrollmentId", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "certificateNumber", "type": "string", "required": true, "unique": true },
+        { "name": "issuedAt", "type": "datetime", "required": true },
+        { "name": "expiresAt", "type": "datetime" },
+        { "name": "verificationCode", "type": "string", "unique": true },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Enrollment" },
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "LearningPath",
+      "description": "Curated learning pathways",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "slug", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "thumbnailUrl", "type": "string" },
+        { "name": "estimatedDuration", "type": "integer" },
+        { "name": "status", "type": "enum", "values": ["draft", "published", "archived"], "default": "draft" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsToMany", "target": "Course", "through": "LearningPathCourse" }
+      ]
+    },
+    {
+      "name": "Discussion",
+      "description": "Course discussion threads",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "content", "type": "text", "required": true },
+        { "name": "isPinned", "type": "boolean", "default": false },
+        { "name": "isResolved", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Post" }
+      ]
+    },
+    {
+      "name": "Badge",
+      "description": "Gamification achievement badges",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true, "unique": true },
+        { "name": "description", "type": "text" },
+        { "name": "iconUrl", "type": "string" },
+        { "name": "criteria", "type": "json", "required": true },
+        { "name": "points", "type": "integer", "default": 0 },
+        { "name": "isActive", "type": "boolean", "default": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsToMany", "target": "User", "through": "UserBadge" }
+      ]
+    },
+    {
+      "name": "LiveSession",
+      "description": "Live virtual classroom sessions",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "courseId", "type": "uuid", "required": true },
+        { "name": "title", "type": "string", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "provider", "type": "enum", "values": ["zoom", "teams", "webex", "custom"], "required": true },
+        { "name": "providerMeetingId", "type": "string" },
+        { "name": "joinUrl", "type": "string" },
+        { "name": "startAt", "type": "datetime", "required": true },
+        { "name": "endAt", "type": "datetime", "required": true },
+        { "name": "recordingUrl", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["scheduled", "live", "ended", "cancelled"], "default": "scheduled" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Course" },
+        { "type": "hasMany", "target": "Recording" }
+      ]
+    }
+  ]
+}

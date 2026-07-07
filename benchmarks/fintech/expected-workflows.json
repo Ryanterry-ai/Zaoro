@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Account Creation Flow",
+      "description": "Open new financial account with KYC verification",
+      "steps": [
+        { "step": 1, "action": "Submit Application", "description": "User submits personal and financial info", "entities": ["AccountApplication"], "validations": ["identity data complete", "SSN/TIN provided", "address verified"] },
+        { "step": 2, "action": "KYC Verification", "description": "Verify identity via documents", "entities": ["KycCheck", "AccountApplication"], "validations": ["ID document verified", "liveness check passed", "AML screening cleared"] },
+        { "step": 3, "action": "Risk Assessment", "description": "Evaluate applicant risk profile", "entities": ["AccountApplication"], "validations": ["credit check if applicable", "risk score calculated"] },
+        { "step": 4, "action": "Approve Account", "description": "Account approved and opened", "entities": ["Account", "AccountApplication"], "validations": ["account number generated", "welcome sent", "funding instructions provided"] }
+      ]
+    },
+    {
+      "name": "Money Transfer Flow",
+      "description": "Send funds between accounts or externally",
+      "steps": [
+        { "step": 1, "action": "Initiate Transfer", "description": "User enters transfer details", "entities": ["Transfer"], "validations": ["sufficient balance", "daily limit check", "recipient valid"] },
+        { "step": 2, "action": "Authenticate Transfer", "description": "MFA or confirmation step", "entities": ["Transfer"], "validations": ["2FA completed", "device recognized"] },
+        { "step": 3, "action": "Process Transfer", "description": "Execute the transfer", "entities": ["Transfer", "Account"], "validations": ["funds debited", "recipient credited", "fee deducted if applicable"] },
+        { "step": 4, "action": "Notify Parties", "description": "Send confirmation notifications", "entities": ["Transfer", "Notification"], "validations": ["sender notified", "recipient notified", "receipt available"] }
+      ]
+    },
+    {
+      "name": "Bill Payment Flow",
+      "description": "Schedule and pay bills to merchants",
+      "steps": [
+        { "step": 1, "action": "Add Payee", "description": "Register biller account", "entities": ["Payee"], "validations": ["biller found", "account number valid", "address verified"] },
+        { "step": 2, "action": "Schedule Payment", "description": "Set amount and date", "entities": ["BillPayment"], "validations": ["amount within limits", "future date valid", "balance sufficient"] },
+        { "step": 3, "action": "Process Payment", "description": "Execute on scheduled date", "entities": ["BillPayment", "Account"], "validations": ["funds debited", "payee credited", "status = paid"] },
+        { "step": 4, "action": "Confirm Delivery", "description": "Verify biller received payment", "entities": ["BillPayment"], "validations": ["confirmation received", "payment tracked"] }
+      ]
+    },
+    {
+      "name": "Investment Portfolio Flow",
+      "description": "Manage investment portfolios and trades",
+      "steps": [
+        { "step": 1, "action": "Fund Account", "description": "Deposit funds to investment account", "entities": ["Account"], "validations": ["deposit cleared", "settlement date set"] },
+        { "step": 2, "action": "Place Trade", "description": "Submit buy/sell order", "entities": ["TradeOrder"], "validations": ["symbol valid", "order type set", "price within market"] },
+        { "step": 3, "action": "Execute Trade", "description": "Order filled on exchange", "entities": ["TradeOrder", "Portfolio"], "validations": ["order executed", "position updated", "cash settled"] },
+        { "step": 4, "action": "Rebalance Portfolio", "description": "Adjust holdings to target allocation", "entities": ["Portfolio"], "validations": ["allocation targets met", "drift corrected", "rebalance report generated"] }
+      ]
+    },
+    {
+      "name": "Loan Application Flow",
+      "description": "Apply for, underwrite, and fund loans",
+      "steps": [
+        { "step": 1, "action": "Submit Application", "description": "Borrower applies for loan", "entities": ["LoanApplication"], "validations": ["amount valid", "purpose provided", "income documented"] },
+        { "step": 2, "action": "Underwrite Loan", "description": "Credit and risk analysis", "entities": ["LoanApplication"], "validations": ["credit score checked", "DTI calculated", "collateral valued if secured"] },
+        { "step": 3, "action": "Approve Loan", "description": "Loan terms finalized", "entities": ["LoanApplication", "Loan"], "validations": ["rate set", "terms accepted", "documents signed"] },
+        { "step": 4, "action": "Disburse Funds", "description": "Funds sent to borrower", "entities": ["Loan", "Account"], "validations": ["disbursement processed", "repayment schedule created", "loan active"] }
+      ]
+    }
+  ]
+}

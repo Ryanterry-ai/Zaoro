@@ -15,6 +15,7 @@ import type { ApplicationSpec } from '../bos/schemas/blueprint/execution-bluepri
 import type { Pattern } from '../bos/schemas/knowledge/pattern.schema.js';
 import type { DesignProfile } from '../bos/schemas/knowledge/design-profile.schema.js';
 import type { RenderResult } from './renderers/renderer.js';
+import type { Industry } from '../orchestration/types.js';
 import { runBREV2Pipeline, type BREv2Result } from '../bos/bre-v2-pipeline.js';
 import { buildExecutionBlueprint } from '../bos/execution-planner.js';
 import { resolveContent } from '../bos/content-resolver.js';
@@ -23,8 +24,11 @@ import { ReactRenderer } from './renderers/react-renderer.js';
 import { FlutterRenderer } from './renderers/flutter-renderer.js';
 import { PATTERNS, DESIGN_PROFILES } from '../bos/knowledge/registry.js';
 import { stageLogger, debugLog } from '../core/debug-logger.js';
-import { SkillIntegrator } from './skill-integrator.js';
+import { SkillIntegrator, type DesignRecommendation } from './skill-integrator.js';
+import { DesignIntelligenceEngine } from '../orchestration/design-intelligence/engine.js';
+import type { DesignDecision } from '../orchestration/design-intelligence/types.js';
 import { ProgressEmitter } from '../core/progress-emitter.js';
+import { getSkillDiscovery } from '../core/skill-discovery.js';
 
 // Pipeline-v2 enrichment — provides richer entity, DB, and API detail
 import { runNormalizedPipeline } from '../bos/pipeline-v2/pipeline.js';
@@ -323,6 +327,85 @@ export async function runBuildPipeline(
     duration: Date.now() - t2,
   });
 
+  // Layer 2a: Skill Discovery & Integration — UI/UX Pro Max, 21st.dev, Design Intelligence
+  progress?.emit('compile', 'info', 'Running skill discovery and design intelligence...');
+  const t2a = Date.now();
+  let skillRecommendations: DesignRecommendation | undefined;
+  let designDecision: DesignDecision | undefined;
+  let skillDiscoveryResult: import('../core/skill-discovery.js').DiscoveryResult | undefined;
+
+  // Discover and install required skills
+  const requiredSkills = [
+    'ui-ux-pro-max',
+    'framer-motion',
+    'gsap-scrolltrigger',
+    'impeccable',
+    'high-end-visual-design',
+    'frontend-design',
+  ];
+
+  try {
+    const skillDiscovery = getSkillDiscovery();
+    skillDiscoveryResult = await skillDiscovery.discoverAndInstall(requiredSkills);
+
+    if (skillDiscoveryResult.installed.length > 0) {
+      progress?.emit('compile', 'info', `Auto-installed skills: ${skillDiscoveryResult.installed.join(', ')}`);
+    }
+
+    if (skillDiscoveryResult.missing.length > 0) {
+      progress?.emit('compile', 'info', `Missing skills (using defaults): ${skillDiscoveryResult.missing.join(', ')}`);
+    }
+
+    log.info('Layer 2a: SkillDiscovery complete', {
+      found: skillDiscoveryResult.found.length,
+      installed: skillDiscoveryResult.installed.length,
+      missing: skillDiscoveryResult.missing.length,
+      twentyFirstDevAvailable: skillDiscoveryResult.twentyFirstDevAvailable,
+      duration: Date.now() - t2a,
+    });
+  } catch (e: unknown) {
+    log.warn('Layer 2a: SkillDiscovery failed (continuing without)', { error: (e as Error).message });
+  }
+
+  try {
+    // SkillIntegrator: provides color palettes, typography, layout, animation recommendations
+    const skillIntegrator = new SkillIntegrator();
+    skillRecommendations = skillIntegrator.getDesignRecommendations(
+      context.industry,
+      context.subIndustry,
+    );
+    progress?.emit('compile', 'info', `Skill recommendations: ${skillRecommendations.components.length} components, ${skillRecommendations.uxGuidelines.length} UX guidelines`);
+    log.info('Layer 2a: SkillIntegrator complete', {
+      industry: context.industry,
+      components: skillRecommendations.components.length,
+      animationLib: skillRecommendations.animation.library,
+      duration: Date.now() - t2a,
+    });
+  } catch (e: unknown) {
+    log.warn('Layer 2a: SkillIntegrator failed (continuing without)', { error: (e as Error).message });
+  }
+
+  try {
+    // DesignIntelligenceEngine: runs 6 sub-engines for comprehensive design tokens
+    const designEngine = new DesignIntelligenceEngine();
+    designDecision = designEngine.recommend({
+      industry: context.industry as Industry,
+      stage: 'frontend',
+      artifacts: {},
+      subIndustry: context.subIndustry,
+      audience: context.audience,
+      personality: context.appName,
+      bosIndustry: context.industry,
+    });
+    progress?.emit('compile', 'info', `Design intelligence: ${designDecision.recommendations.length} recommendations`);
+    log.info('Layer 2a: DesignIntelligenceEngine complete', {
+      recommendations: designDecision.recommendations.length,
+      duration: Date.now() - t2a,
+    });
+  } catch (e: unknown) {
+    log.warn('Layer 2a: DesignIntelligenceEngine failed (continuing without)', { error: (e as Error).message });
+  }
+
   // Layer 3: Execution Blueprint → Application Spec (content resolution)
   progress?.emit('compile', 'started', 'Resolving content and generating component specs...');
   const t3 = Date.now();
@@ -339,6 +422,8 @@ export async function runBuildPipeline(
     ...(matchedPattern ? { pattern: matchedPattern } : {}),
     ...(matchedDesignProfile ? { designProfile: matchedDesignProfile } : {}),
     ...(breResult.revenueIntelligence ? { revenueIntelligence: breResult.revenueIntelligence } : {}),
+    ...(skillRecommendations ? { skillRecommendations } : {}),
+    ...(designDecision ? { designDecision } : {}),
   });
   progress?.emit('compile', 'completed', `Content resolved: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s, p) => s + p.components.length, 0)} components`, { duration: Date.now() - t3 });
   log.info('Layer 3: Content Resolution complete', {

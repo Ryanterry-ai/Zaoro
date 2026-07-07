@@ -12,6 +12,7 @@
 // This is the bridge between planning and a running application.
 // ──────────────────────────────────────────────────────────────────────────────
 
+import * as path from 'path';
 import { BaseStage } from './base-stage.js';
 import type { StageMeta, StageContext, StageResult, AgentRole, LLMTaskType } from '../types.js';
 
@@ -20,8 +21,8 @@ const meta: StageMeta = {
   name: 'Build & Test',
   description: 'Install, build, test, and preview the application',
   agentRole: 'devops' as AgentRole,
-  dependencies: ['integration', 'quality-assurance'],
-  inputs: ['manifest', 'architecture.system', 'architecture.tech-stack', 'qa.plan'],
+  dependencies: ['integration', 'quality-assurance', 'code-writer'],
+  inputs: ['manifest', 'architecture.system', 'architecture.tech-stack', 'qa.plan', 'code.projectRoot'],
   outputs: ['build.result', 'build.screenshots', 'build.failures'],
   estimatedDurationSec: 300,
   skippable: false,
@@ -40,8 +41,13 @@ export class BuildStage extends BaseStage {
       return this.fail('Runtime context not available. Ensure RuntimeEngine is configured.', Date.now() - start);
     }
 
+    // Read projectRoot from code.projectRoot artifact (set by CodeWriterStage)
+    const codeRoot = ctx.getArtifact<string>('code.projectRoot');
     const manifest = ctx.getArtifact<Record<string, unknown>>('manifest');
-    const projectRoot = (manifest?.workingDirectory as string) ?? ctx.manifest.name ?? process.cwd();
+    const projectRoot = codeRoot
+      ?? (manifest?.workingDirectory as string)
+      ?? (manifest?.projectRoot as string)
+      ?? path.join(process.cwd(), '.build-anything', 'default-project');
 
     ctx.log.info(`Starting build lifecycle for: ${projectRoot}`);
     ctx.emit('build:start', { projectRoot });

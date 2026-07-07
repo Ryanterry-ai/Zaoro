@@ -1,0 +1,32 @@
+{
+  "pages": [
+    { "path": "/", "name": "Home", "description": "Hero, featured products, categories", "components": ["Hero", "FeaturedProducts", "Categories", "NewsletterSignup"] },
+    { "path": "/discover", "name": "Discover", "description": "Browse all products", "components": ["ProductGrid", "Filters", "SortOptions"] },
+    { "path": "/categories", "name": "Categories", "description": "Category listing", "components": ["CategoryGrid"] },
+    { "path": "/categories/[slug]", "name": "Category", "description": "Products in category", "components": ["CategoryHeader", "ProductGrid", "Filters"] },
+    { "path": "/search", "name": "Search", "description": "Search results", "components": ["SearchInput", "Autocomplete", "Results"] },
+    { "path": "/product/[id]", "name": "Product Detail", "description": "Product with vendor info", "components": ["ProductGallery", "ProductInfo", "VendorCard", "Reviews"] },
+    { "path": "/cart", "name": "Cart", "description": "Shopping cart", "components": ["CartItems", "CartSummary"] },
+    { "path": "/checkout", "name": "Checkout", "description": "Multi-vendor checkout", "components": ["CartReview", "Shipping", "Payment", "OrderSummary"] },
+    { "path": "/checkout/success", "name": "Order Success", "description": "Confirmation", "components": ["OrderConfirmation"] },
+    { "path": "/account", "name": "Account", "description": "User dashboard", "components": ["AccountNav", "Overview"] },
+    { "path": "/account/orders", "name": "Orders", "description": "Order history", "components": ["OrderList"] },
+    { "path": "/account/wishlist", "name": "Wishlist", "description": "Saved items", "components": ["WishlistItems"] },
+    { "path": "/account/messages", "name": "Messages", "description": "Vendor messaging", "components": ["ConversationList", "Chat"] },
+    { "path": "/account/settings", "name": "Settings", "description": "Account settings", "components": ["ProfileForm", "PaymentMethods"] },
+    { "path": "/vendor/apply", "name": "Vendor Application", "description": "Become a vendor", "components": ["ApplicationForm", "Terms"] },
+    { "path": "/vendor/dashboard", "name": "Vendor Dashboard", "description": "Vendor overview", "components": ["KPIs", "RecentOrders", "RevenueChart"] },
+    { "path": "/vendor/products", "name": "Vendor Products", "description": "Manage products", "components": ["ProductTable", "ProductForm"] },
+    { "path": "/vendor/orders", "name": "Vendor Orders", "description": "Manage orders", "components": ["OrderTable", "FulfillmentForm"] },
+    { "path": "/vendor/payouts", "name": "Payouts", "description": "Commission payouts", "components": ["PayoutHistory", "PayoutSettings"] },
+    { "path": "/vendor/analytics", "name": "Vendor Analytics", "description": "Sales analytics", "components": ["SalesChart", "ProductPerformance"] },
+    { "path": "/vendor/settings", "name": "Vendor Settings", "description": "Vendor config", "components": ["ShopSettings", "ShippingSettings"] },
+    { "path": "/admin", "name": "Admin Dashboard", "description": "Platform overview", "components": ["KPIs", "RecentActivity"] },
+    { "path": "/admin/vendors", "name": "Vendor Management", "description": "Vendor approvals", "components": ["VendorTable", "ApprovalActions"] },
+    { "path": "/admin/products", "name": "Product Moderation", "description": "Review products", "components": ["ProductTable", "ModerationActions"] },
+    { "path": "/admin/orders", "name": "Order Management", "description": "Platform orders", "components": ["OrderTable"] },
+    { "path": "/admin/disputes", "name": "Disputes", "description": "Resolve disputes", "components": ["DisputeList", "DisputeDetail"] },
+    { "path": "/admin/analytics", "name": "Platform Analytics", "description": "Platform metrics", "components": ["RevenueChart", "GMV", "VendorMetrics"] },
+    { "path": "/admin/settings", "name": "Settings", "description": "Platform settings", "components": ["CommissionSettings", "FeeSettings"] }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "workflows": [
+    {
+      "name": "Lead Conversion Flow",
+      "description": "Convert qualified lead to customer",
+      "steps": [
+        { "step": 1, "action": "Lead Created", "description": "Lead captured from web form/import", "entities": ["Lead"], "validations": ["required fields present", "duplicate check"] },
+        { "step": 2, "action": "Lead Assignment", "description": "Auto-assign to rep based on territory/round-robin", "entities": ["Lead", "User"], "validations": ["assignment rules applied"] },
+        { "step": 3, "action": "Lead Qualification", "description": "Rep qualifies the lead", "entities": ["Lead"], "validations": ["BANT criteria met", "status updated"] },
+        { "step": 4, "action": "Create Account/Contact", "description": "Convert to account and contact", "entities": ["Account", "Contact", "Lead"], "validations": ["account created", "contact created", "relationship established"] },
+        { "step": 5, "action": "Create Opportunity", "description": "Create deal in pipeline", "entities": ["Opportunity", "Lead"], "validations": ["opportunity created", "lead marked converted"] }
+      ]
+    },
+    {
+      "name": "Deal Pipeline Flow",
+      "description": "Manage deal through sales stages",
+      "steps": [
+        { "step": 1, "action": "Deal Created", "description": "Opportunity created with initial stage", "entities": ["Opportunity"], "validations": ["name present", "amount set", "owner assigned"] },
+        { "step": 2, "action": "Stage Progression", "description": "Deal moves through pipeline", "entities": ["Opportunity", "Stage"], "validations": ["probability updated", "activities logged"] },
+        { "step": 3, "action": "Activity Logging", "description": "Log calls, meetings, emails", "entities": ["Activity", "Opportunity"], "validations": ["activity created", "linked to deal"] },
+        { "step": 4, "action": "Forecast Update", "description": "Deal updates rolling forecast", "entities": ["Opportunity", "Forecast"], "validations": ["forecast recalculated", "weighted value updated"] },
+        { "step": 5, "action": "Deal Close (Win)", "description": "Deal won and closed", "entities": ["Opportunity"], "validations": ["status = won", "actual close date set", "account updated", "notifications sent"] },
+        { "step": 6, "action": "Deal Close (Lost)", "description": "Deal lost with reason", "entities": ["Opportunity"], "validations": ["status = lost", "lost reason captured", "lesson learned logged"] }
+      ]
+    },
+    {
+      "name": "Task Management Flow",
+      "description": "Create and complete sales tasks",
+      "steps": [
+        { "step": 1, "action": "Task Created", "description": "Task created manually or from sequence", "entities": ["Task"], "validations": ["title present", "owner assigned", "due date set if applicable"] },
+        { "step": 2, "action": "Reminder Notification", "description": "Reminder sent before due date", "entities": ["Task"], "validations": ["reminder triggered", "notification sent"] },
+        { "step": 3, "action": "Task Completed", "description": "Rep marks task complete", "entities": ["Task"], "validations": ["status = completed", "completedAt set"] },
+        { "step": 4, "action": "Linked Entity Updated", "description": "Parent entity activity feed updated", "entities": ["Task", "Activity"], "validations": ["activity created", "timeline updated"] }
+      ]
+    },
+    {
+      "name": "Email Integration Flow",
+      "description": "Track and log email communications",
+      "steps": [
+        { "step": 1, "action": "Email Sent via CRM", "description": "Compose and send email from CRM", "entities": ["Email", "Activity"], "validations": ["recipient validated", "email logged", "tracking pixel added"] },
+        { "step": 2, "action": "Email Opened", "description": "Recipient opens email", "entities": ["Email"], "validations": ["open tracked", "activity logged", "engagement score updated"] },
+        { "step": 3, "action": "Email Clicked", "description": "Recipient clicks link", "entities": ["Email"], "validations": ["click tracked", "URL captured", "activity logged"] },
+        { "step": 4, "action": "Reply Received", "description": "IMAP/POP3 sync receives reply", "entities": ["Email", "Activity"], "validations": ["reply linked", "thread updated", "new activity created"] }
+      ]
+    },
+    {
+      "name": "Forecasting Flow",
+      "description": "Calculate and report sales forecast",
+      "steps": [
+        { "step": 1, "action": "Pipeline Snapshot", "description": "Capture current pipeline state", "entities": ["Opportunity", "Forecast"], "validations": ["all open deals captured", "stage probabilities applied"] },
+        { "step": 2, "action": "Weighted Calculation", "description": "Calculate weighted forecast by rep/team", "entities": ["Forecast"], "validations": ["amount = sum(amount * probability)", "stage groupings correct"] },
+        { "step": 3, "action": "Quota Comparison", "description": "Compare forecast to quota", "entities": ["Forecast"], "validations": ["quota loaded", "attainment calculated"] },
+        { "step": 4, "action": "Forecast Commit", "description": "Manager commits forecast", "entities": ["Forecast"], "validations": ["commit locked", "historical record created"] },
+        { "step": 5, "action": "Report Generation", "description": "Generate forecast reports", "entities": ["Forecast"], "validations": ["charts render", "exports work"] }
+      ]
+    }
+  ]
+}

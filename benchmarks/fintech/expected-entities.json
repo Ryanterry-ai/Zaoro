@@ -1,0 +1,257 @@
+{
+  "entities": [
+    {
+      "name": "User",
+      "description": "Customer and staff authentication",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "email", "type": "string", "required": true, "unique": true },
+        { "name": "passwordHash", "type": "string", "required": true },
+        { "name": "firstName", "type": "string", "required": true },
+        { "name": "lastName", "type": "string", "required": true },
+        { "name": "phone", "type": "string", "required": true },
+        { "name": "kycStatus", "type": "enum", "values": ["unverified", "pending", "verified", "rejected"], "default": "unverified" },
+        { "name": "kycData", "type": "json" },
+        { "name": "twoFactorEnabled", "type": "boolean", "default": false },
+        { "name": "deviceTokens", "type": "json", "default": "[]" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Account" },
+        { "type": "hasMany", "target": "Card" },
+        { "type": "hasMany", "target": "Beneficiary" }
+      ]
+    },
+    {
+      "name": "Account",
+      "description": "Financial accounts (checking, savings, etc.)",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "accountNumber", "type": "string", "required": true, "unique": true },
+        { "name": "type", "type": "enum", "values": ["checking", "savings", "investment", "credit", "loan", "escrow"], "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "balance", "type": "decimal", "required": true, "default": 0 },
+        { "name": "availableBalance", "type": "decimal", "default": 0 },
+        { "name": "ledgerBalance", "type": "decimal", "default": 0 },
+        { "name": "status", "type": "enum", "values": ["active", "frozen", "closed", "dormant"], "default": "active" },
+        { "name": "openDate", "type": "date", "required": true },
+        { "name": "closedDate", "type": "date" },
+        { "name": "interestRate", "type": "decimal" },
+        { "name": "overdraftLimit", "type": "decimal", "default": 0 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "hasMany", "target": "Transaction" },
+        { "type": "hasMany", "target": "Card" },
+        { "type": "belongsToMany", "target": "Beneficiary", "through": "AccountBeneficiary" }
+      ]
+    },
+    {
+      "name": "Transaction",
+      "description": "Financial transactions on accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "accountId", "type": "uuid", "required": true },
+        { "name": "referenceId", "type": "uuid" },
+        { "name": "transactionCode", "type": "string", "required": true, "unique": true },
+        { "name": "type", "type": "enum", "values": ["deposit", "withdrawal", "transfer", "payment", "interest", "fee", "refund", "reversal"], "required": true },
+        { "name": "direction", "type": "enum", "values": ["credit", "debit"], "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "fee", "type": "decimal", "default": 0 },
+        { "name": "netAmount", "type": "decimal", "required": true },
+        { "name": "balanceBefore", "type": "decimal", "required": true },
+        { "name": "balanceAfter", "type": "decimal", "required": true },
+        { "name": "description", "type": "string", "required": true },
+        { "name": "status", "type": "enum", "values": ["pending", "processing", "completed", "failed", "reversed", "cancelled"], "default": "pending" },
+        { "name": "channel", "type": "enum", "values": ["online", "mobile", "atm", "branch", "pos", "api"], "default": "online" },
+        { "name": "timestamp", "type": "datetime", "required": true },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "belongsTo", "target": "Card" }
+      ]
+    },
+    {
+      "name": "Card",
+      "description": "Debit and credit cards",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "accountId", "type": "uuid", "required": true },
+        { "name": "cardLastFour", "type": "string", "required": true },
+        { "name": "cardScheme", "type": "enum", "values": ["visa", "mastercard", "amex", "discover", "rupay"], "required": true },
+        { "name": "type", "type": "enum", "values": ["debit", "credit", "prepaid"], "required": true },
+        { "name": "status", "type": "enum", "values": ["active", "blocked", "suspended", "expired", "cancelled"], "default": "active" },
+        { "name": "expiryMonth", "type": "integer", "required": true },
+        { "name": "expiryYear", "type": "integer", "required": true },
+        { "name": "cvv", "type": "string", "required": true },
+        { "name": "isVirtual", "type": "boolean", "default": false },
+        { "name": "dailyLimit", "type": "decimal" },
+        { "name": "monthlyLimit", "type": "decimal" },
+        { "name": "issuedAt", "type": "datetime", "required": true },
+        { "name": "activatedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "hasMany", "target": "Transaction" }
+      ]
+    },
+    {
+      "name": "Loan",
+      "description": "Loan products and disbursements",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "accountId", "type": "uuid" },
+        { "name": "loanNumber", "type": "string", "required": true, "unique": true },
+        { "name": "type", "type": "enum", "values": ["personal", "home", "auto", "education", "business", "payday"], "required": true },
+        { "name": "principal", "type": "decimal", "required": true },
+        { "name": "outstandingBalance", "type": "decimal", "required": true },
+        { "name": "interestRate", "type": "decimal", "required": true },
+        { "name": "interestType", "type": "enum", "values": ["fixed", "variable"], "default": "fixed" },
+        { "name": "termMonths", "type": "integer", "required": true },
+        { "name": "emiAmount", "type": "decimal" },
+        { "name": "disbursedAt", "type": "datetime" },
+        { "name": "status", "type": "enum", "values": ["pending", "approved", "disbursed", "active", "closed", "defaulted", "written_off"], "default": "pending" },
+        { "name": "collateral", "type": "json" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Account" },
+        { "type": "hasMany", "target": "Transaction" }
+      ]
+    },
+    {
+      "name": "Beneficiary",
+      "description": "Saved beneficiaries for transfers",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "accountNumber", "type": "string", "required": true },
+        { "name": "bankCode", "type": "string" },
+        { "name": "bankName", "type": "string" },
+        { "name": "ifscCode", "type": "string" },
+        { "name": "routingNumber", "type": "string" },
+        { "name": "swiftCode", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "country", "type": "string", "default": "US" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "isFavorite", "type": "boolean", "default": false },
+        { "name": "transferLimit", "type": "decimal" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" }
+      ]
+    },
+    {
+      "name": "Investment",
+      "description": "Investment portfolios and holdings",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "accountId", "type": "uuid" },
+        { "name": "type", "type": "enum", "values": ["stock", "bond", "mutual_fund", "etf", "crypto", "treasury", "fixed_deposit"], "required": true },
+        { "name": "symbol", "type": "string" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "units", "type": "decimal", "required": true },
+        { "name": "buyPrice", "type": "decimal", "required": true },
+        { "name": "currentPrice", "type": "decimal" },
+        { "name": "totalInvested", "type": "decimal", "required": true },
+        { "name": "currentValue", "type": "decimal" },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "status", "type": "enum", "values": ["active", "closed", "suspended"], "default": "active" },
+        { "name": "maturityDate", "type": "date" },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Account" }
+      ]
+    },
+    {
+      "name": "Budget",
+      "description": "Personal budget and spending limits",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "userId", "type": "uuid", "required": true },
+        { "name": "categoryId", "type": "uuid" },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "amount", "type": "decimal", "required": true },
+        { "name": "spent", "type": "decimal", "default": 0 },
+        { "name": "currency", "type": "string", "default": "USD" },
+        { "name": "period", "type": "enum", "values": ["weekly", "monthly", "yearly", "custom"], "default": "monthly" },
+        { "name": "startDate", "type": "date", "required": true },
+        { "name": "endDate", "type": "date" },
+        { "name": "rollover", "type": "boolean", "default": false },
+        { "name": "notifyThreshold", "type": "integer", "default": 80 },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "User" },
+        { "type": "belongsTo", "target": "Category" }
+      ]
+    },
+    {
+      "name": "Category",
+      "description": "Transaction categorization",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "icon", "type": "string" },
+        { "name": "color", "type": "string" },
+        { "name": "type", "type": "enum", "values": ["income", "expense", "transfer"], "default": "expense" },
+        { "name": "parentId", "type": "uuid" },
+        { "name": "isSystem", "type": "boolean", "default": false },
+        { "name": "createdAt", "type": "datetime", "required": true },
+        { "name": "updatedAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "hasMany", "target": "Category", "foreignKey": "parentId" },
+        { "type": "belongsTo", "target": "Category", "foreignKey": "parentId" },
+        { "type": "hasMany", "target": "Budget" }
+      ]
+    },
+    {
+      "name": "Statement",
+      "description": "Monthly/periodic account statements",
+      "fields": [
+        { "name": "id", "type": "uuid", "required": true },
+        { "name": "accountId", "type": "uuid", "required": true },
+        { "name": "periodStart", "type": "date", "required": true },
+        { "name": "periodEnd", "type": "date", "required": true },
+        { "name": "openingBalance", "type": "decimal", "required": true },
+        { "name": "closingBalance", "type": "decimal", "required": true },
+        { "name": "totalCredits", "type": "decimal", "default": 0 },
+        { "name": "totalDebits", "type": "decimal", "default": 0 },
+        { "name": "feesCharged", "type": "decimal", "default": 0 },
+        { "name": "interestEarned", "type": "decimal", "default": 0 },
+        { "name": "transactionCount", "type": "integer", "default": 0 },
+        { "name": "pdfUrl", "type": "string" },
+        { "name": "status", "type": "enum", "values": ["generating", "ready", "failed"], "default": "generating" },
+        { "name": "generatedAt", "type": "datetime" },
+        { "name": "createdAt", "type": "datetime", "required": true }
+      ],
+      "relationships": [
+        { "type": "belongsTo", "target": "Account" }
+      ]
+    }
+  ]
+}

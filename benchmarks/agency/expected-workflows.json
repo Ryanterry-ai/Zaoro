@@ -1,0 +1,56 @@
+{
+  "workflows": [
+    {
+      "name": "Client Onboarding Flow",
+      "description": "Welcome new clients and set up project foundation",
+      "steps": [
+        { "step": 1, "action": "Send Welcome", "description": "Send welcome package and contracts", "entities": ["Client", "Contract"], "validations": ["contracts signed", "NDA executed"] },
+        { "step": 2, "action": "Collect Brief", "description": "Gather project requirements brief", "entities": ["Project", "Brief"], "validations": ["requirements documented", "stakeholders identified", "timeline agreed"] },
+        { "step": 3, "action": "Assign Team", "description": "Allocate internal team members", "entities": ["Project", "TeamMember"], "validations": ["roles assigned", "availability confirmed", "kickoff scheduled"] },
+        { "step": 4, "action": "Setup Tools", "description": "Configure project management, Slack, file sharing", "entities": ["Project"], "validations": ["tools provisioned", "client access granted", "repos created"] },
+        { "step": 5, "action": "Kickoff Meeting", "description": "Conduct project kickoff", "entities": ["Project"], "validations": ["agenda covered", "next steps documented", "meeting notes shared"] }
+      ]
+    },
+    {
+      "name": "Campaign Creation Flow",
+      "description": "Design, approve and launch marketing campaigns",
+      "steps": [
+        { "step": 1, "action": "Create Campaign Brief", "description": "Define campaign goals and strategy", "entities": ["Campaign"], "validations": ["goals defined", "target audience set", "budget allocated"] },
+        { "step": 2, "action": "Design Creatives", "description": "Design team produces assets", "entities": ["CreativeAsset"], "validations": ["designs completed", "brand guidelines met", "formats correct"] },
+        { "step": 3, "action": "Client Review", "description": "Present to client for approval", "entities": ["Campaign", "CreativeAsset"], "validations": ["feedback collected", "revisions submitted"] },
+        { "step": 4, "action": "Launch Campaign", "description": "Push campaign live across channels", "entities": ["Campaign"], "validations": ["scheduling confirmed", "tags in place", "tracking active"] },
+        { "step": 5, "action": "Monitor Performance", "description": "Track KPIs and optimise", "entities": ["Campaign", "AnalyticsReport"], "validations": ["impressions tracked", "conversions measured", "ROI calculated"] }
+      ]
+    },
+    {
+      "name": "Timesheet & Billing Flow",
+      "description": "Track billable hours and generate client invoices",
+      "steps": [
+        { "step": 1, "action": "Log Hours", "description": "Team members log billable time", "entities": ["Timesheet", "TimeEntry"], "validations": ["hours logged", "project tagged", "description provided"] },
+        { "step": 2, "action": "Approve Timesheet", "description": "Project manager approves entries", "entities": ["Timesheet"], "validations": ["hours reasonable", "budget check", "overtime approved"] },
+        { "step": 3, "action": "Generate Invoice", "description": "Create invoice from approved hours", "entities": ["Invoice", "Timesheet"], "validations": ["rates applied", "totals correct", "retainer deducted if applicable"] },
+        { "step": 4, "action": "Send Invoice", "description": "Deliver invoice to client", "entities": ["Invoice"], "validations": ["invoice sent", "payment terms communicated"] }
+      ]
+    },
+    {
+      "name": "Resource Planning Flow",
+      "description": "Allocate team capacity across projects",
+      "steps": [
+        { "step": 1, "action": "Forecast Demand", "description": "Estimate upcoming resource needs", "entities": ["ResourcePlan"], "validations": ["project pipeline reviewed", "capacity estimated"] },
+        { "step": 2, "action": "Check Availability", "description": "Review team member schedules", "entities": ["TeamMember", "ResourcePlan"], "validations": ["availability confirmed", "conflicts flagged"] },
+        { "step": 3, "action": "Assign Resources", "description": "Assign team to projects", "entities": ["ResourcePlan", "Project"], "validations": ["allocation < capacity", "skill match confirmed"] },
+        { "step": 4, "action": "Track Utilization", "description": "Monitor billable utilization rates", "entities": ["ResourcePlan"], "validations": ["utilization reported", "under/over flagged"] }
+      ]
+    },
+    {
+      "name": "Client Reporting Flow",
+      "description": "Generate and deliver performance reports",
+      "steps": [
+        { "step": 1, "action": "Collect Metrics", "description": "Pull data from analytics platforms", "entities": ["AnalyticsReport"], "validations": ["data sources connected", "date range set"] },
+        { "step": 2, "action": "Generate Report", "description": "Build report with visuals and insights", "entities": ["ClientReport"], "validations": ["charts generated", "narrative added", "KPIs highlighted"] },
+        { "step": 3, "action": "Internal Review", "description": "Account manager reviews report", "entities": ["ClientReport"], "validations": ["accuracy checked", "insights validated"] },
+        { "step": 4, "action": "Present to Client", "description": "Deliver report and discuss results", "entities": ["ClientReport"], "validations": ["report shared", "meeting scheduled", "action items recorded"] }
+      ]
+    }
+  ]
+}

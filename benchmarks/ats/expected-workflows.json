@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "Job Posting Flow",
+      "description": "Create and publish job listings across channels",
+      "steps": [
+        { "step": 1, "action": "Create Requisition", "description": "Hiring manager submits job requisition", "entities": ["Requisition"], "validations": ["job title filled", "department set", "budget approved"] },
+        { "step": 2, "action": "Approve Requisition", "description": "HR approves or routes for approval", "entities": ["Requisition"], "validations": ["headcount verified", "comp range approved"] },
+        { "step": 3, "action": "Write Job Posting", "description": "Draft job description and requirements", "entities": ["JobPosting"], "validations": ["description complete", "requirements listed", "salary range included"] },
+        { "step": 4, "action": "Publish Job", "description": "Post to job boards and career page", "entities": ["JobPosting"], "validations": ["posted to LinkedIn", "posted to Indeed", "company career page live"] }
+      ]
+    },
+    {
+      "name": "Candidate Screening Flow",
+      "description": "Review applications and shortlist candidates",
+      "steps": [
+        { "step": 1, "action": "Receive Applications", "description": "Collect incoming applicant data", "entities": ["Application", "Candidate"], "validations": ["resume parsed", "contact info valid"] },
+        { "step": 2, "action": "Screen Resumes", "description": "HR reviews applications", "entities": ["Application"], "validations": ["skills matched", "experience verified", "must-haves checked"] },
+        { "step": 3, "action": "Phone Screen", "description": "Short phone interview", "entities": ["Interview", "Candidate"], "validations": ["availability confirmed", "basic qualifiers met"] },
+        { "step": 4, "action": "Shortlist Candidate", "description": "Move to interview stage", "entities": ["Candidate"], "validations": ["status updated", "hiring manager notified"] }
+      ]
+    },
+    {
+      "name": "Interview Scheduling Flow",
+      "description": "Coordinate interviews between candidates and panel",
+      "steps": [
+        { "step": 1, "action": "Select Panel", "description": "Assign interview panel members", "entities": ["Interview", "Interviewer"], "validations": ["panelists confirmed", "skills aligned"] },
+        { "step": 2, "action": "Send Availability", "description": "Share available time slots with candidate", "entities": ["Interview"], "validations": ["slots sent", "calendar synced"] },
+        { "step": 3, "action": "Confirm Interview", "description": "Candidate selects time and confirms", "entities": ["Interview"], "validations": ["time confirmed", "calendar invites sent", "meeting link provided"] },
+        { "step": 4, "action": "Collect Feedback", "description": "Gather interviewer feedback", "entities": ["InterviewFeedback"], "validations": ["all feedback submitted", "rating recorded", "recommendation provided"] }
+      ]
+    },
+    {
+      "name": "Offer Management Flow",
+      "description": "Extend and negotiate job offers",
+      "steps": [
+        { "step": 1, "action": "Prepare Offer", "description": "Draft offer letter with terms", "entities": ["Offer"], "validations": ["salary approved", "start date set", "benefits included"] },
+        { "step": 2, "action": "Approve Offer", "description": "HR and hiring manager approval", "entities": ["Offer"], "validations": ["comp approval received", "equity if applicable"] },
+        { "step": 3, "action": "Extend Offer", "description": "Send offer to candidate", "entities": ["Offer"], "validations": ["offer sent", "expiration date set"] },
+        { "step": 4, "action": "Accept Offer", "description": "Candidate signs and accepts", "entities": ["Offer", "Candidate"], "validations": ["offer signed", "background check initiated", "onboarding triggered"] }
+      ]
+    },
+    {
+      "name": "Candidate Pipeline Flow",
+      "description": "Manage candidate pipeline and nurture pipeline",
+      "steps": [
+        { "step": 1, "action": "Source Candidate", "description": "Proactively find potential hires", "entities": ["Candidate"], "validations": ["source recorded", "role matched"] },
+        { "step": 2, "action": "Add to Pipeline", "description": "Candidate added to talent pool", "entities": ["CandidatePipeline"], "validations": ["stage set", "tags applied"] },
+        { "step": 3, "action": "Nurture Engagement", "description": "Send relevant content and updates", "entities": ["CandidatePipeline"], "validations": ["engagement tracked", "interest maintained"] },
+        { "step": 4, "action": "Convert to Applicant", "description": "Candidate applies to open role", "entities": ["CandidatePipeline", "Application"], "validations": ["pipeline updated", "stage moved"] }
+      ]
+    }
+  ]
+}

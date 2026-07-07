@@ -1,0 +1,54 @@
+{
+  "workflows": [
+    {
+      "name": "User Onboarding Flow",
+      "description": "Guide new users through initial setup",
+      "steps": [
+        { "step": 1, "action": "Sign Up", "description": "User creates account", "entities": ["User"], "validations": ["email valid", "password strong", "terms accepted"] },
+        { "step": 2, "action": "Verify Email", "description": "Email verification required", "entities": ["User"], "validations": ["verification link clicked", "email confirmed"] },
+        { "step": 3, "action": "Workspace Setup", "description": "Configure workspace or project", "entities": ["Workspace"], "validations": ["workspace name set", "team invites if applicable", "integrations configured"] },
+        { "step": 4, "action": "First Key Action", "description": "Guide user to first value action", "entities": ["User"], "validations": ["onboarding checklist shown", "first action completed", "progress saved"] }
+      ]
+    },
+    {
+      "name": "Subscription Management Flow",
+      "description": "Manage plan selection, upgrades, and billing",
+      "steps": [
+        { "step": 1, "action": "Select Plan", "description": "Choose pricing tier", "entities": ["Subscription"], "validations": ["plan available", "features match needs"] },
+        { "step": 2, "action": "Enter Payment", "description": "Provide billing details", "entities": ["Subscription", "PaymentMethod"], "validations": ["card valid", "address verified"] },
+        { "step": 3, "action": "Activate Subscription", "description": "Access granted based on plan", "entities": ["Subscription"], "validations": ["subscription active", "features unlocked", "welcome sent"] },
+        { "step": 4, "action": "Handle Changes", "description": "Upgrade, downgrade, or cancel", "entities": ["Subscription"], "validations": ["proration calculated", "plan changed", "billing updated"] }
+      ]
+    },
+    {
+      "name": "Feature Provisioning Flow",
+      "description": "Enable and manage feature access",
+      "steps": [
+        { "step": 1, "action": "Check Entitlement", "description": "Verify plan includes feature", "entities": ["Subscription", "Feature"], "validations": ["feature in plan", "limits not exceeded"] },
+        { "step": 2, "action": "Grant Access", "description": "Enable feature for workspace", "entities": ["FeatureAccess"], "validations": ["access granted", "permissions configured"] },
+        { "step": 3, "action": "Track Usage", "description": "Monitor feature consumption", "entities": ["UsageMetric"], "validations": ["usage recorded", "limits tracked"] },
+        { "step": 4, "action": "Notify on Limits", "description": "Alert when approaching limits", "entities": ["UsageMetric"], "validations": ["threshold warning sent", "upgrade prompt shown"] }
+      ]
+    },
+    {
+      "name": "Billing & Invoicing Flow",
+      "description": "Process recurring billing and invoices",
+      "steps": [
+        { "step": 1, "action": "Generate Invoice", "description": "Create periodic invoice", "entities": ["Invoice"], "validations": ["items correct", "tax calculated", "amount matches plan"] },
+        { "step": 2, "action": "Charge Customer", "description": "Process payment via stored method", "entities": ["Invoice", "Payment"], "validations": ["payment captured", "invoice marked paid"] },
+        { "step": 3, "action": "Handle Failure", "description": "Retry failed payment", "entities": ["Payment"], "validations": ["retry logic triggered", "dunning sent", "service suspension if unresolved"] },
+        { "step": 4, "action": "Send Receipt", "description": "Email invoice receipt", "entities": ["Invoice"], "validations": ["receipt sent", "tax document available"] }
+      ]
+    },
+    {
+      "name": "Support Ticket Flow",
+      "description": "Handle customer support requests",
+      "steps": [
+        { "step": 1, "action": "Create Ticket", "description": "User submits support request", "entities": ["Ticket"], "validations": ["subject set", "priority assigned", "category selected"] },
+        { "step": 2, "action": "Auto-Reply", "description": "Acknowledge and suggest resources", "entities": ["Ticket"], "validations": ["auto-response sent", "knowledge base suggested"] },
+        { "step": 3, "action": "Assign Agent", "description": "Route to appropriate team", "entities": ["Ticket"], "validations": ["agent assigned", "SLA started", "queue prioritized"] },
+        { "step": 4, "action": "Resolve Ticket", "description": "Issue resolved and closed", "entities": ["Ticket"], "validations": ["resolution provided", "customer satisfied", "ticket closed", "feedback collected"] }
+      ]
+    }
+  ]
+}

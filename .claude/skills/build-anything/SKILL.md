@@ -1,194 +1,275 @@
 ---
 name: build-anything
-description: Orchestrate a multi-stage pipeline to analyze, design, and plan any software project. Produces a complete blueprint with architecture, database schema, API design, frontend design, testing strategy, deployment plan, and documentation.
+description: Orchestrate the full Build.Anything pipeline — design, plan, and generate any software project from a single prompt. Delegates to the existing orchestrator, never duplicates logic.
 ---
 
 # /build-anything
 
-Orchestrate a modular, resumable pipeline that analyzes requirements and produces a complete project blueprint. This skill does NOT generate code — it produces structured design artifacts that a code-generation step can consume later.
+## Invocation
 
-## Architecture
+When the user types `/build-anything "<prompt>"`, this skill takes control immediately.
 
-```
-User Input
-    │
-    ▼
-Intent Router          ← detects: prompt, website, PRD, figma, codebase, database
-    │
-    ▼
-BOS Loader             ← detects industry, loads knowledge pack
-    │
-    ▼
-Shared Orchestrator
-    │
-    ├── project-intake
-    ├── research
-    ├── business-analysis
-    ├── architecture
-    ├── database-design
-    ├── api-design
-    ├── frontend-design
-    ├── integration
-    ├── quality-assurance
-    ├── deployment
-    └── documentation
-    │
-    ▼
-Quality Gates          ← validates artifacts between stages
-    │
-    ▼
-Output                 ← JSON artifacts + Markdown documentation
-```
+Do NOT fall back to Claude's default reasoning. Execute the pipeline below.
 
-## When to use this skill
-
-- User describes a software project and wants a full design/blueprint
-- User wants architecture, database, API, and frontend design for a project
-- User provides a URL, PRD, Figma link, codebase path, or database connection
-- User wants a structured plan before building
-
-## Usage
-
-### From Claude Desktop
+## Execution Flow
 
 ```
-/build-anything "Build a SaaS project management tool with team collaboration, Kanban boards, and time tracking"
+User prompt
+  │
+  ▼
+Banner + Execution ID
+  │
+  ▼
+Parse input (prompt | URL | hybrid)
+  │
+  ▼
+Intent Router          ← src/orchestration/intent-router.ts
+  │
+  ▼
+Project Intake         ← src/orchestration/stages/project-intake.ts
+  │
+  ▼
+Decision Engine        ← src/orchestration/decision-engine.ts
+  │
+  ▼
+Planner                ← src/orchestration/planner.ts
+  │
+  ▼
+BOS Detection          ← src/orchestration/bos-loader.ts
+  │
+  ▼
+Knowledge Graph        ← src/bos/knowledge/seeds/index.ts
+  │
+  ▼
+Research               ← src/orchestration/stages/research.ts
+  │
+  ▼
+Business Analysis      ← src/orchestration/stages/business-analysis.ts
+  │
+  ▼
+Architecture           ← src/orchestration/stages/architecture.ts
+  │
+  ▼
+Database Design        ← src/orchestration/stages/database-design.ts
+  │
+  ▼
+API Design             ← src/orchestration/stages/api-design.ts
+  │
+  ▼
+Design Intelligence    ← src/orchestration/design-intelligence/engine.ts
+  │
+  ▼
+Frontend Design        ← src/orchestration/stages/frontend-design.ts
+  │
+  ▼
+Validation             ← src/orchestration/validation-pipeline.ts
+  │
+  ▼
+Review Board           ← src/orchestration/stages/review-board.ts
+  │
+  ▼
+Self-Healing           ← src/engine/self-healing-engine.ts
+  │
+  ▼
+Runtime                ← src/orchestration/runtime/runtime-engine.ts
+  │
+  ▼
+Execution Report       ← src/orchestration/execution-report.ts
 ```
 
-### Programmatic
+Every stage above delegates to the existing source file listed. No stage logic lives in this skill.
+
+## Banner
+
+Immediately after invocation display:
+
+```
+══════════════════════════════════════
+  Build.Anything v2
+  Execution ID: <uuid>
+  Mode: <prompt|website|hybrid>
+  Pipeline: Build.Anything
+  Status: Starting
+══════════════════════════════════════
+```
+
+## Stage Progress
+
+For every stage display:
+
+```
+[1/18] Intent Router        ← parsing input
+[2/18] Project Intake       ← building manifest
+[3/18] Decision Engine      ← selecting strategy
+[4/18] Planner              ← ordering stages
+[5/18] BOS Detection        ← detecting industry
+[6/18] Knowledge Graph      ← enriching domain
+[7/18] Research             ← analyzing requirements
+[8/18] Business Analysis    ← mapping entities
+[9/18] Architecture         ← designing system
+[10/18] Database Design     ← modeling schema
+[11/18] API Design          ← defining endpoints
+[12/18] Design Intelligence ← selecting design
+[13/18] Frontend Design     ← composing UI
+[14/18] Validation          ← validating artifacts
+[15/18] Review Board        ← reviewing output
+[16/18] Self-Healing        ← fixing issues
+[17/18] Runtime             ← building project
+[18/18] Execution Report    ← generating report
+```
+
+Use the existing EventBus (`src/orchestration/event-bus.ts`) for structured progress. Subscribe to events and print human-readable status.
+
+## LLM Integration (Claude Desktop)
+
+The orchestrator calls an `LLMAdapterInterface` for each stage that needs LLM work. In Claude Desktop, **you are the LLM provider**.
+
+Create an inline adapter:
 
 ```typescript
-import { Orchestrator, LLMAdapter } from './src/orchestration/index.js';
+import type { LLMAdapterInterface, LLMCallParams, LLMCallResult } from './src/orchestration/types.js';
 
-const orchestrator = new Orchestrator({
-  maxConcurrency: 3,
+const adapter: LLMAdapterInterface = {
+  call: async (params: LLMCallParams): Promise<LLMCallResult> => {
+    // Read params.prompt, params.systemPrompt, params.taskType
+    // Use your own reasoning to produce the response
+    // Return structured LLMCallResult with content, usage, provider="claude", model="claude-sonnet-4"
+    const startTime = Date.now();
+    const content = /* your response based on params */ "";
+    return {
+      content,
+      parsed: params.responseSchema ? JSON.parse(content) : undefined,
+      usage: { input: 0, output: 0, total: 0 },
+      provider: 'claude',
+      model: 'claude-sonnet-4-20250514',
+      durationMs: Date.now() - startTime,
+    };
+  },
+  getTotalUsage: () => ({ calls: 0, totalTokens: 0, byProvider: {} }),
+};
+```
+
+Pass this adapter to the orchestrator via `setLLMAdapter(adapter)`.
+
+## Pipeline Execution
+
+### Path A: Design-only (blueprint)
+
+Use the `Orchestrator` class when the user asks for design/planning only:
+
+```typescript
+import { Orchestrator } from './src/orchestration/orchestrator.js';
+import { ExecutionReportGenerator } from './src/orchestration/execution-report.js';
+
+const orch = new Orchestrator({
   workingDirectory: '.build-anything',
-  contextBudgetTokens: 100_000,
-  dualOutput: true,
+  enableCheckpoints: true,
+  enableLLM: true,
 });
-
-orchestrator.setLLMAdapter(new LLMAdapter());
-
-orchestrator.on('stage:complete', (event) => {
-  console.log(`Done: ${event.stageId}`);
-});
-
-// From a prompt
-const result = await orchestrator.run('Build a SaaS tool...');
-
-// From a URL
-const result = await orchestrator.run('https://example.com');
-
-// From a manifest
-const result = await orchestrator.runFromManifest(manifest);
+orch.setLLMAdapter(adapter);
+orch.on('stage:start', (e) => console.log(`[${e.stageId}] Starting...`));
+orch.on('stage:complete', (e) => console.log(`[${e.stageId}] Done (${e.data?.durationMs}ms)`));
+const result = await orch.run(prompt);
+const report = await new ExecutionReportGenerator().generate(result);
 ```
 
-## Key Features
+### Path B: Code generation (build)
 
-### Intent Routing
-Automatically detects input type (prompt, website, PRD, Figma, codebase, database) and routes to the appropriate intake path. All paths converge on the same orchestrator.
+Use the `DeterministicOrchestratorV4` when the user asks to build/generate code:
 
-### BOS (Business Operating System)
-Detects the project's industry and loads reusable knowledge packs with:
-- Industry-specific entities and relationships
-- Compliance requirements and checklists
-- Common integrations
-- Typical user journeys
-- Domain-specific prompts for each stage
-
-Built-in industries: ecommerce, saas, restaurant, fitness, healthcare, education, fintech, real-estate, media, portfolio, marketplace, nonprofit.
-
-### Context Budget Management
-Tracks token usage across the pipeline to stay within Claude Desktop's context limits. Automatically summarizes large artifacts between stages.
-
-### Quality Gates
-Validates artifact quality between stages:
-- Manifest validation after intake
-- Research completeness after research
-- Requirements validation after business analysis
-- Architecture validation after design
-- API design validation
-- Frontend design validation
-
-### Human Approval
-Optional approval checkpoints between stages. Configure with:
 ```typescript
-const orchestrator = new Orchestrator({
-  requireApproval: true,
-  approvalHandler: {
-    requestApproval: async (approval) => {
-      // Show to user, get decision
-      return { ...approval, status: 'approved' };
-    }
-  }
-});
+import { DeterministicOrchestratorV4 } from './src/agents/deterministic-orchestrator-v4.js';
+import type { GenerationIntent } from './src/types/index.js';
+
+const orch = new DeterministicOrchestratorV4('./sandbox_workspaces');
+const intent: GenerationIntent = { type: 'build-app', prompt };
+const result = await orch.processGenerationIntent(executionId, intent);
 ```
 
-### Dual Output
-Every stage produces both:
-- **JSON artifacts**: Machine-readable structured data
-- **Markdown documentation**: Human-readable documentation
+The orchestrator handles BRE v2 → pipeline v2 → execution blueprint → application graph → content resolution → renderer → self-healing, all deterministically.
 
-### Checkpoint / Resume
-Pipeline state is persisted after each stage. If interrupted, re-running resumes from the last completed stage.
+### Path C: Full pipeline (design → build)
 
-## Artifacts produced
+For a complete end-to-end run, run both:
 
-| Artifact Key | Description |
-|---|---|
-| `manifest` | Structured project manifest |
-| `research.domain` | Domain research |
-| `research.competitive` | Competitive analysis |
-| `requirements` | User stories, features, risks |
-| `features` | Prioritized feature list |
-| `architecture.system` | System architecture |
-| `architecture.tech-stack` | Technology stack |
-| `database.schema` | Database design |
-| `api.endpoints` | API endpoints |
-| `api.auth` | Authentication design |
-| `frontend.pages` | Page layouts |
-| `frontend.components` | Component hierarchy |
-| `frontend.design-tokens` | Design system |
-| `integrations` | Third-party integrations |
-| `qa.plan` | Testing strategy |
-| `qa.quality-gates` | Quality gates |
-| `deployment.config` | Deployment plan |
-| `docs.readme` | README documentation |
-| `docs.api` | API documentation |
+1. `Orchestrator.run()` for design artifacts
+2. `DeterministicOrchestratorV4.processGenerationIntent()` for code generation
 
-## LLM Providers
+The design artifacts from step 1 inform the build in step 2.
 
-Set environment variables for any supported provider:
-```bash
-GROQ_API_KEY=gsk_...
-GEMINI_API_KEY=AIza...
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-```
+## Input Detection
 
-## Extending the Pipeline
+Use the intent router to detect input type:
 
-### Custom Stages
 ```typescript
-orchestrator.registerStage(myCustomStage);
+const intentType = input.startsWith('http') ? 'website'
+  : input.match(/figma\.com/i) ? 'figma'
+  : 'prompt';
 ```
 
-### Custom BOS Packs
+For prompts (the common case), pass the text directly to the orchestrator. For URLs, the website adapter handles scraping.
+
+## Artifact Metadata
+
+Every artifact produced must include:
+
+- `generator`: "Build.Anything"
+- `version`: "2.0"
+- `executionId`: the generated execution ID
+- `stage`: the stage name
+- `timestamp`: ISO timestamp
+
+Use the ArtifactStore to write artifacts with this metadata:
+
 ```typescript
-orchestrator.getBOSLoader().registerPack(myIndustryPack);
+orch.getArtifactStore().store(
+  'architecture.system',
+  { generator: 'Build.Anything', version: '2.0', executionId, stage: 'architecture', timestamp: new Date().toISOString(), /* ... content */ },
+  'json',
+  'architecture'
+);
 ```
 
-### Custom Quality Gates
-```typescript
-const orchestrator = new Orchestrator({
-  qualityGates: [...DEFAULT_QUALITY_GATES, myCustomGate],
-});
-```
+## Error Handling
 
-## Constraints
+| Failure | Action |
+|---------|--------|
+| Stage execution error | Retry up to `maxRetries` (default 3) via `RetryEngine` |
+| Validation failure | Invoke `SelfHealingEngine` for auto-fixable issues; skip non-blocking gates |
+| LLM adapter failure | Retry with exponential backoff; fallback to deterministic defaults |
+| Checkpoint available | Resume from last checkpoint via `Planner.loadCheckpoint()` |
+| Irrecoverable | Record error in execution report, return partial results |
 
-- This skill produces **design artifacts only** — no code generation
-- All content is stored in structured data (JSON), never hardcoded
-- No LLM call spans more than one stage
-- Every stage validates its own output before passing downstream
-- Context budget is tracked to stay within Claude Desktop limits
+Do NOT restart the entire pipeline. Use checkpoint/resume from `src/orchestration/planner.ts`.
+
+## Output
+
+Return to the user:
+
+1. **Summary**: What was built, key metrics (files, pages, entities, APIs, duration)
+2. **Generated artifacts**: List of pages and key files produced
+3. **Execution report**: Full report from `ExecutionReportGenerator`
+4. **Next steps**: Suggested customizations or follow-up commands
+
+If errors occurred, include them transparently with recovery suggestions.
+
+## Anti-patterns (never do these)
+
+- Do NOT generate boilerplate code inline — use the renderer
+- Do NOT bypass the orchestrator with ad-hoc reasoning
+- Do NOT hardcode prompts for individual stages — stage prompts come from BOS packs
+- Do NOT skip stages unless the planner explicitly allows it
+- Do NOT modify orchestrator, stage, or pipeline code from this skill
+- Do NOT call an external LLM API — in Claude Desktop, you ARE the LLM
+
+## Verification
+
+After any `/build-anything` run, verify:
+
+- [ ] Banner was displayed
+- [ ] All 18 stages executed (or were properly skipped by planner)
+- [ ] Stage progress was displayed
+- [ ] Execution report was generated
+- [ ] Artifacts carry Build.Anything metadata
+- [ ] Errors were handled (retry/checkpoint/self-heal)
+- [ ] Existing tests still pass (`npm test`)
