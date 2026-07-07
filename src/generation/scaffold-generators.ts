@@ -4,17 +4,17 @@
  * These generators produce real, working files:
  * - package.json with correct dependencies
  * - tsconfig.json for Next.js + TypeScript
- * - tailwind.config.ts with design tokens
+ * - tailwind.config.ts with design tokens & premium animation keyframes
  * - next.config.mjs
  * - postcss.config.mjs
  * - prisma/schema.prisma from database schema
- * - src/app/globals.css
- * - src/app/layout.tsx
+ * - src/app/globals.css with layout engines & motion tracks
+ * - src/app/layout.tsx driven by dynamic layout blueprint schemas
  */
 
 import type { ProjectManifest } from '../orchestration/types.js';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types & Extended Design Blueprints ───────────────────────────────────────
 
 export interface DesignTokens {
   colors?: {
@@ -33,6 +33,30 @@ export interface DesignTokens {
     bodyFont?: string;
   };
   spacing?: Record<string, string>;
+}
+
+export interface LayoutSectionBlueprint {
+  id: string;
+  type: 'hero-search' | 'categories' | 'featured-listings' | 'bento-grid' | 'trust-metrics' | 'pricing-cards' | 'cta-banner' | string;
+  paddingClass: string;
+  animation?: {
+    type: 'fade-up' | 'scroll-reveal' | 'count-up' | 'marquee-infinite';
+    duration?: number;
+    delay?: number;
+  };
+  props?: Record<string, any>;
+}
+
+export interface DynamicLayoutPlan {
+  patternId: string;
+  patternName: string;
+  industry: string;
+  sections?: LayoutSectionBlueprint[];
+  layoutConfig?: {
+    headerStyle?: 'floating-glass' | 'sidebar-dock' | 'minimal-clean' | 'classic';
+    footerStyle?: 'rich-marketplace' | 'saas-compact' | 'minimalist';
+    enableScrollEffects?: boolean;
+  };
 }
 
 export interface DbSchema {
@@ -83,13 +107,11 @@ export function generatePackageJson(manifest: ProjectManifest, techStack?: TechS
     'postcss': '^8.4.0',
   };
 
-  // Add database-specific deps
   if (techStack?.orm === 'prisma' || techStack?.database === 'postgresql' || techStack?.database === 'mysql') {
     deps['@prisma/client'] = '^5.10.2';
     devDeps['prisma'] = '5.10.2';
   }
 
-  // Add auth if needed
   if (techStack?.auth === 'nextauth') {
     deps['next-auth'] = '^4.24.0';
   }
@@ -194,9 +216,31 @@ const config: Config = {
         sans: ['Inter', 'sans-serif'],
       },
       borderRadius: {
+        xl: '1rem',
+        '2xl': '1.5rem',
+        '3xl': '2rem',
         lg: '0.5rem',
         md: '0.375rem',
         sm: '0.25rem',
+      },
+      animation: {
+        'marquee-infinite': 'marquee-infinite 30s linear infinite',
+        'fade-up': 'fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'shimmer-pulse': 'shimmer-pulse 2s infinite linear',
+      },
+      keyframes: {
+        'marquee-infinite': {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(24px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'shimmer-pulse': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
     },
   },
@@ -279,6 +323,39 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Luxury & High-Performance Design Pattern Extensions */
+@layer components {
+  .glassmorphism-canvas {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .dark .glassmorphism-canvas {
+    background: rgba(24, 24, 27, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(63, 63, 70, 0.3);
+  }
+
+  .marquee-track-container {
+    display: flex;
+    overflow: hidden;
+    user-select: none;
+    mask-image: linear-gradient(to right, transparent, white 15%, white 85%, transparent);
+  }
+
+  .bento-card-gradient {
+    background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,1) 100%);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .dark .bento-card-gradient {
+    background: linear-gradient(135deg, rgba(24,24,27,0.7) 0%, rgba(9,9,11,0.9) 100%);
+  }
+}
+
 img {
   max-width: 100%;
   height: auto;
@@ -291,27 +368,29 @@ img {
 }`;
 }
 
-// ─── Root Layout Generator ────────────────────────────────────────────────────
+// ─── Root Layout Generator (Pattern-Driven Layout Optimization) ────────────────
 
-export function generateRootLayout(manifest: ProjectManifest, tokens?: DesignTokens, pages?: Array<{name: string; path: string}>, biz?: { description?: string; contact?: { email?: string; phone?: string; address?: string; city?: string } }): string {
+export function generateRootLayout(
+  manifest: ProjectManifest, 
+  tokens?: DesignTokens, 
+  pages?: Array<{name: string; path: string}>, 
+  biz?: { description?: string; contact?: { email?: string; phone?: string; address?: string; city?: string } },
+  layoutPlan?: DynamicLayoutPlan
+): string {
   const rawTitle = manifest.name;
   const title = (typeof rawTitle === 'string' ? rawTitle : 'Build Anything App');
   const rawDesc = manifest.description;
-  // Use clean description, not raw prompt text
   const description = biz?.description ?? (typeof rawDesc === 'string' ? rawDesc : 'Built with Build.Anything');
   const primaryColor = tokens?.colors?.primary ?? '#1a1a2e';
   
-  // Contact info from business content, not hardcoded
   const contactEmail = biz?.contact?.email ?? `info@${title.toLowerCase().replace(/\s+/g, '')}.com`;
   const contactPhone = biz?.contact?.phone ?? '(555) 000-0000';
   const contactAddress = biz?.contact?.address ?? '';
   const contactCity = biz?.contact?.city ?? '';
-  const contactLine = [contactAddress, contactCity].filter(Boolean).join(', ') ?? 'Location TBD';
 
-  // Nav pages — use actual generated pages, not hardcoded links
   const navPages = (pages ?? [])
     .filter(p => p.path && !p.path.includes('['))
-    .slice(0, 5);
+    .slice(0, 7); // Allow expanded layout tracks
   
   let headingFont = 'Inter';
   if (tokens?.typography) {
@@ -324,11 +403,115 @@ export function generateRootLayout(manifest: ProjectManifest, tokens?: DesignTok
     }
   }
 
-  // Convert font name to Next.js import name (remove spaces, capitalize each word)
   const fontImportName = headingFont
     .split(/\s+/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join('_');
+
+  // Evaluate structural intent from incoming design pattern plan
+  const industryContext = layoutPlan?.industry?.toLowerCase() ?? 'generic';
+  const patternId = layoutPlan?.patternId ?? 'pattern-generic-standard';
+  
+  // Choose header structure matching specific design system requirements
+  let headerBlock = '';
+  if (industryContext === 'real-estate' || layoutPlan?.layoutConfig?.headerStyle === 'floating-glass') {
+    headerBlock = `
+        <header className="fixed top-4 left-0 right-0 z-50 px-4">
+          <nav className="max-w-7xl mx-auto h-20 glassmorphism-canvas rounded-2xl px-6 flex items-center justify-between shadow-lg border border-white/20 transition-all duration-300">
+            <Link href="/" className="flex items-center gap-2 text-2xl font-black tracking-tight text-gray-900 dark:text-white">
+              <span className="w-3 h-3 rounded-full bg-[${primaryColor}] animate-pulse" />
+              ${title}
+            </Link>
+            <div className="hidden md:flex items-center gap-8 font-medium">
+              {navPages.map((p) => (
+                <Link key={p.path} href={p.path} className="text-sm text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white transition-colors relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-[${primaryColor}] after:transition-all">{p.name}</Link>
+              ))}
+            </div>
+            <Link
+              href="/contact"
+              className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold rounded-xl hover:opacity-90 shadow-sm transition-all transform hover:-translate-y-0.5"
+            >
+              View Listings
+            </Link>
+          </nav>
+        </header>
+    `;
+  } else {
+    headerBlock = `
+        <header className="sticky top-0 z-50 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-gray-100 dark:border-zinc-800">
+          <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <Link href="/" className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+              ${title}
+            </Link>
+            <div className="hidden md:flex items-center gap-6 font-medium">
+              {navPages.map((p) => (
+                <Link key={p.path} href={p.path} className="text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">{p.name}</Link>
+              ))}
+            </div>
+            <Link
+              href="/contact"
+              className="px-4 py-2 bg-[${primaryColor}] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-all"
+            >
+              Launch Platform
+            </Link>
+          </nav>
+        </header>
+    `;
+  }
+
+  // Choose footer matrix layout context safely
+  let footerBlock = '';
+  if (industryContext === 'real-estate' || layoutPlan?.layoutConfig?.footerStyle === 'rich-marketplace') {
+    footerBlock = `
+        <footer className="bg-slate-900 text-slate-100 border-t border-slate-800 pt-20 pb-12">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
+              <div className="md:col-span-4 space-y-4">
+                <h3 className="text-xl font-black tracking-tight">${title}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">${description}</p>
+                <div className="pt-2 text-xs text-slate-500 font-mono tracking-wide uppercase">Brokerage License #RE-992104-AZ</div>
+              </div>
+              <div className="md:col-span-3 md:col-start-6 space-y-4">
+                <h4 className="text-xs font-bold tracking-widest uppercase text-slate-400">Exclusive Portfolios</h4>
+                <div className="space-y-2.5 text-sm text-slate-300">
+                  <a href="#" className="block hover:text-white transition-colors">Luxury Waterfront Estates</a>
+                  <a href="#" className="block hover:text-white transition-colors">Metropolitan Penthouses</a>
+                  <a href="#" className="block hover:text-white transition-colors">Architectural Custom Builds</a>
+                </div>
+              </div>
+              <div className="md:col-span-3 space-y-4">
+                <h4 className="text-xs font-bold tracking-widest uppercase text-slate-400">HQ Brokerage</h4>
+                <div className="space-y-2 text-sm text-slate-400">
+                  ${contactAddress ? `<p className="text-slate-300">${contactAddress}</p>` : ''}
+                  ${contactCity ? `<p className="text-slate-300">${contactCity}</p>` : ''}
+                  <p className="font-medium text-slate-200">${contactEmail}</p>
+                  <p className="font-medium text-slate-200">${contactPhone}</p>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+              <p>© {new Date().getFullYear()} ${title} Real Estate. Equal Housing Opportunity. All records verified.</p>
+              <div className="flex gap-6">
+                <a href="#" className="hover:text-white transition-colors">Compliance</a>
+                <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              </div>
+            </div>
+          </div>
+        </footer>
+    `;
+  } else {
+    footerBlock = `
+        <footer className="bg-zinc-950 text-zinc-50 border-t border-zinc-900 py-12">
+          <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+              <h4 className="font-bold text-sm">${title}</h4>
+              <p className="text-zinc-400 text-xs mt-1">${description}</p>
+            </div>
+            <p className="text-xs text-zinc-500">© {new Date().getFullYear()} ${title}. Engine powered infrastructure.</p>
+          </div>
+        </footer>
+    `;
+  }
 
   return `import type { Metadata } from 'next'
 import { ${fontImportName} } from 'next/font/google'
@@ -351,70 +534,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={font.variable}>
-      <body className="min-h-screen bg-white text-gray-900 antialiased">
-        <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/" className="text-xl font-bold text-[${primaryColor}]">
-              ${title}
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              {navPages.map((p) => (
-                <Link key={p.path} href={p.path} className="text-gray-600 hover:text-gray-900 transition-colors">{p.name}</Link>
-              ))}
-            </div>
-            <Link
-              href="/contact"
-              className="px-5 py-2 bg-[${primaryColor}] text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Get in Touch
-            </Link>
-          </div>
-        </nav>
-        {children}
-        <footer className="bg-gray-900 text-white py-12">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="grid md:grid-cols-4 gap-8 mb-8">
-              <div>
-                <h3 className="text-lg font-bold mb-4">${title}</h3>
-                <p className="text-gray-400 text-sm">${description}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-3">Quick Links</h4>
-                <div className="space-y-2 text-sm text-gray-400">
-                  {navPages.map((p) => (
-                    <Link key={p.path} href={p.path} className="block hover:text-white transition-colors">{p.name}</Link>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-3">Contact</h4>
-                <div className="space-y-2 text-sm text-gray-400">
-                  ${contactAddress ? `<p>${'${contactAddress}'}</p>` : ''}
-                  ${contactCity ? `<p>${'${contactCity}'}</p>` : ''}
-                  <p>${'${contactEmail}'}</p>
-                  <p>${'${contactPhone}'}</p>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-3">Follow Us</h4>
-                <div className="flex gap-4">
-                  <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
-                    <span className="sr-only">Instagram</span>
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" /></svg>
-                  </a>
-                  <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
-                    <span className="sr-only">Twitter</span>
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-              © {new Date().getFullYear()} ${title}. All rights reserved.
-            </div>
-          </div>
-        </footer>
+    <html lang="en" className={\`\${font.variable} scroll-smooth\`}>
+      <body 
+        className="min-h-screen bg-white dark:bg-zinc-950 text-gray-900 dark:text-zinc-50 antialiased relative selection:bg-slate-500/10"
+        data-active-pattern="${patternId}"
+      >
+        ${headerBlock.trim()}
+        
+        <main className="w-full dynamic-layout-canvas">
+          {children}
+        </main>
+
+        ${footerBlock.trim()}
       </body>
     </html>
   )
@@ -425,9 +556,7 @@ export default function RootLayout({
 
 export function generatePrismaSchema(schema: DbSchema, database?: string): string {
   const dbProvider = database === 'mysql' ? 'mysql' : 'postgresql';
-  const dbUrl = database === 'mysql'
-    ? 'env("DATABASE_URL")'
-    : 'env("DATABASE_URL")';
+  const dbUrl = 'env("DATABASE_URL")';
 
   const lines: string[] = [
     'generator client {',
@@ -454,7 +583,6 @@ export function generatePrismaSchema(schema: DbSchema, database?: string): strin
       if (col.primaryKey) modifiers.push('@id @default(cuid())');
       if (col.unique && !col.primaryKey) modifiers.push('@unique');
 
-      // Add decorators for timestamp fields if missing
       if (col.name === 'createdAt' && !modifiers.some(m => m.includes('default'))) {
         modifiers.push('@default(now())');
       }
@@ -466,7 +594,6 @@ export function generatePrismaSchema(schema: DbSchema, database?: string): strin
       lines.push(`  ${col.name.padEnd(24)} ${prismaType}${col.nullable ? '?' : ''}${modifierStr}`);
     }
 
-    // Add timestamps only if not already present
     if (!colNames.has('createdAt') && !colNames.has('updatedAt')) {
       lines.push('');
       lines.push('  createdAt     DateTime  @default(now())');
@@ -507,7 +634,6 @@ export function generateApiRoute(endpoint: { method: string; path: string; descr
   const pathParts = endpoint.path.replace(/^\//, '').split('/');
   const routeName = pathParts[pathParts.length - 1] ?? 'index';
 
-  // Map reserved keywords to valid function names
   const methodMap: Record<string, string> = {
     'DELETE': 'DELETE',
     'NEW': 'CREATE',
@@ -522,7 +648,6 @@ import type { NextRequest } from 'next/server'
  */
 export async function ${funcName}(request: NextRequest) {
   try {
-    // TODO: Implement ${endpoint.method} ${endpoint.path}
     return NextResponse.json({ message: '${endpoint.method} ${endpoint.path} - not yet implemented' })
   } catch (error) {
     console.error('API Error:', error)
