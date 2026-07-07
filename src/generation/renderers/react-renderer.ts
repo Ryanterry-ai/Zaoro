@@ -21,6 +21,8 @@ import type {
   RenderResult,
   ComponentSourceRec,
 } from './renderer.js';
+import { SkillIntegrator } from '../skill-integrator.js';
+import type { PageLayout, SectionLayout } from '../skill-integrator.js';
 import { stageLogger } from '../../core/debug-logger.js';
 
 const log = stageLogger('render');
@@ -80,6 +82,8 @@ export class ReactRenderer implements Renderer {
   /** External packages collected during rendering for package.json */
   private externalPackages: Record<string, string> = {};
 
+  private readonly skillIntegrator = new SkillIntegrator();
+
   renderComponent(spec: ComponentSpec, context: RenderContext): RenderedFile {
     log.debug('Rendering component', { type: spec.type });
     const componentName = spec.type;
@@ -92,7 +96,7 @@ export class ReactRenderer implements Renderer {
       this.externalPackages[sourceRec.packageName] = '^1.0.0';
     }
 
-    const code = this.generateComponentCode(spec, sourceRec);
+    const code = this.generateComponentCode(spec, sourceRec, context);
     return {
       path: `components/${componentName}.tsx`,
       content: code,
@@ -376,6 +380,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
 `,
       type: 'style',
     };
@@ -486,7 +495,60 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   // ─── Code Generation Helpers ───────────────────────────────────────────────
 
-  private generateComponentCode(spec: ComponentSpec, sourceRec?: ComponentSourceRec): string {
+  /**
+   * Resolve the SectionLayout for a component in the current render context.
+   * Falls back to a default if no pageLayout is in context.
+   */
+  private getSectionLayout(
+    spec: ComponentSpec,
+    context: RenderContext,
+  ): SectionLayout {
+    if (context.pageLayout) {
+      const found = context.pageLayout.sections.find(s => s.componentType === spec.type);
+      if (found) return found;
+    }
+    // Fallback defaults
+    return {
+      componentType: spec.type,
+      spacing: 'py-16 px-6',
+      background: 'transparent',
+      animation: 'fade-up',
+      showHeading: true,
+    };
+  }
+
+  private resolveBackgroundClass(background: SectionLayout['background'], primaryColor: string): string {
+    switch (background) {
+      case 'surface':    return 'bg-zinc-900/50';
+      case 'primary':    return 'bg-primary text-white';
+      case 'gradient':   return 'bg-gradient-to-br from-zinc-900 via-zinc-900 to-primary/20';
+      case 'image':      return 'bg-cover bg-center bg-no-repeat';
+      case 'transparent':
+      default:           return '';
+    }
+  }
+
+  private resolveAnimationProps(animation: SectionLayout['animation']): string {
+    switch (animation) {
+      case 'fade-up':
+        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }}`;
+      case 'stagger':
+        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.4, staggerChildren: 0.08 }}`;
+      case 'scale-in':
+        return `initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }}`;
+      case 'slide-left':
+        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.55 }}`;
+      case 'parallax':
+        return `initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}`;
+      case 'marquee':
+      case 'countup':
+      case 'none':
+      default:
+        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.4 }}`;
+    }
+  }
+
+  private generateComponentCode(spec: ComponentSpec, sourceRec?: ComponentSourceRec, context?: RenderContext): string {
     const componentName = spec.type;
 
     // If this component comes from an external source, generate a re-export wrapper
@@ -509,8 +571,17 @@ export default function ${componentName}(${this.hasProps(spec) ? `props: ${compo
     // Build props interface
     const propsInterface = this.generatePropsInterface(spec);
 
+    // Resolve SectionLayout from SkillIntegrator — drives visual treatment
+    const layout = context ? this.getSectionLayout(spec, context) : {
+      componentType: spec.type,
+      spacing: 'py-16 px-6',
+      background: 'transparent' as const,
+      animation: 'fade-up' as const,
+      showHeading: true,
+    };
+
     // Build component body
-    const body = this.generateComponentBody(spec);
+    const body = this.generateComponentBody(spec, layout);
 
     return `'use client';
 
@@ -572,7 +643,7 @@ ${body}
     return lines.join('\n');
   }
 
-  private generateComponentBody(spec: ComponentSpec): string {
+  private generateComponentBody(spec: ComponentSpec, layout: SectionLayout): string {
     const lines: string[] = [];
 
     // Destructure props
@@ -583,103 +654,161 @@ ${body}
 
     // Generate JSX based on component type
     switch (spec.type) {
-      case 'HeroBanner':
-        lines.push(...this.generateHeroBannerBody(spec));
-        break;
-      case 'FeatureGrid':
-        lines.push(...this.generateFeatureGridBody(spec));
-        break;
-      case 'PricingTable':
-        lines.push(...this.generatePricingTableBody(spec));
-        break;
-      case 'Testimonials':
-        lines.push(...this.generateTestimonialsBody(spec));
-        break;
-      case 'CTASection':
-        lines.push(...this.generateCTASectionBody(spec));
-        break;
-      case 'FAQSection':
-        lines.push(...this.generateFAQSectionBody(spec));
-        break;
-      case 'StatsCards':
-        lines.push(...this.generateStatsCardsBody(spec));
-        break;
-      case 'AuthForm':
-        lines.push(...this.generateAuthFormBody(spec));
-        break;
-      case 'ContactForm':
-        lines.push(...this.generateContactFormBody(spec));
-        break;
-      case 'DataTable':
-        lines.push(...this.generateDataTableBody(spec));
-        break;
-      case 'Footer':
-        lines.push(...this.generateFooterBody(spec));
-        break;
-      case 'CalendarWidget':
-        lines.push(...this.generateCalendarWidgetBody(spec));
-        break;
-      case 'BookingCalendar':
-        lines.push(...this.generateBookingCalendarBody(spec));
-        break;
-      default:
-        lines.push(...this.generateGenericBody(spec));
-        break;
+      case 'HeroBanner':      lines.push(...this.generateHeroBannerBody(spec, layout)); break;
+      case 'FeatureGrid':     lines.push(...this.generateFeatureGridBody(spec, layout)); break;
+      case 'StatsCards':      lines.push(...this.generateStatsCardsBody(spec, layout)); break;
+      case 'Testimonials':    lines.push(...this.generateTestimonialsBody(spec, layout)); break;
+      case 'PricingTable':    lines.push(...this.generatePricingTableBody(spec)); break;
+      case 'CTASection':      lines.push(...this.generateCTASectionBody(spec)); break;
+      case 'FAQSection':      lines.push(...this.generateFAQSectionBody(spec)); break;
+      case 'AuthForm':        lines.push(...this.generateAuthFormBody(spec)); break;
+      case 'ContactForm':     lines.push(...this.generateContactFormBody(spec)); break;
+      case 'DataTable':       lines.push(...this.generateDataTableBody(spec)); break;
+      case 'Footer':          lines.push(...this.generateFooterBody(spec)); break;
+      case 'CalendarWidget':  lines.push(...this.generateCalendarWidgetBody(spec)); break;
+      case 'BookingCalendar': lines.push(...this.generateBookingCalendarBody(spec)); break;
+      default:                lines.push(...this.generateGenericBody(spec)); break;
     }
 
     return lines.join('\n');
   }
 
-  private generateHeroBannerBody(spec: ComponentSpec): string[] {
+  private generateHeroBannerBody(spec: ComponentSpec, layout: SectionLayout): string[] {
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
     const badge = this.getContentView(spec, 'badge');
+    const animProps = this.resolveAnimationProps(layout.animation);
+    const bgClass = this.resolveBackgroundClass(layout.background, '');
+    const hasOverlay = layout.flags?.darkOverlay;
+    const isSplit = layout.heroVariant === 'split';
+    const isFullscreen = layout.heroVariant === 'fullscreen';
 
+    if (isFullscreen) {
+      return [
+        `  return (`,
+        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} flex items-end">`,
+        hasOverlay ? `      <div className="absolute inset-0 bg-zinc-950/60 z-10" />` : '',
+        `      <div className="relative z-20 max-w-4xl mx-auto px-8 pb-20 w-full">`,
+        badge !== '{badge}' ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-white/20 bg-white/10 text-white mb-6">{badge}</div>` : '',
+        `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-6">{title}</h1>`,
+        `        <p className="text-zinc-300 text-xl max-w-2xl mb-8">{subtitle}</p>`,
+        ...this.generateActionButtons(spec),
+        `      </div>`,
+        `    </motion.section>`,
+        `  );`,
+      ].filter(Boolean);
+    }
+
+    if (isSplit) {
+      return [
+        `  return (`,
+        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass}">`,
+        `      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">`,
+        `        <div className="space-y-6">`,
+        badge !== '{badge}' ? `          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</div>` : '',
+        `          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-zinc-50">{title}</h1>`,
+        `          <p className="text-zinc-400 text-lg">{subtitle}</p>`,
+        ...this.generateActionButtons(spec),
+        `        </div>`,
+        `        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl aspect-video flex items-center justify-center text-zinc-600">`,
+        `          <span className="text-sm">Preview</span>`,
+        `        </div>`,
+        `      </div>`,
+        `    </motion.section>`,
+        `  );`,
+      ].filter(Boolean);
+    }
+
+    // Default: centered hero
     return [
       `  return (`,
-      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="relative pt-32 pb-20 px-6 overflow-hidden">`,
+      `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass}">`,
       `      <div className="max-w-4xl mx-auto text-center space-y-6">`,
-      badge ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">` : '',
-      badge ? `          <span>{badge}</span>` : '',
-      badge ? `        </div>` : '',
-      `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-zinc-50">`,
-      `          {title}`,
-      `        </h1>`,
-      `        <p className="text-zinc-400 text-lg max-w-xl mx-auto">`,
-      `          {subtitle}`,
-      `        </p>`,
+      badge !== '{badge}' ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</div>` : '',
+      `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-zinc-50">{title}</h1>`,
+      `        <p className="text-zinc-400 text-lg max-w-xl mx-auto">{subtitle}</p>`,
       ...this.generateActionButtons(spec),
-      `        {items?.length ? (`,
-      `          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }} className="flex items-center justify-center gap-8 pt-8">`,
-      `            {items?.map((item, i) => (`,
-      `              <div key={i} className="flex items-center gap-2 text-sm text-zinc-500">`,
-      `                <span className="text-primary">{item.icon === 'shield' ? '🛡' : item.icon === 'trending-up' ? '📈' : item.icon === 'lock' ? '🔒' : '✓'}</span>`,
-      `                <span>{item.title}</span>`,
-      `              </div>`,
-      `            ))}`,
-      `          </motion.div>`,
-      `        ) : null}`,
       `      </div>`,
       `    </motion.section>`,
       `  );`,
-    ];
+    ].filter(Boolean);
   }
 
-  private generateFeatureGridBody(spec: ComponentSpec): string[] {
+  private generateFeatureGridBody(spec: ComponentSpec, layout: SectionLayout): string[] {
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
+    const animProps = this.resolveAnimationProps(layout.animation);
+    const bgClass = this.resolveBackgroundClass(layout.background, '');
+    const isBento = layout.gridCols === 'bento';
+    const isAlternating = layout.gridCols === undefined && layout.animation === 'slide-left';
 
+    if (isBento) {
+      return [
+        `  return (`,
+        `    <motion.section ${animProps} className="${layout.spacing} ${bgClass}">`,
+        `      <div className="max-w-6xl mx-auto">`,
+        `        <div className="text-center mb-12">`,
+        `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
+        `          <p className="text-zinc-400">{subtitle}</p>`,
+        `        </div>`,
+        `        <div className="grid grid-cols-4 grid-rows-2 gap-4 auto-rows-[200px]">`,
+        `          {items?.map((feature, i) => (`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} className={\`bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition \${i === 0 ? 'col-span-2 row-span-2' : i === 3 ? 'col-span-2' : ''}\`}>`,
+        `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
+        `                <Icon name={feature.icon || 'layers'} />`,
+        `              </div>`,
+        `              <h3 className="font-bold text-zinc-50 mb-2">{feature.title}</h3>`,
+        `              <p className="text-sm text-zinc-400">{feature.description}</p>`,
+        `            </motion.div>`,
+        `          ))}`,
+        `        </div>`,
+        `      </div>`,
+        `    </motion.section>`,
+        `  );`,
+      ];
+    }
+
+    if (isAlternating) {
+      return [
+        `  return (`,
+        `    <motion.section ${animProps} className="${layout.spacing} ${bgClass}">`,
+        `      <div className="max-w-6xl mx-auto">`,
+        `        <div className="text-center mb-16">`,
+        `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
+        `          <p className="text-zinc-400">{subtitle}</p>`,
+        `        </div>`,
+        `        <div className="space-y-16">`,
+        `          {items?.map((feature, i) => (`,
+        `            <motion.div key={i} initial={{ opacity: 0, x: i % 2 === 0 ? -32 : 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.55 }} className={\`grid grid-cols-1 md:grid-cols-2 gap-10 items-center \${i % 2 !== 0 ? 'md:[direction:rtl]' : ''}\`}>`,
+        `              <div className={\`bg-zinc-900 border border-zinc-800 rounded-2xl aspect-video \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`} />`,
+        `              <div className={\`space-y-4 \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`}>`,
+        `                <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
+        `                  <Icon name={feature.icon || 'layers'} />`,
+        `                </div>`,
+        `                <h3 className="text-2xl font-black text-zinc-50">{feature.title}</h3>`,
+        `                <p className="text-zinc-400">{feature.description}</p>`,
+        `              </div>`,
+        `            </motion.div>`,
+        `          ))}`,
+        `        </div>`,
+        `      </div>`,
+        `    </motion.section>`,
+        `  );`,
+      ];
+    }
+
+    // Default: standard 3-col stagger grid
     return [
       `  return (`,
-      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
+      `    <motion.section ${animProps} className="${layout.spacing} ${bgClass}">`,
       `      <div className="max-w-6xl mx-auto">`,
       `        <div className="text-center mb-12">`,
       `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
       `          <p className="text-zinc-400">{subtitle}</p>`,
       `        </div>`,
-      `        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, staggerChildren: 0.1 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">`,
+      `        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${layout.gridCols ?? '3'} gap-6">`,
       `          {items?.map((feature, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.05 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">`,
       `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
       `                <Icon name={feature.icon || 'layers'} />`,
       `              </div>`,
@@ -687,7 +816,7 @@ ${body}
       `              <p className="text-sm text-zinc-400">{feature.description}</p>`,
       `            </motion.div>`,
       `          ))}`,
-      `        </motion.div>`,
+      `        </div>`,
       `      </div>`,
       `    </motion.section>`,
       `  );`,
@@ -734,13 +863,42 @@ ${body}
     ];
   }
 
-  private generateTestimonialsBody(spec: ComponentSpec): string[] {
+  private generateTestimonialsBody(spec: ComponentSpec, layout: SectionLayout): string[] {
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
+    const bgClass = this.resolveBackgroundClass(layout.background, '');
+    const isMarquee = layout.animation === 'marquee';
+    const speed = layout.flags?.marqueeSpeed === 'slow' ? '60s' : layout.flags?.marqueeSpeed === 'fast' ? '20s' : '35s';
 
+    if (isMarquee) {
+      return [
+        `  return (`,
+        `    <section className="${layout.spacing} ${bgClass} overflow-hidden">`,
+        `      <div className="mb-10 text-center px-6">`,
+        `        <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
+        `        <p className="text-zinc-400">{subtitle}</p>`,
+        `      </div>`,
+        `      <div className="flex gap-6 w-max animate-[marquee_${speed}_linear_infinite]">`,
+        `        {[...(items ?? []), ...(items ?? [])].map((testimonial, i) => (`,
+        `          <div key={i} className="w-80 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex-shrink-0">`,
+        `            <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
+        `            <p className="text-sm text-zinc-400 mb-4">"{testimonial.metadata?.quote}"</p>`,
+        `            <div>`,
+        `              <div className="font-bold text-zinc-50 text-sm">{testimonial.title}</div>`,
+        `              <div className="text-xs text-zinc-500">{testimonial.description}</div>`,
+        `            </div>`,
+        `          </div>`,
+        `        ))}`,
+        `      </div>`,
+        `    </section>`,
+        `  );`,
+      ];
+    }
+
+    // Static grid
     return [
       `  return (`,
-      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20 bg-zinc-900/50">`,
+      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="${layout.spacing} ${bgClass}">`,
       `      <div className="max-w-5xl mx-auto">`,
       `        <div className="text-center mb-12">`,
       `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
@@ -748,7 +906,7 @@ ${body}
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {items?.map((testimonial, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
       `              <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
       `              <p className="text-sm text-zinc-400 mb-4">"{testimonial.metadata?.quote}"</p>`,
       `              <div>`,
@@ -813,16 +971,41 @@ ${body}
     ];
   }
 
-  private generateStatsCardsBody(_spec: ComponentSpec): string[] {
+  private generateStatsCardsBody(spec: ComponentSpec, layout: SectionLayout): string[] {
+    const isCountup = layout.animation === 'countup';
+    const isPrimary = layout.background === 'primary';
+    const bgClass = this.resolveBackgroundClass(layout.background, '');
+
+    if (isCountup) {
+      return [
+        `  return (`,
+        `    <section className="${layout.spacing} ${bgClass}">`,
+        `      <div className="max-w-6xl mx-auto">`,
+        `        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10">`,
+        `          {stats?.map((stat, i) => (`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="${isPrimary ? 'bg-primary' : 'bg-zinc-900'} p-8 text-center">`,
+        `              <div className="text-4xl font-black ${isPrimary ? 'text-white' : 'text-primary'} mb-2">{stat.value}</div>`,
+        `              <div className="text-sm ${isPrimary ? 'text-white/70' : 'text-zinc-500'}">{stat.label}</div>`,
+        `            </motion.div>`,
+        `          ))}`,
+        `        </div>`,
+        `      </div>`,
+        `    </section>`,
+        `  );`,
+      ];
+    }
+
     return [
       `  return (`,
-      `    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.5 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">`,
-      `      {stats?.map((stat, i) => (`,
-      `        <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">`,
-      `          <div className="text-2xl font-black text-primary mb-1">{stat.value}</div>`,
-      `          <div className="text-xs text-zinc-500">{stat.label}</div>`,
-      `        </motion.div>`,
-      `      ))}`,
+      `    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="${layout.spacing} ${bgClass}">`,
+      `      <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">`,
+      `        {stats?.map((stat, i) => (`,
+      `          <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">`,
+      `            <div className="text-2xl font-black text-primary mb-1">{stat.value}</div>`,
+      `            <div className="text-xs text-zinc-500">{stat.label}</div>`,
+      `          </motion.div>`,
+      `        ))}`,
+      `      </div>`,
       `    </motion.div>`,
       `  );`,
     ];
