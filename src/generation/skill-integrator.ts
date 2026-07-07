@@ -1,21 +1,3 @@
-/**
- * SkillIntegrator - Wires existing Claude skills into the generation pipeline.
- * 
- * Skills available:
- * - UI/UX Pro Max: 50+ styles, 161 color palettes, 57 font pairings, 161 product types
- * - Frontend Design: Distinctive, production-grade interfaces
- * - GSAP ScrollTrigger: Scroll-driven animations
- * - Framer Motion: React animations
- * - Motion Principles: Expert motion design
- * - Modern Web Design: Trends and patterns
- * - High-End Visual Design: Premium aesthetics
- * - shadcn/ui: Pre-built components
- * 
- * Instead of building from scratch, we READ from these skills and
- * inject their recommendations into the generation process.
- */
-
-import * as fs from 'fs';
 import * as path from 'path';
 
 // ─── Skill Data Types ──────────────────────────────────────────────
@@ -179,49 +161,55 @@ const PRODUCT_TEMPLATES: Record<string, {
   features: string[];
   animations: string[];
   dataModels: string[];
+  defaultHeroLayout?: 'centered' | 'split' | 'left' | 'full-width';
 }> = {
   'luxury-watch': {
     sections: ['navbar', 'hero', 'collections', 'customizer', 'story', 'craftsmanship', 'dealers', 'testimonials', 'contact', 'footer'],
     features: ['Interactive product customizer', 'SVG watch rendering', 'Dynamic pricing', 'Dealer locator with map', 'Appointment booking', 'Collection filtering'],
     animations: ['Breathing hero effect', 'Scroll reveal sections', 'Tab switching with layoutId', 'Carousel with auto-slide', 'Hover scale on cards', 'Map pin ripple animation'],
     dataModels: ['Watch', 'Collection', 'CraftsmanshipDetail', 'Dealer', 'Testimonial', 'Appointment'],
+    defaultHeroLayout: 'split',
   },
   'saas-dashboard': {
     sections: ['navbar', 'hero', 'features', 'pricing', 'testimonials', 'cta', 'footer'],
     features: ['Pricing table', 'Feature comparison', 'Social proof', 'Free trial CTA', 'Integration showcase'],
     animations: ['Hero stagger reveal', 'Feature card hover', 'Pricing highlight pulse', 'Counter animation', 'Scroll-triggered reveals'],
     dataModels: ['Feature', 'PricingTier', 'Testimonial', 'Integration'],
+    defaultHeroLayout: 'left',
   },
   'ecommerce': {
     sections: ['navbar', 'hero', 'featured-products', 'categories', 'testimonials', 'newsletter', 'footer'],
     features: ['Product grid with filters', 'Product cards with hover', 'Quick view modal', 'Shopping cart', 'Wishlist'],
     animations: ['Product grid stagger', 'Card hover lift', 'Image zoom on hover', 'Cart slide-in', 'Filter transition'],
     dataModels: ['Product', 'Category', 'CartItem', 'Review', 'Order'],
+    defaultHeroLayout: 'centered',
   },
   'restaurant': {
     sections: ['navbar', 'hero', 'menu', 'about', 'testimonials', 'gallery', 'reservations', 'footer'],
     features: ['Menu with categories', 'Online ordering', 'Reservation form', 'Photo gallery', 'Location map'],
     animations: ['Menu item reveal', 'Gallery masonry', 'Reservation success', 'Scroll parallax', 'Hover glow'],
     dataModels: ['MenuItem', 'Category', 'Reservation', 'Review', 'GalleryImage'],
+    defaultHeroLayout: 'centered',
   },
   'fitness': {
     sections: ['navbar', 'hero', 'classes', 'trainers', 'pricing', 'testimonials', 'contact', 'footer'],
     features: ['Class schedule', 'Trainer profiles', 'Membership plans', 'Booking form', 'Progress tracking'],
     animations: ['Class card stagger', 'Trainer hover', 'Pricing highlight', 'Schedule scroll', 'CTA pulse'],
     dataModels: ['Class', 'Trainer', 'Membership', 'Booking', 'Schedule'],
+    defaultHeroLayout: 'centered',
   },
   'healthcare': {
     sections: ['navbar', 'hero', 'services', 'doctors', 'testimonials', 'booking', 'contact', 'footer'],
     features: ['Doctor profiles', 'Service descriptions', 'Appointment booking', 'Insurance info', 'Patient portal'],
     animations: ['Service card reveal', 'Doctor profile hover', 'Booking form', 'Scroll reveal', 'Trust badge'],
     dataModels: ['Doctor', 'Service', 'Appointment', 'Testimonial', 'Insurance'],
+    defaultHeroLayout: 'left',
   },
 };
 
 type PaletteKey = keyof typeof UI_UX_PRO_MAX.colorPalettes;
 type FontKey = keyof typeof UI_UX_PRO_MAX.fontPairings;
 type StyleKey = keyof typeof UI_UX_PRO_MAX.styles;
-type ProductTemplate = (typeof PRODUCT_TEMPLATES)[string];
 
 // ─── Skill Integrator ──────────────────────────────────────────────
 
@@ -233,40 +221,35 @@ export class SkillIntegrator {
   }
 
   /**
+   * Resolves the most suitable hero layout structure based on the template configuration.
+   */
+  private determineHeroLayout(template: typeof PRODUCT_TEMPLATES[string]): 'centered' | 'split' | 'left' | 'full-width' {
+    if (template.defaultHeroLayout) return template.defaultHeroLayout;
+    if (template.sections.includes('customizer')) return 'split';
+    return 'centered';
+  }
+
+  /**
    * Get design recommendations based on industry and product type.
    * Reads from UI/UX Pro Max skill data.
    */
-  getDesignRecommendations(industry: string, productType?: string): DesignRecommendation {
+  public getDesignRecommendations(industry: string, productType?: string): DesignRecommendation {
     const template = PRODUCT_TEMPLATES[productType || industry] ?? PRODUCT_TEMPLATES['saas-dashboard']!;
-    const uiuxData = UI_UX_PRO_MAX;
 
-    // Select palette based on industry
     const paletteKey = this.getPaletteKey(industry);
-    const palette = uiuxData.colorPalettes[paletteKey] || uiuxData.colorPalettes.minimal;
+    const palette = UI_UX_PRO_MAX.colorPalettes[paletteKey] || UI_UX_PRO_MAX.colorPalettes.minimal;
 
-    // Select fonts based on industry
     const fontKey = this.getFontKey(industry);
-    const fonts = uiuxData.fontPairings[fontKey] || uiuxData.fontPairings.modern;
-
-    // Select style based on industry
-    const styleKey = this.getStyleKey(industry);
-    const style = uiuxData.styles[styleKey] || uiuxData.styles.minimal;
-
-    // Safe palette access with fallbacks
-    const primaryColor = palette[3] ?? palette[0] ?? '#000000';
-    const secondaryColor = palette[2] ?? palette[1] ?? '#333333';
-    const accentColor = palette[4] ?? palette[3] ?? primaryColor;
-    const backgroundColor = palette[0] ?? '#ffffff';
-    const foregroundColor = palette[4] ?? '#ffffff';
+    const fonts = UI_UX_PRO_MAX.fontPairings[fontKey] || UI_UX_PRO_MAX.fontPairings.modern;
 
     return {
       colors: {
         palette,
-        primary: primaryColor,
-        secondary: secondaryColor,
-        accent: accentColor,
-        background: backgroundColor,
-        foreground: foregroundColor,
+        primary: palette[3] ?? palette[0] ?? '#000000',
+        secondary: palette[2] ?? palette[1] ?? '#333333',
+        accent: palette[4] ?? palette[3] ?? '#000000',
+        background: palette[0] ?? '#ffffff',
+        foreground: palette[4] ?? '#ffffff',
         reasoning: `Selected ${paletteKey} palette for ${industry} industry`,
       },
       typography: {
@@ -285,11 +268,11 @@ export class SkillIntegrator {
         reasoning: `Selected ${fontKey} font pairing for ${industry}`,
       },
       layout: {
-        heroLayout: template.sections.includes('customizer') ? 'split' : 'centered',
+        heroLayout: this.determineHeroLayout(template),
         sectionSpacing: 'py-24 sm:py-32',
         containerMaxWidth: 'max-w-7xl',
         gridColumns: { sm: 1, md: 2, lg: 3 },
-        reasoning: `Layout optimized for ${productType || industry} with ${template.sections.length} sections`,
+        reasoning: `Layout optimized for target implementation with ${template.sections.length} UI components`,
       },
       animation: {
         library: 'framer-motion',
@@ -297,33 +280,33 @@ export class SkillIntegrator {
         staggerAnimations: true,
         hoverEffects: true,
         pageTransitions: false,
-        reasoning: `Framer Motion for React with scroll reveals and stagger animations`,
+        reasoning: `Framer Motion orchestration layer using scroll reveals and component stagger patterns`,
       },
       components: template.sections.map(s => {
         const sectionName = s.charAt(0).toUpperCase() + s.slice(1);
         return {
           name: sectionName,
-          source: 'custom' as const,
+          source: 'custom',
           props: [],
           variants: ['default'],
         };
       }),
-      uxGuidelines: uiuxData.uxGuidelines,
+      uxGuidelines: UI_UX_PRO_MAX.uxGuidelines,
     };
   }
 
   /**
    * Get product template with sections, features, animations, data models.
    */
-  getProductTemplate(productType: string): typeof PRODUCT_TEMPLATES[string] {
+  public getProductTemplate(productType: string): typeof PRODUCT_TEMPLATES[string] {
     return PRODUCT_TEMPLATES[productType] ?? PRODUCT_TEMPLATES['saas-dashboard']!;
   }
 
   /**
    * Get animation recommendations from GSAP/Framer Motion skills.
    */
-  getAnimationRecommendations(productType: string): AnimationRecommendation {
-    const template = PRODUCT_TEMPLATES[productType] ?? PRODUCT_TEMPLATES['saas-dashboard']!;
+  public getAnimationRecommendations(productType: string): AnimationRecommendation {
+    const template = this.getProductTemplate(productType);
 
     return {
       library: 'framer-motion',
@@ -331,21 +314,21 @@ export class SkillIntegrator {
       staggerAnimations: true,
       hoverEffects: true,
       pageTransitions: false,
-      reasoning: `Animations: ${template.animations.join(', ')}`,
+      reasoning: `Animations utilized: ${template.animations.join(', ')}`,
     };
   }
 
   /**
    * Get UX guidelines from UI/UX Pro Max.
    */
-  getUXGuidelines(): string[] {
+  public getUXGuidelines(): string[] {
     return UI_UX_PRO_MAX.uxGuidelines;
   }
 
   /**
    * Get style recommendations from UI/UX Pro Max.
    */
-  getStyleRecommendation(industry: string): { style: string; css: string; bestFor: string[] } {
+  public getStyleRecommendation(industry: string): { style: string; css: string; bestFor: string[] } {
     const key = this.getStyleKey(industry);
     const style = UI_UX_PRO_MAX.styles[key] || UI_UX_PRO_MAX.styles.minimal;
     return {
@@ -355,7 +338,10 @@ export class SkillIntegrator {
     };
   }
 
-  produceArtifacts(industry: string, productType?: string): SkillArtifact[] {
+  /**
+   * Generates structured skill artifact manifests for architectural pipelines.
+   */
+  public produceArtifacts(industry: string, productType?: string): SkillArtifact[] {
     const recommendations = this.getDesignRecommendations(industry, productType);
     const template = this.getProductTemplate(productType || industry);
 
@@ -466,50 +452,35 @@ export class SkillIntegrator {
   }
 
   /**
-   * Format recommendations as prompt section for LLM.
+   * Format recommendations as prompt section for LLM context injection.
    */
-  static formatForPrompt(recommendations: DesignRecommendation): string {
-    const sections: string[] = [];
-
-    sections.push('## UI/UX Pro Max Design Recommendations');
-    sections.push('');
-
-    sections.push('### Color Palette');
-    sections.push(`Primary: ${recommendations.colors.primary}`);
-    sections.push(`Secondary: ${recommendations.colors.secondary}`);
-    sections.push(`Accent: ${recommendations.colors.accent}`);
-    sections.push(`Background: ${recommendations.colors.background}`);
-    sections.push(`Foreground: ${recommendations.colors.foreground}`);
-    sections.push(`Reasoning: ${recommendations.colors.reasoning}`);
-    sections.push('');
-
-    sections.push('### Typography');
-    sections.push(`Heading: ${recommendations.typography.headingFont}`);
-    sections.push(`Body: ${recommendations.typography.bodyFont}`);
-    sections.push(`Mono: ${recommendations.typography.monoFont}`);
-    sections.push(`Reasoning: ${recommendations.typography.reasoning}`);
-    sections.push('');
-
-    sections.push('### Layout');
-    sections.push(`Hero: ${recommendations.layout.heroLayout}`);
-    sections.push(`Section Spacing: ${recommendations.layout.sectionSpacing}`);
-    sections.push(`Container: ${recommendations.layout.containerMaxWidth}`);
-    sections.push(`Grid: ${recommendations.layout.gridColumns.sm}/${recommendations.layout.gridColumns.md}/${recommendations.layout.gridColumns.lg}`);
-    sections.push('');
-
-    sections.push('### Animation');
-    sections.push(`Library: ${recommendations.animation.library}`);
-    sections.push(`Scroll Reveal: ${recommendations.animation.scrollReveal}`);
-    sections.push(`Stagger: ${recommendations.animation.staggerAnimations}`);
-    sections.push(`Hover: ${recommendations.animation.hoverEffects}`);
-    sections.push('');
-
-    sections.push('### UX Guidelines');
-    for (const guideline of recommendations.uxGuidelines) {
-      sections.push(`- ${guideline}`);
-    }
-    sections.push('');
-
-    return sections.join('\n');
+  public static formatForPrompt(recommendations: DesignRecommendation): string {
+    return [
+      `## UI/UX Pro Max Design Recommendations\n`,
+      `### Color Palette`,
+      `- Primary: ${recommendations.colors.primary}`,
+      `- Secondary: ${recommendations.colors.secondary}`,
+      `- Accent: ${recommendations.colors.accent}`,
+      `- Background: ${recommendations.colors.background}`,
+      `- Foreground: ${recommendations.colors.foreground}`,
+      `- Reasoning: ${recommendations.colors.reasoning}\n`,
+      `### Typography`,
+      `- Heading: ${recommendations.typography.headingFont}`,
+      `- Body: ${recommendations.typography.bodyFont}`,
+      `- Mono: ${recommendations.typography.monoFont}`,
+      `- Reasoning: ${recommendations.typography.reasoning}\n`,
+      `### Layout`,
+      `- Hero: ${recommendations.layout.heroLayout}`,
+      `- Section Spacing: ${recommendations.layout.sectionSpacing}`,
+      `- Container: ${recommendations.layout.containerMaxWidth}`,
+      `- Grid Columns: SM:${recommendations.layout.gridColumns.sm} / MD:${recommendations.layout.gridColumns.md} / LG:${recommendations.layout.gridColumns.lg}\n`,
+      `### Animation`,
+      `- Library: ${recommendations.animation.library}`,
+      `- Scroll Reveal: ${recommendations.animation.scrollReveal}`,
+      `- Stagger: ${recommendations.animation.staggerAnimations}`,
+      `- Hover: ${recommendations.animation.hoverEffects}\n`,
+      `### UX Guidelines`,
+      ...recommendations.uxGuidelines.map(guideline => `- ${guideline}`)
+    ].join('\n');
   }
 }
