@@ -11,6 +11,7 @@
  */
 
 import type { ComponentSpec, PageSpec, ApplicationSpec } from '../../bos/schemas/blueprint/execution-blueprint.schema.js';
+import type { PageLayout, SectionLayout } from '../skill-integrator.js';
 
 // ─── Renderer Interface ──────────────────────────────────────────────────────
 
@@ -105,6 +106,10 @@ export interface RenderContext {
 
   /** Skip singleton files (shell, layout, Icon, nav-data) — used by worktree groups after the first */
   skipSingletons?: boolean;
+
+  /** Layout plan produced by SkillIntegrator.resolvePageLayout().
+   *  When present, ReactRenderer uses it instead of hardcoded defaults. */
+  pageLayout?: PageLayout;
 }
 
 // ─── Renderer Registry ───────────────────────────────────────────────────────
