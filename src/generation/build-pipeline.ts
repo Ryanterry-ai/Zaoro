@@ -434,6 +434,21 @@ export async function runBuildPipeline(
 
   // Layer 4: Spec-lock + worktree parallel build
   progress?.emit('compile', 'info', 'Writing component specs and running parallel build...');
+
+  // Resolve industry-specific layout plan — drives every section's visual treatment
+  const skillIntegrator = new SkillIntegrator();
+  const industry = (context.industry ?? applicationSpec.appName) as string;
+  const allComponentTypes = [...new Set(
+    applicationSpec.pages.flatMap(p => p.components.map(c => c.type)),
+  )];
+  const pageLayout = skillIntegrator.resolvePageLayout(industry, allComponentTypes);
+  log.info('Layout resolved', {
+    industry,
+    heroVariant: pageLayout.sections.find(s => s.componentType === 'HeroBanner')?.heroVariant,
+    testimonialAnimation: pageLayout.sections.find(s => s.componentType === 'Testimonials')?.animation,
+    statsBackground: pageLayout.sections.find(s => s.componentType === 'StatsCards')?.background,
+  });
+
   const t4 = Date.now();
   let componentSources: ComponentSourceRec[] | undefined = [];
   let renderResult: RenderResult;
@@ -496,6 +511,7 @@ export async function runBuildPipeline(
           includeTests,
           outputDir: path.join(wtSpec.path, 'src'),
           componentSources: [],
+          pageLayout,
           // Only the first group generates singleton files (shell, layout, Icon, nav-data)
           skipSingletons: gi > 0,
         });
@@ -540,6 +556,7 @@ export async function runBuildPipeline(
       includeTests,
       outputDir,
       componentSources: [],
+      pageLayout,
     });
   }
 
