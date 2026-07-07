@@ -470,8 +470,8 @@ function buildRadius(industry: string): RadiusDNA {
   };
 }
 
-function buildShadows(personality: BrandPersonality): ShadowDNA {
-  const sm: Record<BrandPersonality, { c: string; e: string; g: string }> = {
+function shadowMappingBuilder() {
+  return {
     luxury: { c:'0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)', e:'0 4px 20px rgba(0,0,0,0.08)', g:'0 0 40px rgba(0,0,0,0.06)' },
     premium: { c:'0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.08)', e:'0 8px 24px rgba(0,0,0,0.12)', g:'0 0 40px rgba(0,0,0,0.08)' },
     professional: { c:'0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.08)', e:'0 4px 16px rgba(0,0,0,0.1)', g:'0 0 30px rgba(0,0,0,0.06)' },
@@ -489,6 +489,10 @@ function buildShadows(personality: BrandPersonality): ShadowDNA {
     eco: { c:'0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)', e:'0 4px 16px rgba(0,0,0,0.08)', g:'0 0 30px rgba(34,197,94,0.1)' },
     tech: { c:'0 0 1px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)', e:'0 8px 24px rgba(0,0,0,0.4)', g:'0 0 40px rgba(99,102,241,0.2)' },
   };
+}
+
+function buildShadows(personality: BrandPersonality): ShadowDNA {
+  const sm = shadowMappingBuilder();
   const s = sm[personality] || sm.professional;
   return {
     none:'none', xs:'0 1px 2px rgba(0,0,0,0.04)',
