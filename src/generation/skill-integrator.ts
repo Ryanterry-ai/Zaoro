@@ -1,5 +1,59 @@
 import * as path from 'path';
 
+// ─── Layout Spec Types ─────────────────────────────────────────────────────
+
+/**
+ * SectionLayout describes the exact visual treatment for one section.
+ * ReactRenderer reads this instead of using hardcoded defaults.
+ */
+export interface SectionLayout {
+  /** Section component type — matches ComponentSpec.type */
+  componentType: string;
+
+  /** Hero variant — only relevant for HeroBanner */
+  heroVariant?: 'fullscreen' | 'split' | 'centered' | 'product';
+
+  /** Spacing override — replaces the default py-16 px-4 */
+  spacing: string;
+
+  /** Background treatment for the section */
+  background: 'transparent' | 'surface' | 'primary' | 'gradient' | 'image';
+
+  /** Animation pattern to use */
+  animation: 'fade-up' | 'stagger' | 'countup' | 'marquee' | 'scale-in' | 'slide-left' | 'parallax' | 'none';
+
+  /** Grid layout for item-based sections */
+  gridCols?: '2' | '3' | '4' | 'masonry' | 'bento';
+
+  /** Whether to show a section-level heading */
+  showHeading: boolean;
+
+  /** Special layout flags */
+  flags?: {
+    stickyOnScroll?: boolean;      // property type chips on real estate
+    fullHeight?: boolean;          // fullscreen hero
+    darkOverlay?: boolean;         // hero with bg image
+    mobileCarousel?: boolean;      // grid → carousel on mobile
+    centerOnMobile?: boolean;
+    pricingHighlight?: boolean;    // middle card elevated
+    marqueeSpeed?: 'slow' | 'medium' | 'fast';
+  };
+}
+
+/**
+ * PageLayout is the complete layout plan for one page.
+ * Produced by SkillIntegrator before any code is written.
+ */
+export interface PageLayout {
+  industry: string;
+  primaryColor: string;
+  headingFont: string;
+  bodyFont: string;
+  /** Global spacing scale — controls section gaps throughout the page */
+  spacingScale: 'compact' | 'standard' | 'generous';
+  sections: SectionLayout[];
+}
+
 // ─── Skill Data Types ──────────────────────────────────────────────
 
 export interface SkillRecommendation {
@@ -207,6 +261,227 @@ const PRODUCT_TEMPLATES: Record<string, {
   },
 };
 
+// ─── Section Layout Library ────────────────────────────────────────────────
+// Maps component type + industry → specific visual treatment.
+// ReactRenderer reads these to produce differentiated layouts.
+
+const SECTION_LAYOUT_LIBRARY: Record<string, Partial<SectionLayout>> = {
+  // ── Hero variants ──────────────────────────────────────────────────────
+  'HeroBanner:fullscreen': {
+    heroVariant: 'fullscreen',
+    spacing: 'min-h-screen px-0',
+    background: 'image',
+    animation: 'parallax',
+    showHeading: true,
+    flags: { fullHeight: true, darkOverlay: true },
+  },
+  'HeroBanner:split': {
+    heroVariant: 'split',
+    spacing: 'py-24 px-6',
+    background: 'transparent',
+    animation: 'slide-left',
+    showHeading: true,
+  },
+  'HeroBanner:centered': {
+    heroVariant: 'centered',
+    spacing: 'pt-32 pb-20 px-6',
+    background: 'transparent',
+    animation: 'fade-up',
+    showHeading: true,
+  },
+  'HeroBanner:product': {
+    heroVariant: 'product',
+    spacing: 'pt-24 pb-16 px-6',
+    background: 'gradient',
+    animation: 'scale-in',
+    showHeading: true,
+  },
+
+  // ── Feature sections ───────────────────────────────────────────────────
+  'FeatureGrid:3col': {
+    spacing: 'py-20 px-6',
+    background: 'transparent',
+    animation: 'stagger',
+    gridCols: '3',
+    showHeading: true,
+  },
+  'FeatureGrid:bento': {
+    spacing: 'py-20 px-6',
+    background: 'transparent',
+    animation: 'stagger',
+    gridCols: 'bento',
+    showHeading: true,
+  },
+  'FeatureGrid:alternating': {
+    spacing: 'py-20 px-6',
+    background: 'transparent',
+    animation: 'slide-left',
+    showHeading: true,
+  },
+
+  // ── Stats ──────────────────────────────────────────────────────────────
+  'StatsCards:countup': {
+    spacing: 'py-16 px-6',
+    background: 'primary',
+    animation: 'countup',
+    gridCols: '4',
+    showHeading: false,
+  },
+  'StatsCards:surface': {
+    spacing: 'py-12 px-6',
+    background: 'surface',
+    animation: 'stagger',
+    gridCols: '4',
+    showHeading: false,
+  },
+
+  // ── Testimonials ───────────────────────────────────────────────────────
+  'Testimonials:marquee': {
+    spacing: 'py-16 px-0',
+    background: 'surface',
+    animation: 'marquee',
+    showHeading: true,
+    flags: { marqueeSpeed: 'medium' },
+  },
+  'Testimonials:grid': {
+    spacing: 'py-20 px-6',
+    background: 'surface',
+    animation: 'stagger',
+    gridCols: '3',
+    showHeading: true,
+  },
+
+  // ── Pricing ────────────────────────────────────────────────────────────
+  'PricingTable:cards': {
+    spacing: 'py-20 px-6',
+    background: 'transparent',
+    animation: 'stagger',
+    gridCols: '3',
+    showHeading: true,
+    flags: { pricingHighlight: true },
+  },
+
+  // ── CTA ────────────────────────────────────────────────────────────────
+  'CTASection:gradient': {
+    spacing: 'py-20 px-6',
+    background: 'gradient',
+    animation: 'scale-in',
+    showHeading: true,
+  },
+  'CTASection:split': {
+    spacing: 'py-20 px-6',
+    background: 'surface',
+    animation: 'slide-left',
+    showHeading: true,
+  },
+
+  // ── Forms ──────────────────────────────────────────────────────────────
+  'ContactForm:default': {
+    spacing: 'py-20 px-6',
+    background: 'transparent',
+    animation: 'fade-up',
+    showHeading: true,
+  },
+  'BookingCalendar:default': {
+    spacing: 'py-16 px-6',
+    background: 'transparent',
+    animation: 'fade-up',
+    showHeading: true,
+  },
+
+  // ── Misc ───────────────────────────────────────────────────────────────
+  'FAQSection:default': {
+    spacing: 'py-16 px-6',
+    background: 'transparent',
+    animation: 'stagger',
+    showHeading: true,
+  },
+  'Footer:default': {
+    spacing: 'pt-16 pb-8 px-6',
+    background: 'surface',
+    animation: 'none',
+    showHeading: false,
+  },
+};
+
+// ─── Industry → Layout Variant Map ────────────────────────────────────────
+// Determines which SectionLayout variant each industry uses per component.
+
+const INDUSTRY_LAYOUT_MAP: Record<string, Record<string, string>> = {
+  'restaurant': {
+    HeroBanner: 'fullscreen',
+    FeatureGrid: '3col',
+    StatsCards: 'countup',
+    Testimonials: 'marquee',
+    CTASection: 'gradient',
+  },
+  'real-estate': {
+    HeroBanner: 'fullscreen',
+    FeatureGrid: 'alternating',
+    StatsCards: 'countup',
+    Testimonials: 'marquee',
+    CTASection: 'split',
+  },
+  'fitness': {
+    HeroBanner: 'centered',
+    FeatureGrid: '3col',
+    StatsCards: 'countup',
+    Testimonials: 'marquee',
+    CTASection: 'gradient',
+    PricingTable: 'cards',
+  },
+  'saas': {
+    HeroBanner: 'split',
+    FeatureGrid: 'bento',
+    StatsCards: 'surface',
+    Testimonials: 'grid',
+    CTASection: 'gradient',
+    PricingTable: 'cards',
+  },
+  'ecommerce': {
+    HeroBanner: 'product',
+    FeatureGrid: '3col',
+    StatsCards: 'surface',
+    Testimonials: 'grid',
+    CTASection: 'gradient',
+  },
+  'healthcare': {
+    HeroBanner: 'split',
+    FeatureGrid: 'alternating',
+    StatsCards: 'surface',
+    Testimonials: 'grid',
+    CTASection: 'split',
+  },
+  'luxury': {
+    HeroBanner: 'fullscreen',
+    FeatureGrid: 'alternating',
+    StatsCards: 'surface',
+    Testimonials: 'marquee',
+    CTASection: 'split',
+  },
+  'education': {
+    HeroBanner: 'split',
+    FeatureGrid: '3col',
+    StatsCards: 'countup',
+    Testimonials: 'grid',
+    CTASection: 'gradient',
+    PricingTable: 'cards',
+  },
+  // Default fallback — used when industry not in map
+  '_default': {
+    HeroBanner: 'centered',
+    FeatureGrid: '3col',
+    StatsCards: 'surface',
+    Testimonials: 'grid',
+    CTASection: 'gradient',
+    PricingTable: 'cards',
+    ContactForm: 'default',
+    BookingCalendar: 'default',
+    FAQSection: 'default',
+    Footer: 'default',
+  },
+};
+
 type PaletteKey = keyof typeof UI_UX_PRO_MAX.colorPalettes;
 type FontKey = keyof typeof UI_UX_PRO_MAX.fontPairings;
 type StyleKey = keyof typeof UI_UX_PRO_MAX.styles;
@@ -315,6 +590,49 @@ export class SkillIntegrator {
       hoverEffects: true,
       pageTransitions: false,
       reasoning: `Animations utilized: ${template.animations.join(', ')}`,
+    };
+  }
+
+  /**
+   * Resolve the complete PageLayout for a given industry and component type list.
+   * ReactRenderer calls this once per page before generating any code.
+   *
+   * @param industry  - industry string from ApplicationSpec (e.g. 'restaurant', 'saas')
+   * @param componentTypes - ordered list of component types for this page
+   * @returns PageLayout with per-section visual specs
+   */
+  public resolvePageLayout(industry: string, componentTypes: string[]): PageLayout {
+    const normalizedIndustry = industry.toLowerCase().replace(/[^a-z-]/g, '-');
+    const industryMap = INDUSTRY_LAYOUT_MAP[normalizedIndustry] ?? INDUSTRY_LAYOUT_MAP['_default']!;
+    const designRec = this.getDesignRecommendations(industry);
+
+    const sections: SectionLayout[] = componentTypes.map(componentType => {
+      // Look up this component's variant for the industry
+      const variant = industryMap[componentType] ?? 'default';
+      const key = `${componentType}:${variant}`;
+      const libEntry = SECTION_LAYOUT_LIBRARY[key] ?? SECTION_LAYOUT_LIBRARY[`${componentType}:default`] ?? {};
+
+      // Build complete SectionLayout with fallback defaults
+      const layout: SectionLayout = {
+        componentType,
+        spacing: libEntry.spacing ?? 'py-16 px-6',
+        background: libEntry.background ?? 'transparent',
+        animation: libEntry.animation ?? 'fade-up',
+        showHeading: libEntry.showHeading ?? true,
+      };
+      if (libEntry.heroVariant) layout.heroVariant = libEntry.heroVariant;
+      if (libEntry.gridCols) layout.gridCols = libEntry.gridCols;
+      if (libEntry.flags) layout.flags = libEntry.flags;
+      return layout;
+    });
+
+    return {
+      industry: normalizedIndustry,
+      primaryColor: designRec.colors.primary,
+      headingFont: designRec.typography.headingFont,
+      bodyFont: designRec.typography.bodyFont,
+      spacingScale: normalizedIndustry === 'luxury' ? 'generous' : 'standard',
+      sections,
     };
   }
 
