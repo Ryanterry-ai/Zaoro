@@ -260,379 +260,6 @@ function getIndustryFeatures(ctx: ContentResolverContext): ItemSpec[] {
   return items;
 }
 
-/** Get industry-specific about items */
-function getAboutItems(ctx: ContentResolverContext): ItemSpec[] {
-  const industry = ctx.blueprint.industry;
-  const aboutData: Record<string, ItemSpec[]> = {
-    restaurant: [
-      { title: 'Our Kitchen', description: 'Farm-to-table ingredients prepared with passion by our award-winning chefs', icon: 'chef-hat' },
-      { title: 'Our Story', description: 'Family-owned since 2010, serving the community with love and flavor', icon: 'heart' },
-      { title: 'Our Promise', description: 'Every dish crafted fresh daily with locally sourced ingredients', icon: 'leaf' },
-    ],
-    healthcare: [
-      { title: 'Our Practice', description: 'Compassionate care backed by the latest medical technology', icon: 'heart-pulse' },
-      { title: 'Our Team', description: 'Board-certified physicians with decades of combined experience', icon: 'users' },
-      { title: 'Our Mission', description: 'Making quality healthcare accessible to every patient', icon: 'stethoscope' },
-    ],
-    saas: [
-      { title: 'Why We Built This', description: 'Frustrated by existing tools, we created the platform we wished existed', icon: 'lightbulb' },
-      { title: 'Our Approach', description: 'Developer-first design with enterprise-grade reliability', icon: 'code' },
-      { title: 'By the Numbers', description: 'Trusted by thousands of teams across 50+ countries', icon: 'globe' },
-    ],
-    ecommerce: [
-      { title: 'Curated Quality', description: 'Every product hand-selected for quality, design, and value', icon: 'star' },
-      { title: 'Our Story', description: 'Started with a simple idea: make great products accessible', icon: 'package' },
-      { title: 'Our Promise', description: 'Free shipping, easy returns, and customer service that cares', icon: 'shield' },
-    ],
-    fitness: [
-      { title: 'Our Space', description: 'State-of-the-art equipment in a motivating, welcoming environment', icon: 'dumbbell' },
-      { title: 'Our Philosophy', description: 'Fitness is not a destination — it is a lifelong journey', icon: 'heart' },
-      { title: 'Our Community', description: 'More than a gym — a supportive family of like-minded people', icon: 'users' },
-    ],
-    education: [
-      { title: 'Our Academy', description: 'Industry experts teaching practical, job-ready skills', icon: 'graduation-cap' },
-      { title: 'Our Method', description: 'Hands-on projects and real-world case studies, not just lectures', icon: 'monitor' },
-      { title: 'Our Impact', description: 'Over 10,000 graduates and counting, each with new career opportunities', icon: 'trending-up' },
-    ],
-    realestate: [
-      { title: 'Local Expertise', description: 'Deep knowledge of neighborhoods, markets, and investment opportunities', icon: 'map-pin' },
-      { title: 'Our Network', description: 'Connections to the finest properties and trusted professionals', icon: 'link' },
-      { title: 'Client First', description: 'Guiding you every step from search to closing', icon: 'handshake' },
-    ],
-    legal: [
-      { title: 'Our Firm', description: 'Decades of courtroom experience with a track record of results', icon: 'scale' },
-      { title: 'Our Values', description: 'Integrity, diligence, and unwavering commitment to our clients', icon: 'shield' },
-      { title: 'Our Reach', description: 'Serving individuals and businesses across the region', icon: 'globe' },
-    ],
-    agency: [
-      { title: 'Who We Are', description: 'A collective of strategists, designers, and technologists', icon: 'users' },
-      { title: 'What We Do', description: 'Transform brands through compelling digital experiences', icon: 'palette' },
-      { title: 'How We Work', description: 'Data-driven creative that delivers measurable business impact', icon: 'bar-chart' },
-    ],
-    nonprofit: [
-      { title: 'Our Cause', description: 'Dedicated to creating lasting change in the communities we serve', icon: 'heart' },
-      { title: 'Our Impact', description: 'Every donation directly funds programs that change lives', icon: 'trending-up' },
-      { title: 'Our Community', description: 'Powered by volunteers who share a vision for a better world', icon: 'users' },
-    ],
-    media: [
-      { title: 'Our Platform', description: 'Independent journalism and storytelling that matters', icon: 'newspaper' },
-      { title: 'Our Mission', description: 'Inform, inspire, and spark meaningful conversations', icon: 'zap' },
-      { title: 'Our Team', description: 'Award-winning writers, editors, and content creators', icon: 'users' },
-    ],
-    travel: [
-      { title: 'Our Expertise', description: 'Years of curating unforgettable travel experiences worldwide', icon: 'compass' },
-      { title: 'Our Partners', description: 'Exclusive deals with top airlines, hotels, and tour operators', icon: 'handshake' },
-      { title: 'Our Promise', description: 'Every trip planned with care, every detail handled for you', icon: 'check-circle' },
-    ],
-    luxury: [
-      { title: 'Heritage', description: 'A legacy of craftsmanship spanning three generations', icon: 'crown' },
-      { title: 'Exclusivity', description: 'Limited editions and bespoke pieces for the discerning few', icon: 'gem' },
-      { title: 'Experience', description: 'Private viewings and personalized concierge service', icon: 'star' },
-    ],
-    beauty: [
-      { title: 'Our Studio', description: 'A sanctuary for self-care with award-winning treatments', icon: 'sparkles' },
-      { title: 'Our Experts', description: 'Certified professionals trained in the latest techniques', icon: 'user' },
-      { title: 'Our Products', description: 'Premium, cruelty-free products from top brands', icon: 'flower-2' },
-    ],
-    event: [
-      { title: 'Our Vision', description: 'Creating unforgettable moments that bring people together', icon: 'sparkles' },
-      { title: 'Our Track Record', description: 'Over 500 successful events and counting', icon: 'award' },
-      { title: 'Our Team', description: 'Professional event planners with creative vision', icon: 'users' },
-    ],
-    portfolio: [
-      { title: 'About Me', description: 'A creative professional with a passion for meaningful design', icon: 'user' },
-      { title: 'My Process', description: 'Research-driven design that balances beauty and function', icon: 'compass' },
-      { title: 'Recognition', description: 'Featured in industry publications and design awards', icon: 'award' },
-    ],
-    automotive: [
-      { title: 'Our Dealership', description: 'Family-owned since 1985 with a reputation for honesty', icon: 'shield' },
-      { title: 'Our Inventory', description: 'New and certified pre-owned vehicles with full warranties', icon: 'car' },
-      { title: 'Our Service', description: 'Factory-trained technicians keeping your vehicle at its best', icon: 'wrench' },
-    ],
-    enterprise: [
-      { title: 'Enterprise-Grade', description: 'Built for scale with 99.99% uptime SLA and SOC 2 compliance', icon: 'shield' },
-      { title: 'Integration Hub', description: 'Connects with 200+ enterprise tools out of the box', icon: 'puzzle' },
-      { title: 'Dedicated Support', description: 'Named account managers and 24/7 priority support', icon: 'headphones' },
-    ],
-    logistics: [
-      { title: 'Global Reach', description: 'Delivery network spanning 150+ countries and 50,000+ zip codes', icon: 'globe' },
-      { title: 'Real-Time Visibility', description: 'Track every package from warehouse to doorstep', icon: 'eye' },
-      { title: 'Reliability', description: '99.5% on-time delivery rate with money-back guarantee', icon: 'check-circle' },
-    ],
-    manufacturing: [
-      { title: 'Precision Engineering', description: 'ISO-certified processes ensuring consistent quality', icon: 'settings' },
-      { title: 'Scale & Speed', description: 'From prototype to full production in weeks, not months', icon: 'zap' },
-      { title: 'Quality Assurance', description: 'Every product inspected to meet the highest standards', icon: 'check-circle' },
-    ],
-    fintech: [
-      { title: 'Security First', description: 'Bank-grade encryption and PCI DSS Level 1 compliance', icon: 'lock' },
-      { title: 'Innovation', description: 'Cutting-edge technology powering financial transformation', icon: 'cpu' },
-      { title: 'Trust', description: 'Processing billions in transactions for thousands of businesses', icon: 'shield' },
-    ],
-    proptech: [
-      { title: 'Smart Property Management', description: 'Technology that simplifies every aspect of property operations', icon: 'building' },
-      { title: 'Tenant Experience', description: 'Modern tools that tenants love and managers trust', icon: 'smile' },
-      { title: 'Data-Driven Decisions', description: 'Real-time analytics for occupancy, revenue, and maintenance', icon: 'bar-chart' },
-    ],
-  };
-
-  const items = aboutData[industry] ?? aboutData['saas'] ?? [
-    { title: 'Our Story', description: generateAboutDescription(ctx), icon: 'flag' },
-    { title: 'Our Mission', description: 'Delivering exceptional value through innovative solutions', icon: 'target' },
-    { title: 'Our Impact', description: 'Trusted by customers across the globe', icon: 'trending-up' },
-  ];
-  return items;
-}
-
-/** Get industry-specific mission items */
-function getMissionItems(ctx: ContentResolverContext): ItemSpec[] {
-  const industry = ctx.blueprint.industry;
-  const missionData: Record<string, ItemSpec[]> = {
-    restaurant: [
-      { title: 'Fresh Ingredients', description: 'Locally sourced, seasonal produce from trusted farms', icon: 'leaf' },
-      { title: 'Community', description: 'Bringing people together around exceptional food', icon: 'users' },
-      { title: 'Sustainability', description: 'Zero-waste kitchen and eco-friendly packaging', icon: 'recycle' },
-    ],
-    healthcare: [
-      { title: 'Patient-Centered Care', description: 'Every decision starts with what is best for the patient', icon: 'heart' },
-      { title: 'Accessibility', description: 'Quality healthcare should not depend on location or income', icon: 'globe' },
-      { title: 'Innovation', description: 'Adopting the latest evidence-based practices and technology', icon: 'zap' },
-    ],
-    saas: [
-      { title: 'Simplicity', description: 'Complex problems deserve simple, elegant solutions', icon: 'zap' },
-      { title: 'Reliability', description: 'Your business depends on us — we take that seriously', icon: 'shield' },
-      { title: 'User Empowerment', description: 'Tools that make your team faster, not slower', icon: 'users' },
-    ],
-    ecommerce: [
-      { title: 'Customer Obsession', description: 'Every touchpoint designed to delight and exceed expectations', icon: 'heart' },
-      { title: 'Quality Curation', description: 'We vet every product so you do not have to', icon: 'star' },
-      { title: 'Sustainable Commerce', description: 'Responsible sourcing and carbon-neutral shipping', icon: 'leaf' },
-    ],
-    fitness: [
-      { title: 'Inclusive Wellness', description: 'Fitness for every body, every level, every goal', icon: 'heart' },
-      { title: 'Community First', description: 'Building strength together, not just individually', icon: 'users' },
-      { title: 'Holistic Health', description: 'Mind, body, and nutrition working in harmony', icon: 'sun' },
-    ],
-    education: [
-      { title: 'Lifelong Learning', description: 'Knowledge should be accessible at every stage of life', icon: 'book-open' },
-      { title: 'Practical Skills', description: 'Education that directly translates to career advancement', icon: 'briefcase' },
-      { title: 'Inclusive Access', description: 'Breaking down barriers to quality education', icon: 'globe' },
-    ],
-    realestate: [
-      { title: 'Trust & Transparency', description: 'Honest guidance through every transaction', icon: 'shield' },
-      { title: 'Community Building', description: 'Creating neighborhoods where people thrive', icon: 'home' },
-      { title: 'Market Expertise', description: 'Data-driven insights for smarter property decisions', icon: 'bar-chart' },
-    ],
-    legal: [
-      { title: 'Justice', description: 'Fiercely advocating for the rights of our clients', icon: 'scale' },
-      { title: 'Integrity', description: 'Ethical practice in every case we take on', icon: 'shield' },
-      { title: 'Access to Justice', description: 'Legal help should not be reserved for the wealthy', icon: 'globe' },
-    ],
-    agency: [
-      { title: 'Creative Excellence', description: 'Pushing boundaries with every project we deliver', icon: 'star' },
-      { title: 'Client Partnership', description: 'Your success is our success — we work as one team', icon: 'handshake' },
-      { title: 'Measurable Impact', description: 'Beautiful work that drives real business results', icon: 'trending-up' },
-    ],
-    nonprofit: [
-      { title: 'Compassion', description: 'Leading with empathy in everything we do', icon: 'heart' },
-      { title: 'Transparency', description: 'Every dollar accounted for, every impact measured', icon: 'eye' },
-        { title: 'Sustainable Change', description: 'Building solutions that outlast any single program', icon: 'refresh-cw' },
-      ],
-      media: [
-        { title: 'Quality Journalism', description: 'Fact-based reporting that informs and empowers', icon: 'newspaper' },
-        { title: 'Free Expression', description: 'Amplifying diverse voices and perspectives', icon: 'message-circle' },
-        { title: 'Community Engagement', description: 'Building conversations that matter', icon: 'users' },
-      ],
-      travel: [
-        { title: 'Authentic Experiences', description: 'Travel that connects people to places and cultures', icon: 'compass' },
-        { title: 'Sustainable Tourism', description: 'Protecting destinations for future travelers', icon: 'leaf' },
-        { title: 'Accessible Adventure', description: 'Making travel possible for everyone', icon: 'globe' },
-      ],
-      beauty: [
-        { title: 'Confidence Through Care', description: 'Beauty that starts with feeling great', icon: 'sparkles' },
-        { title: 'Clean Ingredients', description: 'Cruelty-free products you can trust', icon: 'flower-2' },
-        { title: 'Inclusive Beauty', description: 'Products for every skin type and tone', icon: 'heart' },
-      ],
-      event: [
-        { title: 'Memorable Moments', description: 'Creating experiences that last a lifetime', icon: 'sparkles' },
-        { title: 'Community Connection', description: 'Bringing people together through shared experiences', icon: 'users' },
-        { title: 'Flawless Execution', description: 'Every detail handled with precision and care', icon: 'check-circle' },
-      ],
-      portfolio: [
-        { title: 'Creative Excellence', description: 'Pushing creative boundaries with every project', icon: 'star' },
-        { title: 'Client Success', description: 'Delivering work that exceeds expectations', icon: 'trending-up' },
-        { title: 'Continuous Growth', description: 'Always learning and evolving the craft', icon: 'zap' },
-      ],
-      automotive: [
-        { title: 'Customer Trust', description: 'Honest sales and transparent pricing', icon: 'shield' },
-        { title: 'Quality Service', description: 'Keeping every vehicle running at its best', icon: 'wrench' },
-        { title: 'Community Roots', description: 'Serving local drivers for generations', icon: 'home' },
-      ],
-      enterprise: [
-        { title: 'Operational Excellence', description: 'Streamlining business processes at scale', icon: 'settings' },
-        { title: 'Enterprise Security', description: 'Protecting data with defense-in-depth', icon: 'lock' },
-        { title: 'Innovation at Scale', description: 'Enterprise-grade solutions without the complexity', icon: 'zap' },
-      ],
-      logistics: [
-        { title: 'On-Time Delivery', description: 'Every shipment, every promise, every time', icon: 'clock' },
-        { title: 'Supply Chain Innovation', description: 'Smarter logistics through technology', icon: 'cpu' },
-        { title: 'Sustainable Operations', description: 'Reducing carbon footprint across the network', icon: 'leaf' },
-      ],
-      manufacturing: [
-        { title: 'Precision & Quality', description: 'Zero-defect manufacturing through rigorous standards', icon: 'check-circle' },
-        { title: 'Operational Efficiency', description: 'Lean processes that reduce waste and cost', icon: 'zap' },
-        { title: 'Workplace Safety', description: 'Protecting every team member on the floor', icon: 'shield' },
-      ],
-      fintech: [
-        { title: 'Financial Inclusion', description: 'Banking services accessible to everyone', icon: 'globe' },
-        { title: 'Trust & Security', description: 'Bank-grade protection for every transaction', icon: 'lock' },
-        { title: 'Innovation First', description: 'Modern finance powered by cutting-edge technology', icon: 'cpu' },
-      ],
-      proptech: [
-        { title: 'Smart Living', description: 'Technology that makes property management effortless', icon: 'building' },
-        { title: 'Tenant Satisfaction', description: 'Creating spaces where people love to live', icon: 'smile' },
-        { title: 'Sustainable Properties', description: 'Energy-efficient buildings for a greener future', icon: 'leaf' },
-      ],
-    };
-
-  const defaults: ItemSpec[] = [
-    { title: 'Innovation', description: 'Pushing boundaries of what is possible in our industry', icon: 'zap' },
-    { title: 'Accessibility', description: 'Making our solutions available to everyone who needs them', icon: 'globe' },
-    { title: 'Impact', description: 'Measuring success by the difference we make', icon: 'heart' },
-  ];
-
-  return missionData[industry] ?? defaults;
-}
-
-/** Get industry-specific team roles */
-function getTeamRoles(ctx: ContentResolverContext): ItemSpec[] {
-  // Use real scraped team members if available
-  if (ctx.scrapedContent?.teamMembers && ctx.scrapedContent.teamMembers.length > 0) {
-    return ctx.scrapedContent.teamMembers.slice(0, 5).map((tm: { name: string; role?: string; bio?: string }) => ({
-      title: tm.role ?? tm.name,
-      description: tm.bio ?? `${tm.name} — ${tm.role}`,
-      icon: 'user' as const,
-    }));
-  }
-
-  const industry = ctx.blueprint.industry;
-  const teamData: Record<string, ItemSpec[]> = {
-    restaurant: [
-      { title: 'Executive Chef', description: 'Culinary visionary leading our kitchen with 15+ years of experience', icon: 'chef-hat' },
-      { title: 'Sommelier', description: 'Expert wine pairing and curated beverage program', icon: 'wine' },
-      { title: 'General Manager', description: 'Ensuring every guest has an exceptional dining experience', icon: 'user' },
-    ],
-    healthcare: [
-      { title: 'Medical Director', description: 'Board-certified physician guiding clinical excellence', icon: 'stethoscope' },
-      { title: 'Head Nurse', description: 'Leading our care team with compassion and expertise', icon: 'heart-pulse' },
-      { title: 'Practice Manager', description: 'Keeping operations running smoothly for patients and staff', icon: 'settings' },
-    ],
-    saas: [
-      { title: 'CEO & Founder', description: 'Product vision and company strategy', icon: 'crown' },
-      { title: 'CTO', description: 'Technical architecture and engineering leadership', icon: 'cpu' },
-      { title: 'Head of Product', description: 'Turning customer insights into product roadmaps', icon: 'compass' },
-    ],
-    ecommerce: [
-      { title: 'Founder', description: 'Passionate about curating the best products for our customers', icon: 'star' },
-      { title: 'Operations Lead', description: 'Ensuring every order ships fast and arrives perfect', icon: 'truck' },
-      { title: 'Brand Director', description: 'Crafting the visual identity and customer experience', icon: 'palette' },
-    ],
-    fitness: [
-      { title: 'Head Trainer', description: 'Certified fitness professional with specialized certifications', icon: 'dumbbell' },
-      { title: 'Studio Manager', description: 'Creating a welcoming environment for every member', icon: 'smile' },
-      { title: 'Wellness Coach', description: 'Guiding members on nutrition, recovery, and mindset', icon: 'heart' },
-    ],
-    education: [
-      { title: 'Lead Instructor', description: 'Industry expert with a passion for teaching', icon: 'graduation-cap' },
-      { title: 'Curriculum Director', description: 'Designing courses that deliver real-world skills', icon: 'book-open' },
-      { title: 'Student Success Manager', description: 'Supporting learners from enrollment to graduation', icon: 'users' },
-    ],
-    realestate: [
-      { title: 'Broker', description: 'Licensed professional with deep local market knowledge', icon: 'badge' },
-      { title: 'Listing Agent', description: 'Specialist in marketing and selling properties', icon: 'home' },
-      { title: 'Transaction Coordinator', description: 'Managing every detail from offer to closing', icon: 'clipboard' },
-    ],
-    legal: [
-      { title: 'Managing Partner', description: 'Overseeing firm strategy and high-profile cases', icon: 'scale' },
-      { title: 'Senior Associate', description: 'Lead counsel with expertise in complex litigation', icon: 'briefcase' },
-      { title: 'Paralegal', description: 'Research and case preparation excellence', icon: 'file-text' },
-    ],
-    agency: [
-      { title: 'Creative Director', description: 'Setting the creative vision across all projects', icon: 'palette' },
-      { title: 'Strategy Lead', description: 'Turning business goals into actionable creative briefs', icon: 'target' },
-      { title: 'Account Manager', description: 'Your primary point of contact and project advocate', icon: 'users' },
-    ],
-    nonprofit: [
-      { title: 'Executive Director', description: 'Leading our mission with passion and integrity', icon: 'heart' },
-      { title: 'Program Manager', description: 'Designing and executing programs that create real impact', icon: 'award' },
-        { title: 'Community Outreach', description: 'Connecting with the people and partners who make our work possible', icon: 'users' },
-      ],
-      media: [
-        { title: 'Editor-in-Chief', description: 'Setting editorial vision and journalistic standards', icon: 'edit' },
-        { title: 'Senior Writer', description: 'Award-winning reporting and long-form storytelling', icon: 'file-text' },
-        { title: 'Content Strategist', description: 'Growing audience through data-driven content planning', icon: 'trending-up' },
-      ],
-      travel: [
-        { title: 'Travel Director', description: 'Curating unforgettable journeys worldwide', icon: 'compass' },
-        { title: 'Concierge Lead', description: 'Personalized service for every traveler', icon: 'headphones' },
-        { title: 'Partnership Manager', description: 'Exclusive deals with top hotels and airlines', icon: 'handshake' },
-      ],
-      beauty: [
-        { title: 'Founder & Stylist', description: 'Creative vision behind every transformation', icon: 'sparkles' },
-        { title: 'Lead Esthetician', description: 'Advanced skincare expertise and personalized treatments', icon: 'flower-2' },
-        { title: 'Studio Manager', description: 'Ensuring every visit is a relaxing experience', icon: 'smile' },
-      ],
-      event: [
-        { title: 'Event Director', description: 'Orchestrating large-scale events with precision', icon: 'calendar' },
-        { title: 'Creative Producer', description: 'Designing unforgettable event experiences', icon: 'palette' },
-        { title: 'Logistics Coordinator', description: 'Managing every vendor, timeline, and detail', icon: 'clipboard' },
-      ],
-      portfolio: [
-        { title: 'Creative Director', description: 'Setting the artistic vision across all work', icon: 'palette' },
-        { title: 'Lead Developer', description: 'Bringing designs to life with clean code', icon: 'code' },
-        { title: 'Project Manager', description: 'Keeping every project on time and on budget', icon: 'clock' },
-      ],
-      automotive: [
-        { title: 'Sales Manager', description: 'Helping customers find the perfect vehicle', icon: 'car' },
-        { title: 'Master Technician', description: 'ASE-certified service and repair expertise', icon: 'wrench' },
-        { title: 'Finance Director', description: 'Flexible financing options for every budget', icon: 'calculator' },
-      ],
-      enterprise: [
-        { title: 'VP of Engineering', description: 'Architecting scalable enterprise systems', icon: 'cpu' },
-        { title: 'Customer Success Lead', description: 'Ensuring every client achieves their goals', icon: 'headphones' },
-        { title: 'Solutions Architect', description: 'Designing custom integrations for enterprise needs', icon: 'settings' },
-      ],
-      logistics: [
-        { title: 'Operations Director', description: 'Managing fleet and delivery network operations', icon: 'truck' },
-        { title: 'Warehouse Manager', description: 'Optimizing inventory and fulfillment operations', icon: 'package' },
-        { title: 'Route Planner', description: 'Maximizing efficiency through smart routing', icon: 'map' },
-      ],
-      manufacturing: [
-        { title: 'Plant Manager', description: 'Overseeing production operations and quality standards', icon: 'settings' },
-        { title: 'Quality Engineer', description: 'Ensuring every product meets specifications', icon: 'check-circle' },
-        { title: 'Supply Chain Director', description: 'Managing procurement and supplier relationships', icon: 'link' },
-      ],
-      fintech: [
-        { title: 'Chief Compliance Officer', description: 'Ensuring regulatory compliance across all products', icon: 'shield' },
-        { title: 'Head of Product', description: 'Building financial products that users love', icon: 'credit-card' },
-        { title: 'Risk Manager', description: 'AI-powered fraud detection and risk assessment', icon: 'bar-chart' },
-      ],
-      proptech: [
-        { title: 'Property Operations Lead', description: 'Managing property portfolios at scale', icon: 'building' },
-        { title: 'Tenant Experience Manager', description: 'Creating exceptional living experiences', icon: 'smile' },
-        { title: 'Data Analyst', description: 'Driving decisions with real-time property data', icon: 'bar-chart' },
-      ],
-    };
-
-  const defaults: ItemSpec[] = [
-    { title: 'Leadership', description: 'Driving our vision forward with experience and passion', icon: 'crown' },
-    { title: 'Engineering', description: 'Building reliable, scalable technology solutions', icon: 'code' },
-    { title: 'Design', description: 'Crafting intuitive and beautiful user experiences', icon: 'palette' },
-  ];
-
-  return teamData[industry] ?? defaults;
-}
-
 // ─── Component Resolvers ────────────────────────────────────────────────────
 
 function vocab(text: string, ctx: ContentResolverContext): string {
@@ -883,110 +510,6 @@ function resolveHeroBanner(
   };
 }
 
-/**
- * Generate a hero subtitle that is a value proposition, not the raw prompt.
- * Uses industry, country, and business context to create meaningful copy.
- */
-function generateHeroSubtitle(ctx: ContentResolverContext): string {
-  const industry = ctx.blueprint.industry;
-  const country = ctx.blueprint.country;
-  const promptText = ctx.blueprint.description?.toLowerCase() ?? '';
-  const promptOrName = ctx.blueprint.description ?? ctx.blueprint.name ?? '';
-
-  // Guard: detect if the raw build prompt text is being used as content.
-  // Build prompts contain certain meta-keywords that should never appear in output.
-  const buildKeywords = ['build', 'create', 'make', 'generate', 'fully functional',
-    'interactive', 'responsive', 'full stack', 'website for', 'web app', 'application'];
-  const isBuildPrompt = buildKeywords.some(kw => promptText.includes(kw));
-
-  // Always prefer industry-specific value propositions over prompt echo
-
-  // Supplement / nutrition stores
-  if (promptText.includes('supplement') || promptText.includes('protein') || promptText.includes('nutrition') || promptText.includes('vitamin')) {
-    if (promptText.includes('wholesale') || promptText.includes('b2b') || promptText.includes('distributor')) {
-      return 'B2B wholesale supplement distribution — bulk pricing, dealer network, nationwide supply chain';
-    }
-    if (country === 'IN') return 'Premium supplements from top brands, delivered across India — lab-tested, 100% genuine';
-    return 'Premium supplements from top brands, delivered to your door';
-  }
-
-  // Coffee shop / cafe
-  if (promptText.includes('coffee') || promptText.includes('espresso') || promptText.includes('brew') || promptText.includes('cafe')) {
-    return 'Freshly roasted beans, handcrafted drinks, and a space worth waking up for';
-  }
-
-  // Ecommerce general
-  if (industry === 'ecommerce' || promptText.includes('store') || promptText.includes('shop') || promptText.includes('marketplace')) {
-    if (promptText.includes('wholesale') || promptText.includes('b2b') || promptText.includes('distributor') || promptText.includes('bulk')) {
-      return 'Wholesale distribution platform — bulk ordering, dealer management, and supply chain visibility';
-    }
-    if (country === 'IN') return 'Shop from thousands of products with fast delivery across India';
-    return 'Shop from thousands of products with fast, free delivery';
-  }
-
-  // Restaurant / food
-  if (industry === 'restaurant' || promptText.includes('restaurant') || promptText.includes('cafe') || promptText.includes('food')) {
-    return 'Fresh, delicious food prepared with love and delivered to your table';
-  }
-
-  // Fitness / gym
-  if (industry === 'fitness' || promptText.includes('gym') || promptText.includes('yoga') || promptText.includes('fitness')) {
-    return 'Transform your body with expert-led programs and world-class facilities';
-  }
-
-  // Healthcare
-  if (industry === 'healthcare' || promptText.includes('health') || promptText.includes('dental') || promptText.includes('medical')) {
-    return 'Compassionate care with modern technology for your whole family';
-  }
-
-  // SaaS / enterprise
-  if (industry === 'saas' || industry === 'enterprise-software' || promptText.includes('saas') || promptText.includes('software')) {
-    return 'Streamline your workflow with powerful, easy-to-use tools';
-  }
-
-  // Real estate
-  if (industry === 'realestate' || promptText.includes('property') || promptText.includes('real estate')) {
-    return 'Find your perfect property with expert guidance and local insights';
-  }
-
-  // Education
-  if (industry === 'education' || promptText.includes('course') || promptText.includes('learn')) {
-    return 'Learn from industry experts and advance your career at your own pace';
-  }
-
-  // Portfolio / agency
-  if (industry === 'agency' || industry === 'portfolio' || promptText.includes('portfolio')) {
-    return 'Creative solutions that drive results and elevate your brand';
-  }
-
-  // If the prompt text is a build instruction (meta keywords), never echo it.
-  // Generate a context-aware value proposition from whatever we know.
-  if (isBuildPrompt) {
-    const city = extractCity(promptText);
-    const cityStr = city ? ` in ${city}` : '';
-    const industryLabel = industry.charAt(0).toUpperCase() + industry.slice(1);
-    return `The best ${industryLabel} experience${cityStr}`;
-  }
-
-  // Fallback: industry-aware value proposition
-  const industryLabel = industry.charAt(0).toUpperCase() + industry.slice(1);
-  const city = extractCity(promptText);
-  const cityStr = city ? ` in ${city}` : '';
-  return `Purpose-built for ${industryLabel}${cityStr} — designed around how your team actually works`;
-}
-
-/** Extract city name from a description string. */
-function extractCity(text: string): string | undefined {
-  const match = text.match(/\bin\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b/);
-  if (match && match[1]) {
-    const city = match[1];
-    const adjectives = new Set(['Indian', 'American', 'British', 'Chinese', 'French', 'German',
-      'Italian', 'Japanese', 'Korean', 'Spanish', 'European', 'African', 'Asian',
-      'Australian', 'Canadian', 'Mexican', 'Russian', 'Thai', 'Vietnamese', 'Turkish']);
-    if (!adjectives.has(city)) return city;
-  }
-  return undefined;
-}
 
 /**
  * Generate an about section description from context — never the raw prompt.
@@ -2345,13 +1868,18 @@ function resolveAboutSection(
   contentBag: ContentBag,
 ): ComponentSpec {
   const about = contentBag.about ?? {};
+  const industry = ctx.blueprint.industry;
   return {
     type: 'AboutSection',
     content: {
       title: { value: about.title ?? vocab('About Us', ctx), type: 'text' },
-      subtitle: { value: about.description ?? `Building solutions for ${ctx.blueprint.industry}`, type: 'text' },
+      subtitle: { value: about.description ?? `Building solutions for ${industry}`, type: 'text' },
     },
-    items: about.items ?? getAboutItems(ctx),
+    items: about.items ?? [
+      { title: vocab('Our Mission', ctx), description: `Delivering exceptional ${industry} solutions`, icon: 'target' },
+      { title: vocab('Our Vision', ctx), description: `Leading innovation in the ${industry} space`, icon: 'eye' },
+      { title: vocab('Our Values', ctx), description: 'Quality, integrity, and customer success', icon: 'heart' },
+    ],
     layout: { alignment: 'center', maxWidth: '4xl' },
   };
 }
@@ -2369,7 +1897,11 @@ function resolveTeamSection(
       title: { value: vocab('Meet Our Team', ctx), type: 'text' },
       subtitle: { value: vocab('The people behind the product', ctx), type: 'text' },
     },
-    items: team.items ?? getTeamRoles(ctx),
+    items: team.items ?? [
+      { title: vocab('Leadership', ctx), description: 'Driving strategy and vision', icon: 'crown' },
+      { title: vocab('Engineering', ctx), description: 'Building reliable solutions', icon: 'code' },
+      { title: vocab('Design', ctx), description: 'Crafting intuitive experiences', icon: 'palette' },
+    ],
     layout: { alignment: 'center', maxWidth: '6xl' },
   };
 }
@@ -2386,7 +1918,11 @@ function resolveTeamGrid(
     content: {
       title: { value: vocab('Our Team', ctx), type: 'text' },
     },
-    items: team.items ?? getTeamRoles(ctx),
+    items: team.items ?? [
+      { title: vocab('Leadership', ctx), description: 'Driving strategy and vision', icon: 'crown' },
+      { title: vocab('Engineering', ctx), description: 'Building reliable solutions', icon: 'code' },
+      { title: vocab('Design', ctx), description: 'Crafting intuitive experiences', icon: 'palette' },
+    ],
     layout: { alignment: 'center', maxWidth: '6xl' },
   };
 }
@@ -2404,7 +1940,11 @@ function resolveMissionSection(
       title: { value: vocab('Our Mission', ctx), type: 'text' },
       subtitle: { value: vocab('What drives us every day', ctx), type: 'text' },
     },
-    items: mission.items ?? getMissionItems(ctx),
+    items: mission.items ?? [
+      { title: vocab('Innovation', ctx), description: 'Pushing boundaries in our industry', icon: 'lightbulb' },
+      { title: vocab('Quality', ctx), description: 'Excellence in everything we do', icon: 'star' },
+      { title: vocab('Community', ctx), description: 'Building meaningful connections', icon: 'users' },
+    ],
     layout: { alignment: 'center', maxWidth: '4xl' },
   };
 }
