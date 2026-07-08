@@ -1,275 +1,1020 @@
 ---
 name: build-anything
-description: Orchestrate the full Build.Anything pipeline — design, plan, and generate any software project from a single prompt. Delegates to the existing orchestrator, never duplicates logic.
+description: Build.Anything v2 - Universal software generation orchestrator. Analyze, plan, design, generate, validate and deliver complete software systems through the Build.Anything orchestration platform.
 ---
 
-# /build-anything
+# Build.Anything
 
-## Invocation
+## Purpose
 
-When the user types `/build-anything "<prompt>"`, this skill takes control immediately.
+Build.Anything should think like an experienced product architect before it thinks like a software engineer. Every request should first understand the business problem, users, workflows, constraints, and success criteria. Only then should it design and generate software.
 
-Do NOT fall back to Claude's default reasoning. Execute the pipeline below.
+This skill is the single operational entry point into the Build.Anything platform.
 
-## Execution Flow
+When invoked, this skill **must never** solve the user's request directly using ad-hoc reasoning.
+
+Instead, it coordinates the existing Build.Anything platform and delegates every responsibility to the appropriate orchestration layer.
+
+This skill contains **no business logic**.
+
+All implementation lives inside the Build.Anything codebase.
+
+The responsibility of this skill is to ensure the existing platform executes correctly.
+
+---
+
+# Supported Requests
+
+Examples include but are not limited to:
+
+- Landing Pages
+- Websites
+- SaaS Applications
+- Dashboards
+- CRM
+- ERP
+- POS
+- Marketplace
+- Ecommerce
+- Hospital Systems
+- Restaurant Systems
+- Fitness Platforms
+- Education Platforms
+- Mobile Apps
+- Desktop Apps
+- Internal Business Tools
+- Admin Panels
+- AI Applications
+- Existing Website Recreation
+- Existing Product Modernization
+
+---
+
+# Operating Principles
+
+Always follow these principles.
+
+## 1.
+
+Build.Anything is the source of truth.
+
+Never replace the platform with your own reasoning.
+
+---
+
+## 2.
+
+Never skip orchestration.
+
+Every request follows the orchestration pipeline.
+
+---
+
+## 3.
+
+Never generate architecture directly.
+
+Architecture is produced by the existing Architecture Stage.
+
+---
+
+## 4.
+
+Never invent database schemas.
+
+Database Design owns schema generation.
+
+---
+
+## 5.
+
+Never invent frontend layouts.
+
+Frontend Design and Design DNA own UI generation.
+
+---
+
+## 6.
+
+Never bypass BOS.
+
+Business knowledge always comes from BOS packs and Knowledge Graph.
+
+---
+
+## 7.
+
+Never bypass Validation.
+
+Every artifact must pass validation before completion.
+
+---
+
+## 8.
+
+Never duplicate logic already implemented inside Build.Anything.
+
+The TypeScript implementation remains the single source of truth.
+
+---
+
+# Execution Overview
+
+Every execution follows the Build.Anything platform.
 
 ```
-User prompt
-  │
-  ▼
-Banner + Execution ID
-  │
-  ▼
-Parse input (prompt | URL | hybrid)
-  │
-  ▼
-Intent Router          ← src/orchestration/intent-router.ts
-  │
-  ▼
-Project Intake         ← src/orchestration/stages/project-intake.ts
-  │
-  ▼
-Decision Engine        ← src/orchestration/decision-engine.ts
-  │
-  ▼
-Planner                ← src/orchestration/planner.ts
-  │
-  ▼
-BOS Detection          ← src/orchestration/bos-loader.ts
-  │
-  ▼
-Knowledge Graph        ← src/bos/knowledge/seeds/index.ts
-  │
-  ▼
-Research               ← src/orchestration/stages/research.ts
-  │
-  ▼
-Business Analysis      ← src/orchestration/stages/business-analysis.ts
-  │
-  ▼
-Architecture           ← src/orchestration/stages/architecture.ts
-  │
-  ▼
-Database Design        ← src/orchestration/stages/database-design.ts
-  │
-  ▼
-API Design             ← src/orchestration/stages/api-design.ts
-  │
-  ▼
-Design Intelligence    ← src/orchestration/design-intelligence/engine.ts
-  │
-  ▼
-Frontend Design        ← src/orchestration/stages/frontend-design.ts
-  │
-  ▼
-Validation             ← src/orchestration/validation-pipeline.ts
-  │
-  ▼
-Review Board           ← src/orchestration/stages/review-board.ts
-  │
-  ▼
-Self-Healing           ← src/engine/self-healing-engine.ts
-  │
-  ▼
-Runtime                ← src/orchestration/runtime/runtime-engine.ts
-  │
-  ▼
-Execution Report       ← src/orchestration/execution-report.ts
+User Request
+        │
+        ▼
+Intent Discovery
+        │
+        ▼
+Application Classification
+        │
+        ▼
+Workflow Discovery
+        │
+        ▼
+Entity Discovery
+        │
+        ▼
+Business Model Detection
+        │
+        ▼
+Industry Detection
+        │
+        ▼
+Pattern Selection
+        │
+        ▼
+Project Intake
+        │
+        ▼
+Decision Engine
+        │
+        ▼
+Planner
+        │
+        ▼
+Research
+        │
+        ▼
+Business Analysis
+        │
+        ▼
+Architecture
+        │
+        ▼
+Database Design
+        │
+        ▼
+API Design
+        │
+        ▼
+Design DNA
+        │
+        ▼
+Design Intelligence
+        │
+        ▼
+Frontend Design
+        │
+        ▼
+Validation Pipeline
+        │
+        ▼
+Review Board
+        │
+        ▼
+Self Healing
+        │
+        ▼
+Runtime
+        │
+        ▼
+Execution Report
 ```
 
-Every stage above delegates to the existing source file listed. No stage logic lives in this skill.
+Every stage delegates to the existing implementation.
 
-## Banner
+No orchestration logic belongs inside this skill.
 
-Immediately after invocation display:
+---
+
+# Stage Responsibilities
+
+## Intent Discovery
+
+Determine what the user is actually requesting.
+
+Examples:
+
+- Landing Page
+- CRM
+- ERP
+- Marketplace
+- Dashboard
+- SaaS
+- Mobile App
+- Existing Website Clone
+- Existing Codebase Upgrade
+
+Intent Discovery determines the software category before any technical planning.
+
+---
+
+## Application Classification
+
+Determine the application family.
+
+Examples:
+
+- Productivity
+- Ecommerce
+- CRM
+- ERP
+- Healthcare
+- Education
+- Finance
+- Marketplace
+- Portfolio
+- Restaurant
+- Hospitality
+- Social
+- CMS
+- Knowledge Base
+- Analytics
+- Booking
+- Inventory
+- Logistics
+- Manufacturing
+
+Application Family is the primary reasoning signal.
+
+Industry is a secondary refinement.
+
+---
+
+## Workflow Discovery
+
+Determine the primary business workflows.
+
+Examples:
+
+Customer Journey
+
+Administrator Journey
+
+Staff Journey
+
+Approval Workflow
+
+Booking Workflow
+
+Purchase Workflow
+
+Inventory Workflow
+
+Checkout Workflow
+
+Support Workflow
+
+Learning Workflow
+
+Healthcare Workflow
+
+---
+
+## Entity Discovery
+
+Determine the core business entities.
+
+Examples:
+
+Customer
+
+Order
+
+Appointment
+
+Invoice
+
+Task
+
+Project
+
+Patient
+
+Doctor
+
+Property
+
+Booking
+
+Course
+
+Lesson
+
+Member
+
+Trainer
+
+Vendor
+
+Product
+
+The generated database, API and UI must all be derived from these entities.
+
+---
+
+## Business Model Detection
+
+Determine how the software operates.
+
+Examples:
+
+Subscription
+
+Marketplace
+
+One Time Purchase
+
+Membership
+
+Advertising
+
+Commission
+
+Enterprise License
+
+Internal Tool
+
+Freemium
+
+Open Source
+
+This influences architecture, permissions and integrations.
+
+---
+
+## Industry Detection
+
+Refine the solution using industry knowledge.
+
+Industry never overrides Application Classification.
+
+Industry enriches the solution with:
+
+- terminology
+- workflows
+- compliance
+- integrations
+- KPIs
+- reporting
+- best practices
+
+---
+
+## Pattern Selection
+
+Select the best implementation strategy.
+
+Pattern selection should use:
+
+Application Family
+
+↓
+
+Business Model
+
+↓
+
+Industry
+
+↓
+
+Workflow
+
+↓
+
+Entities
+
+Never choose a pattern solely because it has the highest score.
+
+If confidence is low:
+
+Generate a hybrid blueprint.
+
+If confidence is extremely low:
+
+Generate a minimal blueprint rather than forcing an unrelated enterprise template.
+
+---
+
+# Build.Anything Services
+
+The following platform services are available.
+
+- Intent Router
+- Decision Engine
+- Planner
+- BOS Loader
+- Knowledge Graph
+- Experience Engine
+- Execution Intelligence
+- Event Bus
+- Design DNA
+- Design Intelligence
+- Runtime
+- Validation Pipeline
+- Review Board
+- Self Healing
+- Execution Report Generator
+
+These services already exist inside the platform.
+
+This skill coordinates them.
+
+It does not replace them.
+
+---
+
+# Design Principles
+
+Visual quality is never optional.
+
+Every generated interface must use Design DNA.
+
+Design DNA determines:
+
+- Visual Personality
+- Color System
+- Typography
+- Layout
+- Component Language
+- Motion
+- Interaction
+- Polish
+
+Generic Tailwind layouts are unacceptable.
+
+Generated interfaces should feel intentionally designed.
+
+---
+
+# Runtime Behaviour
+
+Immediately after execution begins display:
 
 ```
 ══════════════════════════════════════
-  Build.Anything v2
-  Execution ID: <uuid>
-  Mode: <prompt|website|hybrid>
-  Pipeline: Build.Anything
-  Status: Starting
+
+Build.Anything v2
+
+Execution ID: <generated>
+
+Status: Starting
+
 ══════════════════════════════════════
 ```
 
-## Stage Progress
+Then display stage progress throughout execution.
 
-For every stage display:
+The Runtime is responsible for:
+
+- project generation
+- build
+- validation
+- execution
+- screenshots
+- runtime verification
+
+This skill reports progress but does not implement runtime behaviour.
+
+---
+
+# Progress Reporting
+
+During execution, report progress in a consistent, human-readable format.
+
+Example:
 
 ```
-[1/18] Intent Router        ← parsing input
-[2/18] Project Intake       ← building manifest
-[3/18] Decision Engine      ← selecting strategy
-[4/18] Planner              ← ordering stages
-[5/18] BOS Detection        ← detecting industry
-[6/18] Knowledge Graph      ← enriching domain
-[7/18] Research             ← analyzing requirements
-[8/18] Business Analysis    ← mapping entities
-[9/18] Architecture         ← designing system
-[10/18] Database Design     ← modeling schema
-[11/18] API Design          ← defining endpoints
-[12/18] Design Intelligence ← selecting design
-[13/18] Frontend Design     ← composing UI
-[14/18] Validation          ← validating artifacts
-[15/18] Review Board        ← reviewing output
-[16/18] Self-Healing        ← fixing issues
-[17/18] Runtime             ← building project
-[18/18] Execution Report    ← generating report
+[01/18] Intent Discovery          ✓
+[02/18] Application Classification ✓
+[03/18] Workflow Discovery         ✓
+[04/18] Entity Discovery           ✓
+[05/18] Business Model             ✓
+[06/18] Industry Detection         ✓
+[07/18] Pattern Selection          ✓
+[08/18] Project Intake             ✓
+...
 ```
 
-Use the existing EventBus (`src/orchestration/event-bus.ts`) for structured progress. Subscribe to events and print human-readable status.
+Progress reporting should reflect the actual orchestration state whenever available.
 
-## LLM Integration (Claude Desktop)
+Never fabricate stage completion.
 
-The orchestrator calls an `LLMAdapterInterface` for each stage that needs LLM work. In Claude Desktop, **you are the LLM provider**.
+---
 
-Create an inline adapter:
+# Artifact Requirements
 
-```typescript
-import type { LLMAdapterInterface, LLMCallParams, LLMCallResult } from './src/orchestration/types.js';
+Every generated artifact must remain traceable.
 
-const adapter: LLMAdapterInterface = {
-  call: async (params: LLMCallParams): Promise<LLMCallResult> => {
-    // Read params.prompt, params.systemPrompt, params.taskType
-    // Use your own reasoning to produce the response
-    // Return structured LLMCallResult with content, usage, provider="claude", model="claude-sonnet-4"
-    const startTime = Date.now();
-    const content = /* your response based on params */ "";
-    return {
-      content,
-      parsed: params.responseSchema ? JSON.parse(content) : undefined,
-      usage: { input: 0, output: 0, total: 0 },
-      provider: 'claude',
-      model: 'claude-sonnet-4-20250514',
-      durationMs: Date.now() - startTime,
-    };
-  },
-  getTotalUsage: () => ({ calls: 0, totalTokens: 0, byProvider: {} }),
-};
-```
+Artifacts should contain Build.Anything metadata whenever possible.
 
-Pass this adapter to the orchestrator via `setLLMAdapter(adapter)`.
+Required metadata:
 
-## Pipeline Execution
+- Generator
+- Version
+- Execution ID
+- Stage
+- Timestamp
 
-### Path A: Design-only (blueprint)
+Artifacts may include:
 
-Use the `Orchestrator` class when the user asks for design/planning only:
+- Architecture
+- Database Schema
+- API Specification
+- UI Specification
+- Design Tokens
+- Components
+- Generated Code
+- Runtime Results
+- Validation Reports
+- Execution Reports
 
-```typescript
-import { Orchestrator } from './src/orchestration/orchestrator.js';
-import { ExecutionReportGenerator } from './src/orchestration/execution-report.js';
+---
 
-const orch = new Orchestrator({
-  workingDirectory: '.build-anything',
-  enableCheckpoints: true,
-  enableLLM: true,
-});
-orch.setLLMAdapter(adapter);
-orch.on('stage:start', (e) => console.log(`[${e.stageId}] Starting...`));
-orch.on('stage:complete', (e) => console.log(`[${e.stageId}] Done (${e.data?.durationMs}ms)`));
-const result = await orch.run(prompt);
-const report = await new ExecutionReportGenerator().generate(result);
-```
+# Validation Philosophy
 
-### Path B: Code generation (build)
+Validation is mandatory.
 
-Use the `DeterministicOrchestratorV4` when the user asks to build/generate code:
+Never return software that has not been validated.
 
-```typescript
-import { DeterministicOrchestratorV4 } from './src/agents/deterministic-orchestrator-v4.js';
-import type { GenerationIntent } from './src/types/index.js';
+Validation includes:
 
-const orch = new DeterministicOrchestratorV4('./sandbox_workspaces');
-const intent: GenerationIntent = { type: 'build-app', prompt };
-const result = await orch.processGenerationIntent(executionId, intent);
-```
+## Structural Validation
 
-The orchestrator handles BRE v2 → pipeline v2 → execution blueprint → application graph → content resolution → renderer → self-healing, all deterministically.
+Examples:
 
-### Path C: Full pipeline (design → build)
+- Missing entities
+- Missing relationships
+- Invalid schema
+- Missing pages
+- Missing routes
 
-For a complete end-to-end run, run both:
+---
 
-1. `Orchestrator.run()` for design artifacts
-2. `DeterministicOrchestratorV4.processGenerationIntent()` for code generation
+## Semantic Validation
 
-The design artifacts from step 1 inform the build in step 2.
+Examples:
 
-## Input Detection
+- Wrong workflow
 
-Use the intent router to detect input type:
+- Wrong terminology
 
-```typescript
-const intentType = input.startsWith('http') ? 'website'
-  : input.match(/figma\.com/i) ? 'figma'
-  : 'prompt';
-```
+- Incorrect entities
 
-For prompts (the common case), pass the text directly to the orchestrator. For URLs, the website adapter handles scraping.
+- Wrong permissions
 
-## Artifact Metadata
+- Incorrect business logic
 
-Every artifact produced must include:
+---
 
-- `generator`: "Build.Anything"
-- `version`: "2.0"
-- `executionId`: the generated execution ID
-- `stage`: the stage name
-- `timestamp`: ISO timestamp
+## Cross-Stage Validation
 
-Use the ArtifactStore to write artifacts with this metadata:
+Ensure consistency across:
 
-```typescript
-orch.getArtifactStore().store(
-  'architecture.system',
-  { generator: 'Build.Anything', version: '2.0', executionId, stage: 'architecture', timestamp: new Date().toISOString(), /* ... content */ },
-  'json',
-  'architecture'
-);
-```
+Architecture
 
-## Error Handling
+↓
 
-| Failure | Action |
-|---------|--------|
-| Stage execution error | Retry up to `maxRetries` (default 3) via `RetryEngine` |
-| Validation failure | Invoke `SelfHealingEngine` for auto-fixable issues; skip non-blocking gates |
-| LLM adapter failure | Retry with exponential backoff; fallback to deterministic defaults |
-| Checkpoint available | Resume from last checkpoint via `Planner.loadCheckpoint()` |
-| Irrecoverable | Record error in execution report, return partial results |
+Database
 
-Do NOT restart the entire pipeline. Use checkpoint/resume from `src/orchestration/planner.ts`.
+↓
 
-## Output
+API
 
-Return to the user:
+↓
 
-1. **Summary**: What was built, key metrics (files, pages, entities, APIs, duration)
-2. **Generated artifacts**: List of pages and key files produced
-3. **Execution report**: Full report from `ExecutionReportGenerator`
-4. **Next steps**: Suggested customizations or follow-up commands
+Frontend
 
-If errors occurred, include them transparently with recovery suggestions.
+↓
 
-## Anti-patterns (never do these)
+Runtime
 
-- Do NOT generate boilerplate code inline — use the renderer
-- Do NOT bypass the orchestrator with ad-hoc reasoning
-- Do NOT hardcode prompts for individual stages — stage prompts come from BOS packs
-- Do NOT skip stages unless the planner explicitly allows it
-- Do NOT modify orchestrator, stage, or pipeline code from this skill
-- Do NOT call an external LLM API — in Claude Desktop, you ARE the LLM
+↓
 
-## Verification
+Documentation
 
-After any `/build-anything` run, verify:
+Every stage must agree with previous stages.
 
-- [ ] Banner was displayed
-- [ ] All 18 stages executed (or were properly skipped by planner)
-- [ ] Stage progress was displayed
-- [ ] Execution report was generated
-- [ ] Artifacts carry Build.Anything metadata
-- [ ] Errors were handled (retry/checkpoint/self-heal)
-- [ ] Existing tests still pass (`npm test`)
+---
+
+## Quality Validation
+
+Review:
+
+- UX
+- Accessibility
+- Responsiveness
+- Typography
+- Spacing
+- Color
+- Motion
+- Design consistency
+
+The generated experience should feel intentional rather than assembled.
+
+---
+
+# Review Board
+
+Before considering the project complete, review:
+
+- Architecture
+- Database
+- APIs
+- Frontend
+- Runtime
+- Validation
+- Design Quality
+
+Identify:
+
+- inconsistencies
+
+- missing functionality
+
+- duplicated functionality
+
+- poor UX
+
+- incorrect workflows
+
+Review findings should be incorporated whenever possible before final delivery.
+
+---
+
+# Self-Healing
+
+If validation identifies recoverable issues:
+
+Attempt recovery.
+
+Examples:
+
+- Missing page
+
+- Missing entity
+
+- Broken relationship
+
+- Missing API
+
+- Invalid route
+
+- Inconsistent terminology
+
+- Invalid workflow
+
+Self-healing should improve the project rather than restart it.
+
+If recovery fails,
+
+record the issue transparently inside the execution report.
+
+---
+
+# Runtime
+
+Runtime is responsible for transforming design artifacts into a runnable application.
+
+Typical responsibilities include:
+
+- project scaffolding
+
+- dependency generation
+
+- source generation
+
+- build
+
+- preview
+
+- runtime verification
+
+- screenshots
+
+- visual validation
+
+This skill coordinates runtime execution.
+
+It does not implement runtime logic.
+
+---
+
+# Claude Desktop Behaviour
+
+Inside Claude Desktop:
+
+Claude itself is the reasoning engine.
+
+Do not simulate additional AI providers.
+
+Do not invent separate assistant personas.
+
+Do not attempt external LLM API calls unless explicitly configured by the Build.Anything platform.
+
+When orchestration requires reasoning,
+
+reason directly using the active Claude model.
+
+---
+
+# Deterministic Generation
+
+Whenever deterministic generators already exist,
+
+prefer them over free-form generation.
+
+Examples include:
+
+- scaffold generation
+
+- configuration generation
+
+- schema generation
+
+- routing
+
+- project structure
+
+- dependency management
+
+Use LLM reasoning only where creativity or semantic understanding is required.
+
+---
+
+# Design DNA
+
+Every generated experience must follow Design DNA.
+
+Design DNA determines:
+
+- visual personality
+
+- design language
+
+- typography
+
+- spacing
+
+- grid
+
+- elevation
+
+- border radius
+
+- color harmony
+
+- interaction
+
+- animation
+
+- polish
+
+Never generate visually generic software.
+
+---
+
+# Business Knowledge
+
+Business understanding must come from:
+
+- BOS
+
+- Knowledge Graph
+
+- Industry Packs
+
+- Application Families
+
+- Workflow Templates
+
+- Entity Definitions
+
+- Compliance Rules
+
+- KPI Definitions
+
+Do not invent business processes when reusable knowledge already exists.
+
+---
+
+# Output Format
+
+Every successful execution should conclude with:
+
+## Executive Summary
+
+Describe:
+
+- what was built
+
+- application family
+
+- business model
+
+- detected industry
+
+- workflow summary
+
+---
+
+## Deliverables
+
+List major outputs.
+
+Examples:
+
+- Architecture
+
+- Database
+
+- API
+
+- Frontend
+
+- Runtime
+
+- Documentation
+
+- Reports
+
+---
+
+## Execution Metrics
+
+Include whenever available:
+
+- Duration
+
+- Files Generated
+
+- Pages
+
+- Components
+
+- Entities
+
+- APIs
+
+- Validation Status
+
+- Runtime Status
+
+- Build Status
+
+---
+
+## Recommendations
+
+Provide next steps.
+
+Examples:
+
+- authentication
+
+- deployment
+
+- branding
+
+- integrations
+
+- testing
+
+- production hardening
+
+---
+
+# Failure Behaviour
+
+Never hide failures.
+
+If execution cannot complete:
+
+Explain:
+
+- where execution stopped
+
+- why
+
+- what succeeded
+
+- what failed
+
+- suggested recovery
+
+Partial success is preferable to misleading success.
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- bypass the orchestrator
+
+- skip mandatory stages
+
+- replace BOS with ad-hoc reasoning
+
+- ignore validation failures
+
+- generate generic templates without classification
+
+- select enterprise patterns solely because they score highest
+
+- duplicate existing platform logic
+
+- hardcode business rules inside this skill
+
+- invent implementation details already handled by the platform
+
+- sacrifice design quality for speed
+
+---
+
+# Future Compatibility
+
+This skill is intentionally orchestration-first.
+
+Future execution environments may include:
+
+- Claude Desktop
+
+- Claude Code
+
+- MCP
+
+- CLI
+
+- Cloud Execution
+
+The orchestration principles remain identical regardless of execution environment.
+
+---
+
+# Completion Criteria
+
+A Build.Anything execution is complete only when:
+
+✓ Intent has been understood
+
+✓ Application has been classified
+
+✓ Workflow has been identified
+
+✓ Entities have been discovered
+
+✓ Business model has been determined
+
+✓ Industry knowledge has been applied
+
+✓ Pattern selection has completed
+
+✓ Architecture is complete
+
+✓ Database is complete
+
+✓ APIs are complete
+
+✓ Design DNA has been applied
+
+✓ Frontend is complete
+
+✓ Validation has passed
+
+✓ Review has completed
+
+✓ Self-healing has finished
+
+✓ Runtime has completed
+
+✓ Execution report has been generated
+
+---
+
+# Final Principle
+
+Build.Anything is an orchestration platform, not a prompt.
+
+This skill exists only to ensure that every software generation request consistently executes the Build.Anything platform rather than relying on ad-hoc reasoning.
+
+The Build.Anything codebase remains the single source of truth.
+
+This skill coordinates the platform.
+
+It never replaces it.

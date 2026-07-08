@@ -47,6 +47,8 @@ export interface BREv2Result {
   confidence: number;
   usedLLMPlanning: boolean;
   revenueIntelligence?: BusinessIntelligenceProfile;
+  /** Raw scraped content — preserves testimonials, about text, product specs, team members */
+  scrapedContent?: import('./types.js').ScrapedContent;
 }
 
 /**
@@ -73,7 +75,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
       const scraped = await scraper.scrapePromptData(ctx.appName, ctx.industry, ctx.country, ctx.description);
       if (scraped && (scraped.heroHeadline || scraped.aboutText || scraped.prices.length > 0)) {
         const profile = scraper.scrapedToBusinessProfile(scraped, ctx.industry, ctx.appName);
-        ctx = { ...ctx, revenueIntelligence: profile as BusinessIntelligenceProfile };
+        ctx = { ...ctx, revenueIntelligence: profile as BusinessIntelligenceProfile, scrapedContent: scraped };
         log.info('Web intelligence gathered', {
           source: scraped.sourceUrl,
           headline: scraped.heroHeadline?.substring(0, 60),
@@ -248,5 +250,6 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     confidence: blueprint.confidence,
     usedLLMPlanning,
     ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
+    ...(ctx.scrapedContent ? { scrapedContent: ctx.scrapedContent } : {}),
   };
 }

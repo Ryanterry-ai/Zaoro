@@ -1,5 +1,6 @@
 import type { BusinessIntelligenceProfile } from '../schemas/knowledge/business-intelligence.schema.js';
 import type { AppFamilyResult } from './application-family-classifier.js';
+import type { ScrapedContent } from '../types.js';
 
 export interface BREContext {
   industry: string;
@@ -16,6 +17,8 @@ export interface BREContext {
   description?: string;
   /** Deep revenue intelligence profile */
   revenueIntelligence?: BusinessIntelligenceProfile;
+  /** Raw scraped content from web intelligence — preserves testimonials, about text, product specs */
+  scrapedContent?: ScrapedContent;
   /** Application family classification result — set by bre-v2-pipeline.ts */
   appFamilyResult?: AppFamilyResult;
 }

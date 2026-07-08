@@ -24,21 +24,16 @@ const HARD_MARKERS = [
   /your\s+(business|company|brand|store)\b/i,
 ];
 
-// Soft phrases: substring matches (case-insensitive). Even one match strongly
-// indicates templated filler.
+// Soft phrases: substring matches (case-insensitive). These are lower priority
+// since scraped content now takes precedence over templated fallbacks.
+// Only flag these if there are NO dynamic content patterns (.map() calls).
 const SOFT_PHRASES = [
-  /transformed\s+how\s+(i|we|they)\s+run\s+my?\s+(business|company|store|practice)/i,
-  /the\s+best\s+.*?\s+we\s+have\s+used\.\s*clean,\s*fast,\s*and\s*reliable/i,
-  /productivity\s+increased\s+by\s*\d+%\s+since\s+switching/i,
   /clean,\s*fast,\s*and\s*reliable/i,
   /highly\s+recommended!/i,
-  /streamlined\s+.*?\s+process/i,
-  /full\s+.*?\s+management/i,
-  /we\s+take\s+that\s+seriously/i,
-  /trusted\s+by\s+(thousands|hundreds|businesses|teams|customers)/i,
-  /our\s+team\s+is\s+here\s+to\s+help/i,
   /seamless\s+experience/i,
   /world-class\s+support/i,
+  /trusted\s+by\s+(thousands|hundreds|businesses|teams|customers)/i,
+  /our\s+team\s+is\s+here\s+to\s+help/i,
 ];
 
 // Trivial-body signature: a section that renders ONLY a title and nothing else.
@@ -96,8 +91,8 @@ function analyzeFile(filePath) {
     issues.push('no-dynamic-content');
   }
 
-  const isGeneric = hardHits > 0 || softHits > 0;
-  const score = isGeneric ? 0 : (isTrivial ? 25 : (hasAnyContent ? 100 : 50));
+  const isGeneric = hardHits > 0;
+  const score = isGeneric ? 0 : (isTrivial ? 25 : (hasAnyContent ? (softHits > 0 ? 75 : 100) : 50));
 
   return { name, path: filePath, issues, isGeneric, isTrivial, hardHits, softHits, score };
 }

@@ -59,6 +59,7 @@ import { assembleRenderResults, writeAssemblyResult } from './assembly-gate.js';
 
 // Agent-mode detection — bypasses LLM adapter when running inside Claude Code / OpenCode
 import { IS_AGENT_MODE, getAgentModeStatus } from '../pipeline/agent-mode.js';
+import { generateAgentSpec, writeAgentSpec } from '../pipeline/agent-prompt.js';
 
 const log = stageLogger('pipeline');
 
@@ -118,6 +119,9 @@ export interface PipelineResult {
 
   /** Worktree names used in the parallel build */
   usedWorktrees?: string[];
+
+  /** Path to the agent spec file (agent mode only) */
+  agentSpecPath?: string;
 }
 
 // ─── Pipeline Execution ──────────────────────────────────────────────────────
@@ -511,6 +515,7 @@ export async function runBuildPipeline(
     ...(matchedPattern ? { pattern: matchedPattern } : {}),
     ...(matchedDesignProfile ? { designProfile: matchedDesignProfile } : {}),
     ...(breResult.revenueIntelligence ? { revenueIntelligence: breResult.revenueIntelligence } : {}),
+    ...(breResult.scrapedContent ? { scrapedContent: breResult.scrapedContent } : {}),
     ...(skillRecommendations ? { skillRecommendations } : {}),
     ...(designDecision ? { designDecision } : {}),
   });
@@ -620,6 +625,7 @@ export async function runBuildPipeline(
         const wtResult = renderWith(wtAppSpec, platform, {
           theme: { ...(breResult.blueprint.designTokens as Record<string, unknown> ?? {}), ...profileTheme },
           includeComments,
+          agentMode: IS_AGENT_MODE,
           includeTests,
           outputDir: path.join(wtSpec.path, 'src'),
           componentSources: [],
@@ -676,6 +682,7 @@ export async function runBuildPipeline(
     renderResult = renderWith(applicationSpec, platform, {
       theme: { ...(breResult.blueprint.designTokens as Record<string, unknown> ?? {}), ...profileTheme },
       includeComments,
+      agentMode: IS_AGENT_MODE,
       includeTests,
       outputDir,
       componentSources: [],
@@ -700,6 +707,22 @@ export async function runBuildPipeline(
     usedWorktrees: usedWorktrees?.length ?? 0,
     duration: Date.now() - t4,
   });
+
+  // ─── Agent Mode: write spec for agent to generate real content ────────────
+  let agentSpecPath: string | undefined;
+  if (IS_AGENT_MODE && workspaceDir) {
+    const { spec: agentSpec, taskMd } = generateAgentSpec(
+      breResult,
+      applicationSpec,
+      designDNA,
+      appClassification,
+      knowledgeVocabulary ? Object.fromEntries(Object.entries(knowledgeVocabulary)) : undefined,
+      knowledgeDomainEntities,
+      pageLayout as unknown as Record<string, unknown>,
+    );
+    agentSpecPath = writeAgentSpec(agentSpec, taskMd, workspaceDir);
+    log.info('Agent spec written', { path: agentSpecPath });
+  }
 
   // Layer 5: Pass 3 code generation from the canonical ApplicationGraph
   // The ApplicationGraph was already built at Layer 1c — Pass 3 reads it as the IR.
@@ -755,6 +778,7 @@ export async function runBuildPipeline(
     ...(componentSpecManifest ? { componentSpecManifest } : {}),
     ...(assemblyResult ? { assemblyResult } : {}),
     ...(usedWorktrees ? { usedWorktrees } : {}),
+    ...(agentSpecPath ? { agentSpecPath } : {}),
   };
 }
 

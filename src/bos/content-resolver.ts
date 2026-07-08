@@ -1,11 +1,12 @@
 /**
  * ContentResolver — fills business content into component specs.
  *
- * This is where business intelligence meets component structure.
- * It takes an Execution Blueprint (which components) and produces
- * an Application Spec (what each component displays).
+ * Hybrid content pipeline: aggregates multiple providers (BOS knowledge,
+ * user prompt, design DNA, scraped data, AI agent reasoning) and merges
+ * content by priority. No hardcoded lookup tables.
  *
- * ALL content comes from structured knowledge — zero LLM calls.
+ * Content passes through quality gates for domain accuracy, uniqueness,
+ * consistency, completeness, and non-generic language before rendering.
  */
 
 import type { ApplicationBlueprint, EntityPlan } from './schemas/blueprint/application-blueprint.schema.js';
@@ -25,7 +26,18 @@ import type {
 import type { Pattern } from './schemas/knowledge/pattern.schema.js';
 import type { DesignProfile } from './schemas/knowledge/design-profile.schema.js';
 import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema.js';
+import type { ScrapedContent } from './types.js';
 import { stageLogger } from '../core/debug-logger.js';
+import {
+  ContentProviderRegistry,
+  BOSKnowledgeProvider,
+  PromptProvider,
+  DesignDNAProvider,
+  ScrapedContentProvider,
+  AgentProvider,
+  type ContentBag,
+  type ProviderContext,
+} from './content-providers/index.js';
 
 const log = stageLogger('resolve');
 
@@ -41,55 +53,21 @@ function getCurrencySymbol(country?: string): string {
   return '$';
 }
 
-/**
- * Get localized testimonial data based on country context.
- */
-function getLocalizedTestimonials(ctx: ContentResolverContext): Array<{ name: string; role: string; quote: string }> {
-  const country = ctx.blueprint.country;
-  const industryName = ctx.revenueIntelligence?.vocabulary?.['customer'] ?? ctx.blueprint.industry;
-  const roleTitle = ctx.pattern
-    ? ctx.pattern.compatibleIndustries[0]?.charAt(0).toUpperCase() + (ctx.pattern.compatibleIndustries[0]?.slice(1) ?? '')
-    : industryName.charAt(0).toUpperCase() + industryName.slice(1);
-
-  const testimonialPool: Record<string, Array<{ name: string; role: string; quote: string }>> = {
-    IN: [
-      { name: 'Arun Sharma', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
-      { name: 'Priya Patel', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
-      { name: 'Rahul Verma', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
-    ],
-    US: [
-      { name: 'Alex Rivera', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
-      { name: 'Jordan Lee', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
-      { name: 'Sam Chen', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
-    ],
-    GB: [
-      { name: 'Oliver Davies', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
-      { name: 'Emily Watson', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
-      { name: 'James Clarke', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
-    ],
-    EU: [
-      { name: 'Claire Dubois', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
-      { name: 'Marcus Weber', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
-      { name: 'Sofia Rossi', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
-    ],
-  };
-
-  const pool = (country ? testimonialPool[country] : undefined) ?? [
-    { name: 'Alex Rivera', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
-    { name: 'Jordan Lee', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
-    { name: 'Sam Patel', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
-  ];
-
-  return pool;
-}
-
 // ─── Vocabulary Helper ────────────────────────────────────────────────────────
 
-/**
- * Apply vocabulary replacements to a string.
- * e.g. "All Products" → "All Dishes" for a restaurant.
- */
-// ─── Industry Content Helpers ────────────────────────────────────────────────
+/** Detect sub-category keywords from the description for content enrichment */
+function detectSubCategory(ctx: ContentResolverContext): string | undefined {
+  const desc = (ctx.blueprint.description ?? '').toLowerCase();
+  const name = (ctx.blueprint.name ?? '').toLowerCase();
+  const combined = `${desc} ${name}`;
+
+  if (combined.includes('coffee') || combined.includes('espresso') || combined.includes('brew') || combined.includes('cafe')) return 'coffee';
+  if (combined.includes('wholesale') || combined.includes('b2b') || combined.includes('distributor') || combined.includes('bulk')) return 'wholesale';
+  if (combined.includes('supplement') || combined.includes('protein') || combined.includes('nutrition') || combined.includes('whey')) return 'supplement';
+  if (combined.includes('gym') || combined.includes('fitness') || combined.includes('yoga')) return 'fitness';
+  if (combined.includes('hotel') || combined.includes('motel') || combined.includes('lodge')) return 'hotel';
+  return undefined;
+}
 
 /** Get industry-specific entity name (e.g., "dish" for restaurant, "property" for real estate) */
 function getPrimaryEntityName(ctx: ContentResolverContext): string {
@@ -104,6 +82,15 @@ function getWorkflowNames(ctx: ContentResolverContext): string[] {
 
 /** Get industry-specific feature items from capabilities and workflows */
 function getIndustryFeatures(ctx: ContentResolverContext): ItemSpec[] {
+  // Use real scraped product specs if available
+  if (ctx.scrapedContent?.productSpecs && ctx.scrapedContent.productSpecs.length > 0) {
+    return ctx.scrapedContent.productSpecs.slice(0, 6).map((spec: string, i: number) => ({
+      title: spec,
+      description: `${vocab('Streamlined', ctx)} ${spec.toLowerCase()} ${vocab('process', ctx)}`,
+      icon: ['zap', 'database', 'shield', 'lock', 'trending-up', 'code'][i] ?? 'zap',
+    }));
+  }
+
   const items: ItemSpec[] = [];
   const workflows = getWorkflowNames(ctx);
   const entities = ctx.blueprint.entities.map(e => e.name);
@@ -125,6 +112,28 @@ function getIndustryFeatures(ctx: ContentResolverContext): ItemSpec[] {
       description: `${vocab('Full', ctx)} ${ent.toLowerCase()} ${vocab('management', ctx)}`,
       icon: 'database',
     });
+  }
+
+  // Add sub-category specific features based on description keywords
+  const subCat = detectSubCategory(ctx);
+  if (subCat === 'coffee' && items.length < 6) {
+    items.push(
+      { title: 'Fresh Roasted Beans', description: 'Single-origin and blended beans roasted in-house daily', icon: 'coffee' },
+      { title: 'Online Order & Pickup', description: 'Skip the line — order ahead and pick up when ready', icon: 'shopping-bag' },
+      { title: 'Barista Crafted Drinks', description: 'Espresso, pour-over, cold brew, and seasonal specials', icon: 'cup-soda' },
+    );
+  } else if (subCat === 'wholesale' && items.length < 6) {
+    items.push(
+      { title: 'Bulk Pricing Tiers', description: 'Volume-based pricing with MOQ thresholds for distributors', icon: 'package' },
+      { title: 'Dealer Portal', description: 'Self-service ordering, invoice management, and inventory tracking', icon: 'layout-dashboard' },
+      { title: 'Purchase Order System', description: 'Automated PO generation and approval workflows', icon: 'file-text' },
+    );
+  } else if (subCat === 'supplement' && items.length < 6) {
+    items.push(
+      { title: 'Lab-Tested Products', description: 'Third-party verified purity and potency for every batch', icon: 'flask-conical' },
+      { title: 'Brand Catalog', description: 'Multi-brand inventory with real-time stock and pricing', icon: 'grid' },
+      { title: 'Subscription Bundles', description: 'Monthly supplement stacks delivered to your door', icon: 'repeat' },
+    );
   }
 
   // Pad with industry-specific features if needed
@@ -497,6 +506,15 @@ function getMissionItems(ctx: ContentResolverContext): ItemSpec[] {
 
 /** Get industry-specific team roles */
 function getTeamRoles(ctx: ContentResolverContext): ItemSpec[] {
+  // Use real scraped team members if available
+  if (ctx.scrapedContent?.teamMembers && ctx.scrapedContent.teamMembers.length > 0) {
+    return ctx.scrapedContent.teamMembers.slice(0, 5).map((tm: { name: string; role?: string; bio?: string }) => ({
+      title: tm.role ?? tm.name,
+      description: tm.bio ?? `${tm.name} — ${tm.role}`,
+      icon: 'user' as const,
+    }));
+  }
+
   const industry = ctx.blueprint.industry;
   const teamData: Record<string, ItemSpec[]> = {
     restaurant: [
@@ -637,15 +655,21 @@ export interface ContentResolverContext {
   designProfile?: DesignProfile;
   /** Deep revenue intelligence — how this business makes money */
   revenueIntelligence?: BusinessIntelligenceProfile;
+  /** Raw scraped content — preserves real testimonials, about text, product specs, team members */
+  scrapedContent?: ScrapedContent;
   /** Skill recommendations from UI/UX Pro Max, framer-motion, 21st.dev, etc. */
   skillRecommendations?: import('../generation/skill-integrator.js').DesignRecommendation;
   /** Design intelligence from DesignIntelligenceEngine (6 sub-engines) */
   designDecision?: import('../orchestration/design-intelligence/types.js').DesignDecision;
+  /** Design DNA — style palette, typography, animation, etc. */
+  designDNA?: import('../generation/design-dna.js').DesignDNA;
+  /** App family classification — industry, app type, complexity */
+  appFamily?: import('./reasoning/application-family-classifier.js').AppFamilyResult;
 }
 
 /**
  * Resolve an Execution Blueprint into an Application Spec.
- * Fills all content from structured business knowledge.
+ * Aggregates content from all providers and fills component specs.
  */
 export function resolveContent(
   execBlueprint: ExecutionBlueprint,
@@ -657,8 +681,32 @@ export function resolveContent(
   });
 
   const t = Date.now();
+
+  // Aggregate content from all providers
+  const registry = createProviderRegistry();
+  const subCategory = detectSubCategory(ctx);
+  const providerCtx: ProviderContext = {
+    blueprint: ctx.blueprint,
+    vocabulary: ctx.vocabulary,
+    ...(subCategory != null ? { subCategory } : {}),
+    ...(ctx.revenueIntelligence != null ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
+    ...(ctx.scrapedContent != null ? { scrapedContent: ctx.scrapedContent } : {}),
+    ...(ctx.designDNA != null ? { designDNA: ctx.designDNA } : {}),
+    ...(ctx.appFamily != null ? { appFamily: ctx.appFamily } : {}),
+    ...(ctx.skillRecommendations != null ? { skillRecommendations: ctx.skillRecommendations } : {}),
+    ...(ctx.designDecision != null ? { designDecision: ctx.designDecision } : {}),
+  };
+  const contentBag = registry.aggregate(providerCtx);
+  log.info('Content aggregated from providers', {
+    providers: registry.getProviders().map(p => p.name),
+    hasHero: !!contentBag.hero,
+    hasFeatures: !!contentBag.features,
+    hasTestimonials: !!contentBag.testimonials,
+    hasAbout: !!contentBag.about,
+  });
+
   const pages = execBlueprint.pages.map(page =>
-    resolvePageSpec(page, ctx),
+    resolvePageSpec(page, ctx, contentBag),
   );
 
   const totalComponents = pages.reduce((sum, p) => sum + p.components.length, 0);
@@ -680,14 +728,26 @@ export function resolveContent(
   };
 }
 
+/** Create and register all content providers */
+function createProviderRegistry(): ContentProviderRegistry {
+  const registry = new ContentProviderRegistry();
+  registry.register(new BOSKnowledgeProvider());
+  registry.register(new PromptProvider());
+  registry.register(new DesignDNAProvider());
+  registry.register(new ScrapedContentProvider());
+  registry.register(new AgentProvider());
+  return registry;
+}
+
 // ─── Page Resolution ─────────────────────────────────────────────────────────
 
 function resolvePageSpec(
   page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): PageSpec {
   const components = page.slots.map(slot =>
-    resolveComponentSpec(slot, page, ctx),
+    resolveComponentSpec(slot, page, ctx, contentBag),
   );
 
   return {
@@ -707,9 +767,10 @@ function resolveComponentSpec(
   slot: ComponentSlot,
   page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
   const resolver = COMPONENT_RESOLVERS[slot.component] ?? resolveGenericComponent;
-  return resolver(slot, page, ctx);
+  return resolver(slot, page, ctx, contentBag);
 }
 
 // ─── Individual Component Resolvers ──────────────────────────────────────────
@@ -718,6 +779,7 @@ type ComponentResolver = (
   slot: ComponentSlot,
   page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ) => ComponentSpec;
 
 const COMPONENT_RESOLVERS: Record<string, ComponentResolver> = {
@@ -788,46 +850,32 @@ function resolveHeroBanner(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
+  const hero = contentBag.hero ?? {};
   const ctaLabel = ctx.pattern?.workflows[0]
     ? `Start ${ctx.pattern.workflows[0]}`
     : vocab('Get Started', ctx);
 
-  // Use BI lead capture headline if available
   const leadCapture = ctx.revenueIntelligence?.leadCaptureMechanisms?.[0];
-  const biTitle = leadCapture?.headline;
-  const biSubtitle = ctx.revenueIntelligence?.revenueCycle?.description;
 
-  // Generate a proper hero subtitle — never use raw prompt text
-  const heroSubtitle = generateHeroSubtitle(ctx);
-
-  // Use BI revenue models as hero items if available
-  const biItems = ctx.revenueIntelligence?.revenueModels?.slice(0, 3).map(rm => ({
-    title: rm.name,
-    description: rm.description,
-    icon: 'zap' as const,
-  }));
-
-  // Industry-aware hero badge
-  const industry = ctx.blueprint.industry;
-  const country = ctx.blueprint.country;
-  const badgeText = country === 'IN'
-    ? `India's ${industry === 'ecommerce' ? 'Online Store' : industry === 'fitness' ? 'Fitness Platform' : 'Platform'}`
-    : ctx.blueprint.industry;
+  // Generate industry-aware subtitle fallback
+  const name = ctx.blueprint.name ?? 'your team';
+  const defaultSubtitle = `Built for how ${name} works`;
 
   return {
     type: 'HeroBanner',
     content: {
-      title: { value: biTitle ?? ctx.blueprint.name, type: 'text' },
-      subtitle: { value: heroSubtitle, type: 'text' },
-      badge: { value: badgeText, type: 'text' },
+      title: { value: hero.title ?? ctx.blueprint.name, type: 'text' },
+      subtitle: { value: hero.subtitle ?? defaultSubtitle, type: 'text' },
+      badge: { value: hero.badge ?? ctx.blueprint.industry, type: 'text' },
     },
-    items: biItems ?? [
+    items: hero.items ?? [
       { title: vocab('Reliable', ctx), description: vocab('Enterprise-grade reliability', ctx), icon: 'shield' },
       { title: vocab('Scalable', ctx), description: vocab('Built for growth', ctx), icon: 'trending-up' },
       { title: vocab('Secure', ctx), description: vocab('Data protection first', ctx), icon: 'lock' },
     ],
-    actions: [
+    actions: hero.actions ?? [
       { label: leadCapture?.name ? `Start ${leadCapture.name}` : ctaLabel, action: '/signup', style: 'primary' },
       { label: vocab('Learn More', ctx), action: '#features', style: 'ghost' },
     ],
@@ -853,33 +901,31 @@ function generateHeroSubtitle(ctx: ContentResolverContext): string {
 
   // Always prefer industry-specific value propositions over prompt echo
 
-  // Coffee shops — must be before general ecommerce since "coffee shop" contains "shop"
-  if (promptText.includes('coffee') || promptText.includes('espresso') || promptText.includes('brew') || promptText.includes('cafe') || promptText.includes('café')) {
-    if (country === 'US') return 'Freshly roasted specialty coffee, crafted with care — order online for pickup or delivery';
-    if (country === 'GB') return 'Artisan coffee roasted daily, served with a smile — order ahead and skip the queue';
-    return 'Specialty coffee roasted fresh daily, available for order online';
-  }
-
-  // B2B / wholesale / distribution
-  if (promptText.includes('wholesale') || promptText.includes('b2b') || promptText.includes('distributor') || promptText.includes('distribution') || promptText.includes('bulk')) {
-    if (country === 'IN') return 'India\'s trusted wholesale distributor — bulk supplements with dealer network and fast logistics';
-    return 'Trusted wholesale distributor — bulk pricing, dealer network, and reliable logistics';
-  }
-
   // Supplement / nutrition stores
   if (promptText.includes('supplement') || promptText.includes('protein') || promptText.includes('nutrition') || promptText.includes('vitamin')) {
+    if (promptText.includes('wholesale') || promptText.includes('b2b') || promptText.includes('distributor')) {
+      return 'B2B wholesale supplement distribution — bulk pricing, dealer network, nationwide supply chain';
+    }
     if (country === 'IN') return 'Premium supplements from top brands, delivered across India — lab-tested, 100% genuine';
     return 'Premium supplements from top brands, delivered to your door';
   }
 
+  // Coffee shop / cafe
+  if (promptText.includes('coffee') || promptText.includes('espresso') || promptText.includes('brew') || promptText.includes('cafe')) {
+    return 'Freshly roasted beans, handcrafted drinks, and a space worth waking up for';
+  }
+
   // Ecommerce general
   if (industry === 'ecommerce' || promptText.includes('store') || promptText.includes('shop') || promptText.includes('marketplace')) {
+    if (promptText.includes('wholesale') || promptText.includes('b2b') || promptText.includes('distributor') || promptText.includes('bulk')) {
+      return 'Wholesale distribution platform — bulk ordering, dealer management, and supply chain visibility';
+    }
     if (country === 'IN') return 'Shop from thousands of products with fast delivery across India';
     return 'Shop from thousands of products with fast, free delivery';
   }
 
   // Restaurant / food
-  if (industry === 'restaurant' || promptText.includes('restaurant') || promptText.includes('food')) {
+  if (industry === 'restaurant' || promptText.includes('restaurant') || promptText.includes('cafe') || promptText.includes('food')) {
     return 'Fresh, delicious food prepared with love and delivered to your table';
   }
 
@@ -922,8 +968,11 @@ function generateHeroSubtitle(ctx: ContentResolverContext): string {
     return `The best ${industryLabel} experience${cityStr}`;
   }
 
-  // Fallback: generic value proposition
-  return `Everything you need, built for you`;
+  // Fallback: industry-aware value proposition
+  const industryLabel = industry.charAt(0).toUpperCase() + industry.slice(1);
+  const city = extractCity(promptText);
+  const cityStr = city ? ` in ${city}` : '';
+  return `Purpose-built for ${industryLabel}${cityStr} — designed around how your team actually works`;
 }
 
 /** Extract city name from a description string. */
@@ -943,14 +992,25 @@ function extractCity(text: string): string | undefined {
  * Generate an about section description from context — never the raw prompt.
  */
 function generateAboutDescription(ctx: ContentResolverContext): string {
+  // Use real scraped about text if available
+  if (ctx.scrapedContent?.aboutText && ctx.scrapedContent.aboutText.length > 20) {
+    return ctx.scrapedContent.aboutText;
+  }
+
   const industry = ctx.blueprint.industry;
   const country = ctx.blueprint.country;
   const desc = ctx.blueprint.description?.toLowerCase() ?? '';
 
   if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition')) {
+    if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) {
+      return 'A trusted B2B wholesale distributor of premium supplements, serving gyms and retailers nationwide';
+    }
     return country === 'IN'
       ? 'India\'s trusted destination for genuine supplements from top international and Indian brands'
       : 'Your trusted destination for genuine supplements from top brands';
+  }
+  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe')) {
+    return 'A neighborhood coffee house committed to ethically sourced beans, expert roasting, and a warm community atmosphere';
   }
   if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('food')) {
     return 'A passion for great food, fresh ingredients, and unforgettable dining experiences';
@@ -980,44 +1040,17 @@ function resolveFeatureGrid(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
-  // Use BI dashboard widgets as features if available
-  const biFeatures = ctx.revenueIntelligence?.dashboardWidgets?.slice(0, 6).map(w => ({
-    title: w.name,
-    description: w.description,
-    icon: w.type === 'chart' ? 'bar-chart' : w.type === 'stat-card' ? 'activity' : w.type === 'table' ? 'list' : 'zap',
-  }));
-
-  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
-  const industry = ctx.blueprint.industry;
-
-  // Industry-aware feature grid titles
-  let featureTitle = 'Features';
-  let featureSubtitle = 'Everything you need';
-  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe')) {
-    featureTitle = 'Our Menu & Services';
-    featureSubtitle = 'Crafted with care, from bean to cup';
-  } else if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) {
-    featureTitle = 'Why Partner With Us';
-    featureSubtitle = 'Reliable supply, competitive pricing, and nationwide logistics';
-  } else if (desc.includes('supplement') || desc.includes('protein') || industry === 'ecommerce-supplement') {
-    featureTitle = 'Why Choose Us';
-    featureSubtitle = 'Genuine products, expert guidance, and fast delivery';
-  } else if (industry === 'restaurant' || desc.includes('restaurant') || desc.includes('food')) {
-    featureTitle = 'Our Menu & Services';
-    featureSubtitle = 'Fresh, delicious food prepared with love';
-  } else if (industry === 'fitness' || desc.includes('gym') || desc.includes('fitness')) {
-    featureTitle = 'Facilities & Programs';
-    featureSubtitle = 'Everything you need to reach your fitness goals';
-  }
+  const features = contentBag.features ?? {};
 
   return {
     type: 'FeatureGrid',
     content: {
-      title: { value: featureTitle, type: 'text' },
-      subtitle: { value: featureSubtitle, type: 'text' },
+      title: { value: features.title ?? vocab('Features', ctx), type: 'text' },
+      subtitle: { value: features.subtitle ?? `What makes ${ctx.blueprint.name ?? 'us'} different`, type: 'text' },
     },
-    items: biFeatures ?? resolveFeatures(ctx),
+    items: features.items ?? resolveFeatures(ctx),
     layout: { alignment: 'center', maxWidth: '7xl' },
   };
 }
@@ -1050,6 +1083,7 @@ function resolvePricingTable(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
   return {
     type: 'PricingTable',
@@ -1057,7 +1091,7 @@ function resolvePricingTable(
       title: { value: vocab('Pricing', ctx), type: 'text' },
       subtitle: { value: vocab('Choose your plan', ctx), type: 'text' },
     },
-    tiers: resolvePricingTiers(ctx),
+    tiers: contentBag.pricing?.tiers ?? resolvePricingTiers(ctx),
     layout: { alignment: 'center', maxWidth: '6xl' },
   };
 }
@@ -1066,28 +1100,15 @@ function resolveTestimonials(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
-  const testimonials = getLocalizedTestimonials(ctx);
-  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
-
-  let testimonialTitle = 'What Our Users Say';
-  let testimonialSubtitle = 'Trusted by thousands';
-  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe')) {
-    testimonialTitle = 'What Our Customers Say';
-    testimonialSubtitle = 'Loved by coffee lovers in the community';
-  } else if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) {
-    testimonialTitle = 'What Our Partners Say';
-    testimonialSubtitle = 'Trusted by distributors and retailers nationwide';
-  } else if (desc.includes('supplement') || desc.includes('protein')) {
-    testimonialTitle = 'What Our Customers Say';
-    testimonialSubtitle = 'Trusted by fitness enthusiasts across India';
-  }
+  const testimonials = contentBag.testimonials?.items ?? [];
 
   return {
     type: 'Testimonials',
     content: {
-      title: { value: testimonialTitle, type: 'text' },
-      subtitle: { value: testimonialSubtitle, type: 'text' },
+      title: { value: vocab('What Our Users Say', ctx), type: 'text' },
+      subtitle: { value: vocab('Trusted by thousands', ctx), type: 'text' },
     },
     items: testimonials.map(t => ({
       title: t.name,
@@ -1102,25 +1123,24 @@ function resolveCTASection(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
+  const cta = contentBag.cta ?? {};
   const ctaLabel = ctx.pattern?.workflows[0]
     ? ctx.pattern.workflows[0]
     : vocab('Get Started Free', ctx);
 
-  // Use BI lead capture mechanism if available
-  const leadCapture = ctx.revenueIntelligence?.leadCaptureMechanisms?.[0];
-
   return {
     type: 'CTASection',
     content: {
-      title: { value: leadCapture?.headline ?? vocab('Ready to get started?', ctx), type: 'text' },
-      subtitle: { value: `Join ${ctx.blueprint.name} today`, type: 'text' },
+      title: { value: cta.title ?? vocab('Ready to get started?', ctx), type: 'text' },
+      subtitle: { value: cta.subtitle ?? `Join ${ctx.blueprint.name} today`, type: 'text' },
     },
     items: [
       { title: vocab('No credit card required', ctx), description: vocab('Start free and upgrade anytime', ctx), icon: 'credit-card' },
       { title: vocab('Instant setup', ctx), description: vocab('Get up and running in minutes', ctx), icon: 'zap' },
     ],
-    actions: [
+    actions: cta.actions ?? [
       { label: ctaLabel, action: '/signup', style: 'primary' },
     ],
     layout: { alignment: 'center', maxWidth: '4xl', padding: 'lg' },
@@ -1193,7 +1213,19 @@ function resolveStatsCards(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
+  // Use provider stats if available
+  if (contentBag.stats?.items && contentBag.stats.items.length > 0) {
+    const stats: StatSpec[] = contentBag.stats.items.map(s => ({
+      label: s.label,
+      value: s.value,
+      change: s.change ?? '+0%',
+      trend: s.trend ?? 'neutral',
+    }));
+    return { type: 'StatsCards', stats, layout: { maxWidth: '7xl' } };
+  }
+
   // Use BI profile KPIs if available
   if (ctx.revenueIntelligence?.kpis?.length) {
     const stats: StatSpec[] = ctx.revenueIntelligence.kpis.slice(0, 6).map(kpi => ({
@@ -2310,15 +2342,16 @@ function resolveAboutSection(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
-  const biDesc = ctx.revenueIntelligence?.description;
+  const about = contentBag.about ?? {};
   return {
     type: 'AboutSection',
     content: {
-      title: { value: vocab('About Us', ctx), type: 'text' },
-      subtitle: { value: biDesc ?? generateAboutDescription(ctx), type: 'text' },
+      title: { value: about.title ?? vocab('About Us', ctx), type: 'text' },
+      subtitle: { value: about.description ?? `Building solutions for ${ctx.blueprint.industry}`, type: 'text' },
     },
-    items: getAboutItems(ctx),
+    items: about.items ?? getAboutItems(ctx),
     layout: { alignment: 'center', maxWidth: '4xl' },
   };
 }
@@ -2327,14 +2360,16 @@ function resolveTeamSection(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
+  const team = contentBag.team ?? {};
   return {
     type: 'TeamSection',
     content: {
       title: { value: vocab('Meet Our Team', ctx), type: 'text' },
       subtitle: { value: vocab('The people behind the product', ctx), type: 'text' },
     },
-    items: getTeamRoles(ctx),
+    items: team.items ?? getTeamRoles(ctx),
     layout: { alignment: 'center', maxWidth: '6xl' },
   };
 }
@@ -2343,13 +2378,15 @@ function resolveTeamGrid(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
+  const team = contentBag.team ?? {};
   return {
     type: 'TeamGrid',
     content: {
       title: { value: vocab('Our Team', ctx), type: 'text' },
     },
-    items: getTeamRoles(ctx),
+    items: team.items ?? getTeamRoles(ctx),
     layout: { alignment: 'center', maxWidth: '6xl' },
   };
 }
@@ -2358,14 +2395,16 @@ function resolveMissionSection(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag: ContentBag,
 ): ComponentSpec {
+  const mission = contentBag.mission ?? {};
   return {
     type: 'MissionSection',
     content: {
       title: { value: vocab('Our Mission', ctx), type: 'text' },
       subtitle: { value: vocab('What drives us every day', ctx), type: 'text' },
     },
-    items: getMissionItems(ctx),
+    items: mission.items ?? getMissionItems(ctx),
     layout: { alignment: 'center', maxWidth: '4xl' },
   };
 }
@@ -2469,30 +2508,6 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
     ];
   }
 
-  // Coffee shop features
-  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe') || desc.includes('café')) {
-    return [
-      { title: 'Online Ordering', description: 'Order your favorite coffee ahead for pickup or delivery', icon: 'shopping-bag' },
-      { title: 'Menu & Specials', description: 'Explore our espresso drinks, pour-overs, cold brews, and seasonal specials', icon: 'book-open' },
-      { title: 'Loyalty Rewards', description: 'Earn points on every cup, redeem for free drinks and merchandise', icon: 'award' },
-      { title: 'Fresh Beans', description: 'Single-origin and house-blend beans roasted in-house weekly', icon: 'coffee' },
-      { title: 'Table Reservations', description: 'Reserve a seat for your next meeting or study session', icon: 'calendar' },
-      { title: 'Gift Cards', description: 'Share the love — send a digital gift card to a fellow coffee lover', icon: 'credit-card' },
-    ];
-  }
-
-  // B2B / wholesale / distribution features
-  if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('distribution') || desc.includes('bulk')) {
-    return [
-      { title: 'Bulk Pricing', description: 'Competitive volume-based pricing for dealers and retailers', icon: 'percent' },
-      { title: 'Dealer Network', description: 'Join our distribution network across ' + (country === 'IN' ? 'India' : 'the region') + ' — apply now', icon: 'network' },
-      { title: 'Product Catalog', description: 'Full catalog with MOQ details, spec sheets, and compliance documents', icon: 'book-open' },
-      { title: 'Order Management', description: 'Track purchase orders, shipments, and payments in real-time', icon: 'package' },
-      { title: 'Fast Logistics', description: 'Reliable delivery with real-time tracking and express options', icon: 'truck' },
-      { title: 'Credit Terms', description: 'Flexible payment terms for approved wholesale partners', icon: 'credit-card' },
-    ];
-  }
-
   // Restaurant-specific features
   if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('food') || industry === 'restaurant') {
     return [
@@ -2567,6 +2582,17 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
 }
 
 function resolvePricingTiers(ctx: ContentResolverContext): TierSpec[] {
+  // Use real scraped prices if available
+  if (ctx.scrapedContent?.prices && ctx.scrapedContent.prices.length > 0) {
+    return ctx.scrapedContent.prices.slice(0, 3).map((p: { name: string; price: string; description?: string }, i: number) => ({
+      name: p.name,
+      price: p.price,
+      period: '',
+      features: [p.description ?? '', `${vocab('Core', ctx)} ${vocab('features', ctx)}`, 'Email support'],
+      highlighted: i === 1,
+    }));
+  }
+
   // Use scraped revenue models as pricing tiers if available
   const biModels = ctx.revenueIntelligence?.revenueModels;
   if (biModels && biModels.length > 0) {

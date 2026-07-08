@@ -133,6 +133,10 @@ export interface RenderContext {
 
   /** Which engines contributed design output — used for provenance reporting. */
   designLineage?: DesignLineage;
+
+  /** Agent mode: only generate shell files (layout, CSS, tailwind, nav-data).
+   *  Skip page TSX and component TSX — the agent generates those from the spec. */
+  agentMode?: boolean;
 }
 
 /**

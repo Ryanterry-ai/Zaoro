@@ -5,7 +5,7 @@
 - **Successful**: 0
 - **Failed**: 1
 - **Success Rate**: 0%
-- **Avg Duration**: 1.0s
+- **Avg Duration**: 1.1s
 - **Avg Score**: 20/100
 - **Avg Cost**: $0
 
@@ -17,7 +17,7 @@
 ## Weakest Areas
 - architecture (10/100)
 - business (15/100)
-- security (20/100)
+- design (17/100)
 
 ## Recommendations
 - Improve architecture scoring (currently 10/100)
@@ -26,4 +26,4 @@
 ## Per-App Results
 | App | Industry | Score | Duration | Cost | Status |
 |-----|----------|-------|----------|------|--------|
-| Agency Website | portfolio | 20/100 | 1.0s | $0 | Fail |
+| Agency Website | portfolio | 20/100 | 1.1s | $0 | Fail |
