@@ -39,10 +39,10 @@ describe('Section Mapper', () => {
     expect(result?.order).toBe(0);
   });
 
-  it('should return placeholder for unknown sections', () => {
+  it('should return FeatureGrid for unknown sections', () => {
     const page = { id: 'p1', path: '/custom', name: 'Custom', type: 'general', sections: ['hero-banner', 'custom-section'] };
     const result = mapSectionToSlot('custom-section', page, {} as ApplicationBlueprint);
-    expect(result?.component).toBe('PlaceholderSection');
+    expect(result?.component).toBe('FeatureGrid');
     expect(result?.order).toBe(1);
   });
 

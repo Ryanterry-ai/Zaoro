@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec, ChildProcess } from 'child_process';
+import { exec, execSync, ChildProcess } from 'child_process';
 import { WorkspaceConfig } from '../types/index.js';
 
 export class SandboxEngine {
@@ -32,6 +32,8 @@ export class SandboxEngine {
       console.log(`[sandbox] Backfilling ${missingFiles.length} missing scaffold files: ${missingFiles.map(f => f.relativePath).join(', ')}`);
       this.scaffoldWorkspace(rootPath);
     }
+
+    this.ensureGitRepo(rootPath);
 
     return { workspaceId: id, rootPath };
   }
@@ -119,6 +121,20 @@ export class SandboxEngine {
     if (activeProcess) {
       activeProcess.kill('SIGTERM');
       this.activeServers.delete(workspaceId);
+    }
+  }
+
+  private ensureGitRepo(root: string): void {
+    const gitDir = path.join(root, '.git');
+    if (fs.existsSync(gitDir)) return;
+    try {
+      execSync('git init', { cwd: root, stdio: 'pipe' });
+      execSync('git config user.email "build@same.local"', { cwd: root, stdio: 'pipe' });
+      execSync('git config user.name "Build.Same Engine"', { cwd: root, stdio: 'pipe' });
+      execSync('git add -A', { cwd: root, stdio: 'pipe' });
+      execSync('git commit -m "scaffold: initial workspace"', { cwd: root, stdio: 'pipe' });
+    } catch {
+      console.warn('[sandbox] git init failed — worktrees will not be available');
     }
   }
 

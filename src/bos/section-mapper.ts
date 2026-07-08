@@ -388,10 +388,9 @@ export function mapSectionToSlot(
   const component = SECTION_REGISTRY[normalized];
 
   if (!component) {
-    // Fallback: create a generic placeholder
     return {
       slot: sectionName,
-      component: 'PlaceholderSection',
+      component: 'FeatureGrid',
       order: page.sections.indexOf(sectionName),
     };
   }

@@ -289,7 +289,9 @@ export type NavItem = (typeof navItems)[number];
       this.renderTailwindConfig(context),
       this.renderPostCSSConfig(),
       this.renderNextConfig(),
-      this.renderRootLayout(appName),
+      this.renderNavbar(spec),
+      this.renderGlobalFooter(spec),
+      this.renderRootLayout(appName, context),
     ];
   }
 
@@ -578,11 +580,99 @@ export default nextConfig;
     };
   }
 
-  private renderRootLayout(appName: string): RenderedFile {
+  private renderNavbar(spec: ApplicationSpec): RenderedFile {
+    const appName = spec.appName || 'App';
+    const navPages = spec.pages.filter(p => p.type !== 'auth' && p.type !== 'detail');
+    const links = navPages.map(p =>
+      `    { label: '${p.name}', href: '${p.path}' }`
+    ).join(',\n');
+
+    return {
+      path: 'components/Navbar.tsx',
+      content: `'use client';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const navItems = [
+${links}
+];
+
+export default function Navbar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <Link href="/" className="font-black text-xl text-zinc-50">${appName}</Link>
+        <div className="hidden md:flex items-center gap-8">
+          {navItems.map(item => (
+            <Link key={item.href} href={item.href}
+              className={\`text-sm font-medium transition \${pathname === item.href ? 'text-primary' : 'text-zinc-400 hover:text-zinc-50'}\`}>
+              {item.label}
+            </Link>
+          ))}
+        </div>
+        <button onClick={() => setOpen(!open)} className="md:hidden text-zinc-400">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {open ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
+          </svg>
+        </button>
+      </div>
+      {open && (
+        <div className="md:hidden border-t border-zinc-800 bg-zinc-950 px-6 py-4 flex flex-col gap-4">
+          {navItems.map(item => (
+            <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
+              className="text-sm text-zinc-300">{item.label}</Link>
+          ))}
+        </div>
+      )}
+    </nav>
+  );
+}
+`,
+      type: 'component',
+    };
+  }
+
+  private renderGlobalFooter(spec: ApplicationSpec): RenderedFile {
+    return {
+      path: 'components/GlobalFooter.tsx',
+      content: `'use client';
+import React from 'react';
+import Link from 'next/link';
+
+export default function GlobalFooter() {
+  return (
+    <footer className="border-t border-zinc-800 bg-zinc-950 py-12 px-6">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <p className="text-sm text-zinc-500">\u00A9 {new Date().getFullYear()} ${spec.appName}. All rights reserved.</p>
+        <div className="flex items-center gap-6 text-sm text-zinc-500">
+          <Link href="/privacy" className="hover:text-zinc-300 transition">Privacy</Link>
+          <Link href="/terms" className="hover:text-zinc-300 transition">Terms</Link>
+          <Link href="/contact" className="hover:text-zinc-300 transition">Contact</Link>
+        </div>
+      </div>
+    </footer>
+  );
+}
+`,
+      type: 'component',
+    };
+  }
+
+  private renderRootLayout(appName: string, context?: RenderContext): RenderedFile {
+    const dna = context?.designDNA;
+    const fontLink = dna?.typography?.googleFontsUrl
+      ? `<link rel="preconnect" href="https://fonts.googleapis.com" />\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />\n    <link href="${dna.typography.googleFontsUrl}" rel="stylesheet" />`
+      : '';
+
     return {
       path: 'app/layout.tsx',
       content: `import type { Metadata } from 'next';
 import './globals.css';
+import Navbar from '@/components/Navbar';
+import GlobalFooter from '@/components/GlobalFooter';
 
 export const metadata: Metadata = {
   title: '${appName}',
@@ -592,7 +682,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        ${fontLink}
+      </head>
+      <body className="bg-zinc-950 text-zinc-50 antialiased">
+        <Navbar />
+        <main className="pt-16">{children}</main>
+        <GlobalFooter />
+      </body>
     </html>
   );
 }

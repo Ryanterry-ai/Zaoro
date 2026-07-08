@@ -1156,6 +1156,11 @@ export class CloneOrchestrator {
   // ─── Page generation ───────────────────────────────────────────
 
   private async generatePage(page: CrawledPage, allPages: CrawledPage[], assetMap: Map<string, string>): Promise<ASTPatch[]> {
+    if (!this.gateway || !(this.gateway as any).apiKey) {
+      const routePath = page.pagePath === '/' ? '' : page.pagePath.replace(/^\//, '');
+      const targetFile = page.pagePath === '/' ? 'src/app/page.tsx' : `src/app/${routePath}/page.tsx`;
+      return [{ action: 'insert', targetFile, codeBlock: `export default function Page() { return <div>${page.title}</div>; }` }];
+    }
     const routePath = page.pagePath === '/' ? '' : page.pagePath.replace(/^\//, '');
     const localImages = page.images.map(src => assetMap.get(src) || src);
     const localVideos = page.videos.map(src => assetMap.get(src) || src);
@@ -1325,6 +1330,9 @@ Generate a complete Next.js App Router page component.`;
   // ─── Layout generation ─────────────────────────────────────────
 
   private async generateLayout(pages: CrawledPage[], assetMap: Map<string, string>): Promise<ASTPatch[]> {
+    if (!this.gateway || !(this.gateway as any).apiKey) {
+      return [];
+    }
     const home = pages.find(p => p.pagePath === '/') || pages[0]!;
     const allPageLinks = pages.map(p => {
       const label = p.navItems.length > 0 ? p.navItems[0]!.label : p.title || p.pagePath;

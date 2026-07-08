@@ -474,6 +474,37 @@ export async function runBuildPipeline(
     ? DESIGN_PROFILES.find(dp => dp.id === breResult.selectedDesignProfile!.id)
     : undefined;
 
+  const profileTheme: Record<string, unknown> = {};
+  if (matchedDesignProfile) {
+    const cp = matchedDesignProfile.colorPsychology;
+    const ty = matchedDesignProfile.typography;
+    profileTheme['colors'] = {
+      primary: cp?.primary,
+      secondary: cp?.secondary,
+      accent: cp?.accent,
+      background: cp?.background ?? '#09090b',
+      foreground: cp?.foreground ?? '#fafafa',
+      muted: cp?.muted,
+      destructive: cp?.destructive,
+      success: cp?.success,
+      warning: cp?.warning,
+      info: cp?.info,
+    };
+    profileTheme['typography'] = {
+      heading: ty?.displayFamily,
+      body: ty?.bodyFamily,
+      mono: ty?.monoFamily,
+    };
+    if (matchedDesignProfile.motion) {
+      profileTheme['motion'] = {
+        durationFast: matchedDesignProfile.motion.duration?.fast,
+        durationNormal: matchedDesignProfile.motion.duration?.normal,
+        durationSlow: matchedDesignProfile.motion.duration?.slow,
+        easingDefault: matchedDesignProfile.motion.easing?.default,
+      };
+    }
+  }
+
   const applicationSpec = resolveContent(executionBlueprint, {
     blueprint: breResult.blueprint,
     vocabulary: breResult.blueprint.vocabulary ?? {},
@@ -516,7 +547,9 @@ export async function runBuildPipeline(
 
   // Resolve industry-specific layout plan — drives every section's visual treatment
   const skillIntegrator = new SkillIntegrator();
-  const industry = (context.industry ?? applicationSpec.appName) as string;
+  const industry = context.industry
+    ?? breResult.blueprint.industry
+    ?? 'saas';
   const allComponentTypes = [...new Set(
     applicationSpec.pages.flatMap(p => p.components.map(c => c.type)),
   )];
@@ -553,7 +586,7 @@ export async function runBuildPipeline(
     });
 
     const wtManager = new WorktreeManager({
-      repoPath: process.cwd(),
+      repoPath: workspaceDir,
       worktreeBase: path.join(workspaceDir, '.worktrees'),
       maxWorktrees: 4,
     });
@@ -585,7 +618,7 @@ export async function runBuildPipeline(
 
       try {
         const wtResult = renderWith(wtAppSpec, platform, {
-          theme: breResult.blueprint.designTokens as Record<string, unknown>,
+          theme: { ...(breResult.blueprint.designTokens as Record<string, unknown> ?? {}), ...profileTheme },
           includeComments,
           includeTests,
           outputDir: path.join(wtSpec.path, 'src'),
@@ -641,7 +674,7 @@ export async function runBuildPipeline(
     // Fallback: original single-thread render
     componentSources = [];
     renderResult = renderWith(applicationSpec, platform, {
-      theme: breResult.blueprint.designTokens as Record<string, unknown>,
+      theme: { ...(breResult.blueprint.designTokens as Record<string, unknown> ?? {}), ...profileTheme },
       includeComments,
       includeTests,
       outputDir,
