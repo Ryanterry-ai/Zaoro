@@ -2,121 +2,165 @@ import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
-const GENERIC_PATTERNS = [
-  // Generic resolver output: single title prop, no body content
-  /export interface \w+Props {\s*title\?: string;\s*}/,
+// ─── Generic-content detection ────────────────────────────────────────────────
+// These patterns catch the templated/placeholder copy that the deterministic
+// content-resolver pools currently emit (e.g. "This platform transformed how I
+// run my business. Highly recommended!"). The gate BLOCKS builds that contain
+// them so the pipeline is forced to produce real, business-specific content.
+
+// Hard markers: any single occurrence fails the build outright.
+const HARD_MARKERS = [
+  /lorem\s*ipsum/i,
+  /\bTODO\b|\bFIXME\b|\bXXX\b/i,
+  /your\s+business\s+depends\s+on\s+us/i,
+  /\bjohn\s+doe\b|\bjane\s+doe\b|\balex\s+m\.?\b/i,
+  /\bacme\b/i,
+  /placeholder\s+(content|text|copy|company|business)/i,
+  /example\s+company|example\s+corp/i,
+  /premium\s+option/i,
+  /lightning\s+fast/i,
+  /\$\s?99\b|£\s?99\b|€\s?99\b/,
+  /add\s+your\s+(business|company|name|description|here)/i,
+  /your\s+(business|company|brand|store)\b/i,
 ];
 
-const TRIVIAL_COMPONENT_PATTERNS = [
-  // Component that ONLY renders a title in a section (no items, fields, columns, stats, tiers, actions)
-  // Matches: section > div > h2{title} </div> </section> with nothing else
-  /return \(\s*<section[^>]*>\s*<div[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<\/div>\s*<\/section>\s*\);/,
+// Soft phrases: substring matches (case-insensitive). Even one match strongly
+// indicates templated filler.
+const SOFT_PHRASES = [
+  /transformed\s+how\s+(i|we|they)\s+run\s+my?\s+(business|company|store|practice)/i,
+  /the\s+best\s+.*?\s+we\s+have\s+used\.\s*clean,\s*fast,\s*and\s*reliable/i,
+  /productivity\s+increased\s+by\s*\d+%\s+since\s+switching/i,
+  /clean,\s*fast,\s*and\s*reliable/i,
+  /highly\s+recommended!/i,
+  /streamlined\s+.*?\s+process/i,
+  /full\s+.*?\s+management/i,
+  /we\s+take\s+that\s+seriously/i,
+  /trusted\s+by\s+(thousands|hundreds|businesses|teams|customers)/i,
+  /our\s+team\s+is\s+here\s+to\s+help/i,
+  /seamless\s+experience/i,
+  /world-class\s+support/i,
 ];
 
-function analyzeComponent(filePath) {
+// Trivial-body signature: a section that renders ONLY a title and nothing else.
+const TRIVIAL_BODY = /return\s*\(\s*<section[^>]*>\s*<div[^>]*>\s*<h2[^>]*>[^<]*<\/h2>\s*<\/div>\s*<\/section>\s*\);/;
+
+function countMatches(content, patterns) {
+  let n = 0;
+  for (const p of patterns) {
+    if (p.test(content)) n++;
+  }
+  return n;
+}
+
+function walk(dir, out = []) {
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) {
+      if (e.name === 'node_modules' || e.name.startsWith('.') || e.name === '.next') continue;
+      walk(full, out);
+    } else if (e.name.endsWith('.tsx') || e.name.endsWith('.jsx') || e.name.endsWith('.ts') || e.name.endsWith('.js')) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+function analyzeFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
-  const componentName = path.basename(filePath, '.tsx');
-
+  const name = path.basename(filePath);
   const issues = [];
 
-  // Check for generic resolver patterns
-  const isGeneric = GENERIC_PATTERNS.some(p => p.test(content));
-  if (isGeneric) {
-    issues.push('generic-resolver-output');
-  }
+  const hardHits = countMatches(content, HARD_MARKERS);
+  const softHits = countMatches(content, SOFT_PHRASES);
 
-  // Check for trivial content (only title, no body)
-  const hasTrivialBody = TRIVIAL_COMPONENT_PATTERNS.some(p => p.test(content));
-  if (hasTrivialBody) {
-    issues.push('trivial-body');
-  }
+  if (hardHits > 0) issues.push(`hard-placeholder(${hardHits})`);
+  if (softHits > 0) issues.push(`generic-phrase(${softHits})`);
 
-  // Check for missing business content
-  const hasItems = content.includes('items?.map') || content.includes('items={');
-  const hasFields = content.includes('fields?.map') || content.includes('fields={');
-  const hasColumns = content.includes('columns?.map') || content.includes('columns={');
-  const hasStats = content.includes('stats?.map') || content.includes('stats={');
-  const hasTiers = content.includes('tiers?.map') || content.includes('tiers={');
-  const hasActions = content.includes('actions?.map') || content.includes('actions={');
+  const isTrivial = TRIVIAL_BODY.test(content);
+  if (isTrivial) issues.push('trivial-body');
 
-  const hasAnyContent = hasItems || hasFields || hasColumns || hasStats || hasTiers || hasActions;
-
-  if (!hasAnyContent && !isGeneric) {
+  const hasAnyContent =
+    content.includes('items?.map') || content.includes('items={') ||
+    content.includes('fields?.map') || content.includes('fields={') ||
+    content.includes('columns?.map') || content.includes('columns={') ||
+    content.includes('stats?.map') || content.includes('stats={') ||
+    content.includes('tiers?.map') || content.includes('tiers={') ||
+    content.includes('actions?.map') || content.includes('actions={');
+  if (!hasAnyContent && !hardHits && !softHits && !isTrivial) {
     issues.push('no-dynamic-content');
   }
 
-  // Count props (more props = more real content)
-  const propCount = (content.match(/\?:/g) || []).length;
+  const isGeneric = hardHits > 0 || softHits > 0;
+  const score = isGeneric ? 0 : (isTrivial ? 25 : (hasAnyContent ? 100 : 50));
 
-  // A component is "trivial" if it only has a title and no dynamic content
-  const isTrivial = !hasAnyContent && propCount <= 1;
-
-  return {
-    name: componentName,
-    path: filePath,
-    issues,
-    isGeneric,
-    isTrivial,
-    propCount,
-    score: isGeneric ? 0 : (isTrivial ? 25 : (hasAnyContent ? 100 : 50)),
-  };
+  return { name, path: filePath, issues, isGeneric, isTrivial, hardHits, softHits, score };
 }
 
 function gate(projectDir) {
   if (!fs.existsSync(projectDir)) {
+    // A missing project directory is a hard failure — there is nothing to validate.
     console.error(JSON.stringify({ pass: false, error: `Directory not found: ${projectDir}` }));
-    process.exit(0);
+    process.exit(1);
   }
 
   const componentsDir = path.join(projectDir, 'src', 'components');
-  if (!fs.existsSync(componentsDir)) {
-    console.log(JSON.stringify({ pass: true, reason: 'No components directory found', components: 0 }));
-    process.exit(0);
+  const appDir = path.join(projectDir, 'src', 'app');
+
+  const componentFiles = fs.existsSync(componentsDir) ? walk(componentsDir) : [];
+  const appFiles = fs.existsSync(appDir) ? walk(appDir) : [];
+  const allFiles = [...componentFiles, ...appFiles];
+
+  // No generated UI at all -> the build produced nothing usable.
+  if (allFiles.length === 0) {
+    console.error(JSON.stringify({ pass: false, reason: 'No generated UI files found (src/components or src/app).', components: 0, appFiles: 0 }));
+    process.exit(1);
   }
 
-  // Find all component files
-  const componentFiles = fs.readdirSync(componentsDir)
-    .filter(f => f.endsWith('.tsx') || f.endsWith('.jsx'))
-    .map(f => path.join(componentsDir, f));
-
-  if (componentFiles.length === 0) {
-    console.log(JSON.stringify({ pass: true, reason: 'No component files found', components: 0 }));
-    process.exit(0);
+  const pageFiles = allFiles.filter(f => path.basename(f) === 'page.tsx' || path.basename(f) === 'page.jsx');
+  if (pageFiles.length === 0) {
+    console.error(JSON.stringify({ pass: false, reason: 'No page.tsx found — the app has no renderable route.', components: componentFiles.length, appFiles: appFiles.length }));
+    process.exit(1);
   }
 
-  // Analyze each component
-  const analyses = componentFiles.map(analyzeComponent);
+  const analyses = allFiles.map(analyzeFile);
   const genericCount = analyses.filter(a => a.isGeneric).length;
   const trivialCount = analyses.filter(a => a.isTrivial).length;
+  const totalHard = analyses.reduce((s, a) => s + a.hardHits, 0);
   const totalIssues = analyses.filter(a => a.issues.length > 0).length;
 
   const genericRatio = genericCount / analyses.length;
   const trivialRatio = trivialCount / analyses.length;
 
-  // Parse threshold from args
   const thresholdIdx = process.argv.indexOf('--threshold');
   const threshold = thresholdIdx !== -1 ? parseFloat(process.argv[thresholdIdx + 1]) : 0.3;
 
-  const pass = genericRatio <= threshold;
+  // Block if: any hard placeholder anywhere, OR generic ratio exceeds threshold,
+  // OR more than half the files are trivial skeletons.
+  const pass = totalHard === 0 && genericRatio <= threshold && trivialRatio <= 0.5;
 
   const result = {
     pass,
-    components: analyses.length,
+    files: analyses.length,
+    components: componentFiles.length,
+    pages: pageFiles.length,
     generic: genericCount,
     trivial: trivialCount,
+    hardMarkers: totalHard,
     genericRatio: Math.round(genericRatio * 100) / 100,
     trivialRatio: Math.round(trivialRatio * 100) / 100,
     threshold,
-    details: analyses.filter(a => a.issues.length > 0).map(a => ({
-      name: a.name,
-      issues: a.issues,
-      score: a.score,
-    })),
+    details: analyses.filter(a => a.issues.length > 0).map(a => ({ name: a.name, issues: a.issues, score: a.score })),
   };
 
-  console.error(`\n[content-quality-gate] ${genericCount}/${analyses.length} components (${Math.round(genericRatio * 100)}%) are generic (threshold: ${Math.round(threshold * 100)}%)`);
-  console.error(`Generic components: ${analyses.filter(a => a.isGeneric).map(a => a.name).join(', ')}`);
-  console.error(`Trivial components: ${analyses.filter(a => a.isTrivial).map(a => a.name).join(', ')}`);
+  console.error(`\n[content-quality-gate] ${genericCount}/${analyses.length} files (${Math.round(genericRatio * 100)}%) are generic; ${totalHard} hard placeholder markers (threshold: ${Math.round(threshold * 100)}%)`);
+  if (genericCount > 0) console.error(`Generic files: ${analyses.filter(a => a.isGeneric).map(a => a.name).join(', ')}`);
+  if (trivialCount > 0) console.error(`Trivial files: ${analyses.filter(a => a.isTrivial).map(a => a.name).join(', ')}`);
 
   console.log(JSON.stringify(result));
   process.exit(pass ? 0 : 1);

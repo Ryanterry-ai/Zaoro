@@ -12,6 +12,9 @@
 
 import type { ComponentSpec, PageSpec, ApplicationSpec } from '../../bos/schemas/blueprint/execution-blueprint.schema.js';
 import type { PageLayout, SectionLayout } from '../skill-integrator.js';
+import type { DesignDecision } from '../../orchestration/design-intelligence/types.js';
+import type { DesignDNA } from '../design-dna.js';
+import type { AppFamilyResult } from '../../bos/reasoning/application-family-classifier.js';
 
 // ─── Renderer Interface ──────────────────────────────────────────────────────
 
@@ -110,6 +113,43 @@ export interface RenderContext {
   /** Layout plan produced by SkillIntegrator.resolvePageLayout().
    *  When present, ReactRenderer uses it instead of hardcoded defaults. */
   pageLayout?: PageLayout;
+
+  /** Design Intelligence decision (colors, typography, layout, motion, component map).
+   *  When present, the renderer derives design tokens from it instead of hardcoded fallbacks. */
+  designDecision?: DesignDecision;
+
+  /** Design DNA (rich per-industry design system: colors, type, spacing, radius, motion). */
+  designDNA?: DesignDNA;
+
+  /** Application classification (family / appType / uiMode / complexity). */
+  appClassification?: AppFamilyResult;
+
+  /** Knowledge Graph enrichment (vocabulary, domain entities, capabilities). */
+  knowledge?: {
+    vocabulary: Record<string, string>;
+    domainEntities: string[];
+    additionalCapabilities: string[];
+  };
+
+  /** Which engines contributed design output — used for provenance reporting. */
+  designLineage?: DesignLineage;
+}
+
+/**
+ * DesignLineage records which engine produced each class of design decision.
+ * Written into the output as design-lineage.json and surfaced in execution reports
+ * so reviewers can prove the final UI was driven by the engines, not hardcoded constants.
+ */
+export interface DesignLineage {
+  colors: string;
+  typography: string;
+  layout: string;
+  motion: string;
+  components: string;
+  polish: string;
+  knowledgeGraph: string;
+  classification: string;
+  generatedAt: string;
 }
 
 // ─── Renderer Registry ───────────────────────────────────────────────────────

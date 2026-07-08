@@ -82,10 +82,14 @@ export class ReactRenderer implements Renderer {
   /** External packages collected during rendering for package.json */
   private externalPackages: Record<string, string> = {};
 
+  /** Current render context — set per render cycle for engine token access */
+  private currentContext?: RenderContext;
+
   private readonly skillIntegrator = new SkillIntegrator();
 
   renderComponent(spec: ComponentSpec, context: RenderContext): RenderedFile {
     log.debug('Rendering component', { type: spec.type });
+    this.currentContext = context;
     const componentName = spec.type;
 
     // Check if this component has an external source recommendation
@@ -148,6 +152,7 @@ ${componentRenders}
       pages: spec.pages.length,
       appName: spec.appName,
     });
+    this.currentContext = context;
 
     const t = Date.now();
     const files: RenderedFile[] = [];
@@ -276,16 +281,115 @@ export type NavItem = (typeof navItems)[number];
 
   renderShell(spec: ApplicationSpec, context: RenderContext): RenderedFile[] {
     const appName = spec.appName || 'My App';
-    const theme = (context?.theme ?? {}) as Record<string, unknown>;
 
     return [
       this.renderPackageJson(appName),
-      this.renderGlobalsCSS(theme),
-      this.renderTailwindConfig(theme),
+      this.renderTsConfig(),
+      this.renderGlobalsCSS(context),
+      this.renderTailwindConfig(context),
       this.renderPostCSSConfig(),
       this.renderNextConfig(),
       this.renderRootLayout(appName),
     ];
+  }
+
+  /**
+   * Resolve the complete design-system token set consumed by globals.css and
+   * tailwind.config. Every value originates from an engine output
+   * (Design Intelligence > Design DNA > Skill Integrator theme), with only the
+   * final fallback being a neutral default. No hardcoded brand palettes remain
+   * in the render path.
+   */
+  private resolveDesignSystem(context: RenderContext): {
+    colors: {
+      background: string; foreground: string; primary: string; primaryForeground: string;
+      secondary: string; secondaryForeground: string; accent: string; muted: string;
+      mutedForeground: string; card: string; cardForeground: string; border: string;
+      input: string; ring: string; destructive: string; success: string; warning: string; info: string;
+    };
+    fonts: { heading: string; body: string; mono: string };
+    radius: string;
+  } {
+    const theme = (context?.theme ?? {}) as Record<string, unknown>;
+    const themeColors = (theme.colors ?? {}) as Record<string, string>;
+    const themeType = (theme.typography ?? {}) as Record<string, string>;
+
+    const dd = context?.designDecision;
+    const dna = context?.designDNA;
+
+    // Color precedence: Design Intelligence > Design DNA > Skill Integrator theme > default
+    const ct = (dd?.colorTokens ?? {}) as Record<string, string | undefined>;
+    const dc = dna?.colors;
+    const pick = (...vals: (string | undefined)[]): string | undefined =>
+      vals.find(v => typeof v === 'string' && v.length > 0);
+
+    const primary = pick(ct.primary, dc?.primary, themeColors.primary) ?? '#6366f1';
+    const secondary = pick(ct.secondary, dc?.secondary, themeColors.secondary) ?? primary;
+    const accent = pick(ct.accent, dc?.accent, themeColors.accent) ?? primary;
+    const background = pick(ct.background, dc?.background, themeColors.background) ?? '#0a0a0b';
+    const foreground = pick(ct.text, dc?.foreground, themeColors.foreground) ?? '#fafafa';
+    const card = pick(dc?.card, themeColors.card) ?? '#18181b';
+    const cardForeground = pick(dc?.cardForeground, themeColors.cardForeground) ?? foreground;
+    const muted = pick(dc?.muted, themeColors.muted) ?? card;
+    const mutedForeground = pick(dc?.mutedForeground, ct.textMuted, themeColors.mutedForeground) ?? '#a1a1aa';
+    const border = pick(dc?.border, ct.border, themeColors.border) ?? '#27272a';
+    const input = pick(dc?.input, ct.border, themeColors.input) ?? border;
+    const ring = pick(ct.ring, dc?.ring, themeColors.ring) ?? primary;
+    const destructive = pick(ct.error, dc?.destructive, themeColors.destructive) ?? '#ef4444';
+    const success = pick(ct.success, dc?.success, themeColors.success) ?? '#22c55e';
+    const warning = pick(ct.warning, dc?.warning, themeColors.warning) ?? '#f59e0b';
+    const info = pick(ct.info, dc?.info, themeColors.info) ?? '#3b82f6';
+
+    // Typography precedence: Design Intelligence > Design DNA > Skill Integrator theme > system
+    const tt = (dd?.typographyTokens?.fontFamily ?? {}) as Record<string, string | undefined>;
+    const dt = dna?.typography;
+    const heading = pick(tt.heading, dt?.heading, themeType.heading) ?? 'Inter';
+    const body = pick(tt.body, dt?.body, themeType.body) ?? 'Inter';
+    const mono = pick(tt.mono, dt?.mono, themeType.mono) ?? 'ui-monospace';
+
+    const radius = pick(
+      typeof dd?.layoutTokens?.borderRadius === 'string' ? dd.layoutTokens.borderRadius : undefined,
+      typeof dna?.radius === 'string' ? dna.radius : undefined,
+      themeColors.radius,
+    ) ?? '0.75rem';
+
+    return {
+      colors: {
+        background, foreground, primary, primaryForeground: '#ffffff',
+        secondary, secondaryForeground: '#ffffff', accent, muted, mutedForeground,
+        card, cardForeground, border, input, ring, destructive, success, warning, info,
+      },
+      fonts: { heading, body, mono },
+      radius,
+    };
+  }
+
+  private renderTsConfig(): RenderedFile {
+    return {
+      path: '../tsconfig.json',
+      content: JSON.stringify({
+        compilerOptions: {
+          target: 'ES2017',
+          lib: ['dom', 'dom.iterable', 'esnext'],
+          allowJs: true,
+          skipLibCheck: true,
+          strict: true,
+          noEmit: true,
+          esModuleInterop: true,
+          module: 'esnext',
+          moduleResolution: 'bundler',
+          resolveJsonModule: true,
+          isolatedModules: true,
+          jsx: 'preserve',
+          incremental: true,
+          plugins: [{ name: 'next' }],
+          paths: { '@/*': ['./src/*'] },
+        },
+        include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
+        exclude: ['node_modules'],
+      }, null, 2),
+      type: 'config',
+    };
   }
 
   private renderPackageJson(appName: string): RenderedFile {
@@ -335,21 +439,9 @@ export type NavItem = (typeof navItems)[number];
     };
   }
 
-  private renderGlobalsCSS(theme: Record<string, unknown>): RenderedFile {
-    const colors = (theme.colors ?? {}) as Record<string, string>;
-    const c = {
-      background: colors.background ?? '#09090b',
-      foreground: colors.foreground ?? '#fafafa',
-      primary: colors.primary ?? '#10b981',
-      secondary: colors.secondary ?? colors.primary ?? '#10b981',
-      muted: colors.muted ?? '#27272a',
-      mutedForeground: '#a1a1aa',
-      border: colors.muted ?? '#27272a',
-      destructive: colors.destructive ?? '#ef4444',
-      success: colors.success ?? '#22c55e',
-      warning: colors.warning ?? '#f59e0b',
-      info: colors.info ?? '#3b82f6',
-    };
+  private renderGlobalsCSS(context: RenderContext): RenderedFile {
+    const ds = this.resolveDesignSystem(context);
+    const c = ds.colors;
 
     return {
       path: 'app/globals.css',
@@ -361,24 +453,34 @@ export type NavItem = (typeof navItems)[number];
   --background: ${c.background};
   --foreground: ${c.foreground};
   --primary: ${c.primary};
-  --primary-foreground: #ffffff;
+  --primary-foreground: ${c.primaryForeground};
   --secondary: ${c.secondary};
+  --secondary-foreground: ${c.secondaryForeground};
+  --accent: ${c.accent};
   --muted: ${c.muted};
   --muted-foreground: ${c.mutedForeground};
+  --card: ${c.card};
+  --card-foreground: ${c.cardForeground};
   --border: ${c.border};
-  --ring: ${c.primary};
+  --input: ${c.input};
+  --ring: ${c.ring};
   --destructive: ${c.destructive};
   --success: ${c.success};
   --warning: ${c.warning};
   --info: ${c.info};
+  --radius: ${ds.radius};
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: ${ds.fonts.body}, ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: ${ds.fonts.heading}, ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 @keyframes marquee {
@@ -390,10 +492,8 @@ body {
     };
   }
 
-  private renderTailwindConfig(theme: Record<string, unknown>): RenderedFile {
-    const typography = (theme.typography ?? {}) as Record<string, string>;
-    const headingFont = typography.heading ?? 'Inter';
-    const bodyFont = typography.body ?? 'Inter';
+  private renderTailwindConfig(context: RenderContext): RenderedFile {
+    const ds = this.resolveDesignSystem(context);
 
     return {
       path: '../tailwind.config.ts',
@@ -411,17 +511,25 @@ const config: Config = {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
         primary: { DEFAULT: 'var(--primary)', foreground: 'var(--primary-foreground)' },
-        secondary: 'var(--secondary)',
+        secondary: { DEFAULT: 'var(--secondary)', foreground: 'var(--secondary-foreground)' },
+        accent: 'var(--accent)',
         muted: { DEFAULT: 'var(--muted)', foreground: 'var(--muted-foreground)' },
+        card: { DEFAULT: 'var(--card)', foreground: 'var(--card-foreground)' },
         border: 'var(--border)',
+        input: 'var(--input)',
+        ring: 'var(--ring)',
         destructive: 'var(--destructive)',
         success: 'var(--success)',
         warning: 'var(--warning)',
         info: 'var(--info)',
       },
       fontFamily: {
-        heading: ['${headingFont}', 'sans-serif'],
-        body: ['${bodyFont}', 'sans-serif'],
+        heading: ['${ds.fonts.heading}', 'sans-serif'],
+        body: ['${ds.fonts.body}', 'sans-serif'],
+        mono: ['${ds.fonts.mono}', 'monospace'],
+      },
+      borderRadius: {
+        DEFAULT: 'var(--radius)',
       },
     },
   },
@@ -521,30 +629,47 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     switch (background) {
       case 'surface':    return 'bg-zinc-900/50';
       case 'primary':    return 'bg-primary text-white';
-      case 'gradient':   return 'bg-gradient-to-br from-zinc-900 via-zinc-900 to-primary/20';
+      case 'gradient':   return primaryColor
+        ? `bg-gradient-to-br from-zinc-900 via-zinc-900 to-[${primaryColor}]/20`
+        : 'bg-gradient-to-br from-zinc-900 via-zinc-900 to-primary/20';
       case 'image':      return 'bg-cover bg-center bg-no-repeat';
       case 'transparent':
       default:           return '';
     }
   }
 
-  private resolveAnimationProps(animation: SectionLayout['animation']): string {
+  private resolveAnimationProps(animation: SectionLayout['animation'], context?: RenderContext): string {
+    const motion = context?.designDecision?.motionTokens;
+    const dur = motion?.duration ?? {};
+    const ease = motion?.easing ?? {};
+    const reduced = motion?.reducedMotion ?? false;
+
+    if (reduced) {
+      return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.2 }}`;
+    }
+
+    const fast = dur.fast ?? '0.3s';
+    const normal = dur.normal ?? '0.5s';
+    const slow = dur.slow ?? '0.8s';
+    const easeOut = ease.out ?? 'ease-out';
+    const easeInOut = ease.inOut ?? 'ease-in-out';
+
     switch (animation) {
       case 'fade-up':
-        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }}`;
+        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: ${normal}, ease: "${easeOut}" }}`;
       case 'stagger':
-        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.4, staggerChildren: 0.08 }}`;
+        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: ${fast}, ease: "${easeOut}", staggerChildren: 0.08 }}`;
       case 'scale-in':
-        return `initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }}`;
+        return `initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: ${normal}, ease: "${easeOut}" }}`;
       case 'slide-left':
-        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.55 }}`;
+        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: ${normal}, ease: "${easeInOut}" }}`;
       case 'parallax':
-        return `initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}`;
+        return `initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: ${slow}, ease: "${easeInOut}" }}`;
       case 'marquee':
       case 'countup':
       case 'none':
       default:
-        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.4 }}`;
+        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: ${fast}, ease: "${easeOut}" }}`;
     }
   }
 
@@ -677,8 +802,9 @@ ${body}
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
     const badge = this.getContentView(spec, 'badge');
-    const animProps = this.resolveAnimationProps(layout.animation);
-    const bgClass = this.resolveBackgroundClass(layout.background, '');
+    const animProps = this.resolveAnimationProps(layout.animation, this.currentContext);
+    const primaryColor = this.currentContext ? this.resolveDesignSystem(this.currentContext).colors.primary : '';
+    const bgClass = this.resolveBackgroundClass(layout.background, primaryColor);
     const hasOverlay = layout.flags?.darkOverlay;
     const isSplit = layout.heroVariant === 'split';
     const isFullscreen = layout.heroVariant === 'fullscreen';
@@ -737,8 +863,9 @@ ${body}
   private generateFeatureGridBody(spec: ComponentSpec, layout: SectionLayout): string[] {
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
-    const animProps = this.resolveAnimationProps(layout.animation);
-    const bgClass = this.resolveBackgroundClass(layout.background, '');
+    const animProps = this.resolveAnimationProps(layout.animation, this.currentContext);
+    const primaryColor = this.currentContext ? this.resolveDesignSystem(this.currentContext).colors.primary : '';
+    const bgClass = this.resolveBackgroundClass(layout.background, primaryColor);
     const isBento = layout.gridCols === 'bento';
     const isAlternating = layout.gridCols === undefined && layout.animation === 'slide-left';
 
@@ -866,7 +993,8 @@ ${body}
   private generateTestimonialsBody(spec: ComponentSpec, layout: SectionLayout): string[] {
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
-    const bgClass = this.resolveBackgroundClass(layout.background, '');
+    const primaryColor = this.currentContext ? this.resolveDesignSystem(this.currentContext).colors.primary : '';
+    const bgClass = this.resolveBackgroundClass(layout.background, primaryColor);
     const isMarquee = layout.animation === 'marquee';
     const speed = layout.flags?.marqueeSpeed === 'slow' ? '60s' : layout.flags?.marqueeSpeed === 'fast' ? '20s' : '35s';
 
@@ -974,7 +1102,8 @@ ${body}
   private generateStatsCardsBody(spec: ComponentSpec, layout: SectionLayout): string[] {
     const isCountup = layout.animation === 'countup';
     const isPrimary = layout.background === 'primary';
-    const bgClass = this.resolveBackgroundClass(layout.background, '');
+    const primaryColor = this.currentContext ? this.resolveDesignSystem(this.currentContext).colors.primary : '';
+    const bgClass = this.resolveBackgroundClass(layout.background, primaryColor);
 
     if (isCountup) {
       return [

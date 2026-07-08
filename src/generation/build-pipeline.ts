@@ -41,12 +41,24 @@ import { runPass3CodeGeneration } from './pass3-code-generator.js';
 
 // Knowledge Graph — domain knowledge enrichment
 import { initializeKnowledgeGraph, enrichFromKnowledgeGraph } from '../bos/knowledge/seeds/index.js';
+
+// Design DNA — per-industry design system
+import { generateDesignDNA, type DesignDNA } from './design-dna.js';
+
+// Application Family Classifier — app classification
+import type { AppFamilyResult } from '../bos/reasoning/application-family-classifier.js';
+
+// DesignLineage — provenance tracking
+import type { DesignLineage } from './renderers/renderer.js';
 import * as path from 'path';
 
 // Spec-first + worktree parallel pipeline
 import { writeComponentSpecManifest, loadComponentSpecManifest } from './component-spec-writer.js';
 import { WorktreeManager } from './worktree-manager.js';
 import { assembleRenderResults, writeAssemblyResult } from './assembly-gate.js';
+
+// Agent-mode detection — bypasses LLM adapter when running inside Claude Code / OpenCode
+import { IS_AGENT_MODE, getAgentModeStatus } from '../pipeline/agent-mode.js';
 
 const log = stageLogger('pipeline');
 
@@ -137,6 +149,19 @@ export async function runBuildPipeline(
     appName: context.appName,
     platform,
   });
+
+  // Log agent mode status — critical for understanding LLM call behavior
+  const agentStatus = getAgentModeStatus();
+  if (IS_AGENT_MODE) {
+    log.info('AGENT MODE ACTIVE — LLM adapter bypassed, agent generates directly from specs', {
+      detectionMethod: agentStatus.detectionMethod,
+    });
+    console.log(`[pipeline] AGENT MODE: ${agentStatus.detectionMethod} — agent IS the LLM`);
+  } else {
+    log.info('STANDALONE MODE — using LLM adapter for content generation', {
+      detectionMethod: agentStatus.detectionMethod,
+    });
+  }
 
   // Register renderers if not already registered
   ensureRenderers();
@@ -406,6 +431,39 @@ export async function runBuildPipeline(
     log.warn('Layer 2a: DesignIntelligenceEngine failed (continuing without)', { error: (e as Error).message });
   }
 
+  // Layer 2b: Design DNA — per-industry design system from intent
+  let designDNA: DesignDNA | undefined;
+  try {
+    const t2b = Date.now();
+    designDNA = generateDesignDNA({
+      business_domain: context.industry ?? 'general',
+      ...(designDecision?.context?.personality ? { design_style: designDecision.context.personality } : {}),
+    });
+    log.info('Layer 2b: DesignDNA complete', {
+      industry: designDNA.industry,
+      personality: designDNA.brandPersonality,
+      duration: Date.now() - t2b,
+    });
+  } catch (e: unknown) {
+    log.warn('Layer 2b: DesignDNA failed (continuing without)', { error: (e as Error).message });
+  }
+
+  // Layer 2c: App Classification — from BRE context (set during BRE v2)
+  const appClassification: AppFamilyResult | undefined = context.appFamilyResult;
+
+  // Build design-lineage provenance — records which engine produced each design class
+  const designLineage: DesignLineage = {
+    colors: designDecision ? 'design-intelligence' : designDNA ? 'design-dna' : 'hardcoded-fallback',
+    typography: designDecision ? 'design-intelligence' : designDNA ? 'design-dna' : 'hardcoded-fallback',
+    layout: 'skill-integrator',
+    motion: designDecision ? 'design-intelligence-motion-engine' : 'hardcoded-fallback',
+    components: 'react-renderer',
+    polish: 'pending',
+    knowledgeGraph: knowledgeCapabilities.length > 0 ? 'knowledge-graph' : 'none',
+    classification: appClassification ? 'application-family-classifier' : 'none',
+    generatedAt: new Date().toISOString(),
+  };
+
   // Layer 3: Execution Blueprint → Application Spec (content resolution)
   progress?.emit('compile', 'started', 'Resolving content and generating component specs...');
   const t3 = Date.now();
@@ -426,6 +484,27 @@ export async function runBuildPipeline(
     ...(designDecision ? { designDecision } : {}),
   });
   progress?.emit('compile', 'completed', `Content resolved: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s, p) => s + p.components.length, 0)} components`, { duration: Date.now() - t3 });
+
+  // ─── Structural quality gate (Phase 1) ─────────────────────────────────────
+  // Block structurally-empty builds before any rendering happens. A runnable app
+  // must have at least one page with at least one component. Entities/workflows
+  // are warned (not fatal) so minimal NoPattern apps can still ship, but full
+  // apps are expected to model real domain data and business processes.
+  {
+    const totalComponents = applicationSpec.pages.reduce((s, p) => s + p.components.length, 0);
+    if (applicationSpec.pages.length === 0) {
+      throw new Error('STRUCTURAL_GATE_FAILED: resolved ApplicationSpec has zero pages — nothing to render.');
+    }
+    if (totalComponents === 0) {
+      throw new Error('STRUCTURAL_GATE_FAILED: resolved ApplicationSpec has pages but zero components — no UI to render.');
+    }
+    if (breResult.blueprint.entities.length === 0) {
+      log.warn('Structural gate: blueprint has no entities — domain data model is empty.', { industry: context.industry });
+    }
+    if (breResult.blueprint.workflows.length === 0) {
+      log.warn('Structural gate: blueprint has no workflows — no business processes modeled.', { industry: context.industry });
+    }
+  }
   log.info('Layer 3: Content Resolution complete', {
     pages: applicationSpec.pages.length,
     totalComponents: applicationSpec.pages.reduce((s, p) => s + p.components.length, 0),
@@ -512,6 +591,17 @@ export async function runBuildPipeline(
           outputDir: path.join(wtSpec.path, 'src'),
           componentSources: [],
           pageLayout,
+          ...(designDecision ? { designDecision } : {}),
+          ...(designDNA ? { designDNA } : {}),
+          ...(appClassification ? { appClassification } : {}),
+          ...(knowledgeCapabilities.length > 0 ? {
+            knowledge: {
+              vocabulary: knowledgeVocabulary,
+              domainEntities: knowledgeDomainEntities,
+              additionalCapabilities: knowledgeCapabilities,
+            },
+          } : {}),
+          ...(designLineage ? { designLineage } : {}),
           // Only the first group generates singleton files (shell, layout, Icon, nav-data)
           skipSingletons: gi > 0,
         });
@@ -557,6 +647,17 @@ export async function runBuildPipeline(
       outputDir,
       componentSources: [],
       pageLayout,
+      ...(designDecision ? { designDecision } : {}),
+      ...(designDNA ? { designDNA } : {}),
+      ...(appClassification ? { appClassification } : {}),
+      ...(knowledgeCapabilities.length > 0 ? {
+        knowledge: {
+          vocabulary: knowledgeVocabulary,
+          domainEntities: knowledgeDomainEntities,
+          additionalCapabilities: knowledgeCapabilities,
+        },
+      } : {}),
+      ...(designLineage ? { designLineage } : {}),
     });
   }
 
@@ -593,6 +694,13 @@ export async function runBuildPipeline(
     totalDuration,
     files: renderResult.files.length,
     warnings: renderResult.warnings,
+  });
+
+  // Emit design-lineage.json — provenance record for which engines contributed
+  renderResult.files.push({
+    path: 'design-lineage.json',
+    content: JSON.stringify(designLineage, null, 2),
+    type: 'config',
   });
 
   // Flush debug logs to file

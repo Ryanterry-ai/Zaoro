@@ -379,19 +379,21 @@ try {
   // seeing their app — they just log warnings and feed the SelfHealingEngine.
   const { execSync } = await import('child_process');
 
-  // Run quality gate (prisma generate + next build) in background
+  // Run quality gate (prisma generate + typecheck + next build).
+  // This is now BLOCKING: a project that fails typecheck or build is not
+  // shippable, so the build is failed rather than silently previewed.
   const gateScript = path.resolve(process.cwd(), 'tools', 'quality-gate', 'index.cjs');
   try {
-    writeProgress('gate', 'started', 'Running background quality gate...');
+    writeProgress('gate', 'started', 'Running quality gate (typecheck + build)...');
     execSync('node "' + gateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 600000, stdio: 'pipe', env: { ...process.env, NODE_ENV: 'production' } });
     writeProgress('gate', 'passed', 'Quality gate passed');
   } catch (gateErr) {
     const stdout = gateErr.stdout?.toString() || '';
     const stderr = gateErr.stderr?.toString() || '';
-    const fullOutput = stdout || stderr || gateErr.message;
+    const fullOutput = (stdout || stderr || gateErr.message || '').toString();
     console.error('[quality-gate] FULL OUTPUT:', fullOutput);
-    // Don't throw — log warning and continue. Preview is already live.
-    writeProgress('gate', 'warning', 'Quality gate issues (non-blocking): ' + fullOutput.slice(0, 500));
+    writeProgress('gate', 'failed', 'Quality gate FAILED: ' + fullOutput.slice(0, 600));
+    throw new Error('QUALITY_GATE_FAILED: the generated project failed typecheck or build. ' + fullOutput.slice(0, 400));
   }
 
   // Run content quality gate in background
