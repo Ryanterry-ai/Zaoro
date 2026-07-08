@@ -57,6 +57,11 @@ function getLocalizedTestimonials(ctx: ContentResolverContext): Array<{ name: st
       { name: 'Priya Patel', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
       { name: 'Rahul Verma', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
     ],
+    US: [
+      { name: 'Alex Rivera', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
+      { name: 'Jordan Lee', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
+      { name: 'Sam Chen', role: 'Manager', quote: `Our team productivity increased by 40% since switching.` },
+    ],
     GB: [
       { name: 'Oliver Davies', role: `${roleTitle} Owner`, quote: `This platform transformed how I run my ${vocab('business', ctx)}. Highly recommended!` },
       { name: 'Emily Watson', role: 'Operations Lead', quote: `The best ${vocab('product', ctx)} we have used. Clean, fast, and reliable.` },
@@ -848,6 +853,19 @@ function generateHeroSubtitle(ctx: ContentResolverContext): string {
 
   // Always prefer industry-specific value propositions over prompt echo
 
+  // Coffee shops — must be before general ecommerce since "coffee shop" contains "shop"
+  if (promptText.includes('coffee') || promptText.includes('espresso') || promptText.includes('brew') || promptText.includes('cafe') || promptText.includes('café')) {
+    if (country === 'US') return 'Freshly roasted specialty coffee, crafted with care — order online for pickup or delivery';
+    if (country === 'GB') return 'Artisan coffee roasted daily, served with a smile — order ahead and skip the queue';
+    return 'Specialty coffee roasted fresh daily, available for order online';
+  }
+
+  // B2B / wholesale / distribution
+  if (promptText.includes('wholesale') || promptText.includes('b2b') || promptText.includes('distributor') || promptText.includes('distribution') || promptText.includes('bulk')) {
+    if (country === 'IN') return 'India\'s trusted wholesale distributor — bulk supplements with dealer network and fast logistics';
+    return 'Trusted wholesale distributor — bulk pricing, dealer network, and reliable logistics';
+  }
+
   // Supplement / nutrition stores
   if (promptText.includes('supplement') || promptText.includes('protein') || promptText.includes('nutrition') || promptText.includes('vitamin')) {
     if (country === 'IN') return 'Premium supplements from top brands, delivered across India — lab-tested, 100% genuine';
@@ -861,7 +879,7 @@ function generateHeroSubtitle(ctx: ContentResolverContext): string {
   }
 
   // Restaurant / food
-  if (industry === 'restaurant' || promptText.includes('restaurant') || promptText.includes('cafe') || promptText.includes('food')) {
+  if (industry === 'restaurant' || promptText.includes('restaurant') || promptText.includes('food')) {
     return 'Fresh, delicious food prepared with love and delivered to your table';
   }
 
@@ -970,11 +988,34 @@ function resolveFeatureGrid(
     icon: w.type === 'chart' ? 'bar-chart' : w.type === 'stat-card' ? 'activity' : w.type === 'table' ? 'list' : 'zap',
   }));
 
+  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
+  const industry = ctx.blueprint.industry;
+
+  // Industry-aware feature grid titles
+  let featureTitle = 'Features';
+  let featureSubtitle = 'Everything you need';
+  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe')) {
+    featureTitle = 'Our Menu & Services';
+    featureSubtitle = 'Crafted with care, from bean to cup';
+  } else if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) {
+    featureTitle = 'Why Partner With Us';
+    featureSubtitle = 'Reliable supply, competitive pricing, and nationwide logistics';
+  } else if (desc.includes('supplement') || desc.includes('protein') || industry === 'ecommerce-supplement') {
+    featureTitle = 'Why Choose Us';
+    featureSubtitle = 'Genuine products, expert guidance, and fast delivery';
+  } else if (industry === 'restaurant' || desc.includes('restaurant') || desc.includes('food')) {
+    featureTitle = 'Our Menu & Services';
+    featureSubtitle = 'Fresh, delicious food prepared with love';
+  } else if (industry === 'fitness' || desc.includes('gym') || desc.includes('fitness')) {
+    featureTitle = 'Facilities & Programs';
+    featureSubtitle = 'Everything you need to reach your fitness goals';
+  }
+
   return {
     type: 'FeatureGrid',
     content: {
-      title: { value: vocab('Features', ctx), type: 'text' },
-      subtitle: { value: vocab('Everything you need', ctx), type: 'text' },
+      title: { value: featureTitle, type: 'text' },
+      subtitle: { value: featureSubtitle, type: 'text' },
     },
     items: biFeatures ?? resolveFeatures(ctx),
     layout: { alignment: 'center', maxWidth: '7xl' },
@@ -1027,12 +1068,26 @@ function resolveTestimonials(
   ctx: ContentResolverContext,
 ): ComponentSpec {
   const testimonials = getLocalizedTestimonials(ctx);
+  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
+
+  let testimonialTitle = 'What Our Users Say';
+  let testimonialSubtitle = 'Trusted by thousands';
+  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe')) {
+    testimonialTitle = 'What Our Customers Say';
+    testimonialSubtitle = 'Loved by coffee lovers in the community';
+  } else if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) {
+    testimonialTitle = 'What Our Partners Say';
+    testimonialSubtitle = 'Trusted by distributors and retailers nationwide';
+  } else if (desc.includes('supplement') || desc.includes('protein')) {
+    testimonialTitle = 'What Our Customers Say';
+    testimonialSubtitle = 'Trusted by fitness enthusiasts across India';
+  }
 
   return {
     type: 'Testimonials',
     content: {
-      title: { value: vocab('What Our Users Say', ctx), type: 'text' },
-      subtitle: { value: vocab('Trusted by thousands', ctx), type: 'text' },
+      title: { value: testimonialTitle, type: 'text' },
+      subtitle: { value: testimonialSubtitle, type: 'text' },
     },
     items: testimonials.map(t => ({
       title: t.name,
@@ -2411,6 +2466,30 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
       { title: 'Expert Guidance', description: 'Personalized supplement recommendations based on your fitness goals', icon: 'compass' },
       { title: 'Easy Returns', description: 'Hassle-free returns within 7 days for unopened products', icon: 'refresh-cw' },
       { title: 'Secure Payments', description: paymentText, icon: 'credit-card' },
+    ];
+  }
+
+  // Coffee shop features
+  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe') || desc.includes('café')) {
+    return [
+      { title: 'Online Ordering', description: 'Order your favorite coffee ahead for pickup or delivery', icon: 'shopping-bag' },
+      { title: 'Menu & Specials', description: 'Explore our espresso drinks, pour-overs, cold brews, and seasonal specials', icon: 'book-open' },
+      { title: 'Loyalty Rewards', description: 'Earn points on every cup, redeem for free drinks and merchandise', icon: 'award' },
+      { title: 'Fresh Beans', description: 'Single-origin and house-blend beans roasted in-house weekly', icon: 'coffee' },
+      { title: 'Table Reservations', description: 'Reserve a seat for your next meeting or study session', icon: 'calendar' },
+      { title: 'Gift Cards', description: 'Share the love — send a digital gift card to a fellow coffee lover', icon: 'credit-card' },
+    ];
+  }
+
+  // B2B / wholesale / distribution features
+  if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('distribution') || desc.includes('bulk')) {
+    return [
+      { title: 'Bulk Pricing', description: 'Competitive volume-based pricing for dealers and retailers', icon: 'percent' },
+      { title: 'Dealer Network', description: 'Join our distribution network across ' + (country === 'IN' ? 'India' : 'the region') + ' — apply now', icon: 'network' },
+      { title: 'Product Catalog', description: 'Full catalog with MOQ details, spec sheets, and compliance documents', icon: 'book-open' },
+      { title: 'Order Management', description: 'Track purchase orders, shipments, and payments in real-time', icon: 'package' },
+      { title: 'Fast Logistics', description: 'Reliable delivery with real-time tracking and express options', icon: 'truck' },
+      { title: 'Credit Terms', description: 'Flexible payment terms for approved wholesale partners', icon: 'credit-card' },
     ];
   }
 

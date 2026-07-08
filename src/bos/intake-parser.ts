@@ -589,6 +589,24 @@ function detectJourneys(prompt: string, industry?: IndustryMapping): string[] {
 
 function detectCountry(prompt: string): string | undefined {
   const lower = prompt.toLowerCase();
+
+  // City → country mapping (check cities first since they're more specific)
+  const cityCountryMap: Record<string, string> = {
+    'austin': 'US', 'new york': 'US', 'los angeles': 'US', 'chicago': 'US', 'houston': 'US',
+    'phoenix': 'US', 'seattle': 'US', 'san francisco': 'US', 'boston': 'US', 'miami': 'US',
+    'denver': 'US', 'portland': 'US', 'nashville': 'US', 'atlanta': 'US', 'dallas': 'US',
+    'london': 'GB', 'manchester': 'GB', 'birmingham': 'GB', 'edinburgh': 'GB', 'glasgow': 'GB',
+    'berlin': 'DE', 'munich': 'DE', 'hamburg': 'DE', 'frankfurt': 'DE',
+    'paris': 'FR', 'lyon': 'FR', 'marseille': 'FR',
+    'toronto': 'CA', 'vancouver': 'CA', 'montreal': 'CA', 'calgary': 'CA',
+    'sydney': 'AU', 'melbourne': 'AU', 'brisbane': 'AU',
+    'tokyo': 'JP', 'osaka': 'JP',
+    'singapore': 'SG', 'dubai': 'AE', 'mumbai': 'IN', 'delhi': 'IN', 'bangalore': 'IN',
+  };
+  for (const [city, country] of Object.entries(cityCountryMap)) {
+    if (lower.includes(city)) return country;
+  }
+
   const countryPatterns: [RegExp, string][] = [
     [/\b(usa|united states|us)\b/, 'US'],
     [/\b(uk|united kingdom|britain|england)\b/, 'GB'],
