@@ -101,7 +101,7 @@ export class PreviewServer {
     return new Promise((resolve, reject) => {
       const child = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`], {
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: true,
+        shell: false,
         windowsHide: true,
       });
 

@@ -363,37 +363,42 @@ export async function runBuildPipeline(
   let designDecision: DesignDecision | undefined;
   let skillDiscoveryResult: import('../core/skill-discovery.js').DiscoveryResult | undefined;
 
-  // Discover and install required skills
-  const requiredSkills = [
-    'ui-ux-pro-max',
-    'framer-motion',
-    'gsap-scrolltrigger',
-    'impeccable',
-    'high-end-visual-design',
-    'frontend-design',
-  ];
+  // Discover and install required skills — only when explicitly enabled (not in tests/CI)
+  const enableSkillDiscovery = process.env.ENABLE_SKILL_DISCOVERY === 'true';
+  if (enableSkillDiscovery) {
+    const requiredSkills = [
+      'ui-ux-pro-max',
+      'framer-motion',
+      'gsap-scrolltrigger',
+      'impeccable',
+      'high-end-visual-design',
+      'frontend-design',
+    ];
 
-  try {
-    const skillDiscovery = getSkillDiscovery();
-    skillDiscoveryResult = await skillDiscovery.discoverAndInstall(requiredSkills);
+    try {
+      const skillDiscovery = getSkillDiscovery();
+      skillDiscoveryResult = await skillDiscovery.discoverAndInstall(requiredSkills);
 
-    if (skillDiscoveryResult.installed.length > 0) {
-      progress?.emit('compile', 'info', `Auto-installed skills: ${skillDiscoveryResult.installed.join(', ')}`);
+      if (skillDiscoveryResult.installed.length > 0) {
+        progress?.emit('compile', 'info', `Auto-installed skills: ${skillDiscoveryResult.installed.join(', ')}`);
+      }
+
+      if (skillDiscoveryResult.missing.length > 0) {
+        progress?.emit('compile', 'info', `Missing skills (using defaults): ${skillDiscoveryResult.missing.join(', ')}`);
+      }
+
+      log.info('Layer 2a: SkillDiscovery complete', {
+        found: skillDiscoveryResult.found.length,
+        installed: skillDiscoveryResult.installed.length,
+        missing: skillDiscoveryResult.missing.length,
+        twentyFirstDevAvailable: skillDiscoveryResult.twentyFirstDevAvailable,
+        duration: Date.now() - t2a,
+      });
+    } catch (e: unknown) {
+      log.warn('Layer 2a: SkillDiscovery failed (continuing without)', { error: (e as Error).message });
     }
-
-    if (skillDiscoveryResult.missing.length > 0) {
-      progress?.emit('compile', 'info', `Missing skills (using defaults): ${skillDiscoveryResult.missing.join(', ')}`);
-    }
-
-    log.info('Layer 2a: SkillDiscovery complete', {
-      found: skillDiscoveryResult.found.length,
-      installed: skillDiscoveryResult.installed.length,
-      missing: skillDiscoveryResult.missing.length,
-      twentyFirstDevAvailable: skillDiscoveryResult.twentyFirstDevAvailable,
-      duration: Date.now() - t2a,
-    });
-  } catch (e: unknown) {
-    log.warn('Layer 2a: SkillDiscovery failed (continuing without)', { error: (e as Error).message });
+  } else {
+    log.info('Layer 2a: SkillDiscovery skipped (set ENABLE_SKILL_DISCOVERY=true to enable)');
   }
 
   try {

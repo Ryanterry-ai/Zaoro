@@ -56,7 +56,9 @@ export class ProcessManager {
         cwd: spec.cwd,
         env: { ...process.env, ...spec.env } as Record<string, string>,
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: true,
+        // On Windows, shell:true is needed for .cmd extensions (npm, npx).
+        // On Linux, shell:true breaks args — they become positional $0, $1 to /bin/sh -c.
+        shell: isWin,
       } as SpawnOptions);
 
       let stdout = '';
@@ -189,7 +191,7 @@ export class ProcessManager {
       cwd,
       env: { ...process.env, ...env, PORT: String(port) } as Record<string, string>,
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: true,
+      shell: false,
     } as SpawnOptions);
 
     let resolveReady!: () => void;
@@ -302,7 +304,7 @@ export class ProcessManager {
     const child = spawn('node', [scriptPath], {
       cwd: directory,
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: true,
+      shell: false,
     } as SpawnOptions);
 
     let resolvedPort = port;
