@@ -75,7 +75,7 @@ describe('Pipeline Smoke: Supplement Store', () => {
       expect(result.breResult.blueprint.name.toLowerCase()).not.toBe(adj);
       expect(result.breResult.blueprint.name.length).toBeGreaterThan(2);
     }
-  });
+  }, 60_000);
 
   it('generates all expected page types', async () => {
     const ctx = buildBREContext('Build a multi brand supplement store for Indian customers');

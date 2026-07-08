@@ -17,7 +17,7 @@
 ## Weakest Areas
 - architecture (10/100)
 - business (15/100)
-- design (17/100)
+- security (20/100)
 
 ## Recommendations
 - Improve architecture scoring (currently 10/100)

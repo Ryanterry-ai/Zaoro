@@ -226,7 +226,9 @@ const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.strin
 // Always use DeterministicOrchestratorV4 (canonical orchestrator)
 (async () => {
 const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
+const { buildBREContext } = await import('./src/bos/intake-parser.js');
 const orch = new DeterministicOrchestratorV4(wsDir);
+const detectedIndustry = buildBREContext(payload.prompt || '').industry || 'general';
 try {
   writeProgress('init', 'started', 'Build started — analyzing prompt');
   writeProgress('init', 'info', 'Loading orchestrator and dependencies...');
@@ -374,9 +376,9 @@ try {
     writeProgress('preview', 'warning', 'Preview render failed: ' + (previewErr.message || '').slice(0, 200));
   }
 
-  // ═══ BACKGROUND QC: Quality gates (non-blocking) ═════════════════════════════
-  // These run after preview is delivered. Failures don't block the user from
-  // seeing their app — they just log warnings and feed the SelfHealingEngine.
+  // ═══ BACKGROUND QC: Quality gates (BLOCKING) ═════════════════════════════
+  // These run after preview is delivered. Failures mark the job as failed
+  // and prevent the build from being considered complete.
   const { execSync } = await import('child_process');
 
   // Run quality gate (prisma generate + typecheck + next build).
@@ -400,7 +402,7 @@ try {
   const contentGateScript = path.resolve(process.cwd(), 'tools', 'content-quality-gate', 'index.js');
   try {
     writeProgress('content-gate', 'started', 'Running content quality gate...');
-    var cgOutput = execSync('node "' + contentGateScript + '" "' + wsDir + '"', { cwd: process.cwd(), timeout: 60000, encoding: 'utf-8' });
+    var cgOutput = execSync('node "' + contentGateScript + '" "' + wsDir + '" --industry ' + detectedIndustry, { cwd: process.cwd(), timeout: 60000, encoding: 'utf-8' });
     var cgResult = JSON.parse(cgOutput.trim());
     if (cgResult.pass === undefined || cgResult.pass === null) {
       // Malformed output — treat as failure

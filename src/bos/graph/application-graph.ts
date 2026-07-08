@@ -187,8 +187,14 @@ export function buildApplicationGraph(opts: {
         const tName = t.name.toLowerCase();
         return tName === entityLower ||
           tName === entityLower + 's' ||
+          tName === entityLower + 'es' ||
+          tName === entityLower.replace(/y$/, 'ies') ||
           tName === entity.slug + 's' ||
-          tName.replace(/s$/, '') === entityLower;
+          tName === entity.slug + 'es' ||
+          tName === entity.slug.replace(/y$/, 'ies') ||
+          tName.replace(/s$/, '') === entityLower ||
+          tName.replace(/es$/, '') === entityLower ||
+          tName.replace(/ies$/, '') === entityLower;
       },
     );
     if (table) {

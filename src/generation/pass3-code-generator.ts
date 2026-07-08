@@ -20,6 +20,12 @@ import type {
 } from '../bos/graph/application-graph.js';
 import { computeAppGraphStats } from '../bos/graph/application-graph.js';
 
+function pluralize(name: string): string {
+  if (name.endsWith('y') && !/[aeiou]y$/.test(name)) return name.slice(0, -1) + 'ies';
+  if (name.endsWith('s') || name.endsWith('x') || name.endsWith('z') || name.endsWith('ch') || name.endsWith('sh')) return name + 'es';
+  return name + 's';
+}
+
 // ─── Pass 3 Entry Point ──────────────────────────────────────────────────────
 
 export interface Pass3Result {
@@ -187,7 +193,7 @@ function generateAPIRoutes(graph: ApplicationGraph): RenderedFile[] {
     const name = entity.data.name;
     // Find matching table to get the plural name used in Prisma schema
     const tableNode = graph.nodes.find((n): n is TableNode => n.kind === 'table' && n.data.name.toLowerCase().startsWith(name.toLowerCase()));
-    const tableName = tableNode?.data.name ?? `${name.toLowerCase()}s`;
+    const tableName = tableNode?.data.name ?? pluralize(name.toLowerCase());
     const camelName = tableName.charAt(0).toLowerCase() + tableName.slice(1);
     const fields = entity.data.fields;
 
@@ -262,7 +268,7 @@ function generateDynamicRoutes(graph: ApplicationGraph): RenderedFile[] {
     const name = entity.data.name;
     // Find matching table to get the plural name used in Prisma schema
     const tableNode = graph.nodes.find((n): n is TableNode => n.kind === 'table' && n.data.name.toLowerCase().startsWith(name.toLowerCase()));
-    const tableName = tableNode?.data.name ?? `${name.toLowerCase()}s`;
+    const tableName = tableNode?.data.name ?? pluralize(name.toLowerCase());
     const camelName = tableName.charAt(0).toLowerCase() + tableName.slice(1);
 
     // Check if any endpoint requires PUT or DELETE

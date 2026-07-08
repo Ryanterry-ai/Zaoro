@@ -176,9 +176,9 @@ function extractBusinessContent(prompt: string): BusinessContent {
   const location = locationMatch?.[1] ?? '';
   const tagline = taglineMatch?.[1]?.trim() ?? (location ? `Premium services in ${location}` : 'Premium quality, exceptional results');
 
-  // Extract description (look for "description:", or the prompt itself)
+  // Extract description (look for "description:", or generate from name+tagline)
   const descMatch = prompt.match(/description[:\s]+(.+?)(?:\.|$)/i);
-  const description = descMatch?.[1]?.trim() ?? prompt;
+  const description = descMatch?.[1]?.trim() ?? `${name} — ${tagline}`;
 
   // Extract services/products (look for "services:", "products:", or listed items)
   const services: BusinessContent['services'] = [];

@@ -60,14 +60,105 @@ export class AgentProvider implements ContentProvider {
         ],
       },
       cta: {
-        title: `Ready to transform your ${blueprint.industry} workflow?`,
-        subtitle: `Join hundreds of ${blueprint.industry} professionals who trust ${blueprint.name ?? 'this platform'}`,
-        actions: [
-          { label: `Start with ${blueprint.name ?? 'us'}`, action: '/signup', style: 'primary' },
-          { label: 'Schedule a Demo', action: '/contact', style: 'ghost' },
-        ],
+        title: this.generateCTATitle(blueprint),
+        subtitle: this.generateCTASubtitle(blueprint),
+        actions: this.generateCTAActions(blueprint),
       },
     };
+  }
+
+  private generateCTATitle(blueprint: ProviderContext['blueprint']): string {
+    const name = blueprint.name ?? 'us';
+    const industry = blueprint.industry;
+    const ctaMap: Record<string, string> = {
+      ecommerce: `Shop ${name} Today`,
+      restaurant: `Reserve Your Table at ${name}`,
+      cafe: `Visit ${name} for Fresh Brews`,
+      gym: `Join ${name} and Start Training`,
+      fitness: `Start Your Fitness Journey with ${name}`,
+      supplement: `Order from ${name} — Lab-Tested & Trusted`,
+      healthcare: `Book an Appointment at ${name}`,
+      dental: `Schedule Your Visit to ${name}`,
+      salon: `Book Your Session at ${name}`,
+      spa: `Experience ${name} — Relax & Rejuvenate`,
+      saas: `Get Started with ${name}`,
+      realestate: `Explore Properties with ${name}`,
+      legal: `Consult with ${name} Today`,
+      agency: `Partner with ${name}`,
+      education: `Enroll at ${name}`,
+      travel: `Plan Your Trip with ${name}`,
+      technology: `Try ${name} Now`,
+      media: `Subscribe to ${name}`,
+      nonprofit: `Support ${name}`,
+      portfolio: `View Our Work at ${name}`,
+    };
+    return ctaMap[industry] ?? `Get Started with ${name}`;
+  }
+
+  private generateCTASubtitle(blueprint: ProviderContext['blueprint']): string {
+    const industry = blueprint.industry;
+    const subMap: Record<string, string> = {
+      ecommerce: `Browse our curated collection and find exactly what you need.`,
+      restaurant: `Fresh ingredients, crafted dishes, and an unforgettable dining experience.`,
+      cafe: ` specialty coffee, fresh pastries, and a welcoming space every morning.`,
+      gym: `State-of-the-art equipment, expert trainers, and a community that keeps you going.`,
+      fitness: `Personalized programs, group classes, and results you can see.`,
+      supplement: `Premium, lab-tested supplements delivered to your door.`,
+      healthcare: `Compassionate care with experienced professionals.`,
+      dental: `Modern dentistry for a healthier, brighter smile.`,
+      salon: `Expert stylists and premium treatments for every look.`,
+      spa: `Unwind with our luxury treatments and peaceful atmosphere.`,
+      saas: `Streamline your workflow and boost productivity.`,
+      realestate: `Find your perfect property with our expert guidance.`,
+      legal: `Trusted legal counsel for your business and personal needs.`,
+      agency: `Creative solutions that drive real results for your brand.`,
+      education: `Quality education that empowers lifelong success.`,
+      travel: `Curated experiences and unforgettable destinations.`,
+      technology: `Cutting-edge solutions built for your success.`,
+      media: `Stay informed with quality content and journalism.`,
+      nonprofit: `Every contribution makes a meaningful difference.`,
+      portfolio: `See our creative work and innovative projects.`,
+    };
+    return subMap[industry] ?? `Join thousands who trust ${blueprint.name ?? 'us'} for quality and reliability.`;
+  }
+
+  private generateCTAActions(blueprint: ProviderContext['blueprint']): Array<{ label: string; action: string; style: 'primary' | 'ghost' }> {
+    const name = blueprint.name ?? 'us';
+    const industry = blueprint.industry;
+    const actionMap: Record<string, Array<{ label: string; action: string; style: 'primary' | 'ghost' }>> = {
+      ecommerce: [
+        { label: `Shop Now`, action: '/shop', style: 'primary' },
+        { label: 'Browse Categories', action: '/shop', style: 'ghost' },
+      ],
+      restaurant: [
+        { label: 'Reserve a Table', action: '/contact', style: 'primary' },
+        { label: 'View Menu', action: '/menu', style: 'ghost' },
+      ],
+      cafe: [
+        { label: 'Visit Us', action: '/contact', style: 'primary' },
+        { label: 'See Menu', action: '/menu', style: 'ghost' },
+      ],
+      gym: [
+        { label: 'Join Now', action: '/register', style: 'primary' },
+        { label: 'View Plans', action: '/pricing', style: 'ghost' },
+      ],
+      fitness: [
+        { label: 'Start Free Trial', action: '/register', style: 'primary' },
+        { label: 'See Programs', action: '/programs', style: 'ghost' },
+      ],
+      supplement: [
+        { label: 'Order Now', action: '/shop', style: 'primary' },
+        { label: 'View Products', action: '/shop', style: 'ghost' },
+      ],
+      saas: [
+        { label: `Start with ${name}`, action: '/register', style: 'primary' },
+        { label: 'Schedule a Demo', action: '/contact', style: 'ghost' },
+      ],
+    };
+    return actionMap[industry] ?? [
+      { label: `Get Started`, action: '/register', style: 'primary' as const },
+      { label: 'Learn More', action: '/about', style: 'ghost' as const },
+    ];
   }
 
   private generateTestimonials(
