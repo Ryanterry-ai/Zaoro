@@ -314,7 +314,25 @@ function gate(projectDir) {
   const threshold = thresholdIdx !== -1 ? parseFloat(process.argv[thresholdIdx + 1]) : 0.3;
 
   const industryIdx = process.argv.indexOf('--industry');
-  const industry = industryIdx !== -1 ? process.argv[industryIdx + 1] : null;
+  let industry = industryIdx !== -1 ? process.argv[industryIdx + 1] : null;
+
+  // Auto-detect industry from generated content if not provided
+  if (!industry) {
+    const allContent = allFiles.map(f => {
+      try { return fs.readFileSync(f, 'utf-8').toLowerCase(); } catch { return ''; }
+    }).join(' ');
+    let bestScore = 0;
+    for (const [ind, keywords] of Object.entries(INDUSTRY_KEYWORDS)) {
+      const hits = keywords.filter(kw => allContent.includes(kw.toLowerCase())).length;
+      if (hits > bestScore && hits >= 3) {
+        bestScore = hits;
+        industry = ind;
+      }
+    }
+    if (industry) {
+      console.error(`[content-quality-gate] Auto-detected industry: ${industry} (${bestScore} keyword matches)`);
+    }
+  }
 
   // Analyze each file
   const analyses = allFiles.map(f => analyzeFile(f, industry));
