@@ -1,6 +1,6 @@
 import type { BusinessIntelligenceProfile } from '../schemas/knowledge/business-intelligence.schema.js';
 import type { AppFamilyResult } from './application-family-classifier.js';
-import type { ScrapedContent } from '../types.js';
+import type { ScrapedContent, BusinessResearch } from '../types.js';
 
 export interface BREContext {
   industry: string;
@@ -21,6 +21,15 @@ export interface BREContext {
   scrapedContent?: ScrapedContent;
   /** Application family classification result — set by bre-v2-pipeline.ts */
   appFamilyResult?: AppFamilyResult;
+  /**
+   * Business intelligence gathered from prompt analysis + real business research.
+   * This is the FOUNDATION — all downstream consumers read from this.
+   */
+  businessResearch?: BusinessResearch;
+  /** Design brief from DesignAgent — industry-specific design rules, colors, typography, layout, animation, UX guidelines. */
+  designBrief?: import('../../agents/orchestrator/subagents/design-agent.js').DesignBrief;
+  /** Solution architecture decision from SAP — single authority for technology selection. */
+  solutionArchitecture?: import('../types-solution-architecture.js').SolutionArchitectureDecision;
 }
 
 export interface Rule {

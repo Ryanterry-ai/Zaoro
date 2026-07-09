@@ -131,6 +131,12 @@ export interface RenderContext {
     additionalCapabilities: string[];
   };
 
+  /** Design Brief from DesignAgent — industry-specific design rules, colors, typography, layout, animation, UX guidelines. */
+  designBrief?: import('../../agents/orchestrator/subagents/design-agent.js').DesignBrief;
+
+  /** Solution architecture decision from SAP — single authority for technology selection. */
+  solutionArchitecture?: import('../../bos/types-solution-architecture.js').SolutionArchitectureDecision;
+
   /** Which engines contributed design output — used for provenance reporting. */
   designLineage?: DesignLineage;
 

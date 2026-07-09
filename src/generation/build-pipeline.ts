@@ -335,6 +335,8 @@ export async function runBuildPipeline(
     ...(context.subIndustry ? { subIndustry: context.subIndustry } : {}),
     ...(context.country ? { country: context.country } : {}),
     ...(context.audience ? { audience: context.audience } : {}),
+    ...(breResult.scrapedContent ? { scrapedContent: breResult.scrapedContent } : {}),
+    ...(context.businessResearch ? { businessResearch: context.businessResearch } : {}),
   });
   log.info('Layer 1c: ApplicationGraph constructed (canonical IR)', {
     nodes: applicationGraph.nodes.length,
@@ -521,6 +523,7 @@ export async function runBuildPipeline(
     ...(matchedDesignProfile ? { designProfile: matchedDesignProfile } : {}),
     ...(breResult.revenueIntelligence ? { revenueIntelligence: breResult.revenueIntelligence } : {}),
     ...(breResult.scrapedContent ? { scrapedContent: breResult.scrapedContent } : {}),
+    ...(context.businessResearch ? { businessResearch: context.businessResearch } : {}),
     ...(skillRecommendations ? { skillRecommendations } : {}),
     ...(designDecision ? { designDecision } : {}),
   });
@@ -646,7 +649,8 @@ export async function runBuildPipeline(
             },
           } : {}),
           ...(designLineage ? { designLineage } : {}),
-          // Only the first group generates singleton files (shell, layout, Icon, nav-data)
+          ...(context.designBrief ? { designBrief: context.designBrief } : {}),
+          ...(context.solutionArchitecture ? { solutionArchitecture: context.solutionArchitecture } : {}),
           skipSingletons: gi > 0,
         });
         wtManager.markReady(groupName);
@@ -703,6 +707,8 @@ export async function runBuildPipeline(
         },
       } : {}),
       ...(designLineage ? { designLineage } : {}),
+      ...(context.designBrief ? { designBrief: context.designBrief } : {}),
+      ...(context.solutionArchitecture ? { solutionArchitecture: context.solutionArchitecture } : {}),
     });
   }
 
