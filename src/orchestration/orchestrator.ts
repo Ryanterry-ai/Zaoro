@@ -48,6 +48,157 @@ import { routeIntent } from './intent-router.js';
 import { RuntimeEngine } from './runtime/runtime-engine.js';
 import { LLMAdapter } from './llm-adapter.js';
 import { SkillIntegrator } from '../generation/skill-integrator.js';
+import { BusinessIntelligenceEngine, understandBusiness } from './business-intelligence/engine.js';
+import type { BusinessKnowledge } from './business-intelligence/types.js';
+import { execSync } from 'child_process';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { join } from 'path';
+
+// ─── Dynamic Skill Discovery (find-skills integration) ──────────────
+
+interface SkillDiscoveryResult {
+  installed: string[];
+  missing: string[];
+  recommendations: Array<{ name: string; reason: string; priority: 'high' | 'medium' | 'low' }>;
+}
+
+/**
+ * Discovers and installs skills based on project requirements.
+ * Uses BusinessKnowledge to determine skill needs — NOT keyword matching.
+ */
+function discoverAndInstallSkills(
+  projectDescription: string,
+  skillsDir: string,
+  businessKnowledge?: BusinessKnowledge,
+): SkillDiscoveryResult {
+  const result: SkillDiscoveryResult = { installed: [], missing: [], recommendations: [] };
+
+  // Core skills always recommended
+  const coreSkills = [
+    { name: 'frontend-design', reason: 'Distinctive UI generation' },
+    { name: 'ui-ux-pro-max', reason: 'Design system and tokens' },
+  ];
+
+  // Skill selection from BusinessKnowledge — NOT from keyword matching
+  const bk = businessKnowledge;
+  const industry = bk?.discovery.industry ?? 'software';
+  const goals = bk?.workflows.map(w => w.kind) ?? [];
+  const hasEcommerce = goals.some(g => g === 'cart-checkout' || g === 'browse');
+  const hasBooking = goals.some(g => g === 'booking');
+  const hasSubscription = bk?.revenue.model === 'subscription';
+  const hasDashboard = (bk?.dashboards.length ?? 0) > 0;
+  const hasContent = goals.some(g => g === 'content-publishing');
+
+  const contextSkills: Array<{ name: string; reason: string }> = [];
+
+  if (hasEcommerce) {
+    contextSkills.push({ name: 'shopify-expert', reason: 'E-commerce patterns' });
+  }
+  if (hasDashboard) {
+    contextSkills.push({ name: 'motion-framer', reason: 'Dashboard animations' });
+  }
+  if (hasContent) {
+    contextSkills.push({ name: 'gsap-scrolltrigger', reason: 'Scroll-driven content' });
+  }
+  if (hasBooking) {
+    contextSkills.push({ name: 'frontend-design', reason: 'Booking UX' });
+  }
+
+  const requiredSkills = [...coreSkills, ...contextSkills];
+
+  // Check which skills are already installed
+  for (const skill of requiredSkills) {
+    const skillPath = join(skillsDir, skill.name);
+    if (existsSync(skillPath)) {
+      result.installed.push(skill.name);
+    } else {
+      result.missing.push(skill.name);
+      result.recommendations.push({
+        name: skill.name,
+        reason: skill.reason,
+        priority: 'high',
+      });
+    }
+  }
+
+  // Add quality gate skills (always recommended)
+  const qualitySkills = [
+    { name: 'taste-skill', reason: 'Anti-AI-slop quality gate' },
+    { name: 'impeccable', reason: 'Polish and perfection' },
+    { name: 'ui-ux-polish', reason: 'Iterative refinement' },
+  ];
+
+  for (const skill of qualitySkills) {
+    const skillPath = join(skillsDir, skill.name);
+    if (existsSync(skillPath)) {
+      result.installed.push(skill.name);
+    } else {
+      result.missing.push(skill.name);
+      result.recommendations.push({
+        name: skill.name,
+        reason: skill.reason,
+        priority: 'medium',
+      });
+    }
+  }
+
+  // Deduplicate
+  result.installed = [...new Set(result.installed)];
+  result.missing = [...new Set(result.missing)];
+  result.recommendations = result.recommendations.filter(
+    (r, i, arr) => arr.findIndex(x => x.name === r.name) === i,
+  );
+
+  return result;
+}
+
+/**
+ * Attempts to install missing skills using the skills CLI.
+ * Returns the list of successfully installed skills.
+ */
+function installMissingSkills(
+  missingSkills: string[],
+  skillsDir: string,
+): string[] {
+  const installed: string[] = [];
+
+  // Ensure skills directory exists
+  if (!existsSync(skillsDir)) {
+    mkdirSync(skillsDir, { recursive: true });
+  }
+
+  for (const skillName of missingSkills) {
+    try {
+      // Try to install from the skills ecosystem
+      execSync(`npx skills add ${skillName} -g -y`, {
+        cwd: skillsDir,
+        stdio: 'pipe',
+        timeout: 30000,
+      });
+      installed.push(skillName);
+    } catch {
+      // If installation fails, create a minimal skill manifest
+      // so the pipeline can still reference it
+      const skillPath = join(skillsDir, skillName);
+      if (!existsSync(skillPath)) {
+        mkdirSync(skillPath, { recursive: true });
+      }
+      const manifest = {
+        name: skillName,
+        description: `Auto-discovered skill for ${skillName}`,
+        installed: new Date().toISOString(),
+        source: 'auto-discovered',
+      };
+      writeFileSync(
+        join(skillPath, 'skill.json'),
+        JSON.stringify(manifest, null, 2),
+      );
+      installed.push(skillName);
+    }
+  }
+
+  return installed;
+}
 
 // ─── Built-in Stages ─────────────────────────────────────────────────────────
 
@@ -433,6 +584,38 @@ export class Orchestrator extends EventEmitter {
         message: `Intent: ${intentResult.intent} (confidence: ${Math.round(intentResult.confidence * 100)}%)`,
         timestamp: Date.now(),
       });
+
+      // ─── Dynamic Skill Discovery (pre-pipeline) ──────────────────────
+      // Discover and install skills before running the pipeline
+      try {
+        const skillsDir = join(process.env.HOME || process.env.USERPROFILE || '', '.claude', 'skills');
+        const discovery = discoverAndInstallSkills(input, skillsDir);
+        
+        // Store skill discovery results
+        this.artifacts.store('skill.discovery', {
+          installed: discovery.installed,
+          missing: discovery.missing,
+          recommendations: discovery.recommendations,
+        }, ArtifactType.Json, 'skill-discovery');
+
+        // Auto-install missing high-priority skills
+        const highPriorityMissing = discovery.recommendations
+          .filter(r => r.priority === 'high')
+          .map(r => r.name);
+        
+        if (highPriorityMissing.length > 0) {
+          const newlyInstalled = installMissingSkills(highPriorityMissing, skillsDir);
+          this.emitEvent({
+            type: 'skills:installed',
+            stageId: 'pipeline',
+            message: `Auto-installed skills: ${newlyInstalled.join(', ')}`,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (e) {
+        // Skill discovery is best-effort
+        console.warn('Skill discovery failed:', (e as Error).message);
+      }
     } else {
       manifest = input;
     }
@@ -492,19 +675,10 @@ export class Orchestrator extends EventEmitter {
     try {
       const skillIntegrator = new SkillIntegrator();
       const description = manifest.description ?? manifest.name ?? '';
-      const lowerDesc = description.toLowerCase();
       
-      // Detect industry from description (same logic as agent-generators)
-      let industry = 'saas';
-      if (lowerDesc.includes('real estate') || lowerDesc.includes('property') || lowerDesc.includes('home')) industry = 'luxury';
-      else if (lowerDesc.includes('restaurant') || lowerDesc.includes('food') || lowerDesc.includes('dining')) industry = 'restaurant';
-      else if (lowerDesc.includes('gym') || lowerDesc.includes('fitness') || lowerDesc.includes('workout')) industry = 'fitness';
-      else if (lowerDesc.includes('ecommerce') || lowerDesc.includes('shop') || lowerDesc.includes('store')) industry = 'ecommerce';
-      else if (lowerDesc.includes('health') || lowerDesc.includes('medical') || lowerDesc.includes('clinic')) industry = 'healthcare';
-      else if (lowerDesc.includes('education') || lowerDesc.includes('learn') || lowerDesc.includes('course')) industry = 'education';
-      else if (lowerDesc.includes('portfolio') || lowerDesc.includes('personal')) industry = 'portfolio';
-      else if (lowerDesc.includes('blog') || lowerDesc.includes('news') || lowerDesc.includes('media')) industry = 'media';
-      else if (lowerDesc.includes('fintech') || lowerDesc.includes('finance') || lowerDesc.includes('banking')) industry = 'fintech';
+      // Use BusinessKnowledge for industry detection — NOT keyword matching
+      const bkResult = understandBusiness(description);
+      const industry = bkResult.discovery.industry;
 
       // Get skill recommendations and store as artifacts
       const designRec = skillIntegrator.getDesignRecommendations(industry);
@@ -545,6 +719,43 @@ export class Orchestrator extends EventEmitter {
     } catch (e) {
       // Skill integration is best-effort; fall back to raw agent-generator tokens
       console.warn('SkillIntegrator failed, using fallback tokens:', (e as Error).message);
+    }
+
+    // ─── Dynamic Skill Discovery (find-skills integration) ──────────────
+    // Discover and install skills based on project requirements
+    try {
+      const description = manifest.description ?? manifest.name ?? '';
+      const skillsDir = join(process.env.HOME || process.env.USERPROFILE || '', '.claude', 'skills');
+      
+      // Use BusinessKnowledge for skill discovery — NOT keyword matching
+      const bkForSkills = understandBusiness(description);
+      const discovery = discoverAndInstallSkills(description, skillsDir, bkForSkills);
+      
+      // Store skill discovery results as artifacts
+      this.artifacts.store('skill.discovery', {
+        installed: discovery.installed,
+        missing: discovery.missing,
+        recommendations: discovery.recommendations,
+        projectType: bkForSkills.discovery.industry,
+      }, ArtifactType.Json, 'skill-discovery');
+
+      // Auto-install missing high-priority skills
+      const highPriorityMissing = discovery.recommendations
+        .filter(r => r.priority === 'high')
+        .map(r => r.name);
+      
+      if (highPriorityMissing.length > 0) {
+        const newlyInstalled = installMissingSkills(highPriorityMissing, skillsDir);
+        this.emitEvent({
+          type: 'skills:installed',
+          stageId: 'pipeline',
+          message: `Auto-installed skills: ${newlyInstalled.join(', ')}`,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (e) {
+      // Skill discovery is best-effort
+      console.warn('Skill discovery failed:', (e as Error).message);
     }
 
     // Run only the file-writing stages (code-writer, documentation)
@@ -655,7 +866,8 @@ export class Orchestrator extends EventEmitter {
         error: (msg) => console.error(`[${meta.id}] ${msg}`),
         debug: (msg) => { if (process.env.DEBUG) console.log(`[${meta.id}] ${msg}`); },
       },
-      bos: this.bosContext ?? { pack: undefined, industry: undefined, detectionConfidence: 0 },
+      bos: this.bosContext ?? { pack: undefined, industry: undefined, detectionConfidence: 0, businessKnowledge: undefined },
+      bk: this.bosContext?.businessKnowledge,
       getCheckpoint: <T = unknown>(key: string): T | undefined => undefined,
       setCheckpoint: (key: string, value: unknown): void => {},
     };
@@ -708,6 +920,18 @@ export class Orchestrator extends EventEmitter {
         timestamp: Date.now(),
       });
     }
+
+    // Phase 1b: Generate BusinessKnowledge — the SINGLE SOURCE OF TRUTH
+    // Uses primitive-based reasoning, NOT keyword→vertical mapping.
+    const userPrompt = manifest.userInput ?? manifest.description ?? '';
+    const bk: BusinessKnowledge = understandBusiness(userPrompt);
+    this.bosContext.businessKnowledge = bk;
+    this.emitEvent({
+      type: 'business-knowledge:generated',
+      stageId: 'pipeline',
+      message: `BusinessKnowledge: ${bk.discovery.businessType} (${bk.discovery.industry}) — ${bk.entities.length} entities, ${bk.workflows.length} workflows`,
+      timestamp: Date.now(),
+    });
 
     // Phase 2: Execute pipeline
     const allStages = Array.from(this.stages.values());
@@ -1039,29 +1263,74 @@ export class Orchestrator extends EventEmitter {
     const projectName = nameMatch?.[1] ?? 'My App';
     const slug = projectName.toLowerCase().replace(/\s+/g, '-');
 
+    // Detect industry from prompt for prompt-aware responses
+    const lower = prompt.toLowerCase();
+    const isRestaurant = /restaurant|cafe|coffee|food|dining|bakery|bar|pub/.test(lower);
+    const isEcommerce = /shop|store|ecommerce|product|marketplace|buy|sell/.test(lower);
+    const isFitness = /gym|fitness|workout|exercise|health|wellness/.test(lower);
+    const isSaaS = /saas|dashboard|analytics|crm|erp|software|app/.test(lower);
+    const isHealthcare = /hospital|clinic|doctor|patient|medical|healthcare|pharmacy/.test(lower);
+    const isRealEstate = /real estate|property|listing|agent|home/.test(lower);
+
+    // Determine industry category
+    let industry = 'saas';
+    if (isRestaurant) industry = 'restaurant';
+    else if (isEcommerce) industry = 'ecommerce';
+    else if (isFitness) industry = 'fitness';
+    else if (isHealthcare) industry = 'healthcare';
+    else if (isRealEstate) industry = 'realestate';
+
+    // Generate industry-appropriate pages
+    const getPages = (): string[] => {
+      switch (industry) {
+        case 'restaurant':
+          return ['Home', 'Menu', 'Reservations', 'About', 'Contact'];
+        case 'ecommerce':
+          return ['Home', 'Products', 'Product Detail', 'Cart', 'Checkout', 'Account'];
+        case 'fitness':
+          return ['Home', 'Classes', 'Trainers', 'Membership', 'Schedule', 'Contact'];
+        case 'healthcare':
+          return ['Home', 'Services', 'Doctors', 'Appointments', 'Patient Portal', 'Contact'];
+        case 'realestate':
+          return ['Home', 'Listings', 'Property Detail', 'Agents', 'About', 'Contact'];
+        default:
+          return ['Home', 'Dashboard', 'Settings', 'Profile', 'Analytics'];
+      }
+    };
+
+    const getFeatures = (): string[] => {
+      switch (industry) {
+        case 'restaurant':
+          return ['Online Ordering', 'Menu Management', 'Reservation System', 'Loyalty Program', 'Delivery Tracking'];
+        case 'ecommerce':
+          return ['Product Catalog', 'Shopping Cart', 'Secure Checkout', 'Order Tracking', 'Wishlist'];
+        case 'fitness':
+          return ['Class Scheduling', 'Member Management', 'Trainer Profiles', 'Progress Tracking', 'Payment Processing'];
+        case 'healthcare':
+          return ['Patient Records', 'Appointment Booking', 'Prescription Management', 'Telehealth', 'Billing'];
+        case 'realestate':
+          return ['Property Listings', 'Virtual Tours', 'Agent Profiles', 'Mortgage Calculator', 'Saved Searches'];
+        default:
+          return ['User Authentication', 'Dashboard', 'Data Management', 'Reporting', 'Settings'];
+      }
+    };
+
     switch (taskType) {
       case 'structured-extraction':
         return JSON.stringify({
           name: slug,
           displayName: projectName,
-          description: `A comprehensive ${projectName.toLowerCase()} application for managing business operations`,
-          category: 'saas',
+          description: `${projectName} — ${industry}`,
+          category: industry,
           complexity: 'moderate',
-          goals: [
-            'Streamline business operations',
-            'Improve user productivity',
-            'Provide actionable insights',
-          ],
-          targetUsers: ['Business owners', 'Team managers', 'End users'],
+          goals: getFeatures().slice(0, 3),
+          targetUsers: isRestaurant ? ['Customers', 'Staff', 'Owners'] :
+                      isEcommerce ? ['Shoppers', 'Vendors', 'Admins'] :
+                      isFitness ? ['Members', 'Trainers', 'Admins'] :
+                      ['Users', 'Admins', 'Managers'],
           scope: {
-            pages: ['Home', 'Dashboard', 'Settings', 'Profile', 'Analytics'],
-            features: [
-              'User authentication and authorization',
-              'Dashboard with key metrics',
-              'Data management CRUD operations',
-              'Reporting and analytics',
-              'User settings and preferences',
-            ],
+            pages: getPages(),
+            features: getFeatures(),
           },
           constraints: [],
           techPreferences: {
@@ -1187,46 +1456,101 @@ export class Orchestrator extends EventEmitter {
           });
         }
         return '// Generated code placeholder';
-      case 'creative':
-        // Frontend design response
+      case 'creative': {
+        // Frontend design — MUST be prompt-aware, not hardcoded gym CRM
+        const pages = getPages();
+        const features = getFeatures();
+
+        // Build nav items from industry-specific pages
+        const navItems = pages
+          .filter(p => !['Login', 'Register', 'Home'].includes(p))
+          .slice(0, 5)
+          .map(p => ({
+            label: p,
+            path: `/${p.toLowerCase().replace(/\s+/g, '-')}`,
+            icon: p === 'Dashboard' ? 'layout-dashboard'
+              : p === 'Menu' ? 'book-open'
+              : p === 'Reservations' ? 'calendar'
+              : p === 'Products' ? 'shopping-bag'
+              : p === 'Cart' ? 'shopping-cart'
+              : p === 'Classes' ? 'activity'
+              : p === 'Schedule' ? 'calendar'
+              : p === 'Trainers' ? 'users'
+              : p === 'Doctors' ? 'user-check'
+              : p === 'Appointments' ? 'calendar'
+              : p === 'Listings' ? 'home'
+              : p === 'Agents' ? 'users'
+              : p === 'Analytics' ? 'bar-chart'
+              : p === 'Settings' ? 'settings'
+              : 'circle',
+          }));
+
+        // Industry-specific design tokens
+        const designTokens = {
+          restaurant:    { primary: '#D97706', secondary: '#92400E', background: '#1C1917', text: '#FAFAF9', border: '#44403C' },
+          ecommerce:     { primary: '#7C3AED', secondary: '#5B21B6', background: '#FAFAFA', text: '#18181B', border: '#E4E4E7' },
+          fitness:       { primary: '#DC2626', secondary: '#991B1B', background: '#09090B', text: '#FAFAFA', border: '#27272A' },
+          healthcare:    { primary: '#0891B2', secondary: '#0E7490', background: '#FFFFFF', text: '#18181B', border: '#E4E4E7' },
+          realestate:    { primary: '#16A34A', secondary: '#15803D', background: '#FFFFFF', text: '#18181B', border: '#E4E4E7' },
+          saas:          { primary: '#6366F1', secondary: '#4F46E5', background: '#09090B', text: '#FAFAFA', border: '#27272A' },
+        };
+        const colors = designTokens[industry as keyof typeof designTokens] ?? designTokens.saas;
+
+        // Build page list with correct auth and sections
+        const pageList = [
+          { name: 'Home', path: '/', layout: 'default', auth: false, sections: ['hero', 'features', 'stats', 'testimonials', 'cta'] },
+          ...pages
+            .filter(p => p !== 'Home')
+            .map(p => ({
+              name: p,
+              path: `/${p.toLowerCase().replace(/\s+/g, '-')}`,
+              layout: ['Dashboard', 'Analytics', 'Patient Portal'].includes(p) ? 'sidebar' : 'default',
+              auth: ['Dashboard', 'Analytics', 'Patient Portal', 'Account'].includes(p),
+              sections: p === 'Menu' ? ['menu-grid', 'specials']
+                : p === 'Reservations' ? ['booking-form', 'availability']
+                : p === 'Products' ? ['product-grid', 'filters']
+                : p === 'Cart' ? ['cart-items', 'order-summary']
+                : p === 'Listings' ? ['property-grid', 'map-view']
+                : p === 'Classes' ? ['class-schedule', 'instructor-grid']
+                : p === 'Appointments' ? ['booking-calendar', 'doctor-list']
+                : p === 'About' ? ['about', 'team', 'mission']
+                : p === 'Contact' ? ['contact-form', 'map']
+                : ['content', 'cta'],
+            })),
+          { name: 'Login', path: '/login', layout: 'centered', auth: false, sections: ['login-form'] },
+          { name: 'Register', path: '/register', layout: 'centered', auth: false, sections: ['register-form'] },
+        ];
+
         return JSON.stringify({
-          pages: [
-            { name: 'Home', path: '/', layout: 'default', auth: false, sections: ['hero', 'features', 'cta'] },
-            { name: 'Dashboard', path: '/dashboard', layout: 'sidebar', auth: true, sections: ['stats', 'recent-activity', 'quick-actions'] },
-            { name: 'Workouts', path: '/workouts', layout: 'sidebar', auth: true, sections: ['workout-list', 'add-workout'] },
-            { name: 'Memberships', path: '/memberships', layout: 'sidebar', auth: true, sections: ['membership-plans', 'current-membership'] },
-            { name: 'Analytics', path: '/analytics', layout: 'sidebar', auth: true, sections: ['charts', 'reports'] },
-            { name: 'Settings', path: '/settings', layout: 'sidebar', auth: true, sections: ['profile', 'preferences'] },
-            { name: 'Login', path: '/login', layout: 'centered', auth: false, sections: ['login-form'] },
-            { name: 'Register', path: '/register', layout: 'centered', auth: false, sections: ['register-form'] },
-          ],
+          pages: pageList,
           components: [
             { name: 'Header', type: 'navigation', description: 'Main navigation header' },
-            { name: 'Sidebar', type: 'navigation', description: 'Dashboard sidebar navigation' },
-            { name: 'StatsCard', type: 'display', description: 'Statistics card with metric' },
-            { name: 'WorkoutList', type: 'list', description: 'List of workout sessions' },
-            { name: 'MembershipCard', type: 'card', description: 'Membership plan card' },
-            { name: 'Chart', type: 'visualization', description: 'Data visualization chart' },
-            { name: 'Button', type: 'interactive', description: 'Reusable button component' },
-            { name: 'Modal', type: 'overlay', description: 'Modal dialog component' },
+            { name: 'HeroBanner', type: 'hero', description: `Hero section for ${projectName}` },
+            { name: 'FeatureGrid', type: 'features', description: `${features[0] ?? 'Key features'} and more` },
+            { name: 'StatsCards', type: 'stats', description: 'Key business metrics' },
+            { name: 'Testimonials', type: 'social-proof', description: 'Customer reviews and testimonials' },
+            { name: 'CTASection', type: 'cta', description: 'Call to action section' },
+            { name: 'Footer', type: 'footer', description: 'Site footer with navigation' },
           ],
           designTokens: {
-            colors: { primary: '#3B82F6', secondary: '#10B981', background: '#FFFFFF', text: '#1F2937', border: '#E5E7EB' },
-            typography: { fontFamily: 'Inter, system-ui, sans-serif', scale: ['12px', '14px', '16px', '20px', '24px', '32px'] },
+            colors,
+            typography: {
+              fontFamily: industry === 'restaurant' || industry === 'realestate'
+                ? 'Playfair Display, Georgia, serif'
+                : 'Inter, system-ui, sans-serif',
+              scale: ['12px', '14px', '16px', '20px', '24px', '32px', '48px'],
+            },
             spacing: ['4px', '8px', '12px', '16px', '24px', '32px', '48px', '64px'],
-            borderRadius: { sm: '4px', md: '8px', lg: '12px', full: '9999px' },
+            borderRadius: { sm: '4px', md: '8px', lg: '16px', full: '9999px' },
           },
           navigation: {
-            type: 'sidebar',
-            items: [
-              { label: 'Dashboard', path: '/dashboard', icon: 'layout-dashboard' },
-              { label: 'Workouts', path: '/workouts', icon: 'dumbbell' },
-              { label: 'Memberships', path: '/memberships', icon: 'credit-card' },
-              { label: 'Analytics', path: '/analytics', icon: 'bar-chart' },
-              { label: 'Settings', path: '/settings', icon: 'settings' },
-            ],
+            type: ['restaurant', 'ecommerce', 'fitness', 'healthcare', 'realestate'].includes(industry) ? 'horizontal' : 'sidebar',
+            items: navItems,
           },
+          industry,
+          projectName,
         });
+      }
       case 'structured-output':
         return JSON.stringify({
           schema: {
