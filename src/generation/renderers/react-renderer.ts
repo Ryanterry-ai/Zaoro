@@ -19,11 +19,18 @@ import type {
   RenderContext,
   RenderedFile,
   RenderResult,
-  ComponentSourceRec,
 } from './renderer.js';
 import { SkillIntegrator } from '../skill-integrator.js';
 import type { PageLayout, SectionLayout } from '../skill-integrator.js';
 import { stageLogger } from '../../core/debug-logger.js';
+import { ECOMMERCE_TEMPLATES } from './templates/ecommerce.js';
+import { SAAS_TEMPLATES } from './templates/saas.js';
+import { RESTAURANT_TEMPLATES } from './templates/restaurant.js';
+import { CONTENT_TEMPLATES } from './templates/content.js';
+import { HEALTHCARE_TEMPLATES } from './templates/healthcare.js';
+import { LEGAL_TEMPLATES } from './templates/legal.js';
+import { REALESTATE_TEMPLATES } from './templates/realestate.js';
+import { FITNESS_TEMPLATES } from './templates/fitness.js';
 
 const log = stageLogger('render');
 
@@ -79,8 +86,8 @@ export class ReactRenderer implements Renderer {
   readonly componentExtension = '.tsx';
   readonly pageExtension = '.tsx';
 
-  /** External packages collected during rendering for package.json */
-  private externalPackages: Record<string, string> = {};
+  /** Current section index during rendering — used by Experience Blueprint scene lookup */
+  private currentSectionIndex = 0;
 
   /** Current render context — set per render cycle for engine token access */
   private currentContext?: RenderContext;
@@ -92,15 +99,9 @@ export class ReactRenderer implements Renderer {
     this.currentContext = context;
     const componentName = spec.type;
 
-    // Check if this component has an external source recommendation
-    const sourceRec = context.componentSources?.find(
-      (s: ComponentSourceRec) => s.type === spec.type && s.source !== 'custom',
-    );
-    if (sourceRec) {
-      this.externalPackages[sourceRec.packageName] = '^1.0.0';
-    }
-
-    const code = this.generateComponentCode(spec, sourceRec, context);
+    // All components are generated inline and self-contained. We never import
+    // from third-party component registries at runtime (AGENTS.md hard rule #4).
+    const code = this.generateComponentCode(spec, context);
     return {
       path: `components/${componentName}.tsx`,
       content: code,
@@ -113,9 +114,13 @@ export class ReactRenderer implements Renderer {
     const pageName = spec.path === '/' ? 'Home' : this.toPascalCase(spec.path);
 
     // Deduplicate components by type (same component can appear multiple times in a page)
-    const uniqueComponents = [...new Map(spec.components.map(c => [c.type, c])).values()];
+    const componentMap = new Map<string, { type: string }>();
+    for (const c of spec.components) {
+      componentMap.set(c.type, c);
+    }
+    const uniqueComponents = [...componentMap.values()];
     const componentImports = uniqueComponents.map(c => `import ${c.type} from '@/components/${c.type}';`).join('\n');
-    const componentRenders = spec.components.map(c => {
+    const componentRenders = spec.components.map((c: { type: string }) => {
       const props = this.buildComponentProps(c);
       return `      <${c.type}${props ? ` ${props}` : ''} />`;
     }).join('\n');
@@ -131,7 +136,7 @@ ${componentImports}
 
 export default function ${pageName}Page() {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50 font-sans">
+    <div className="min-h-screen bg-background text-foreground font-sans">
 ${componentRenders}
     </div>
   );
@@ -185,7 +190,7 @@ ${componentRenders}
           if (!generatedComponents.has(component.type)) {
             generatedComponents.add(component.type);
             files.push(this.renderComponent(component, context));
-          }
+}
         }
       }
 
@@ -238,8 +243,8 @@ ${componentRenders}
 
   renderNavData(spec: ApplicationSpec, _context: RenderContext): RenderedFile[] {
     const navItems = spec.pages
-      .filter(p => p.type !== 'auth' && p.type !== 'detail')
-      .map(p => `  { label: '${p.name}', href: '${p.path}' }`)
+      .filter((p: { type: string }) => p.type !== 'auth' && p.type !== 'detail')
+      .map((p: { name: string; path: string }) => `  { label: '${p.name}', href: '${p.path}' }`)
       .join(',\n');
 
     const layoutCode = `export const navItems = [
@@ -277,7 +282,7 @@ export type NavItem = (typeof navItems)[number];
   /**
    * Resolve the complete design-system token set consumed by globals.css and
    * tailwind.config. Every value originates from an engine output
-   * (Design Intelligence > Design DNA > Skill Integrator theme), with only the
+   * (Design Brief > Design Intelligence > Design DNA > Skill Integrator theme), with only the
    * final fallback being a neutral default. No hardcoded brand palettes remain
    * in the render path.
    */
@@ -295,38 +300,43 @@ export type NavItem = (typeof navItems)[number];
     const themeColors = (theme.colors ?? {}) as Record<string, string>;
     const themeType = (theme.typography ?? {}) as Record<string, string>;
 
+    const brief = context?.designBrief;
     const dd = context?.designDecision;
     const dna = context?.designDNA;
+    const sr = context?.skillRecommendations;
 
-    // Color precedence: Design Intelligence > Design DNA > Skill Integrator theme > default
+    // Color precedence: Design Brief > Design Intelligence > Design DNA > Skill Integrator > default
     const ct = (dd?.colorTokens ?? {}) as Record<string, string | undefined>;
     const dc = dna?.colors;
+    const bc = brief?.colors;
+    const sc = sr?.colors;
     const pick = (...vals: (string | undefined)[]): string | undefined =>
       vals.find(v => typeof v === 'string' && v.length > 0);
 
-    const primary = pick(ct.primary, dc?.primary, themeColors.primary) ?? '#6366f1';
-    const secondary = pick(ct.secondary, dc?.secondary, themeColors.secondary) ?? primary;
-    const accent = pick(ct.accent, dc?.accent, themeColors.accent) ?? primary;
-    const background = pick(ct.background, dc?.background, themeColors.background) ?? '#0a0a0b';
-    const foreground = pick(ct.text, dc?.foreground, themeColors.foreground) ?? '#fafafa';
-    const card = pick(dc?.card, themeColors.card) ?? '#18181b';
-    const cardForeground = pick(dc?.cardForeground, themeColors.cardForeground) ?? foreground;
-    const muted = pick(dc?.muted, themeColors.muted) ?? card;
-    const mutedForeground = pick(dc?.mutedForeground, ct.textMuted, themeColors.mutedForeground) ?? '#a1a1aa';
-    const border = pick(dc?.border, ct.border, themeColors.border) ?? '#27272a';
-    const input = pick(dc?.input, ct.border, themeColors.input) ?? border;
-    const ring = pick(ct.ring, dc?.ring, themeColors.ring) ?? primary;
-    const destructive = pick(ct.error, dc?.destructive, themeColors.destructive) ?? '#ef4444';
-    const success = pick(ct.success, dc?.success, themeColors.success) ?? '#22c55e';
-    const warning = pick(ct.warning, dc?.warning, themeColors.warning) ?? '#f59e0b';
-    const info = pick(ct.info, dc?.info, themeColors.info) ?? '#3b82f6';
+    const primary = pick(bc?.primary, ct.primary, dc?.primary, sc?.primary, themeColors.primary) ?? '#6366f1';
+    const secondary = pick(bc?.secondary, ct.secondary, dc?.secondary, sc?.secondary, themeColors.secondary) ?? primary;
+    const accent = pick(bc?.accent, ct.accent, dc?.accent, sc?.accent, themeColors.accent) ?? primary;
+    const background = pick(bc?.background, ct.background, dc?.background, sc?.background, themeColors.background) ?? '#0a0a0b';
+    const foreground = pick(bc?.foreground, ct.text, dc?.foreground, sc?.foreground, themeColors.foreground) ?? '#fafafa';
+    const card = pick(bc?.card, dc?.card, sc?.card, themeColors.card) ?? '#18181b';
+    const cardForeground = pick(dc?.cardForeground, sc?.cardForeground, themeColors.cardForeground) ?? foreground;
+    const muted = pick(bc?.muted, dc?.muted, sc?.muted, themeColors.muted) ?? card;
+    const mutedForeground = pick(dc?.mutedForeground, ct.textMuted, sc?.mutedForeground, themeColors.mutedForeground) ?? '#a1a1aa';
+    const border = pick(bc?.border, dc?.border, ct.border, sc?.border, themeColors.border) ?? '#27272a';
+    const input = pick(dc?.input, ct.border, sc?.input, themeColors.input) ?? border;
+    const ring = pick(ct.ring, dc?.ring, sc?.ring, themeColors.ring) ?? primary;
+    const destructive = pick(bc?.destructive, ct.error, dc?.destructive, sc?.destructive, themeColors.destructive) ?? '#ef4444';
+    const success = pick(bc?.success, ct.success, dc?.success, sc?.success, themeColors.success) ?? '#22c55e';
+    const warning = pick(bc?.warning, ct.warning, dc?.warning, sc?.warning, themeColors.warning) ?? '#f59e0b';
+    const info = pick(ct.info, dc?.info, sc?.info, themeColors.info) ?? '#3b82f6';
 
-    // Typography precedence: Design Intelligence > Design DNA > Skill Integrator theme > system
+    // Typography precedence: Design Brief > Design Intelligence > Design DNA > Skill Integrator theme > system
     const tt = (dd?.typographyTokens?.fontFamily ?? {}) as Record<string, string | undefined>;
     const dt = dna?.typography;
-    const heading = pick(tt.heading, dt?.heading, themeType.heading) ?? 'Inter';
-    const body = pick(tt.body, dt?.body, themeType.body) ?? 'Inter';
-    const mono = pick(tt.mono, dt?.mono, themeType.mono) ?? 'ui-monospace';
+    const bt = brief?.typography;
+    const heading = pick(bt?.headingFont, tt.heading, dt?.heading, themeType.heading) ?? 'Inter';
+    const body = pick(bt?.bodyFont, tt.body, dt?.body, themeType.body) ?? 'Inter';
+    const mono = pick(bt?.monoFont, tt.mono, dt?.mono, themeType.mono) ?? 'ui-monospace';
 
     const radius = pick(
       typeof dd?.layoutTokens?.borderRadius === 'string' ? dd.layoutTokens.borderRadius : undefined,
@@ -343,6 +353,88 @@ export type NavItem = (typeof navItems)[number];
       fonts: { heading, body, mono },
       radius,
     };
+  }
+
+  /**
+   * Get component templates based on solutionArchitecture.projectCategory and industry.
+   * Returns the appropriate template set for the project type.
+   */
+  private getTemplatesForProject(context: RenderContext): Record<string, () => string> | null {
+    const sa = context?.solutionArchitecture;
+    if (!sa) return null;
+
+    // Check industry-specific templates first using designBrief
+    const industry = context?.designBrief?.industry ?? '';
+    const subIndustry = context?.designBrief?.subIndustry ?? '';
+
+    if (industry === 'healthcare' || subIndustry.includes('health')) {
+      return HEALTHCARE_TEMPLATES;
+    }
+    if (industry === 'legal' || subIndustry.includes('legal') || subIndustry.includes('law')) {
+      return LEGAL_TEMPLATES;
+    }
+    if (industry === 'realestate' || subIndustry.includes('real') || subIndustry.includes('property')) {
+      return REALESTATE_TEMPLATES;
+    }
+    if (industry === 'fitness' || subIndustry.includes('fitness') || subIndustry.includes('gym')) {
+      return FITNESS_TEMPLATES;
+    }
+    if (industry === 'restaurant' || subIndustry.includes('restaurant') || subIndustry.includes('cafe') || subIndustry.includes('coffee')) {
+      return RESTAURANT_TEMPLATES;
+    }
+
+    // Fall back to project category
+    switch (sa.projectCategory) {
+      case 'web-store':
+      case 'mobile-store':
+        return ECOMMERCE_TEMPLATES;
+      case 'saas-app':
+      case 'internal-tool':
+        return SAAS_TEMPLATES;
+      case 'web-site':
+        return CONTENT_TEMPLATES;
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Get a specific component template by name from the current project's templates.
+   */
+  private getComponentTemplate(componentType: string, context: RenderContext): (() => string) | null {
+    const templates = this.getTemplatesForProject(context);
+    if (!templates) return null;
+
+    // Map component types to template names
+    const templateMap: Record<string, string> = {
+      'ProductGrid': 'ProductCard',
+      'ProductCard': 'ProductCard',
+      'CartDrawer': 'CartDrawer',
+      'CheckoutModal': 'CheckoutModal',
+      'ProductFilter': 'ProductFilter',
+      'CartStore': 'CartStore',
+      'ProductDetailModal': 'ProductDetailModal',
+      'PricingCard': 'PricingCard',
+      'FeatureGrid': 'FeatureGrid',
+      'DashboardLayout': 'DashboardLayout',
+      'StatsCard': 'StatsCard',
+      'Hero': 'Hero',
+      'BlogCard': 'BlogCard',
+      'Testimonial': 'Testimonial',
+      'CTASection': 'CTASection',
+      'FAQ': 'FAQ',
+      'Newsletter': 'Newsletter',
+      'MenuItem': 'MenuItem',
+      'TableReservation': 'TableReservation',
+      'MenuCategory': 'MenuCategory',
+      'OrderStatus': 'OrderStatus',
+    };
+
+    const templateName = templateMap[componentType];
+    if (templateName && templates[templateName]) {
+      return templates[templateName];
+    }
+    return null;
   }
 
   private renderTsConfig(): RenderedFile {
@@ -389,13 +481,6 @@ export type NavItem = (typeof navItems)[number];
       'tailwind-merge': '^2.5.4',
       'tailwindcss': '^3.4.1',
     };
-
-    // Merge any externally-sourced component packages
-    for (const [pkg, ver] of Object.entries(this.externalPackages)) {
-      if (!deps[pkg]) {
-        deps[pkg] = ver;
-      }
-    }
 
     return {
       path: '../package.json',
@@ -561,8 +646,8 @@ export default nextConfig;
 
   private renderNavbar(spec: ApplicationSpec): RenderedFile {
     const appName = spec.appName || 'App';
-    const navPages = spec.pages.filter(p => p.type !== 'auth' && p.type !== 'detail');
-    const links = navPages.map(p =>
+    const navPages = spec.pages.filter((p: { type: string }) => p.type !== 'auth' && p.type !== 'detail');
+    const links = navPages.map((p: { name: string; path: string }) =>
       `    { label: '${p.name}', href: '${p.path}' }`
     ).join(',\n');
 
@@ -581,28 +666,28 @@ export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="font-black text-xl text-zinc-50">${appName}</Link>
+        <Link href="/" className="font-black text-xl text-foreground">${appName}</Link>
         <div className="hidden md:flex items-center gap-8">
           {navItems.map(item => (
             <Link key={item.href} href={item.href}
-              className={\`text-sm font-medium transition \${pathname === item.href ? 'text-primary' : 'text-zinc-400 hover:text-zinc-50'}\`}>
+              className={\`text-sm font-medium transition \${pathname === item.href ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}\`}>
               {item.label}
             </Link>
           ))}
         </div>
-        <button onClick={() => setOpen(!open)} className="md:hidden text-zinc-400">
+        <button onClick={() => setOpen(!open)} className="md:hidden text-muted-foreground">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {open ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
           </svg>
         </button>
       </div>
       {open && (
-        <div className="md:hidden border-t border-zinc-800 bg-zinc-950 px-6 py-4 flex flex-col gap-4">
+        <div className="md:hidden border-t border-border bg-background px-6 py-4 flex flex-col gap-4">
           {navItems.map(item => (
             <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
-              className="text-sm text-zinc-300">{item.label}</Link>
+              className="text-sm text-muted-foreground">{item.label}</Link>
           ))}
         </div>
       )}
@@ -689,13 +774,13 @@ import Link from 'next/link';
 
 export default function GlobalFooter() {
   return (
-    <footer className="border-t border-zinc-800 bg-zinc-950 py-12 px-6">
+    <footer className="border-t border-border bg-background py-12 px-6">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-sm text-zinc-500">\u00A9 {new Date().getFullYear()} ${spec.appName}. All rights reserved.</p>
-        <div className="flex items-center gap-6 text-sm text-zinc-500">
-          <Link href="/privacy" className="hover:text-zinc-300 transition">Privacy</Link>
-          <Link href="/terms" className="hover:text-zinc-300 transition">Terms</Link>
-          <Link href="/contact" className="hover:text-zinc-300 transition">Contact</Link>
+        <p className="text-sm text-muted-foreground">\u00A9 {new Date().getFullYear()} ${spec.appName}. All rights reserved.</p>
+        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <Link href="/privacy" className="hover:text-muted-foreground transition">Privacy</Link>
+          <Link href="/terms" className="hover:text-muted-foreground transition">Terms</Link>
+          <Link href="/contact" className="hover:text-muted-foreground transition">Contact</Link>
         </div>
       </div>
     </footer>
@@ -708,8 +793,32 @@ export default function GlobalFooter() {
 
   private renderRootLayout(appName: string, context?: RenderContext): RenderedFile {
     const dna = context?.designDNA;
-    const fontLink = dna?.typography?.googleFontsUrl
-      ? `<link rel="preconnect" href="https://fonts.googleapis.com" />\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />\n    <link href="${dna.typography.googleFontsUrl}" rel="stylesheet" />`
+    const ds = this.resolveDesignSystem(context ?? {} as RenderContext);
+
+    // Build Google Fonts URL from resolved fonts (Design Intelligence > DesignDNA)
+    const fontsToLoad = new Set<string>();
+    if (ds.fonts.heading && !ds.fonts.heading.includes('system-ui')) {
+      fontsToLoad.add(ds.fonts.heading.split(',')[0].trim().replace(/ /g, '+'));
+    }
+    if (ds.fonts.body && !ds.fonts.body.includes('system-ui')) {
+      fontsToLoad.add(ds.fonts.body.split(',')[0].trim().replace(/ /g, '+'));
+    }
+    // Fallback to DesignDNA if Design Intelligence didn't provide fonts
+    if (fontsToLoad.size === 0 && dna?.typography?.googleFontsUrl) {
+      return {
+        path: 'app/layout.tsx',
+        content: '',
+        type: 'page' as const,
+      };
+    }
+
+    const fontFamilies = Array.from(fontsToLoad).map(f => `family=${f}:wght@400;500;600;700;800`).join('&');
+    const googleFontsUrl = fontsToLoad.size > 0
+      ? `https://fonts.googleapis.com/css2?${fontFamilies}&display=swap`
+      : dna?.typography?.googleFontsUrl ?? '';
+
+    const fontLink = googleFontsUrl
+      ? `<link rel="preconnect" href="https://fonts.googleapis.com" />\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />\n    <link href="${googleFontsUrl}" rel="stylesheet" />`
       : '';
 
     return {
@@ -730,7 +839,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         ${fontLink}
       </head>
-      <body className="bg-zinc-950 text-zinc-50 antialiased">
+      <body className="bg-background text-foreground antialiased">
         <Navbar />
         <main className="pt-16">{children}</main>
         <GlobalFooter />
@@ -769,7 +878,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   private resolveBackgroundClass(background: SectionLayout['background'], primaryColor: string): string {
     switch (background) {
-      case 'surface':    return 'bg-zinc-900/50';
+      case 'surface':    return 'bg-card/50';
       case 'primary':    return 'bg-primary text-white';
       case 'gradient':   return primaryColor
         ? `bg-gradient-to-br from-zinc-900 via-zinc-900 to-[${primaryColor}]/20`
@@ -780,59 +889,153 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }
 
+  private resolveCurrentScene(context?: RenderContext): import('../../orchestration/design-intelligence/types-experience').Scene | undefined {
+    const bp = context?.experienceBlueprint;
+    if (!bp?.scenes) return undefined;
+    return bp.scenes[this.currentSectionIndex] ?? bp.scenes[0];
+  }
+
+  private resolveHoverProps(context?: RenderContext): string {
+    const bp = context?.experienceBlueprint;
+    if (!bp?.hoverBehaviors) return '';
+    const hover = bp.hoverBehaviors[this.currentSectionIndex] ?? bp.hoverBehaviors[0];
+    if (!hover || hover.strategy === 'none') return '';
+    const dur = `${(hover.animation.duration / 1000).toFixed(2)}`;
+    const ease = hover.animation.easing;
+    const feedback = hover.feedback;
+    switch (hover.strategy) {
+      case 'magnetic':
+        return `whileHover={{ scale: ${feedback.scale ?? 1.02}, x: 4, y: 4 }}`;
+      case 'elevation':
+        return `whileHover={{ y: -4, boxShadow: "${feedback.shadow ?? '0 12px 24px rgba(0,0,0,0.12)'}" }}`;
+      case 'glow':
+        return `whileHover={{ boxShadow: "0 0 20px ${feedback.backgroundShift ?? 'rgba(124,58,237,0.4)'}" }}`;
+      case 'image-zoom':
+        return `whileHover={{ scale: ${feedback.scale ?? 1.05} }}`;
+      case 'tilt-3d':
+        return `whileHover={{ rotateY: 5, rotateX: -3, scale: ${feedback.scale ?? 1.02} }}`;
+      case 'glass-movement':
+        return `whileHover={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(12px)", scale: ${feedback.scale ?? 1.01} }}`;
+      case 'text-reveal':
+        return `whileHover={{ letterSpacing: "0.05em" }}`;
+      case 'border-draw':
+        return `whileHover={{ borderColor: "${feedback.borderColor ?? 'currentColor'}" }}`;
+      case 'background-shift':
+        return `whileHover={{ backgroundColor: "${feedback.backgroundShift ?? 'var(--primary)'}" }}`;
+      case 'scale-subtle':
+        return `whileHover={{ scale: ${feedback.scale ?? 1.02} }}`;
+      case 'depth-shift':
+        return `whileHover={{ y: -2 }}`;
+      case 'icon-movement':
+        return `whileHover={{ x: 4 }}`;
+      case 'cursor-follow':
+        return `whileHover={{ scale: ${feedback.scale ?? 1.02} }}`;
+      default:
+        return `whileHover={{ scale: ${feedback.scale ?? 1.02} }}`;
+    }
+  }
+
   private resolveAnimationProps(animation: SectionLayout['animation'], context?: RenderContext): string {
+    const scene = this.resolveCurrentScene(context);
     const motion = context?.designDecision?.motionTokens;
     const dur = motion?.duration ?? {};
     const ease = motion?.easing ?? {};
     const reduced = motion?.reducedMotion ?? false;
 
+    // Check for industry-specific animation suggestions from MotionEngine
+    const animSuggestions = context?.designDecision?.recommendations
+      ?.filter(r => r.domain === 'motion' && r.animations)
+      .flatMap(r => r.animations ?? []) ?? [];
+
     if (reduced) {
       return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.2 }}`;
     }
 
-    const fast = dur.fast ?? '0.3s';
-    const normal = dur.normal ?? '0.5s';
-    const slow = dur.slow ?? '0.8s';
-    const easeOut = ease.out ?? 'ease-out';
-    const easeInOut = ease.inOut ?? 'ease-in-out';
+    const fast = dur.fast ?? '150ms';
+    const normal = dur.normal ?? '250ms';
+    const slow = dur.slow ?? '400ms';
+    const easeOut = ease.out ?? 'cubic-bezier(0, 0, 0.2, 1)';
+    const easeDefault = ease.default ?? 'cubic-bezier(0.4, 0, 0.2, 1)';
 
-    switch (animation) {
+    // Experience Intelligence: use scene-specific animation config when available
+    const sceneEntry = scene?.entry;
+    const sceneScroll = scene?.scrollTrigger;
+    const sceneDurMs = sceneEntry?.duration ?? 500;
+    const sceneDur = `${(sceneDurMs / 1000).toFixed(2)}`;
+    const sceneEase = sceneEntry?.easing ?? easeOut;
+    const sceneType = sceneEntry?.type ?? animation;
+
+    // Build viewport string from scroll trigger
+    const viewportAmount = sceneScroll?.start ? parseFloat(sceneScroll.start) / 100 : 0.3;
+    const viewportOnce = true;
+    const viewportParts = [`once: ${viewportOnce}`, `amount: ${viewportAmount}`];
+    const viewportStr = viewportParts.join(', ');
+
+    // Get stagger delay from choreography
+    const staggerDelay = scene?.choreography?.stagger?.childDelay ? scene.choreography.stagger.childDelay / 1000 : 0.08;
+
+    // Use scene motion type to override animation, falling back to layout animation
+    const motionType = (sceneType as string) ?? animation;
+
+    switch (motionType) {
       case 'fade-up':
-        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: ${normal}, ease: "${easeOut}" }}`;
+      case 'fade-up':
+        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'fade-down':
+        return `initial={{ opacity: 0, y: -24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'fade-left':
+        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'fade-right':
+        return `initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
       case 'stagger':
-        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: ${fast}, ease: "${easeOut}", staggerChildren: 0.08 }}`;
+        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}", staggerChildren: ${staggerDelay} }}`;
       case 'scale-in':
-        return `initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: ${normal}, ease: "${easeOut}" }}`;
+      case 'scale-up':
+        return `initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
       case 'slide-left':
-        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: ${normal}, ease: "${easeInOut}" }}`;
+        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'slide-right':
+        return `initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'slide-up':
+        return `initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'slide-down':
+        return `initial={{ opacity: 0, y: -32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'zoom-in':
+        return `initial={{ opacity: 0, scale: 1.1 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'bounce-in':
+        return `initial={{ opacity: 0, scale: 0 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ ${viewportStr} }} transition={{ type: "spring", stiffness: 400, damping: 15 }}`;
       case 'parallax':
-        return `initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: ${slow}, ease: "${easeInOut}" }}`;
+        return `initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'card-lift':
+        return `whileHover={{ y: -4, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'text-reveal':
+        return `initial={{ clipPath: "inset(0 100% 0 0)" }} whileInView={{ clipPath: "inset(0 0% 0 0)" }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
       case 'marquee':
+        return `animate={{ x: [0, -1000] }} transition={{ duration: 20, ease: "linear", repeat: Infinity }}`;
       case 'countup':
+        return `initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'unveil':
+        return `initial={{ clipPath: "inset(100% 0 0 0)" }} whileInView={{ clipPath: "inset(0% 0 0 0)" }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'glitch':
+        return `initial={{ opacity: 0, x: -4 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'blur-in':
+        return `initial={{ opacity: 0, filter: "blur(8px)" }} whileInView={{ opacity: 1, filter: "blur(0px)" }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+      case 'rotate-in':
+        return `initial={{ opacity: 0, rotate: -8 }} whileInView={{ opacity: 1, rotate: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
       case 'none':
+        return '';
       default:
-        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: ${fast}, ease: "${easeOut}" }}`;
+        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
     }
   }
 
-  private generateComponentCode(spec: ComponentSpec, sourceRec?: ComponentSourceRec, context?: RenderContext): string {
+  private generateComponentCode(spec: ComponentSpec, context?: RenderContext): string {
     const componentName = spec.type;
 
-    // If this component comes from an external source, generate a re-export wrapper
-    if (sourceRec) {
-      const exportName = sourceRec.exportName || componentName;
-      const propsInterface = this.generatePropsInterface(spec);
-      return `'use client';
-
-import React from 'react';
-import { ${exportName} } from '${sourceRec.packageName}';
-
-${propsInterface}
-
-export default function ${componentName}(${this.hasProps(spec) ? `props: ${componentName}Props` : ''}) {
-  return <${exportName} {...props} />;
-}
-`;
+    // Check if we have a production-quality template for this component
+    const templateFn = context ? this.getComponentTemplate(componentName, context) : null;
+    if (templateFn) {
+      return templateFn();
     }
 
     // Build props interface
@@ -852,7 +1055,7 @@ export default function ${componentName}(${this.hasProps(spec) ? `props: ${compo
 
     return `'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 ${body.includes('<Icon') ? "import Icon from './Icon';\n" : ''}
 ${propsInterface}
@@ -944,7 +1147,9 @@ ${body}
     const subtitle = this.getContentView(spec, 'subtitle');
     const badge = this.getContentView(spec, 'badge');
     const animProps = this.resolveAnimationProps(layout.animation, this.currentContext);
-    const primaryColor = this.currentContext ? this.resolveDesignSystem(this.currentContext).colors.primary : '';
+    const ds = this.currentContext ? this.resolveDesignSystem(this.currentContext) : null;
+    const primaryColor = ds?.colors.primary ?? '#6366f1';
+    const bgColor = ds?.colors.background ?? '#0a0a0b';
     const bgClass = this.resolveBackgroundClass(layout.background, primaryColor);
     const hasOverlay = layout.flags?.darkOverlay;
     const isSplit = layout.heroVariant === 'split';
@@ -953,12 +1158,12 @@ ${body}
     if (isFullscreen) {
       return [
         `  return (`,
-        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} flex items-end">`,
-        hasOverlay ? `      <div className="absolute inset-0 bg-zinc-950/60 z-10" />` : '',
+        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} min-h-screen px-0 bg-cover bg-center bg-no-repeat flex items-end" style={{ background: 'linear-gradient(135deg, ${bgColor} 0%, ${primaryColor}33 60%, ${bgColor} 100%)' }}>`,
+        hasOverlay ? `      <div className="absolute inset-0 bg-background/60 z-10" />` : '',
         `      <div className="relative z-20 max-w-4xl mx-auto px-8 pb-20 w-full">`,
         badge !== '{badge}' ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-white/20 bg-white/10 text-white mb-6">{badge}</div>` : '',
         `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-6">{title}</h1>`,
-        `        <p className="text-zinc-300 text-xl max-w-2xl mb-8">{subtitle}</p>`,
+        `        <p className="text-muted-foreground text-xl max-w-2xl mb-8">{subtitle}</p>`,
         ...this.generateActionButtons(spec),
         `      </div>`,
         `    </motion.section>`,
@@ -973,11 +1178,11 @@ ${body}
         `      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">`,
         `        <div className="space-y-6">`,
         badge !== '{badge}' ? `          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</div>` : '',
-        `          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-zinc-50">{title}</h1>`,
-        `          <p className="text-zinc-400 text-lg">{subtitle}</p>`,
+        `          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-foreground">{title}</h1>`,
+        `          <p className="text-muted-foreground text-lg">{subtitle}</p>`,
         ...this.generateActionButtons(spec),
         `        </div>`,
-        `        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl aspect-video flex items-center justify-center text-zinc-600">`,
+        `        <div className="bg-card border border-border rounded-2xl aspect-video flex items-center justify-center text-muted-foreground">`,
         `          <span className="text-sm">Preview</span>`,
         `        </div>`,
         `      </div>`,
@@ -992,8 +1197,8 @@ ${body}
       `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass}">`,
       `      <div className="max-w-4xl mx-auto text-center space-y-6">`,
       badge !== '{badge}' ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</div>` : '',
-      `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-zinc-50">{title}</h1>`,
-      `        <p className="text-zinc-400 text-lg max-w-xl mx-auto">{subtitle}</p>`,
+      `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground">{title}</h1>`,
+      `        <p className="text-muted-foreground text-lg max-w-xl mx-auto">{subtitle}</p>`,
       ...this.generateActionButtons(spec),
       `      </div>`,
       `    </motion.section>`,
@@ -1011,22 +1216,23 @@ ${body}
     const isAlternating = layout.gridCols === undefined && layout.animation === 'slide-left';
 
     if (isBento) {
+      const cardHover = this.resolveHoverProps(this.currentContext);
       return [
         `  return (`,
         `    <motion.section ${animProps} className="${layout.spacing} ${bgClass}">`,
         `      <div className="max-w-6xl mx-auto">`,
         `        <div className="text-center mb-12">`,
-        `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
-        `          <p className="text-zinc-400">{subtitle}</p>`,
+        `          <h2 className="text-3xl font-black text-foreground mb-3">{title}</h2>`,
+        `          <p className="text-muted-foreground">{subtitle}</p>`,
         `        </div>`,
         `        <div className="grid grid-cols-4 grid-rows-2 gap-4 auto-rows-[200px]">`,
         `          {items?.map((feature, i) => (`,
-        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} className={\`bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition \${i === 0 ? 'col-span-2 row-span-2' : i === 3 ? 'col-span-2' : ''}\`}>`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} ${cardHover ? cardHover : ''} className={\`bg-card border border-border rounded-2xl p-6 transition \${i === 0 ? 'col-span-2 row-span-2' : i === 3 ? 'col-span-2' : ''}\`}>`,
         `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
         `                <Icon name={feature.icon || 'layers'} />`,
         `              </div>`,
-        `              <h3 className="font-bold text-zinc-50 mb-2">{feature.title}</h3>`,
-        `              <p className="text-sm text-zinc-400">{feature.description}</p>`,
+        `              <h3 className="font-bold text-foreground mb-2">{feature.title}</h3>`,
+        `              <p className="text-sm text-muted-foreground">{feature.description}</p>`,
         `            </motion.div>`,
         `          ))}`,
         `        </div>`,
@@ -1042,19 +1248,19 @@ ${body}
         `    <motion.section ${animProps} className="${layout.spacing} ${bgClass}">`,
         `      <div className="max-w-6xl mx-auto">`,
         `        <div className="text-center mb-16">`,
-        `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
-        `          <p className="text-zinc-400">{subtitle}</p>`,
+        `          <h2 className="text-3xl font-black text-foreground mb-3">{title}</h2>`,
+        `          <p className="text-muted-foreground">{subtitle}</p>`,
         `        </div>`,
         `        <div className="space-y-16">`,
         `          {items?.map((feature, i) => (`,
         `            <motion.div key={i} initial={{ opacity: 0, x: i % 2 === 0 ? -32 : 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.55 }} className={\`grid grid-cols-1 md:grid-cols-2 gap-10 items-center \${i % 2 !== 0 ? 'md:[direction:rtl]' : ''}\`}>`,
-        `              <div className={\`bg-zinc-900 border border-zinc-800 rounded-2xl aspect-video \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`} />`,
+        `              <div className={\`bg-card border border-border rounded-2xl aspect-video \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`} />`,
         `              <div className={\`space-y-4 \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`}>`,
         `                <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
         `                  <Icon name={feature.icon || 'layers'} />`,
         `                </div>`,
-        `                <h3 className="text-2xl font-black text-zinc-50">{feature.title}</h3>`,
-        `                <p className="text-zinc-400">{feature.description}</p>`,
+        `                <h3 className="text-2xl font-black text-foreground">{feature.title}</h3>`,
+        `                <p className="text-muted-foreground">{feature.description}</p>`,
         `              </div>`,
         `            </motion.div>`,
         `          ))}`,
@@ -1066,22 +1272,23 @@ ${body}
     }
 
     // Default: standard 3-col stagger grid
+    const cardHover = this.resolveHoverProps(this.currentContext);
     return [
       `  return (`,
       `    <motion.section ${animProps} className="${layout.spacing} ${bgClass}">`,
       `      <div className="max-w-6xl mx-auto">`,
       `        <div className="text-center mb-12">`,
-      `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
-      `          <p className="text-zinc-400">{subtitle}</p>`,
+      `          <h2 className="text-3xl font-black text-foreground mb-3">{title}</h2>`,
+      `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
       `        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${layout.gridCols ?? '3'} gap-6">`,
       `          {items?.map((feature, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition">`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} ${cardHover ? cardHover : ''} className="bg-card border border-border rounded-2xl p-6 transition">`,
       `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
       `                <Icon name={feature.icon || 'layers'} />`,
       `              </div>`,
-      `              <h3 className="font-bold text-lg text-zinc-50 mb-2">{feature.title}</h3>`,
-      `              <p className="text-sm text-zinc-400">{feature.description}</p>`,
+      `              <h3 className="font-bold text-lg text-foreground mb-2">{feature.title}</h3>`,
+      `              <p className="text-sm text-muted-foreground">{feature.description}</p>`,
       `            </motion.div>`,
       `          ))}`,
       `        </div>`,
@@ -1095,31 +1302,32 @@ ${body}
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
 
+    const cardHover = this.resolveHoverProps(this.currentContext);
     return [
       `  return (`,
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
       `      <div className="max-w-6xl mx-auto">`,
       `        <div className="text-center mb-12">`,
-      `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
-      `          <p className="text-zinc-400">{subtitle}</p>`,
+      `          <h2 className="text-3xl font-black text-foreground mb-3">{title}</h2>`,
+      `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {tiers?.map((tier, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-zinc-900 border-zinc-800'}\`}>`,
-      `              <h3 className="text-xl font-black text-zinc-50 mb-2">{tier.name}</h3>`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }} ${cardHover ? cardHover : ''} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-card border-border'}\`}>`,
+      `              <h3 className="text-xl font-black text-foreground mb-2">{tier.name}</h3>`,
       `              <div className="mb-6">`,
-      `                <span className="text-4xl font-black text-zinc-50">{tier.price}</span>`,
-      `                <span className="text-zinc-400 text-sm">{tier.period}</span>`,
+      `                <span className="text-4xl font-black text-foreground">{tier.price}</span>`,
+      `                <span className="text-muted-foreground text-sm">{tier.period}</span>`,
       `              </div>`,
       `              <ul className="space-y-3 mb-8">`,
       `                {tier.features?.map((feature, j) => (`,
-      `                  <li key={j} className="flex items-center gap-2 text-sm text-zinc-400">`,
+      `                  <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">`,
       `                    <span className="text-primary">✓</span>`,
       `                    {feature}`,
       `                  </li>`,
       `                ))}`,
       `              </ul>`,
-      `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-primary hover:bg-primary/90 text-white' : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'}\`}>`,
+      `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-primary text-white' : 'border border-border text-muted-foreground'}\`}>`,
       `                Get Started`,
       `              </button>`,
       `            </motion.div>`,
@@ -1144,17 +1352,17 @@ ${body}
         `  return (`,
         `    <section className="${layout.spacing} ${bgClass} overflow-hidden">`,
         `      <div className="mb-10 text-center px-6">`,
-        `        <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
-        `        <p className="text-zinc-400">{subtitle}</p>`,
+        `        <h2 className="text-3xl font-black text-foreground mb-2">{title}</h2>`,
+        `        <p className="text-muted-foreground">{subtitle}</p>`,
         `      </div>`,
         `      <div className="flex gap-6 w-max animate-[marquee_${speed}_linear_infinite]">`,
         `        {[...(items ?? []), ...(items ?? [])].map((testimonial, i) => (`,
-        `          <div key={i} className="w-80 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex-shrink-0">`,
+        `          <div key={i} className="w-80 bg-card border border-border rounded-2xl p-6 flex-shrink-0">`,
         `            <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
-        `            <p className="text-sm text-zinc-400 mb-4">"{testimonial.metadata?.quote}"</p>`,
+        `            <p className="text-sm text-muted-foreground mb-4">"{testimonial.metadata?.quote}"</p>`,
         `            <div>`,
-        `              <div className="font-bold text-zinc-50 text-sm">{testimonial.title}</div>`,
-        `              <div className="text-xs text-zinc-500">{testimonial.description}</div>`,
+        `              <div className="font-bold text-foreground text-sm">{testimonial.title}</div>`,
+        `              <div className="text-xs text-muted-foreground">{testimonial.description}</div>`,
         `            </div>`,
         `          </div>`,
         `        ))}`,
@@ -1165,22 +1373,23 @@ ${body}
     }
 
     // Static grid
+    const cardHover = this.resolveHoverProps(this.currentContext);
     return [
       `  return (`,
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="${layout.spacing} ${bgClass}">`,
       `      <div className="max-w-5xl mx-auto">`,
       `        <div className="text-center mb-12">`,
-      `          <h2 className="text-3xl font-black text-zinc-50 mb-3">{title}</h2>`,
-      `          <p className="text-zinc-400">{subtitle}</p>`,
+      `          <h2 className="text-3xl font-black text-foreground mb-3">{title}</h2>`,
+      `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
       `          {items?.map((testimonial, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} ${cardHover ? cardHover : ''} className="bg-card border border-border rounded-2xl p-6">`,
       `              <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
-      `              <p className="text-sm text-zinc-400 mb-4">"{testimonial.metadata?.quote}"</p>`,
+      `              <p className="text-sm text-muted-foreground mb-4">"{testimonial.metadata?.quote}"</p>`,
       `              <div>`,
-      `                <div className="font-bold text-zinc-50">{testimonial.title}</div>`,
-      `                <div className="text-sm text-zinc-500">{testimonial.description}</div>`,
+      `                <div className="font-bold text-foreground">{testimonial.title}</div>`,
+      `                <div className="text-sm text-muted-foreground">{testimonial.description}</div>`,
       `              </div>`,
       `            </motion.div>`,
       `          ))}`,
@@ -1198,13 +1407,13 @@ ${body}
     return [
       `  return (`,
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
-      `      <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="max-w-xl mx-auto text-center p-8 bg-zinc-900 border border-zinc-800 rounded-2xl">`,
-      `        <h2 className="text-xl font-black text-zinc-50 mb-3">{title}</h2>`,
-      `        <p className="text-sm text-zinc-500 mb-6">{subtitle}</p>`,
+      `      <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="max-w-xl mx-auto text-center p-8 bg-card border border-border rounded-2xl">`,
+      `        <h2 className="text-xl font-black text-foreground mb-3">{title}</h2>`,
+      `        <p className="text-sm text-muted-foreground mb-6">{subtitle}</p>`,
       `        {items?.length ? (`,
       `          <div className="flex items-center justify-center gap-4 mb-6">`,
       `            {items?.map((item, i) => (`,
-      `              <div key={i} className="flex items-center gap-1.5 text-xs text-zinc-400">`,
+      `              <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">`,
       `                <span className="text-primary">✓</span>`,
       `                <span>{item.title}</span>`,
       `              </div>`,
@@ -1225,12 +1434,12 @@ ${body}
       `  return (`,
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
       `      <div className="max-w-3xl mx-auto">`,
-      `        <h2 className="text-3xl font-black text-zinc-50 text-center mb-12">{title}</h2>`,
+      `        <h2 className="text-3xl font-black text-foreground text-center mb-12">{title}</h2>`,
       `        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, staggerChildren: 0.08 }} className="space-y-4">`,
       `          {items?.map((faq, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: i * 0.05 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
-      `              <h3 className="font-bold text-zinc-50 mb-2">{faq.title}</h3>`,
-      `              <p className="text-sm text-zinc-400">{faq.description}</p>`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: i * 0.05 }} className="bg-card border border-border rounded-2xl p-6">`,
+      `              <h3 className="font-bold text-foreground mb-2">{faq.title}</h3>`,
+      `              <p className="text-sm text-muted-foreground">{faq.description}</p>`,
       `            </motion.div>`,
       `          ))}`,
       `        </motion.div>`,
@@ -1253,9 +1462,9 @@ ${body}
         `      <div className="max-w-6xl mx-auto">`,
         `        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10">`,
         `          {stats?.map((stat, i) => (`,
-        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="${isPrimary ? 'bg-primary' : 'bg-zinc-900'} p-8 text-center">`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="${isPrimary ? 'bg-primary' : 'bg-card'} p-8 text-center">`,
         `              <div className="text-4xl font-black ${isPrimary ? 'text-white' : 'text-primary'} mb-2">{stat.value}</div>`,
-        `              <div className="text-sm ${isPrimary ? 'text-white/70' : 'text-zinc-500'}">{stat.label}</div>`,
+        `              <div className="text-sm ${isPrimary ? 'text-white/70' : 'text-muted-foreground'}">{stat.label}</div>`,
         `            </motion.div>`,
         `          ))}`,
         `        </div>`,
@@ -1270,9 +1479,9 @@ ${body}
       `    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="${layout.spacing} ${bgClass}">`,
       `      <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">`,
       `        {stats?.map((stat, i) => (`,
-      `          <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">`,
+      `          <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="bg-card border border-border rounded-2xl p-5 text-center">`,
       `            <div className="text-2xl font-black text-primary mb-1">{stat.value}</div>`,
-      `            <div className="text-xs text-zinc-500">{stat.label}</div>`,
+      `            <div className="text-xs text-muted-foreground">{stat.label}</div>`,
       `          </motion.div>`,
       `        ))}`,
       `      </div>`,
@@ -1287,14 +1496,14 @@ ${body}
 
     return [
       `  return (`,
-      `    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="min-h-screen flex items-center justify-center px-6 bg-zinc-950">`,
+      `    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="min-h-screen flex items-center justify-center px-6 bg-background">`,
       `      <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="w-full max-w-sm">`,
-      `        <h1 className="text-2xl font-black text-zinc-50 text-center mb-2">{title}</h1>`,
-      `        <p className="text-zinc-400 text-center mb-8">{subtitle}</p>`,
-      `        <form className="space-y-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
-      ...(spec.fields ?? []).map(f => `          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition" />
+      `        <h1 className="text-2xl font-black text-foreground text-center mb-2">{title}</h1>`,
+      `        <p className="text-muted-foreground text-center mb-8">{subtitle}</p>`,
+      `        <form className="space-y-4 bg-card border border-border rounded-2xl p-6">`,
+      ...(spec.fields ?? []).map((f: { label: string; type: string; name: string; required?: boolean }) => `          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">${f.label}</label>
+            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary transition" />
           </div>`),
       `          <button type="submit" className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition">`,
       `            ${spec.actions?.[0]?.label ?? 'Submit'}`,
@@ -1309,25 +1518,61 @@ ${body}
   private generateContactFormBody(spec: ComponentSpec): string[] {
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
+    const fields = spec.fields ?? [];
+
+    // Build initial state from fields
+    const initialState = fields.map(f => `    ${f.name}: ''`).join(',\n');
+
+    // Build field names for state destructuring
+    const fieldNames = fields.map(f => f.name).join(', ');
+
+    // Determine API endpoint from component metadata or default to /api/contact
+    const apiEndpoint = spec.metadata?.apiEndpoint ?? '/api/contact';
 
     return [
+      `  const [formData, setFormData] = useState({`,
+      ...fields.map(f => `    ${f.name}: '',`),
+      `  })`,
+      `  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')`,
+      ``,
+      `  const handleSubmit = async (e: React.FormEvent) => {`,
+      `    e.preventDefault()`,
+      `    setStatus('loading')`,
+      `    try {`,
+      `      const res = await fetch('${apiEndpoint}', {`,
+      `        method: 'POST',`,
+      `        headers: { 'Content-Type': 'application/json' },`,
+      `        body: JSON.stringify(formData),`,
+      `      })`,
+      `      if (!res.ok) throw new Error('Submission failed')`,
+      `      setStatus('success')`,
+      `      setFormData({`,
+      ...fields.map(f => `        ${f.name}: '',`),
+      `      })`,
+      `    } catch (err) {`,
+      `      setStatus('error')`,
+      `    }`,
+      `  }`,
+      ``,
       `  return (`,
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-16">`,
       `      <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }} className="max-w-2xl mx-auto">`,
-      `        <h2 className="text-3xl font-black text-zinc-50 text-center mb-3">{title}</h2>`,
-      `        <p className="text-zinc-400 text-center mb-8">{subtitle}</p>`,
-      `        <form className="space-y-4 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
-      ...(spec.fields ?? []).map(f => f.type === 'textarea'
+      `        <h2 className="text-3xl font-black text-foreground text-center mb-3">{title}</h2>`,
+      `        <p className="text-muted-foreground text-center mb-8">{subtitle}</p>`,
+      `        <form onSubmit={handleSubmit} className="space-y-4 bg-card border border-border rounded-2xl p-6">`,
+      ...fields.map((f: { type: string; label: string; name: string; required?: boolean }) => f.type === 'textarea'
         ? `          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-            <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={4} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition resize-none" />
+            <label className="block text-sm font-medium text-muted-foreground mb-1">${f.label}</label>
+            <textarea name="${f.name}" value={formData.${f.name}} onChange={e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))} ${f.required ? 'required' : ''} rows={4} className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary transition resize-none" />
           </div>`
         : `          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-            <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition" />
+            <label className="block text-sm font-medium text-muted-foreground mb-1">${f.label}</label>
+            <input type="${f.type}" name="${f.name}" value={formData.${f.name}} onChange={e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))} ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary transition" />
           </div>`),
-      `          <button type="submit" className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition">`,
-      `            ${spec.actions?.[0]?.label ?? 'Send Message'}`,
+      `          {status === 'success' && <p className="text-green-400 text-sm">Message sent successfully!</p>}`,
+      `          {status === 'error' && <p className="text-red-400 text-sm">Something went wrong. Please try again.</p>}`,
+      `          <button type="submit" disabled={status === 'loading'} className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition disabled:opacity-50">`,
+      `            {status === 'loading' ? 'Sending...' : '${spec.actions?.[0]?.label ?? 'Send Message'}'}`,
       `          </button>`,
       `        </form>`,
       `      </motion.div>`,
@@ -1342,23 +1587,23 @@ ${body}
 
     return [
       `  return (`,
-      `    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.5 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">`,
-      `      <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: 0.1 }} className="px-4 py-3 flex items-center justify-between border-b border-zinc-800">`,
-      `        <h3 className="font-semibold text-zinc-100">{title}</h3>`,
+      `    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.5 }} className="bg-card border border-border rounded-2xl overflow-hidden">`,
+      `      <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: 0.1 }} className="px-4 py-3 flex items-center justify-between border-b border-border">`,
+      `        <h3 className="font-semibold text-card-foreground">{title}</h3>`,
       `        {actions?.map((action, i) => (`,
       `          <button key={i} className="px-4 py-2 text-sm rounded-lg bg-primary hover:bg-primary/90 text-white">{action.label}</button>`,
       `        ))}`,
       `      </motion.div>`,
       `      <table className="w-full text-sm">`,
       `        <thead>`,
-      `          <tr className="border-b border-zinc-800 text-zinc-400">`,
+      `          <tr className="border-b border-border text-muted-foreground">`,
       `            {columns?.map((col, i) => (<th key={i} className="px-4 py-3 text-left font-medium">{col.label}</th>))}`,
       `          </tr>`,
       `        </thead>`,
       `        <tbody>`,
       `          {items?.map((item, i) => (`,
-      `            <tr key={i} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">`,
-      `              {columns?.map((col, j) => (<td key={j} className="px-4 py-3 text-zinc-300">{String(item[col.key] ?? item.title ?? '—')}</td>))}`,
+      `            <tr key={i} className="border-b border-border/50 hover:bg-muted/30">`,
+      `              {columns?.map((col, j) => (<td key={j} className="px-4 py-3 text-muted-foreground">{String(item[col.key] ?? item.title ?? '—')}</td>))}`,
       `            </tr>`,
       `          ))}`,
       `        </tbody>`,
@@ -1373,7 +1618,7 @@ ${body}
 
     return [
       `  return (`,
-      `    <motion.footer initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="border-t border-zinc-800 py-12 px-6 text-center text-sm text-zinc-600">`,
+      `    <motion.footer initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="border-t border-border py-12 px-6 text-center text-sm text-muted-foreground">`,
       `      <p>© 2024 {${companyName}}. All rights reserved.</p>`,
       `    </motion.footer>`,
       `  );`,
@@ -1389,21 +1634,21 @@ ${body}
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="py-16 px-6">`,
       `      <div className="max-w-2xl mx-auto">`,
       `        <div className="text-center mb-8">`,
-      `          <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
-      `          <p className="text-zinc-400">{subtitle}</p>`,
+      `          <h2 className="text-3xl font-black text-foreground mb-2">{title}</h2>`,
+      `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
-      `        <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.4 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">`,
+      `        <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.4 }} className="bg-card border border-border rounded-2xl p-6">`,
       `          <div className="flex items-center justify-between mb-4">`,
-      `            <button className="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 transition">← {actions?.[0]?.label ?? 'Prev'}</button>`,
-      `            <span className="text-sm font-bold text-zinc-50">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>`,
-      `            <button className="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 transition">{actions?.[1]?.label ?? 'Next'} →</button>`,
+      `            <button className="px-3 py-1 text-sm text-muted-foreground hover:text-zinc-200 transition">← {actions?.[0]?.label ?? 'Prev'}</button>`,
+      `            <span className="text-sm font-bold text-foreground">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>`,
+      `            <button className="px-3 py-1 text-sm text-muted-foreground hover:text-zinc-200 transition">{actions?.[1]?.label ?? 'Next'} →</button>`,
       `          </div>`,
       `          <div className="grid grid-cols-7 gap-2 text-center text-xs">`,
       `            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (`,
-      `              <div key={day} className="text-zinc-500 font-medium py-1">{day}</div>`,
+      `              <div key={day} className="text-muted-foreground font-medium py-1">{day}</div>`,
       `            ))}`,
       `            {items?.map((item, i) => (`,
-      `              <button key={i} disabled={item.metadata?.available === 'false'} className={\`py-2 rounded-lg transition \${item.metadata?.available === 'false' ? 'text-zinc-600 cursor-not-allowed' : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50'}\`}>`,
+      `              <button key={i} disabled={item.metadata?.available === 'false'} className={\`py-2 rounded-lg transition \${item.metadata?.available === 'false' ? 'text-muted-foreground cursor-not-allowed' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>`,
       `                {item.metadata?.day}`,
       `              </button>`,
       `            ))}`,
@@ -1424,42 +1669,42 @@ ${body}
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="py-16 px-6">`,
       `      <div className="max-w-2xl mx-auto">`,
       `        <div className="text-center mb-8">`,
-      `          <h2 className="text-3xl font-black text-zinc-50 mb-2">{title}</h2>`,
-      `          <p className="text-zinc-400">{subtitle}</p>`,
+      `          <h2 className="text-3xl font-black text-foreground mb-2">{title}</h2>`,
+      `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
       `        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, staggerChildren: 0.08 }} className="space-y-6">`,
       `          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }} className="grid grid-cols-3 gap-4">`,
       `            {items?.map((slot, i) => (`,
-      `              <motion.button key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: i * 0.05 }} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-left hover:border-primary/50 transition">`,
-      `                <div className="font-bold text-zinc-50 mb-1">{slot.title}</div>`,
-      `                <div className="text-sm text-zinc-400">{slot.description}</div>`,
+      `              <motion.button key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: i * 0.05 }} className="p-4 bg-card border border-border rounded-xl text-left hover:border-primary/50 transition">`,
+      `                <div className="font-bold text-foreground mb-1">{slot.title}</div>`,
+      `                <div className="text-sm text-muted-foreground">{slot.description}</div>`,
       `                <div className="text-xs text-primary mt-2">{slot.metadata?.slots} slots available</div>`,
       `              </motion.button>`,
       `            ))}`,
-      `          </div>`,
-      `          <form className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">`,
-      ...(spec.fields ?? []).map(f => f.type === 'select'
+      `          </motion.div>`,
+      `          <form className="bg-card border border-border rounded-2xl p-6 space-y-4">`,
+      ...(spec.fields ?? []).map((f: { type: string; label: string; name: string; required?: boolean; options?: Array<{ value: string; label: string }> }) => f.type === 'select'
         ? `            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-              <select name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:border-primary transition">
-                ${f.options?.map(o => `<option value="${o.value}">${o.label}</option>`).join('\n                ') ?? ''}
+              <label className="block text-sm font-medium text-muted-foreground mb-1">${f.label}</label>
+              <select name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-white focus:outline-none focus:border-primary transition">
+                ${f.options?.map((o: { value: string; label: string }) => `<option value="${o.value}">${o.label}</option>`).join('\n                ') ?? ''}
               </select>
             </div>`
         : f.type === 'textarea'
         ? `            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-              <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={3} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition resize-none" />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">${f.label}</label>
+              <textarea name="${f.name}" ${f.required ? 'required' : ''} rows={3} className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary transition resize-none" />
             </div>`
         : `            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">${f.label}</label>
-              <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary transition" />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">${f.label}</label>
+              <input type="${f.type}" name="${f.name}" ${f.required ? 'required' : ''} className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary transition" />
             </div>`),
       `            <button type="submit" className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition">`,
       `              ${spec.actions?.[0]?.label ?? 'Book Now'}`,
       `            </button>`,
       `          </form>`,
       `        </motion.div>`,
-      `      </motion.div>`,
+      `      </div>`,
       `    </motion.section>`,
       `  );`,
     ];
@@ -1482,19 +1727,19 @@ ${body}
     ];
 
     if (subtitle !== `{subtitle}`) {
-      lines.push(`        <p className="text-zinc-400 mt-2">${subtitle}</p>`);
+      lines.push(`        <p className="text-muted-foreground mt-2">${subtitle}</p>`);
     }
 
     // Render items grid (for about, team, mission, activity, features, etc.)
     if (hasItems) {
       lines.push(`        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">`);
       lines.push(`          {items?.map((item, i) => (`);
-      lines.push(`            <div key={i} className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">`);
+      lines.push(`            <div key={i} className="p-6 rounded-2xl bg-card border border-border">`);
       lines.push(`              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`);
       lines.push(`                <span className="text-lg font-bold">{item.icon ? '★' : '→'}</span>`);
       lines.push(`              </div>`);
-      lines.push(`              <h3 className="text-lg font-semibold text-zinc-100 mb-2">{item.title}</h3>`);
-      lines.push(`              <p className="text-zinc-400 text-sm">{item.description}</p>`);
+      lines.push(`              <h3 className="text-lg font-semibold text-card-foreground mb-2">{item.title}</h3>`);
+      lines.push(`              <p className="text-muted-foreground text-sm">{item.description}</p>`);
       lines.push(`            </div>`);
       lines.push(`          ))}`);
       lines.push(`        </div>`);
@@ -1505,15 +1750,15 @@ ${body}
       lines.push(`        <div className="mt-8 space-y-4 max-w-lg">`);
       lines.push(`          {fields?.map((field, i) => (`);
       lines.push(`            <div key={i}>`);
-      lines.push(`              <label className="block text-sm font-medium text-zinc-300 mb-1">{field.label}</label>`);
+      lines.push(`              <label className="block text-sm font-medium text-muted-foreground mb-1">{field.label}</label>`);
       lines.push(`              {field.type === 'textarea' ? (`);
-      lines.push(`                <textarea className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100" rows={3} />`);
+      lines.push(`                <textarea className="w-full px-4 py-2 bg-card border border-border rounded-lg text-card-foreground" rows={3} />`);
       lines.push(`              ) : field.type === 'select' ? (`);
-      lines.push(`                <select className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100">`);
+      lines.push(`                <select className="w-full px-4 py-2 bg-card border border-border rounded-lg text-card-foreground">`);
       lines.push(`                  {field.options?.map((opt, j) => <option key={j} value={opt.value}>{opt.label}</option>)}`);
       lines.push(`                </select>`);
       lines.push(`              ) : (`);
-      lines.push(`                <input type={field.type || 'text'} className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100" placeholder={field.placeholder} />`);
+      lines.push(`                <input type={field.type || 'text'} className="w-full px-4 py-2 bg-card border border-border rounded-lg text-card-foreground" placeholder={field.placeholder} />`);
       lines.push(`              )}`);
       lines.push(`            </div>`);
       lines.push(`          ))}`);
@@ -1525,13 +1770,13 @@ ${body}
       lines.push(`        <div className="mt-8 overflow-x-auto">`);
       lines.push(`          <table className="w-full">`);
       lines.push(`            <thead><tr>`);
-      lines.push(`              {columns?.map((col, i) => <th key={i} className="px-4 py-3 text-left font-medium text-zinc-300">{col.label}</th>)}`);
+      lines.push(`              {columns?.map((col, i) => <th key={i} className="px-4 py-3 text-left font-medium text-muted-foreground">{col.label}</th>)}`);
       lines.push(`            </tr></thead>`);
       lines.push(`            <tbody>`);
       lines.push(`              {items?.map((row, i) => (`);
-      lines.push(`                <tr key={i} className="border-t border-zinc-800">`);
-      lines.push(`                  <td className="px-4 py-3 text-zinc-100">{row.title}</td>`);
-      lines.push(`                  {columns?.slice(1).map((col, j) => <td key={j} className="px-4 py-3 text-zinc-400">{(row.metadata as any)?.[col.key] ?? '—'}</td>)}`);
+      lines.push(`                <tr key={i} className="border-t border-border">`);
+      lines.push(`                  <td className="px-4 py-3 text-card-foreground">{row.title}</td>`);
+      lines.push(`                  {columns?.slice(1).map((col, j) => <td key={j} className="px-4 py-3 text-muted-foreground">{(row.metadata as any)?.[col.key] ?? '—'}</td>)}`);
       lines.push(`                </tr>`);
       lines.push(`              ))}`);
       lines.push(`            </tbody>`);
@@ -1543,9 +1788,9 @@ ${body}
     if (hasStats) {
       lines.push(`        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-10">`);
       lines.push(`          {stats?.map((stat, i) => (`);
-      lines.push(`            <div key={i} className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 text-center">`);
-      lines.push(`              <div className="text-3xl font-black text-zinc-50">{stat.value}</div>`);
-      lines.push(`              <div className="text-sm text-zinc-400 mt-1">{stat.label}</div>`);
+      lines.push(`            <div key={i} className="p-6 rounded-2xl bg-card border border-border text-center">`);
+      lines.push(`              <div className="text-3xl font-black text-foreground">{stat.value}</div>`);
+      lines.push(`              <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>`);
       lines.push(`            </div>`);
       lines.push(`          ))}`);
       lines.push(`        </div>`);
@@ -1555,11 +1800,11 @@ ${body}
     if (hasTiers) {
       lines.push(`        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">`);
       lines.push(`          {tiers?.map((tier, i) => (`);
-      lines.push(`            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'border-zinc-800 bg-zinc-900'}\`}>`);
-      lines.push(`              <h3 className="text-xl font-bold text-zinc-100">{tier.name}</h3>`);
-      lines.push(`              <div className="mt-4 text-4xl font-black text-zinc-50">{tier.price}<span className="text-sm text-zinc-400">{tier.period}</span></div>`);
+      lines.push(`            <div key={i} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'border-border bg-card'}\`}>`);
+      lines.push(`              <h3 className="text-xl font-bold text-card-foreground">{tier.name}</h3>`);
+      lines.push(`              <div className="mt-4 text-4xl font-black text-foreground">{tier.price}<span className="text-sm text-muted-foreground">{tier.period}</span></div>`);
       lines.push(`              <ul className="mt-6 space-y-3">`);
-      lines.push(`                {tier.features?.map((f, j) => <li key={j} className="flex items-center gap-2 text-sm text-zinc-400">✓ {f}</li>)}`);
+      lines.push(`                {tier.features?.map((f, j) => <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">✓ {f}</li>)}`);
       lines.push(`              </ul>`);
       lines.push(`            </div>`);
       lines.push(`          ))}`);
@@ -1611,7 +1856,7 @@ ${body}
 
     // Content props
     for (const [key, content] of Object.entries(spec.content ?? {})) {
-      const val = content?.value;
+      const val = (content as { value?: string })?.value;
       if (val !== undefined && val !== null) {
         parts.push(`${key}="${val.replace(/"/g, '&quot;')}"`);
       }
@@ -1653,14 +1898,23 @@ ${body}
   private generateActionButtons(spec: ComponentSpec): string[] {
     if ((spec.actions?.length ?? 0) === 0) return [];
 
-    const buttons = (spec.actions ?? []).map(action => {
-      const styleClass = action.style === 'primary'
-        ? 'bg-primary hover:bg-primary/90 text-white'
-        : action.style === 'ghost'
-        ? 'border border-zinc-700 hover:border-zinc-500 text-zinc-300'
-        : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300';
+    const hoverProps = this.resolveHoverProps(this.currentContext);
+    const useMotion = hoverProps && this.currentContext?.experienceBlueprint;
 
-      return `          <a href="${action.action}" className="px-8 py-4 rounded-xl font-bold transition-all ${styleClass}">
+    const buttons = (spec.actions ?? []).map((action: { label: string; style?: string }) => {
+      const styleClass = action.style === 'primary'
+        ? 'bg-primary text-white'
+        : action.style === 'ghost'
+        ? 'border border-border text-muted-foreground'
+        : 'border border-border text-muted-foreground';
+
+      if (useMotion) {
+        return `          <motion.a href="${(action as { action?: string }).action ?? '#'}" ${hoverProps} className="px-8 py-4 rounded-xl font-bold transition-all ${styleClass}">
+            ${action.label}
+          </motion.a>`;
+      }
+
+      return `          <a href="${(action as { action?: string }).action ?? '#'}" className="px-8 py-4 rounded-xl font-bold transition-all ${styleClass} hover:bg-primary/90">
             ${action.label}
           </a>`;
     });
@@ -1679,5 +1933,42 @@ ${body}
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join('');
+  }
+
+  private resolveStaggerProps(context?: RenderContext): string {
+    const scene = this.resolveCurrentScene(context);
+    const stagger = scene?.choreography?.stagger;
+    if (!stagger) return '';
+    const delayMs = stagger.childDelay ?? 80;
+    const delay = (delayMs / 1000).toFixed(2);
+    const fromCenter = stagger.direction === 'center-out';
+    return `transition={{ staggerChildren: ${delay}, delayChildren: ${fromCenter ? delay : 0} }}`;
+  }
+
+  private resolveChildMotion(context?: RenderContext): string {
+    const scene = this.resolveCurrentScene(context);
+    const stagger = scene?.choreography?.stagger;
+    if (!stagger) return '';
+    const dist = 20;
+    return `initial={{ opacity: 0, y: ${dist} }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}`;
+  }
+
+  private resolveParallaxLayer(context?: RenderContext, depth: number = 0): { open: string; close: string } {
+    const scene = this.resolveCurrentScene(context);
+    const layers = scene?.parallaxLayers;
+    if (!layers || layers.length === 0) return { open: '', close: '' };
+    const layer = layers[depth] ?? layers[0];
+    const speed = layer.speed ?? 0.3;
+    const depthVal = layer.depth ?? 0;
+    if (depth === 0) {
+      return {
+        open: `<motion.div style={{ perspective: 1000 }} className="relative">`,
+        close: '</motion.div>',
+      };
+    }
+    return {
+      open: `<motion.div initial={{ y: ${40 * speed}, z: ${depthVal * 100} }} whileInView={{ y: 0, z: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative">`,
+      close: '</motion.div>',
+    };
   }
 }

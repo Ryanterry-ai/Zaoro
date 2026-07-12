@@ -19,6 +19,10 @@ import type {
   AppGraphStats,
 } from '../bos/graph/application-graph.js';
 import { computeAppGraphStats } from '../bos/graph/application-graph.js';
+import { getDomainData, type DomainMockData } from '../generation/domain-data.js';
+import { mergeScrapedContent } from '../generation/content-scraper.js';
+import type { TableDef } from '../bos/pipeline-v2/stages.js';
+import type { BusinessResearch } from '../bos/types.js';
 
 function pluralize(name: string): string {
   if (name.endsWith('y') && !/[aeiou]y$/.test(name)) return name.slice(0, -1) + 'ies';
@@ -61,6 +65,10 @@ export function runPass3CodeGeneration(graph: ApplicationGraph): Pass3Result {
   // 4. Generate [id] dynamic route handlers for entities with GET/PUT/DELETE
   const dynamicFiles = generateDynamicRoutes(graph);
   files.push(...dynamicFiles);
+
+  // 5. Generate prisma/seed.ts with domain-specific data
+  const seedFile = generateSeedFile(graph);
+  if (seedFile) files.push(seedFile);
 
   return { files, stats, warnings };
 }
@@ -347,4 +355,289 @@ export async function GET(
   }
 
   return files;
+}
+
+// ─── Seed File Generator ────────────────────────────────────────────────────
+
+function generateSeedFile(graph: ApplicationGraph): RenderedFile | null {
+  const tables = graph.nodes.filter((n): n is TableNode => n.kind === 'table');
+  if (tables.length === 0) return null;
+
+  const { industry, subIndustry, appName, scrapedContent, businessResearch } = graph.metadata;
+  // Start with hardcoded domain data, then merge scraped content on top
+  let domainData = getDomainData(industry, subIndustry);
+  if (scrapedContent) {
+    domainData = mergeScrapedContent(domainData, scrapedContent);
+  }
+
+  // Enrich domain data with BusinessResearch dynamic data
+  if (businessResearch) {
+    // Use real products from research if available
+    if (businessResearch.realProducts.length > 0) {
+      domainData.items = businessResearch.realProducts.map(p => ({
+        name: p.name,
+        description: p.description || '',
+        price: parseFloat(p.price.replace(/[^0-9.]/g, '')) || 0,
+        emoji: '📦',
+      }));
+    }
+    // Use real testimonials from research if available
+    if (businessResearch.realTestimonials.length > 0) {
+      domainData.testimonials = businessResearch.realTestimonials.map(t => ({
+        name: t.author,
+        text: t.text,
+        role: t.role || '',
+        rating: 5,
+      }));
+    }
+  }
+
+  let seed = `import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('Seeding database...');
+`;
+
+  for (const table of tables) {
+    const t = table.data;
+    const modelName = t.name.charAt(0).toUpperCase() + t.name.slice(1);
+    const camelName = t.name.charAt(0).toLowerCase() + t.name.slice(1);
+    const records = mapTableToSeedRecords(t, domainData, appName, industry);
+
+    if (records.length === 0) continue;
+
+    seed += `
+  // ${modelName}
+  const ${camelName}Data = ${JSON.stringify(records, null, 4)};
+  for (const data of ${camelName}Data) {
+    await prisma.${camelName}.upsert({
+      where: { id: data.id },
+      update: data,
+      create: data,
+    });
+  }
+  console.log(\`  ✓ ${modelName}: \${${camelName}Data.length} records\`);
+`;
+  }
+
+  seed += `
+  console.log('Seeding complete.');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+`;
+
+  return {
+    path: 'prisma/seed.ts',
+    content: seed,
+    type: 'config',
+  };
+}
+
+/**
+ * Map a table's columns to realistic seed records using domain data.
+ * Uses column name heuristics to infer what data goes where.
+ */
+function mapTableToSeedRecords(
+  table: TableDef,
+  domainData: DomainMockData,
+  appName: string,
+  industry: string,
+): Record<string, unknown>[] {
+  const cols = table.columns.filter(c => c.name !== 'id');
+  const tableName = table.name.toLowerCase();
+
+  // Determine what kind of entity this table represents
+  const entityKind = inferEntityKind(tableName, cols);
+
+  // Pick the right domain data source
+  const sourceItems = getSourceItems(entityKind, domainData);
+
+  const records: Record<string, unknown>[] = [];
+  const count = sourceItems.length > 0 ? Math.min(sourceItems.length, 5) : 5;
+
+  for (let i = 0; i < count; i++) {
+    const record: Record<string, unknown> = {};
+    record['id'] = `seed-${tableName}-${i + 1}`;
+
+    for (const col of cols) {
+      if (col.name === 'id') continue;
+      record[col.name] = generateColumnValue(col.name, col.type, entityKind, sourceItems[i], i, appName, industry);
+    }
+
+    records.push(record);
+  }
+
+  return records;
+}
+
+type EntityKind = 'product' | 'user' | 'order' | 'category' | 'testimonial' | 'team' | 'feature' | 'service' | 'pricing' | 'generic';
+
+function inferEntityKind(tableName: string, columns: Array<{ name: string; type: string }>): EntityKind {
+  const lower = tableName.toLowerCase();
+  const colNames = columns.map(c => c.name.toLowerCase());
+
+  if (lower.includes('product') || lower.includes('item') || lower.includes('listing') || lower.includes('property') || lower.includes('dish') || lower.includes('menu')) return 'product';
+  if (lower.includes('user') || lower.includes('customer') || lower.includes('account') || lower.includes('member')) return 'user';
+  if (lower.includes('order') || lower.includes('purchase') || lower.includes('transaction') || lower.includes('booking') || lower.includes('reservation')) return 'order';
+  if (lower.includes('category') || lower.includes('collection') || lower.includes('tag')) return 'category';
+  if (lower.includes('testimonial') || lower.includes('review') || lower.includes('feedback')) return 'testimonial';
+  if (lower.includes('team') || lower.includes('staff') || lower.includes('agent') || lower.includes('doctor') || lower.includes('trainer')) return 'team';
+  if (lower.includes('feature') || lower.includes('capability')) return 'feature';
+  if (lower.includes('service')) return 'service';
+  if (lower.includes('pricing') || lower.includes('plan') || lower.includes('tier') || lower.includes('membership')) return 'pricing';
+
+  // Heuristic: if it has price/amount columns, treat as product
+  if (colNames.some(n => n.includes('price') || n.includes('amount'))) return 'product';
+  // If it has email, treat as user
+  if (colNames.some(n => n.includes('email'))) return 'user';
+
+  return 'generic';
+}
+
+function getSourceItems(kind: EntityKind, data: DomainMockData): DomainMockData['items'] {
+  switch (kind) {
+    case 'product': return data.items;
+    case 'testimonial': return data.testimonials.map(t => ({ name: t.name, description: t.text, emoji: '★'.repeat(t.rating), tag: t.role, rating: t.rating }));
+    case 'team': return data.team.map(t => ({ name: t.name, description: t.bio, emoji: t.emoji, tag: t.role }));
+    case 'feature': return data.features.map(f => ({ name: f.title, description: f.description, emoji: f.icon }));
+    case 'service': return data.services.map(s => ({ name: s.name, description: s.description, emoji: s.icon }));
+    case 'pricing': return data.items.filter(i => i.price !== undefined);
+    case 'category': return data.features.map(f => ({ name: f.title, description: f.description, emoji: f.icon }));
+    case 'user': return data.team.map(t => ({ name: t.name, description: t.email ?? '', emoji: t.emoji, tag: t.role }));
+    case 'order': return []; // synthetic — generateColumnValue handles these per-field
+    default: return data.items;
+  }
+}
+
+function generateColumnValue(
+  colName: string,
+  colType: string,
+  entityKind: EntityKind,
+  sourceItem: DomainMockData['items'][number] | DomainMockData['testimonials'][number] | DomainMockData['team'][number] | DomainMockData['features'][number] | DomainMockData['services'][number] | undefined,
+  index: number,
+  appName: string,
+  industry: string,
+): unknown {
+  const lower = colName.toLowerCase();
+
+  // ID fields
+  if (lower === 'id') return `seed-${index + 1}`;
+
+  // Name/title fields — use source item name
+  if (lower.includes('name') || lower.includes('title')) {
+    if (entityKind === 'user' && sourceItem && 'name' in sourceItem) return sourceItem.name;
+    if (entityKind === 'order') {
+      const guestNames = ['James Mitchell', 'Sarah Chen', 'David Park', 'Maria Garcia', 'Alex Thompson'];
+      return guestNames[index % guestNames.length];
+    }
+    if (sourceItem && 'name' in sourceItem) return sourceItem.name;
+    return `${appName} Item ${index + 1}`;
+  }
+
+  // Description fields
+  if (lower.includes('description') || lower.includes('bio') || lower.includes('text') || lower.includes('about') || lower.includes('content') || lower.includes('body')) {
+    if (sourceItem && 'description' in sourceItem) return sourceItem.description;
+    return `Details about ${appName} ${colName}.`;
+  }
+
+  // Price/cost/amount fields
+  if (lower.includes('price') || lower.includes('cost') || lower.includes('amount') || lower.includes('fee') || lower.includes('rate')) {
+    if (sourceItem && 'price' in sourceItem && sourceItem.price != null) return sourceItem.price;
+    return 49.99 + index * 20;
+  }
+
+  // Email fields
+  if (lower.includes('email')) {
+    const roles = ['admin', 'user', 'contact', 'support'];
+    return `${roles[index % roles.length]}@${appName.toLowerCase().replace(/\s+/g, '')}.com`;
+  }
+
+  // Image/photo/url/avatar fields
+  if (lower.includes('image') || lower.includes('photo') || lower.includes('url') || lower.includes('avatar') || lower.includes('thumbnail') || lower.includes('cover')) {
+    return `https://placehold.co/400x300?text=${encodeURIComponent(colName + ' ' + (index + 1))}`;
+  }
+
+  // Status fields
+  if (lower.includes('status')) {
+    const statuses = ['active', 'published', 'approved', 'in_stock'];
+    return statuses[index % statuses.length];
+  }
+
+  // Type/category/kind fields
+  if (lower.includes('type') || lower.includes('category') || lower.includes('kind') || lower.includes('tag') || lower.includes('role')) {
+    if (entityKind === 'user') {
+      const roles = ['admin', 'staff', 'customer'];
+      return roles[index % roles.length];
+    }
+    if (sourceItem && 'tag' in sourceItem && sourceItem.tag) return sourceItem.tag;
+    const tags = ['premium', 'standard', 'featured', 'new'];
+    return tags[index % tags.length];
+  }
+
+  // Rating fields
+  if (lower.includes('rating') || lower.includes('score')) {
+    if (sourceItem && 'rating' in sourceItem && sourceItem.rating != null) return sourceItem.rating;
+    return 4.5 + (index % 5) * 0.1;
+  }
+
+  // Count/review/quantity fields
+  if (lower.includes('count') || lower.includes('review') || lower.includes('quantity') || lower.includes('stock') || lower.includes('inventory')) {
+    return 10 + index * 15;
+  }
+
+  // Guests field (reservations/orders)
+  if (lower.includes('guest') || lower.includes('party') || lower.includes('party_size') || lower.includes('party-size')) {
+    return (2 + index).toString();
+  }
+
+  // Phone fields
+  if (lower.includes('phone') || lower.includes('mobile') || lower.includes('telephone')) {
+    return `+1-512-${555 + index * 11}`;
+  }
+
+  // Notes/special instructions
+  if (lower.includes('note') || lower.includes('instruction') || lower.includes('comment') || lower.includes('special')) {
+    const notes = ['Window seat preferred', 'No allergies', 'Birthday celebration', 'Anniversary dinner', 'Quiet table please'];
+    return notes[index % notes.length];
+  }
+
+  // Boolean fields
+  if (colType === 'boolean' || lower.includes('active') || lower.includes('enabled') || lower.includes('verified') || lower.includes('featured')) {
+    return index < 2;
+  }
+
+  // Date fields
+  if (colType === 'date' || lower.includes('date') || lower.includes('at') || lower.includes('created') || lower.includes('updated')) {
+    const now = new Date();
+    now.setDate(now.getDate() - index * 7);
+    return now.toISOString();
+  }
+
+  // Enum or string fields with no clear match
+  if (colType === 'enum') {
+    return 'default';
+  }
+
+  // Foreign key fields (reference type)
+  if (colType === 'reference' || lower.endsWith('id') && lower !== 'id') {
+    return null;
+  }
+
+  // Number fields
+  if (colType === 'number') {
+    return index + 1;
+  }
+
+  // Fallback: generate a descriptive string
+  return `${appName} ${colName} ${index + 1}`;
 }
