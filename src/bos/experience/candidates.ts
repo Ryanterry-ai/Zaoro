@@ -8,7 +8,7 @@ import type { CapabilityId } from '../capabilities/types.js';
 import type { ExperienceConcept } from './types.js';
 
 interface BusinessKnowledge {
-  industry: string;
+  industry?: string;
   capabilities: CapabilityId[];
   entities: string[];
   description?: string;
@@ -30,6 +30,7 @@ const CANDIDATE_TEMPLATES: Array<{
   capabilityHints: string[];          // partial matches — expanded at generation
   pageLayout: ExperienceConcept['pageLayout'];
   audienceHints: string[];
+  impliedPrimitives: string[];
 }> = [
   {
     id: 'cinematic-scroll',
@@ -44,6 +45,7 @@ const CANDIDATE_TEMPLATES: Array<{
     capabilityHints: ['commerce.catalog', 'content.management', 'auth'],
     pageLayout: 'single-scroll',
     audienceHints: ['luxury', 'premium', 'story-driven'],
+    impliedPrimitives: ['narrative', 'camera', 'lighting', 'depth', 'confidence', 'desire', 'cinematic'],
   },
   {
     id: '3d-immersive',
@@ -58,6 +60,7 @@ const CANDIDATE_TEMPLATES: Array<{
     capabilityHints: ['commerce.catalog', 'commerce.cart', 'commerce.checkout'],
     pageLayout: 'single-scroll',
     audienceHints: ['tech-savvy', 'product-focused', 'explorer'],
+    impliedPrimitives: ['future', 'innovation', 'precision', 'interaction', 'desire', 'curiosity', 'technology'],
   },
   {
     id: 'minimal-luxe',
@@ -72,6 +75,7 @@ const CANDIDATE_TEMPLATES: Array<{
     capabilityHints: ['commerce.catalog', 'auth', 'subscriptions'],
     pageLayout: 'multi-page',
     audienceHints: ['luxury', 'design-conscious', 'premium'],
+    impliedPrimitives: ['minimalism', 'whitespace', 'precision', 'calm', 'confidence', 'hierarchy', 'luxury'],
   },
   {
     id: 'editorial-scroll',
@@ -86,6 +90,7 @@ const CANDIDATE_TEMPLATES: Array<{
     capabilityHints: ['content.management', 'analytics.dashboard', 'auth'],
     pageLayout: 'single-scroll',
     audienceHints: ['informed', 'research-oriented', 'professional'],
+    impliedPrimitives: ['typography', 'content', 'hierarchy', 'trust', 'education', 'narrative'],
   },
   {
     id: 'dynamic-motion',
@@ -100,6 +105,7 @@ const CANDIDATE_TEMPLATES: Array<{
     capabilityHints: ['commerce.catalog', 'marketplace', 'notifications.email'],
     pageLayout: 'single-scroll',
     audienceHints: ['young', 'social', 'trend-conscious'],
+    impliedPrimitives: ['energy', 'movement', 'speed', 'contrast', 'excitement', 'playful'],
   },
   {
     id: 'conversion-engine',
@@ -114,6 +120,7 @@ const CANDIDATE_TEMPLATES: Array<{
     capabilityHints: ['commerce.checkout', 'payments', 'auth', 'analytics.dashboard'],
     pageLayout: 'single-scroll',
     audienceHints: ['buyer', 'price-sensitive', 'deal-seeker'],
+    impliedPrimitives: ['trust', 'urgency', 'social-proof', 'efficiency', 'action', 'confidence'],
   },
 ];
 
@@ -136,9 +143,8 @@ export function generateCandidateConcepts(bk: BusinessKnowledge): ExperienceConc
       }
     }
 
-    // Audience alignment — how well does this concept fit the industry?
-    const audienceMatch = computeAudienceMatch(bk.industry, tmpl.audienceHints);
-
+    // Audience alignment is now derived from primitive overlap (see director.ts),
+    // not from industry keywords.  Keep audienceHints for downstream inspection.
     candidates.push({
       id: tmpl.id,
       name: tmpl.name,
@@ -151,22 +157,10 @@ export function generateCandidateConcepts(bk: BusinessKnowledge): ExperienceConc
       performanceProfile: tmpl.performanceProfile,
       requiredCapabilities: requiredCaps,
       pageLayout: tmpl.pageLayout,
-      audienceAlignment: tmpl.audienceHints.map(a => `${a}:${audienceMatch > 0.6 ? 'strong' : 'moderate'}`),
+      audienceAlignment: tmpl.audienceHints,
+      impliedPrimitives: tmpl.impliedPrimitives,
     });
   }
 
   return candidates;
-}
-
-function computeAudienceMatch(industry: string, audienceHints: string[]): number {
-  const ind = industry.toLowerCase();
-  // Simple keyword overlap heuristic
-  const industryTerms = ind.split(/[\s-_]+/);
-  let overlap = 0;
-  for (const hint of audienceHints) {
-    for (const term of industryTerms) {
-      if (hint.includes(term) || term.includes(hint)) overlap++;
-    }
-  }
-  return Math.min(1, overlap / Math.max(1, audienceHints.length));
 }

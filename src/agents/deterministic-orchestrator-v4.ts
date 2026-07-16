@@ -41,9 +41,16 @@ import {
 } from '../bos/candidate/index.js';
 import { composeKnowledgePack, CompositionContext } from '../bos/knowledge/primitive-packs/index.js';
 import { capabilityRegistry } from '../bos/capabilities/index.js';
-import { directExperience } from '../bos/experience/index.js';
-import { IntentDecomposer } from '../bos/intent/intent-decomposer.js';
-import { buildPrimitiveGraph, ENTITY_TO_PRIMITIVES } from '../bos/intent/primitive-seeds.js';
+import {
+  directExperience,
+  reasonExperience,
+  compileExperience,
+  generateCandidateConcepts,
+  type CompiledExperience,
+} from '../bos/experience/reasoning-index.js';
+import { primitiveRegistry, BRAND_PRIMITIVES, resolveConflicts, scoreConsistency } from '../bos/primitives/index.js';
+import type { BrandReference, PrimitiveSet } from '../bos/primitives/index.js';
+import { runCanonicalBuild, type CanonicalBuildReport } from '../orchestration/pipeline/canonical-build.js';
 import { KnowledgeRegistry } from '../bos/knowledge/registry.js';
 import { BuildHistoryManager } from '../engine/build-history.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
@@ -54,6 +61,28 @@ import { RefinementEngine } from './refinement/index.js';
 import { DeployExecutor, DeployConfigGenerator, detectDeploymentPlatform } from './deployment/index.js';
 import { parseCommand, commandToIntent, isCommand, getHelpText } from './command-parser.js';
 import { RuntimeTracer } from './runtime-trace.js';
+
+/**
+ * Extract brand references from a user prompt.
+ * Brands are evidence-backed entities (Apple, Nike, Tesla, etc.) — NOT
+ * industries.  Each known brand contributes its associated primitives.
+ */
+function extractBrandReferences(prompt: string): BrandReference[] {
+  const lower = prompt.toLowerCase();
+  const refs: BrandReference[] = [];
+
+  for (const brand of Object.keys(BRAND_PRIMITIVES)) {
+    if (lower.includes(brand)) {
+      // Intensity: how prominently the brand is mentioned
+      const idx = lower.indexOf(brand);
+      const context = lower.slice(Math.max(0, idx - 20), idx + brand.length + 20);
+      const intensity = context.includes('with') || context.includes('like') ? 0.9 : 0.7;
+      refs.push({ brand, intensity });
+    }
+  }
+
+  return refs;
+}
 
 export class DeterministicOrchestratorV4 {
   private sandbox: SandboxEngine;
@@ -245,51 +274,137 @@ export class DeterministicOrchestratorV4 {
       hash: RuntimeTracer.hashContent(JSON.stringify(breContext)),
     });
 
-    // ═══ Semantic Intent Decomposition: entity→primitive mapping with confidence ═══
-    // Decomposes the prompt into canonical primitives. Brands become evidence, not knowledge.
-    tracer.beginSpan({ layer: 'intent-decomposition', owner: 'IntentDecomposer', inputs: ['bre-context', 'prompt'], dependencies: ['bre-v2'] });
-    const primitiveGraph = buildPrimitiveGraph();
-    const intentDecomposer = new IntentDecomposer(primitiveGraph, ENTITY_TO_PRIMITIVES);
-    const intentDecomposition = intentDecomposer.decompose(prompt);
-    tracer.endSpan('intent-decomposition', {
-      outputs: ['intent-decomposition'],
+    // ═══ Canonical Build Pipeline (wiring milestone 1) ═══
+    // Runs the vertical-agnostic intelligence engines and INSTRUMENTS every
+    // remaining hardcoded-industry read as a traced compliance violation.
+    // BusinessKnowledge becomes the single business authority; the legacy
+    // breContext stays as an adapter bridge until migration completes.
+    tracer.beginSpan({ layer: 'canonical-build', owner: 'CanonicalPipeline', inputs: ['prompt', 'bre-context'], dependencies: ['bre-v2'] });
+    let canonical: CanonicalBuildReport | null = null;
+    try {
+      canonical = await runCanonicalBuild({ prompt });
+      const bk = canonical.businessKnowledge;
+      // Bridge: use BusinessKnowledge as the authoritative business source
+      // for the experience pipeline (replaces breContext.industry usage).
+      const businessAuthority = {
+        industry: (bk as any).discovery?.industry ?? breContext.industry,
+        capabilities: buildCapabilities.expanded,
+        entities: (bk.entities ?? []).map(e => typeof e === 'string' ? e : (e as any).name ?? String(e)),
+        description: (bk as any).discovery?.summary,
+      };
+      // The canonical BusinessKnowledge is the authoritative business source;
+      // the XRE span below consumes canonical.compiledExperience directly.
+      console.log(`[orchestrator] Canonical build: BK entities=${businessAuthority.entities.length}, ` +
+        `evidence=${(canonical.evidence as any).id ? 'present' : 'none'}, ` +
+        `content=${(canonical.contentBlueprint as any).id ? 'present' : 'none'}, ` +
+        `design=${(canonical.designDecision as any).id ? 'present' : 'none'}, ` +
+        `tech=${(canonical.solutionArchitecture as any).id ? 'present' : 'none'}`);
+      if (canonical.violations.length > 0) {
+        console.warn(`[orchestrator] Compliance violations (${canonical.violations.length}): ` +
+          canonical.violations.map(v => `[${v.stage}:${v.severity}] ${v.detail}`).join(' | '));
+      }
+    } catch (err: any) {
+      console.warn(`[orchestrator] Canonical build failed (adapter fallback active): ${err.message}`);
+    }
+    tracer.endSpan('canonical-build', {
+      outputs: ['business-knowledge', 'evidence', 'experience-blueprint', 'content-blueprint', 'design-decision', 'solution-architecture'],
       artifactIds: [],
-      confidence: intentDecomposition.overallConfidence,
+      confidence: canonical ? 0.95 : 0.5,
       evidence: [
-        `entities=${intentDecomposition.entities.length}`,
-        `primitives=${intentDecomposition.primitives.length}`,
-        `confidence=${intentDecomposition.overallConfidence.toFixed(2)}`,
+        `businessKnowledge=${canonical ? 'yes' : 'no'}`,
+        `violations=${canonical?.violations.length ?? 0}`,
+        `compliant=${canonical?.compliant ?? false}`,
       ],
-      hash: RuntimeTracer.hashContent(JSON.stringify(intentDecomposition)),
+      hash: RuntimeTracer.hashContent(JSON.stringify(canonical?.businessKnowledge ?? {})),
     });
-    console.log(`[orchestrator] Intent Decomposition: entities=${intentDecomposition.entities.length}, primitives=${intentDecomposition.primitives.length}, confidence=${intentDecomposition.overallConfidence.toFixed(2)}`);
 
-    // ═══ Experience Director: plan, compare, then generate ═══
-    // Scores candidate experience concepts and selects the strongest one
-    // BEFORE anything is rendered.  This moves the system from
-    // "generate then critique" to "plan, compare, then generate."
-    tracer.beginSpan({ layer: 'experience-director', owner: 'ExperienceDirector', inputs: ['bre-context', 'bre-v2'], dependencies: ['bre-v2'] });
-    const experienceDesign = directExperience({
-      industry: breContext.industry,
-      capabilities: buildCapabilities.expanded,
-      entities: breContext.entities.map(e => typeof e === 'string' ? e : (e as any).name ?? String(e)),
-      description: breContext.description,
-    });
-    const experienceStyle = experienceDesign.selectedBlueprint?.concept.style ?? 'hybrid';
-    const experienceScore = experienceDesign.scoredCandidates[0]?.overallScore ?? 0;
-    tracer.endSpan('experience-director', {
-      outputs: ['experience-design'],
+    // ═══ Experience Reasoning Engine (XRE) ─══
+    // Universal pipeline: no industry logic, no hardcoded decision trees.
+    // The canonical build (runCanonicalBuild) is the SINGLE source for the
+    // experience: it already ran resolveConflicts → scoreConsistency →
+    // reasonExperience → compileExperience. We consume its CompiledExperience
+    // directly here so there is no parallel/duplicate XRE path. Only if the
+    // canonical build failed do we fall back to a local XRE computation.
+    tracer.beginSpan({ layer: 'experience-reasoning', owner: 'XRE', inputs: ['canonical-build'], dependencies: ['canonical-build'] });
+
+    let compiledExperience: CompiledExperience | null = null;
+    let primitiveSet: PrimitiveSet | null = null;
+    let experienceScore = 0;
+    let experienceStyle = 'mechanical';
+    let xreSelectedName = 'none';
+
+    const brandRefs = extractBrandReferences(prompt);
+
+    if (canonical) {
+      // Consume the canonical XRE output — no duplicate reasoning.
+      compiledExperience = canonical.compiledExperience;
+      experienceScore = compiledExperience.sections.length > 0 ? 75 : 0;
+      experienceStyle = compiledExperience.motionLanguage ?? 'mechanical';
+      xreSelectedName = compiledExperience.conceptName ?? 'compiled';
+      // Re-derive the primitive set for tracer evidence (cheap, read-only).
+      primitiveSet = resolveConflicts({
+        brands: brandRefs,
+        industry: ((canonical.businessKnowledge as any).discovery?.industry ?? breContext.industry),
+        config: { weightBudget: 1.0, minWeight: 0.15, maxPrimitives: 12 },
+      });
+    } else {
+      // Fallback only: canonical build failed, recompute XRE locally.
+      const xreIndustry = breContext.industry;
+      const xreEntities = breContext.entities.map(e => typeof e === 'string' ? e : (e as any).name ?? String(e));
+      const xreDescription = breContext.description;
+      primitiveSet = resolveConflicts({
+        brands: brandRefs,
+        industry: xreIndustry,
+        config: { weightBudget: 1.0, minWeight: 0.15, maxPrimitives: 12 },
+      });
+      const consistency = scoreConsistency(primitiveSet);
+      const xreResult = reasonExperience({
+        primitiveSet,
+        capabilities: buildCapabilities.expanded,
+        entities: xreEntities,
+        description: xreDescription,
+        maxPlans: 6,
+        rendererTarget: 'react',
+      });
+      if (xreResult.selected) {
+        const candidates = generateCandidateConcepts({
+          capabilities: buildCapabilities.expanded,
+          entities: xreEntities,
+          description: xreDescription,
+        });
+        compiledExperience = compileExperience(
+          { primitiveSet, capabilities: buildCapabilities.expanded, entities: xreEntities, description: xreDescription, rendererTarget: 'react' },
+          xreResult.selected,
+          candidates,
+        );
+      }
+      experienceScore = xreResult.selected?.overallScore ?? 0;
+      experienceStyle = compiledExperience?.motionLanguage ?? 'mechanical';
+      xreSelectedName = xreResult.selected?.conceptName ?? 'none';
+    }
+
+    // Build primitive weights map for downstream consumption
+    const primitiveWeights: Record<string, number> = {};
+    if (primitiveSet) {
+      for (const p of primitiveSet.primitives) {
+        primitiveWeights[p.primitive.id] = p.resolvedWeight;
+      }
+    }
+
+    tracer.endSpan('experience-reasoning', {
+      outputs: ['compiled-experience', 'primitive-set'],
       artifactIds: [],
       confidence: experienceScore / 100,
       evidence: [
-        `style=${experienceStyle}`,
-        `score=${experienceScore}`,
-        `candidates=${experienceDesign.allCandidates.length}`,
-        `selected=${experienceDesign.selectedBlueprint?.concept.name ?? 'none'}`,
+        `source=${canonical ? 'canonical-build' : 'fallback'}`,
+        `brands=${brandRefs.map(b => b.brand).join(',') || 'none'}`,
+        `primitives=${primitiveSet?.primitives.length ?? 0}`,
+        `selected=${xreSelectedName}`,
+        `conflictsResolved=${primitiveSet?.conflictsResolved.length ?? 0}`,
       ],
-      hash: RuntimeTracer.hashContent(JSON.stringify(experienceDesign.selectedBlueprint)),
+      hash: RuntimeTracer.hashContent(JSON.stringify(compiledExperience)),
     });
-    console.log(`[orchestrator] Experience Director: style=${experienceStyle}, score=${experienceScore}, candidates=${experienceDesign.allCandidates.length}`);
+    console.log(`[orchestrator] XRE: source=${canonical ? 'canonical-build' : 'fallback'}, brands=${brandRefs.map(b => b.brand).join(',') || 'none'}, primitives=${primitiveSet?.primitives.length ?? 0}, selected=${xreSelectedName} (${experienceScore}/100)`);
 
     // ═══ New 4-layer pipeline: BRE v2 → Execution Blueprint → Content Resolver → Renderer ═══
     tracer.beginSpan({ layer: 'pipeline-4-layer', owner: 'LeadAgent', inputs: ['bre-context'], dependencies: ['bre-v2'] });
@@ -895,6 +1010,26 @@ export class DeterministicOrchestratorV4 {
       pageResults,
       duration: Date.now() - startTime,
     };
+
+    // Surface the canonical build artifacts (single source of truth for the
+    // experience) on the result. They ride alongside the 4-layer pipeline
+    // output until the 4-layer pipeline is migrated to consume them directly.
+    if (canonical) {
+      result.analysis = {
+        domain: intent.domain || '',
+        canonical: {
+          businessKnowledge: canonical.businessKnowledge,
+          contentBlueprint: canonical.contentBlueprint,
+          designDecision: canonical.designDecision,
+          solutionArchitecture: canonical.solutionArchitecture,
+          compiledExperience,
+          compliance: {
+            violations: canonical.violations,
+            compliant: canonical.compliant,
+          },
+        },
+      };
+    }
 
     const allWarnings = [...appBlueprint.warnings, ...renderResult.warnings];
     if (allWarnings.length > 0) {

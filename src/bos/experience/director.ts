@@ -20,41 +20,29 @@ import type {
 import { generateCandidateConcepts } from './candidates.js';
 
 // ─── Business Knowledge (input) ─────────────────────────────────────
+// Universal — no industry-specific fields.  Primitive weights are derived
+// from brand references (evidence) or provided directly.  The `industry`
+// field is kept ONLY as an optional inferred label for downstream logging;
+// it is NEVER used in scoring decisions.
 
 interface BusinessKnowledge {
-  industry: string;
+  industry?: string;
   capabilities: CapabilityId[];
   entities: string[];
   description?: string;
+  /** Resolved primitive weights (from Conflict Resolver / brand references). */
+  primitiveWeights?: Record<string, number>;
 }
 
 // ─── Scoring weights ────────────────────────────────────────────────
 
 const SCORING_WEIGHTS = {
   narrativeFit: 0.15,
-  capabilityFit: 0.30,
+  capabilityFit: 0.25,
   conversionPotential: 0.15,
   emotionalResonance: 0.15,
   performanceFeasibility: 0.10,
-  audienceMatch: 0.15,
-};
-
-// Industry categories that boost specific experience styles
-const INDUSTRY_STYLE_BOOSTS: Record<string, ExperienceConcept['style'][]> = {
-  'headphones': ['immersive-3d', 'cinematic'],
-  'audio': ['immersive-3d', 'cinematic'],
-  'fashion': ['cinematic', 'minimal-luxe'],
-  'luxury': ['minimal-luxe', 'cinematic'],
-  'beauty': ['cinematic', 'dynamic'],
-  'food': ['editorial', 'cinematic'],
-  'restaurant': ['editorial', 'cinematic'],
-  'saas': ['conversion', 'editorial'],
-  'crm': ['conversion', 'editorial'],
-  'erp': ['conversion', 'editorial'],
-  'healthcare': ['editorial', 'minimal-luxe'],
-  'marketplace': ['dynamic', 'conversion'],
-  'footwear': ['dynamic', 'immersive-3d'],
-  'manufacturing': ['conversion', 'editorial'],
+  primitiveFit: 0.20, // overlap between concept's implied primitives and the business's primitive weights
 };
 
 const MIN_CONFIDENCE = 0.55;
@@ -100,22 +88,24 @@ function scoreCandidate(
     concept.performanceProfile === 'standard' ? 0.85 :
     concept.performanceProfile === 'heavy' ? 0.65 : 0.5;
 
-  // Audience match: industry keywords vs audience hints + style boost
-  const rawAudience = computeAudienceFit(bk.industry, concept.audienceAlignment);
-  const industryBoosts = Object.entries(INDUSTRY_STYLE_BOOSTS)
-    .filter(([key]) => bk.industry.toLowerCase().includes(key))
-    .flatMap(([, styles]) => styles);
-  const styleBoost = industryBoosts.includes(concept.style) ? 0.3 : 0;
-  const audienceMatch = Math.min(1, rawAudience + styleBoost);
+  // Primitive fit: overlap between concept's implied primitives and the
+  // business's resolved primitive weights.  This is UNIVERSAL — it never
+  // uses industry keywords.  A concept scores high when its semantic
+  // primitives match what the business actually embodies.
+  const primitiveWeights = bk.primitiveWeights ?? {};
+  const implied = concept.impliedPrimitives ?? [];
+  const primitiveFit = implied.length === 0
+    ? 0.5 // neutral if no primitives known
+    : implied.reduce((sum, p) => sum + (primitiveWeights[p] ?? 0), 0) / implied.length;
 
-  // Composite
+  // Composite (no industry logic anywhere)
   const overallScore =
     narrativeFit * SCORING_WEIGHTS.narrativeFit +
     capabilityFit * SCORING_WEIGHTS.capabilityFit +
     conversionPotential * SCORING_WEIGHTS.conversionPotential +
     emotionalResonance * SCORING_WEIGHTS.emotionalResonance +
     performanceFeasibility * SCORING_WEIGHTS.performanceFeasibility +
-    audienceMatch * SCORING_WEIGHTS.audienceMatch;
+    primitiveFit * SCORING_WEIGHTS.primitiveFit;
 
   return {
     conceptId: concept.id,
@@ -126,21 +116,9 @@ function scoreCandidate(
       conversionPotential: Math.round(conversionPotential * 100),
       emotionalResonance: Math.round(emotionalResonance * 100),
       performanceFeasibility: Math.round(performanceFeasibility * 100),
-      audienceMatch: Math.round(audienceMatch * 100),
+      audienceMatch: Math.round(primitiveFit * 100),
     },
   };
-}
-
-function computeAudienceFit(industry: string, audienceHints: string[]): number {
-  const ind = industry.toLowerCase();
-  const terms = ind.split(/[\s-_]+/);
-  let hits = 0;
-  for (const hint of audienceHints) {
-    for (const t of terms) {
-      if (hint.toLowerCase().includes(t) || t.includes(hint.toLowerCase())) hits++;
-    }
-  }
-  return Math.min(1, hits / Math.max(1, audienceHints.length));
 }
 
 // ─── Build the blueprint plan from a selected concept ───────────────

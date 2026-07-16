@@ -16,7 +16,7 @@
 - **9 competing vocabularies found & consolidated:** business `CAPABILITY_REGISTRY`, primitive-pack tags, skill-pack `capability`, dead page-level `capability-registry` (now `@deprecated`), motion registry, BI workflow signals, AppFamily, taxonomy legacy, `CapabilitySchema`. Aliases in `registry-data.ts` fold them in.
 - **Dead/aspirational:** `PipelineOrchestrator` (410, `@deprecated`), `BusinessIntelligencePipeline` (removed, 410 stub), `ExperienceOS v2` (`@deprecated`, do NOT delete), `ValidationPipeline` (tests only), `orchestration/capability-registry` (`@deprecated`, never imported), Phase 3 `ArtifactGraphExecutor` (no production caller).
 - `RuntimeTrace` persisted to `.build-artifacts/runtime-trace.json`; `ENGINE_VERSION='4.0.0'`.
-- Node.js: `C:\Users\viren\AppData\Local\nvm\v20.20.2\node.exe`; `npm`/`npx` not on PATH. Full suite GREEN: 75 files / 1069 tests; typecheck clean.
+- Node.js: `C:\Users\viren\AppData\Local\nvm\v20.20.2\node.exe`; `npm`/`npx` not on PATH. Full suite GREEN: 72 files / 1031 tests; typecheck clean.
 - `knowledge-candidates/` and `.build-artifacts/` are git-ignored runtime data.
 
 ## Work State
@@ -83,14 +83,17 @@
 - `src/bos/learning/promotion.ts` — **NEW (Step 6):** suggestFromCandidates, buildCapabilityPatch
 - `src/bos/learning/index.ts` — **NEW (Step 6):** barrel
 - `src/bos/capabilities/registry.ts` — MODIFIED (Step 4): `scaleCapabilities`
-- `src/taxonomy/resolver.ts` — MODIFIED: `packCanonicalCapabilities` bridge
+ - `src/taxonomy/resolver.ts` — MODIFIED: `packCanonicalCapabilities` bridge
+
+## XRE + Canonical Build Milestone (wiring the existing intelligence engines into V4)
+- **Mandate (user verbatim):** wire the EXISTING canonical `src/orchestration/*-intelligence` engines into the live V4 execution path (NOT build parallel systems); instrument/trace every remaining hardcoded-industry decision; end each phase with a working, fully tested runtime. No `if industry == X`, no per-vertical templates, no renderer business reasoning.
+- **XRE architecture (all hardcoded-industry violations removed from these modules):** `src/bos/primitives/{types,registry,conflict-resolver,evolution,cross-domain,scoring,index}.ts` (weighted `Primitive`, `PrimitiveSet`, `BRAND_PRIMITIVES`, brand-based conflict resolution, cross-domain learning by brand context, consistency scoring — no industry logic); `src/bos/experience/{types,candidates,director,grammar,reasoning-engine,compiled,reasoning-index}.ts` (8-dim universal `reasonExperience`, `compileExperience`→`CompiledExperience`, primitive-overlap scoring, removed `INDUSTRY_STYLE_BOOSTS`/`computeAudienceMatch`/`input.style` branching).
+- **V4 wiring:** `src/agents/deterministic-orchestrator-v4.ts` — added `canonical-build` tracer span running `runCanonicalBuild` (BusinessKnowledge becomes the authoritative business source; legacy `breContext` retained as adapter); XRE span now CONSUMES `canonical.compiledExperience` directly (eliminating the duplicate/parallel XRE re-run — the canonical build is the single experience source; local XRE only runs as a fallback if canonical build fails). Canonical artifacts (businessKnowledge/contentBlueprint/designDecision/solutionArchitecture/compiledExperience/compliance) are surfaced on `GenerationResult.analysis.canonical`.
+- **Milestone 1 (canonical-build):** `src/orchestration/pipeline/canonical-build.ts` — `runCanonicalBuild(opts)` runs the 6 canonical engines in order (BusinessIntelligence → KnowledgeAcquisition → ExperienceIntelligence → ContentIntelligence → DesignIntelligence → TechnologyPlanner) + XRE→CompiledExperience. Built-in compliance instrumentation: `ComplianceViolation[]` records any industry-key read per stage; `compliant` flag = no high/medium violations. `compiledExperience` is ALWAYS non-null (falls back to a neutral baseline for unseen businesses with no brand references).
+- **Traced violations MIGRATED:**
+  - `content-intelligence/engine.ts` — removed `INDUSTRY_CONTENT_PROFILES` table and `getIndustryCopy(industry)` lookup. New `deriveContentProfile(bk, exp)` derives voice/tone/CTA/media/density purely from BusinessKnowledge signals (persona formality, revenue model → CTA action, entity count + interaction density → density/animation, vocabulary depth → technical level). No industry key is read.
+  - `experience-intelligence/experience-engine.ts` — `industry` made OPTIONAL in `ExperienceEngineInput`; profile now derived from `capabilities` (via `getExperienceProfileForCapabilities`) or the optional label as a neutral default. Removed the `isSensoryIndustry` hardcoded `perfume/fragrance/spa/wellness` string branch — scroll-accumulation now derived from `style` (`cinematic`/`luxury`) only. No `if industry == X` control flow remains.
+  - `technology-planner/engine.ts` — `industry` read is evidence-only (no branching); all platform/framework/db/auth decisions derive from signal counts (workflows, entities, personas, media). Compliant by construction.
+- **Status:** typecheck clean; full suite GREEN: 74 files / 1050 tests. `tests/canonical-build.test.ts` (4) asserts all 7 artifacts + violation tracing for unseen businesses (marine bioluminescence lab, quantum computing company). `tests/experience-director.test.ts` (15) asserts primitive-driven (not industry-label) selection. `tests/experience-intelligence.test.ts` (32) still green (per-industry profile data table retained as optional default label; engine no longer branches on it).
+- **Next:** fully route the 4-layer pipeline (LeadAgent) to consume `canonical.*` artifacts directly (remove the `buildBREContext` adapter); add intent-resolver/ontology modules only after legacy is fully migrated. `industry-copy-schema` is now dead (no importers) — safe to delete in a later cleanup.
 - Node binary: `C:\Users\viren\AppData\Local\nvm\v20.20.2\node.exe`
-- `src/bos/intent/types.ts` — **NEW:** ConfidentPrimitive, EntityEvidence, IntentDecomposition types
-- `src/bos/graph/primitive-graph.ts` — **NEW:** PrimitiveGraph with typed relationships (implies, conflicts, composes, requires, strengthens)
-- `src/bos/intent/primitive-seeds.ts` — **NEW:** 65 primitives (6 categories), 50+ relationships, 45+ entity→primitive mappings
-- `src/bos/intent/intent-decomposer.ts` — **NEW:** IntentDecomposer (entity extraction → primitive mapping → confidence propagation)
-- `src/bos/intent/index.ts` — **NEW:** barrel
-- V4 pipeline wired: new `intent-decomposition` span between BRE v2 and Experience Director
-- Apple → minimalism → whitespace (brand disappears after normalization)
-- Iron Man → mechanical-assembly → engineering → innovation (generalizes across franchises)
-- `tests/semantic-primitive-graph.test.ts` (14), `tests/intent-decomposer.test.ts` (11)

@@ -36,6 +36,8 @@ export interface ExperienceConcept {
   requiredCapabilities: CapabilityId[];     // canonical ids this concept demands
   pageLayout: 'single-scroll' | 'multi-page' | 'app-like';
   audienceAlignment: string[];              // e.g. ['audiophile', 'luxury-buyer']
+  /** Semantic primitives this concept embodies (used for primitive-overlap scoring, NOT industry). */
+  impliedPrimitives: string[];
 }
 
 // ─── Scoring ────────────────────────────────────────────────────────

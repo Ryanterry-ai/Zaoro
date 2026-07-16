@@ -33,7 +33,6 @@ import type {
   IContentIntelligenceLayer,
 } from './types.js';
 import type { ValidationResult } from '../shared/types.js';
-import { getIndustryCopy } from '../../bos/industry-copy-schema.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,9 +47,13 @@ function makeProvenance(layer: Provenance['layer'], confidence: number, evidence
   };
 }
 
-// ─── Industry Content Profiles ────────────────────────────────────────────────
+// ─── Signal-derived Content Profile ───────────────────────────────────────────
+// NO hardcoded industry keyed profiles. The voice, tone, CTA and media strategy
+// are derived from BusinessKnowledge signals (personas, revenue model, entity
+// count, experience blueprint motion language) so the engine reasons over the
+// business, not over a vertical lookup table.
 
-interface IndustryContentProfile {
+interface ContentProfile {
   personality: BrandVoice['personality'];
   formality: number;
   technicalLevel: number;
@@ -64,30 +67,74 @@ interface IndustryContentProfile {
   animationLevel: 'none' | 'subtle' | 'moderate' | 'aggressive';
 }
 
-const INDUSTRY_CONTENT_PROFILES: Record<string, IndustryContentProfile> = {
-  restaurant: { personality: 'friendly', formality: 0.3, technicalLevel: 0.2, emotionalLevel: 0.7, vocabularyComplexity: 'simple', defaultTone: 'excited', ctaAction: 'contact', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'photography', animationLevel: 'subtle' },
-  saas: { personality: 'professional', formality: 0.5, technicalLevel: 0.6, emotionalLevel: 0.4, vocabularyComplexity: 'moderate', defaultTone: 'educational', ctaAction: 'sign-up', ctaStyle: 'primary', contentDensity: 'balanced', mediaStyle: 'illustration', animationLevel: 'moderate' },
-  ecommerce: { personality: 'friendly', formality: 0.4, technicalLevel: 0.3, emotionalLevel: 0.6, vocabularyComplexity: 'simple', defaultTone: 'excited', ctaAction: 'purchase', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'photography', animationLevel: 'moderate' },
-  fitness: { personality: 'friendly', formality: 0.3, technicalLevel: 0.4, emotionalLevel: 0.8, vocabularyComplexity: 'simple', defaultTone: 'inspirational', ctaAction: 'sign-up', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'photography', animationLevel: 'aggressive' },
-  healthcare: { personality: 'professional', formality: 0.7, technicalLevel: 0.5, emotionalLevel: 0.5, vocabularyComplexity: 'moderate', defaultTone: 'reassuring', ctaAction: 'contact', ctaStyle: 'primary', contentDensity: 'balanced', mediaStyle: 'photography', animationLevel: 'subtle' },
-  'real-estate': { personality: 'professional', formality: 0.6, technicalLevel: 0.4, emotionalLevel: 0.6, vocabularyComplexity: 'moderate', defaultTone: 'inspirational', ctaAction: 'contact', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'photography', animationLevel: 'moderate' },
-  fintech: { personality: 'authoritative', formality: 0.6, technicalLevel: 0.7, emotionalLevel: 0.3, vocabularyComplexity: 'advanced', defaultTone: 'reassuring', ctaAction: 'sign-up', ctaStyle: 'primary', contentDensity: 'balanced', mediaStyle: 'illustration', animationLevel: 'subtle' },
-  education: { personality: 'friendly', formality: 0.5, technicalLevel: 0.5, emotionalLevel: 0.6, vocabularyComplexity: 'moderate', defaultTone: 'educational', ctaAction: 'sign-up', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'mixed', animationLevel: 'moderate' },
-  perfume: { personality: 'sophisticated', formality: 0.7, technicalLevel: 0.3, emotionalLevel: 0.9, vocabularyComplexity: 'advanced', defaultTone: 'inspirational', ctaAction: 'learn-more', ctaStyle: 'primary', contentDensity: 'minimal', mediaStyle: 'photography', animationLevel: 'moderate' },
-  fragrance: { personality: 'sophisticated', formality: 0.7, technicalLevel: 0.3, emotionalLevel: 0.9, vocabularyComplexity: 'advanced', defaultTone: 'inspirational', ctaAction: 'learn-more', ctaStyle: 'primary', contentDensity: 'minimal', mediaStyle: 'photography', animationLevel: 'moderate' },
-  luxury: { personality: 'sophisticated', formality: 0.8, technicalLevel: 0.2, emotionalLevel: 0.8, vocabularyComplexity: 'advanced', defaultTone: 'inspirational', ctaAction: 'learn-more', ctaStyle: 'primary', contentDensity: 'minimal', mediaStyle: 'photography', animationLevel: 'subtle' },
-  beauty: { personality: 'playful', formality: 0.4, technicalLevel: 0.3, emotionalLevel: 0.8, vocabularyComplexity: 'simple', defaultTone: 'excited', ctaAction: 'purchase', ctaStyle: 'primary', contentDensity: 'balanced', mediaStyle: 'photography', animationLevel: 'moderate' },
-  nonprofit: { personality: 'authoritative', formality: 0.5, technicalLevel: 0.3, emotionalLevel: 0.9, vocabularyComplexity: 'simple', defaultTone: 'inspirational', ctaAction: 'subscribe', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'photography', animationLevel: 'subtle' },
-  portfolio: { personality: 'casual', formality: 0.3, technicalLevel: 0.4, emotionalLevel: 0.7, vocabularyComplexity: 'simple', defaultTone: 'inspirational', ctaAction: 'contact', ctaStyle: 'ghost', contentDensity: 'minimal', mediaStyle: 'mixed', animationLevel: 'moderate' },
-  media: { personality: 'playful', formality: 0.4, technicalLevel: 0.4, emotionalLevel: 0.7, vocabularyComplexity: 'moderate', defaultTone: 'excited', ctaAction: 'subscribe', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'mixed', animationLevel: 'moderate' },
-  marketplace: { personality: 'friendly', formality: 0.4, technicalLevel: 0.4, emotionalLevel: 0.5, vocabularyComplexity: 'simple', defaultTone: 'educational', ctaAction: 'sign-up', ctaStyle: 'primary', contentDensity: 'rich', mediaStyle: 'photography', animationLevel: 'moderate' },
-};
+/**
+ * Derive a content profile from BusinessKnowledge signals. This is the single
+ * replacement for the old INDUSTRY_CONTENT_PROFILES lookup — no industry key is
+ * read. Signals:
+ *  - customer persona formality/role → personality + formality
+ *  - revenue model (subscription/sale/service) → CTA action
+ *  - entity count + experience motion language → density + animation
+ *  - technical vocabulary depth → technicalLevel + vocabularyComplexity
+ */
+function deriveContentProfile(bk: BusinessKnowledge, exp: ExperienceBlueprint): ContentProfile {
+  const personas = bk.customerPersonas ?? [];
+  const topPersonaLabel = personas[0]?.label?.toLowerCase() ?? '';
+  const revenueModel = (bk.revenue?.model ?? '').toLowerCase();
+  const entityCount = (bk.entities ?? []).length;
+  const hasCommerce = /sell|purchase|checkout|commerce|shop|store|cart/.test(revenueModel);
+  const hasSubscription = /subscri|membership|recurring/.test(revenueModel);
+  const isService = /service|booking|appointment|consult/.test(revenueModel);
 
-const DEFAULT_CONTENT_PROFILE: IndustryContentProfile = {
-  personality: 'professional', formality: 0.5, technicalLevel: 0.4, emotionalLevel: 0.5,
-  vocabularyComplexity: 'moderate', defaultTone: 'educational', ctaAction: 'sign-up',
-  ctaStyle: 'primary', contentDensity: 'balanced', mediaStyle: 'photography', animationLevel: 'subtle',
-};
+  // Personality + formality from persona signal (universal defaults if unknown).
+  let personality: BrandVoice['personality'] = 'professional';
+  let formality = 0.5;
+  if (/member|community|friend|casual|playful/.test(topPersonaLabel)) { personality = 'friendly'; formality = 0.35; }
+  else if (/client|enterprise|business|professional|authority/.test(topPersonaLabel)) { personality = 'authoritative'; formality = 0.65; }
+  else if (/luxury|sophisticat|premium|editorial/.test(topPersonaLabel)) { personality = 'sophisticated'; formality = 0.75; }
+
+  // CTA action from business model signal.
+  let ctaAction: CTA['action'] = 'sign-up';
+  if (hasCommerce) ctaAction = 'purchase';
+  else if (isService) ctaAction = 'contact';
+  else if (hasSubscription) ctaAction = 'subscribe';
+
+  // Density + animation from entity count and experience interaction signals
+  // (no industry key, no motionLanguage string parsing — derive from counts
+  // and the experience blueprint's interaction density when available).
+  const interactionDensity = (exp as any).interactionDensity?.value;
+  const contentDensity: ContentProfile['contentDensity'] =
+    entityCount <= 3 ? 'minimal' : entityCount >= 8 ? 'rich' : 'balanced';
+  let animationLevel: ContentProfile['animationLevel'] = 'subtle';
+  if (interactionDensity === 'immersive' || interactionDensity === 'rich') animationLevel = 'moderate';
+  else if (interactionDensity === 'minimal' || interactionDensity === 'light') animationLevel = 'none';
+
+  // Technical level from vocabulary depth signal.
+  const vocab = bk.vocabulary?.domainNouns ?? [];
+  const technicalLevel = Math.min(0.9, 0.3 + vocab.length * 0.05);
+
+  const vocabularyComplexity: BrandVoice['vocabularyComplexity'] =
+    technicalLevel > 0.65 ? 'advanced' : technicalLevel > 0.45 ? 'moderate' : 'simple';
+
+  const defaultTone: ToneVariation['tone'] =
+    personality === 'sophisticated' ? 'inspirational'
+      : personality === 'authoritative' ? 'reassuring'
+      : personality === 'friendly' ? 'excited'
+      : 'educational';
+
+  return {
+    personality,
+    formality,
+    technicalLevel,
+    emotionalLevel: personality === 'friendly' || personality === 'sophisticated' ? 0.75 : 0.5,
+    vocabularyComplexity,
+    defaultTone,
+    ctaAction,
+    ctaStyle: 'primary',
+    contentDensity,
+    mediaStyle: 'photography',
+    animationLevel,
+  };
+}
 
 // ─── Content Intelligence Engine ──────────────────────────────────────────────
 
@@ -100,9 +147,7 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
     businessKnowledge: BusinessKnowledge,
     experienceBlueprint: ExperienceBlueprint
   ): Promise<ContentBlueprint> {
-    const industry = businessKnowledge.discovery.industry || businessKnowledge.discovery.businessType;
-    const profile = INDUSTRY_CONTENT_PROFILES[industry] || DEFAULT_CONTENT_PROFILE;
-    const industryCopy = getIndustryCopy(industry);
+    const profile = deriveContentProfile(businessKnowledge, experienceBlueprint);
     const prov = (conf: number) => makeProvenance('content-intelligence', conf);
     const bkId = `bk-${Buffer.from(businessKnowledge.discovery.businessType || 'unknown').toString('base64').slice(0, 12)}`;
 
@@ -113,7 +158,7 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
       businessKnowledgeId: bkId,
       experienceBlueprintId: experienceBlueprint.id,
       primaryMessage: {
-        value: this.buildPrimaryMessage(businessKnowledge, industryCopy),
+        value: this.buildPrimaryMessage(businessKnowledge),
         provenance: prov(0.8),
       },
       supportingMessages: {
@@ -121,7 +166,7 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
         provenance: prov(0.75),
       },
       taglineOptions: {
-        value: this.buildTaglineOptions(businessKnowledge, industryCopy),
+        value: this.buildTaglineOptions(businessKnowledge),
         provenance: prov(0.7),
       },
       ctaHierarchy: {
@@ -172,8 +217,8 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
 
   // ─── Private Builders ──────────────────────────────────────────────────────
 
-  private buildPrimaryMessage(bk: BusinessKnowledge, _copy: ReturnType<typeof getIndustryCopy>): string {
-    // discovery.intent is a string like "A restaurant aimed at..."
+  private buildPrimaryMessage(bk: BusinessKnowledge): string {
+    // discovery.intent is a free-text business description (signal, not a vertical).
     const intent = bk.discovery.intent;
     if (intent && typeof intent === 'string' && intent.length > 10) return intent;
     const persona = bk.customerPersonas?.[0]?.label || 'you';
@@ -188,15 +233,16 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
     return msgs.slice(0, 3);
   }
 
-  private buildTaglineOptions(bk: BusinessKnowledge, copy: ReturnType<typeof getIndustryCopy>): string[] {
+  private buildTaglineOptions(bk: BusinessKnowledge): string[] {
+    const brand = bk.vocabulary?.domainNouns?.[0] || bk.discovery.businessType;
     const opts: string[] = [];
-    if (copy?.heroSubheading) opts.push(copy.heroSubheading);
-    opts.push(`The future of ${bk.discovery.businessType}`);
+    if (bk.discovery.intent && bk.discovery.intent.length > 10) opts.push(bk.discovery.intent);
+    opts.push(`The future of ${brand}`);
     opts.push(`Built for ${bk.customerPersonas?.[0]?.label || 'you'}`);
     return opts.slice(0, 3);
   }
 
-  private buildCTAStrategy(bk: BusinessKnowledge, profile: IndustryContentProfile): CTAStrategy {
+  private buildCTAStrategy(bk: BusinessKnowledge, profile: ContentProfile): CTAStrategy {
     const primary: CTA = {
       text: this.getCTAText(profile.ctaAction),
       action: profile.ctaAction,
@@ -216,7 +262,7 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
     };
   }
 
-  private buildMediaStrategy(bk: BusinessKnowledge, exp: ExperienceBlueprint, profile: IndustryContentProfile): MediaStrategy {
+  private buildMediaStrategy(bk: BusinessKnowledge, exp: ExperienceBlueprint, profile: ContentProfile): MediaStrategy {
     const sections = (exp.sectionOrder?.value || []) as any[];
     return {
       sections: sections.map((s: any, i: number) => ({
@@ -248,7 +294,7 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
     }));
   }
 
-  private buildContentDensity(exp: ExperienceBlueprint, profile: IndustryContentProfile): ContentDensity[] {
+  private buildContentDensity(exp: ExperienceBlueprint, profile: ContentProfile): ContentDensity[] {
     const sections = (exp.sectionOrder?.value || []) as any[];
     const isMinimal = profile.contentDensity === 'minimal';
     return sections.map((s: any, i: number) => ({
@@ -260,7 +306,7 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
     }));
   }
 
-  private buildVoice(profile: IndustryContentProfile): BrandVoice {
+  private buildVoice(profile: ContentProfile): BrandVoice {
     return {
       personality: profile.personality,
       formality: profile.formality,
@@ -270,7 +316,7 @@ export class ContentIntelligenceEngine implements IContentIntelligenceLayer {
     };
   }
 
-  private buildToneVariations(exp: ExperienceBlueprint, profile: IndustryContentProfile): ToneVariation[] {
+  private buildToneVariations(exp: ExperienceBlueprint, profile: ContentProfile): ToneVariation[] {
     const sections = (exp.sectionOrder?.value || []) as any[];
     return sections.map((s: any, i: number) => ({
       sectionId: s.id || `section-${i}`,

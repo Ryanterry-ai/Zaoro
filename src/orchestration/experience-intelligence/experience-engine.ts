@@ -51,7 +51,7 @@ import type {
 } from './types-experience.js';
 import type { ScrollAccumulationConfig } from './types.js';
 
-import { getExperienceProfile, customizeProfile } from './experience-profiles.js';
+import { getExperienceProfile, customizeProfile, getExperienceProfileForCapabilities } from './experience-profiles.js';
 import type { ExperienceProfile } from './types-experience.js';
 import { planScenes, generateEmotionCurve } from './scene-planner.js';
 import { planScrollNarrative, reorderForNarrative } from './scroll-narrative.js';
@@ -338,8 +338,8 @@ function extractParallaxLayers(scenes: Scene[]): ParallaxLayer[] {
 // ─── Main Engine ───────────────────────────────────────────────────────────
 
 export interface ExperienceEngineInput {
-  /** Industry */
-  industry: Industry;
+  /** Industry (optional inference label — NOT used for branching decisions) */
+  industry?: Industry;
   /** Sub-industry */
   subIndustry?: string;
   /** Page sections from ApplicationSpec */
@@ -352,11 +352,18 @@ export interface ExperienceEngineInput {
   designDecision?: DesignDecision;
   /** Personality override */
   personality?: string;
+  /** Resolved capabilities (optional) — primary signal for experience derivation */
+  capabilities?: string[];
 }
 
 /**
  * Generate an ExperienceBlueprint for a page.
  * This is the main entry point for the Experience Intelligence Engine.
+ *
+ * The experience is derived from DESIGN SIGNALS (personality, design DNA,
+ * design decision, capabilities) — never from an `if industry == X` branch.
+ * The optional `industry` label is used only as a fallback default profile
+ * name; it drives no control-flow decision.
  */
 export function generateExperienceBlueprint(
   input: ExperienceEngineInput,
@@ -369,10 +376,15 @@ export function generateExperienceBlueprint(
     designDNA,
     designDecision,
     personality,
+    capabilities,
   } = input;
 
-  // 1. Get industry profile
-  const baseProfile = getExperienceProfile(industry);
+  // 1. Derive the base profile from signals — capabilities take priority,
+  //    then the optional industry label as a neutral default. No branching
+  //    on industry values occurs below.
+  const baseProfile = capabilities && capabilities.length > 0
+    ? getExperienceProfileForCapabilities(capabilities)
+    : getExperienceProfile(industry ?? 'other');
   const profile = customizeProfile(baseProfile, subIndustry, personality);
 
   // 2. Determine experience style
@@ -552,20 +564,15 @@ export function generateExperienceBlueprint(
 
   // 10. Scroll-accumulation: make the user FEEL a quality (scent,
   // tension, calm) grow the more they scroll — continuous, not one-shot.
-  // Triggered for sensory/atmospheric industries (perfume, spa, etc.) and
-  // cinematic/luxury experiences.
-  // `industry` is typed as the canonical Industry union; compare as string
-  // to avoid forcing the union to enumerate every sensory sub-industry.
-  const ind = String(industry);
-  const isSensoryIndustry =
-    ind === 'perfume' || ind === 'fragrance' || ind === 'spa' || ind === 'wellness';
-  const wantsAccumulation = isSensoryIndustry || style === 'cinematic';
+  // Triggered for cinematic/luxury experiences (derived from STYLE, not from
+  // an industry label). This removes the old `if industry == perfume` branch.
+  const wantsAccumulation = style === 'cinematic' || style === 'luxury';
 
   const scrollAccumulation: ScrollAccumulationConfig | undefined = wantsAccumulation
     ? {
         enabled: true,
-        metric: ind === 'perfume' || ind === 'fragrance' ? 'scent' : 'atmosphere',
-        label: ind === 'perfume' || ind === 'fragrance' ? 'Scent' : 'Mood',
+        metric: style === 'luxury' ? 'scent' : 'atmosphere',
+        label: style === 'luxury' ? 'Scent' : 'Mood',
         accent: style === 'luxury' ? '#D4AF37' : '#C9A96E',
         placement: 'fixed',
         reverse: false,

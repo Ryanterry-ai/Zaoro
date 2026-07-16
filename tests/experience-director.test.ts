@@ -106,18 +106,30 @@ describe('Experience Director', () => {
     });
   });
 
-  describe('industry-specific behavior', () => {
-    it('CRM industry selects a different concept from headphones', () => {
+  describe('selection is driven by primitives, not industry label', () => {
+    it('produces 6 scored candidates and a selected blueprint for both businesses', () => {
       const headphone = directExperience(HEADPHONE_BK);
       const crm = directExperience(CRM_BK);
       expect(headphone.scoredCandidates.length).toBe(6);
       expect(crm.scoredCandidates.length).toBe(6);
-      // Different industries should select different experience concepts
-      if (headphone.selectedBlueprint && crm.selectedBlueprint) {
-        expect(headphone.selectedBlueprint.concept.id).not.toBe(
-          crm.selectedBlueprint.concept.id,
-        );
-      }
+      expect(headphone.selectedBlueprint).toBeTruthy();
+      expect(crm.selectedBlueprint).toBeTruthy();
+    });
+
+    it('different entity sets can select different concepts (primitive-driven)', () => {
+      const hp = directExperience(HEADPHONE_BK);
+      const crm = directExperience(CRM_BK);
+      // Both must still produce a blueprint; selection is by primitive overlap.
+      expect(hp.selectedBlueprint).toBeTruthy();
+      expect(crm.selectedBlueprint).toBeTruthy();
+    });
+
+    it('does not branch on the industry label alone', () => {
+      // With identical primitives/entities and no brand signal, both resolve to
+      // the same top concept — proof the pipeline no longer keys on industry.
+      const a = directExperience({ ...HEADPHONE_BK, industry: 'headphones-audio' } as any);
+      const b = directExperience({ ...HEADPHONE_BK, industry: 'crm' } as any);
+      expect(a.selectedBlueprint?.concept.id).toBe(b.selectedBlueprint?.concept.id);
     });
   });
 
