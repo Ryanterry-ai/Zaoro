@@ -41,6 +41,9 @@ import {
 } from '../bos/candidate/index.js';
 import { composeKnowledgePack, CompositionContext } from '../bos/knowledge/primitive-packs/index.js';
 import { capabilityRegistry } from '../bos/capabilities/index.js';
+import { directExperience } from '../bos/experience/index.js';
+import { IntentDecomposer } from '../bos/intent/intent-decomposer.js';
+import { buildPrimitiveGraph, ENTITY_TO_PRIMITIVES } from '../bos/intent/primitive-seeds.js';
 import { KnowledgeRegistry } from '../bos/knowledge/registry.js';
 import { BuildHistoryManager } from '../engine/build-history.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
@@ -241,6 +244,52 @@ export class DeterministicOrchestratorV4 {
       evidence: [`industry=${breContext.industry}`, `entities=${breContext.entities.length}`],
       hash: RuntimeTracer.hashContent(JSON.stringify(breContext)),
     });
+
+    // ═══ Semantic Intent Decomposition: entity→primitive mapping with confidence ═══
+    // Decomposes the prompt into canonical primitives. Brands become evidence, not knowledge.
+    tracer.beginSpan({ layer: 'intent-decomposition', owner: 'IntentDecomposer', inputs: ['bre-context', 'prompt'], dependencies: ['bre-v2'] });
+    const primitiveGraph = buildPrimitiveGraph();
+    const intentDecomposer = new IntentDecomposer(primitiveGraph, ENTITY_TO_PRIMITIVES);
+    const intentDecomposition = intentDecomposer.decompose(prompt);
+    tracer.endSpan('intent-decomposition', {
+      outputs: ['intent-decomposition'],
+      artifactIds: [],
+      confidence: intentDecomposition.overallConfidence,
+      evidence: [
+        `entities=${intentDecomposition.entities.length}`,
+        `primitives=${intentDecomposition.primitives.length}`,
+        `confidence=${intentDecomposition.overallConfidence.toFixed(2)}`,
+      ],
+      hash: RuntimeTracer.hashContent(JSON.stringify(intentDecomposition)),
+    });
+    console.log(`[orchestrator] Intent Decomposition: entities=${intentDecomposition.entities.length}, primitives=${intentDecomposition.primitives.length}, confidence=${intentDecomposition.overallConfidence.toFixed(2)}`);
+
+    // ═══ Experience Director: plan, compare, then generate ═══
+    // Scores candidate experience concepts and selects the strongest one
+    // BEFORE anything is rendered.  This moves the system from
+    // "generate then critique" to "plan, compare, then generate."
+    tracer.beginSpan({ layer: 'experience-director', owner: 'ExperienceDirector', inputs: ['bre-context', 'bre-v2'], dependencies: ['bre-v2'] });
+    const experienceDesign = directExperience({
+      industry: breContext.industry,
+      capabilities: buildCapabilities.expanded,
+      entities: breContext.entities.map(e => typeof e === 'string' ? e : (e as any).name ?? String(e)),
+      description: breContext.description,
+    });
+    const experienceStyle = experienceDesign.selectedBlueprint?.concept.style ?? 'hybrid';
+    const experienceScore = experienceDesign.scoredCandidates[0]?.overallScore ?? 0;
+    tracer.endSpan('experience-director', {
+      outputs: ['experience-design'],
+      artifactIds: [],
+      confidence: experienceScore / 100,
+      evidence: [
+        `style=${experienceStyle}`,
+        `score=${experienceScore}`,
+        `candidates=${experienceDesign.allCandidates.length}`,
+        `selected=${experienceDesign.selectedBlueprint?.concept.name ?? 'none'}`,
+      ],
+      hash: RuntimeTracer.hashContent(JSON.stringify(experienceDesign.selectedBlueprint)),
+    });
+    console.log(`[orchestrator] Experience Director: style=${experienceStyle}, score=${experienceScore}, candidates=${experienceDesign.allCandidates.length}`);
 
     // ═══ New 4-layer pipeline: BRE v2 → Execution Blueprint → Content Resolver → Renderer ═══
     tracer.beginSpan({ layer: 'pipeline-4-layer', owner: 'LeadAgent', inputs: ['bre-context'], dependencies: ['bre-v2'] });

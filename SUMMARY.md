@@ -16,7 +16,7 @@
 - **9 competing vocabularies found & consolidated:** business `CAPABILITY_REGISTRY`, primitive-pack tags, skill-pack `capability`, dead page-level `capability-registry` (now `@deprecated`), motion registry, BI workflow signals, AppFamily, taxonomy legacy, `CapabilitySchema`. Aliases in `registry-data.ts` fold them in.
 - **Dead/aspirational:** `PipelineOrchestrator` (410, `@deprecated`), `BusinessIntelligencePipeline` (removed, 410 stub), `ExperienceOS v2` (`@deprecated`, do NOT delete), `ValidationPipeline` (tests only), `orchestration/capability-registry` (`@deprecated`, never imported), Phase 3 `ArtifactGraphExecutor` (no production caller).
 - `RuntimeTrace` persisted to `.build-artifacts/runtime-trace.json`; `ENGINE_VERSION='4.0.0'`.
-- Node.js: `C:\Users\viren\AppData\Local\nvm\v20.20.2\node.exe`; `npm`/`npx` not on PATH. Full suite GREEN: 72 files / 1031 tests; typecheck clean.
+- Node.js: `C:\Users\viren\AppData\Local\nvm\v20.20.2\node.exe`; `npm`/`npx` not on PATH. Full suite GREEN: 75 files / 1069 tests; typecheck clean.
 - `knowledge-candidates/` and `.build-artifacts/` are git-ignored runtime data.
 
 ## Work State
@@ -85,3 +85,12 @@
 - `src/bos/capabilities/registry.ts` — MODIFIED (Step 4): `scaleCapabilities`
 - `src/taxonomy/resolver.ts` — MODIFIED: `packCanonicalCapabilities` bridge
 - Node binary: `C:\Users\viren\AppData\Local\nvm\v20.20.2\node.exe`
+- `src/bos/intent/types.ts` — **NEW:** ConfidentPrimitive, EntityEvidence, IntentDecomposition types
+- `src/bos/graph/primitive-graph.ts` — **NEW:** PrimitiveGraph with typed relationships (implies, conflicts, composes, requires, strengthens)
+- `src/bos/intent/primitive-seeds.ts` — **NEW:** 65 primitives (6 categories), 50+ relationships, 45+ entity→primitive mappings
+- `src/bos/intent/intent-decomposer.ts` — **NEW:** IntentDecomposer (entity extraction → primitive mapping → confidence propagation)
+- `src/bos/intent/index.ts` — **NEW:** barrel
+- V4 pipeline wired: new `intent-decomposition` span between BRE v2 and Experience Director
+- Apple → minimalism → whitespace (brand disappears after normalization)
+- Iron Man → mechanical-assembly → engineering → innovation (generalizes across franchises)
+- `tests/semantic-primitive-graph.test.ts` (14), `tests/intent-decomposer.test.ts` (11)
