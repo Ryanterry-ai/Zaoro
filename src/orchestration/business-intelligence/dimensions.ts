@@ -29,7 +29,7 @@ const LEXICONS: Lexicon[] = [
   // product-nature — what is being exchanged
   { dimension: 'product-nature', value: 'beverage', words: ['coffee', 'tea', 'espresso', 'latte', 'brew', 'beverage', 'drink', 'juice', 'smoothie', 'cocktail', 'wine', 'beer'] },
   { dimension: 'product-nature', value: 'food', words: ['restaurant', 'food', 'meal', 'dish', 'bakery', 'pastry', 'pizza', 'cuisine', 'menu', 'snack', 'dessert', 'grocery'] },
-  { dimension: 'product-nature', value: 'physical-good', words: ['store', 'shop', 'product', 'apparel', 'clothing', 'furniture', 'gadget', 'device', 'gear', 'toy', 'jewelry'] },
+  { dimension: 'product-nature', value: 'physical-good', words: ['store', 'shop', 'product', 'apparel', 'clothing', 'furniture', 'gadget', 'device', 'gear', 'toy', 'jewelry', 'headphone', 'headphones', 'earbud', 'earbuds', 'earphone', 'headset', 'speaker', 'speakers', 'audio', 'sound', 'wearable', 'accessory', 'accessories', 'electronics'] },
   { dimension: 'product-nature', value: 'digital-good', words: ['ebook', 'course', 'template', 'download', 'software-license', 'plugin', 'asset', 'preset'] },
   { dimension: 'product-nature', value: 'service', words: ['salon', 'spa', 'clinic', 'consulting', 'agency', 'legal', 'accounting', 'coaching', 'training', 'repair', 'fitness', 'gym', 'dentist', 'doctor', 'therapy', 'tutoring'] },
   { dimension: 'product-nature', value: 'content', words: ['blog', 'news', 'magazine', 'portfolio', 'podcast', 'video', 'publication', 'media', 'showcase', 'gallery'] },
@@ -77,6 +77,14 @@ const LEXICONS: Lexicon[] = [
 
   // locale — region (drives compliance + payment)
   { dimension: 'locale', value: 'IN', words: ['india', 'indian', 'bangalore', 'mumbai', 'delhi', 'hyderabad', 'chennai', 'pune', 'ahmedabad', 'kolkata'] },
+
+  // experience-theme — how the visitor should FEEL across the journey.
+  // Detected from narrative/scroll cues in the prompt. Pure signal expansion
+  // (no vertical templates) — drives experience-concept selection downstream.
+  { dimension: 'experience-theme', value: 'transformation', words: ['transform', 'transforms', 'transformation', 'journey', 'from', 'to', 'evolve', 'metamorphosis', 'before', 'after'] },
+  { dimension: 'experience-theme', value: 'scroll-journey', words: ['scroll', 'scrolling', 'every scroll', 'as you scroll', 'on scroll', 'parallax'] },
+  { dimension: 'experience-theme', value: 'sound-to-silence', words: ['noise', 'soundwave', 'soundwaves', 'silent', 'silence', 'calm', 'quiet', 'sound', 'audio', 'chao', 'chaotic', 'serene', 'stillness'] },
+  { dimension: 'experience-theme', value: 'immersive', words: ['immersive', 'futuristic', 'cinematic', 'atmospheric', 'spatial', 'depth'] },
   { dimension: 'locale', value: 'US', words: ['usa', 'united states', 'america', 'us ', 'new york', 'california', 'texas', 'austin', 'sf', 'los angeles'] },
   { dimension: 'locale', value: 'EU', words: ['europe', 'uk', 'germany', 'france', 'spain', 'italy', 'netherlands', 'eu ', 'london', 'berlin', 'paris'] },
 ];
@@ -140,6 +148,7 @@ export function extractDomainNouns(prompt: string): string[] {
     'coffee', 'tea', 'cafe', 'restaurant', 'pizza', 'bakery', 'supplement', 'protein', 'gym',
     'fitness', 'salon', 'spa', 'clinic', 'dentist', 'doctor', 'lawyer', 'agency', 'studio',
     'school', 'academy', 'consulting', 'real estate', 'property', 'hotel', 'resort',
+    'headphone', 'headphones', 'earbuds', 'earphone', 'headset', 'speaker', 'audio',
   ];
   const found: string[] = [];
   for (const n of nouns) {

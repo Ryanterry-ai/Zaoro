@@ -122,6 +122,21 @@ const CANDIDATE_TEMPLATES: Array<{
     audienceHints: ['buyer', 'price-sensitive', 'deal-seeker'],
     impliedPrimitives: ['trust', 'urgency', 'social-proof', 'efficiency', 'action', 'confidence'],
   },
+  {
+    id: 'silent-soundscape',
+    name: 'Silent Soundscape',
+    style: 'cinematic',
+    tagline: 'Every scroll moves you from noise into silence.',
+    description: 'A scroll-driven transformation where chaotic soundwaves resolve into complete calm. The page opens in motion and turbulence, then, section by section, distills into stillness — a sensory arc from chaos to serenity that makes the product feel like the source of quiet.',
+    motionPrinciples: ['scroll-driven-transformation', 'soundwave-dissolve', 'noise-to-silence', 'turbulence-to-stillness', 'ambient-parallax', 'breath-reveal'],
+    emotionalArc: ['chaos', 'tension', 'curiosity', 'release', 'calm', 'stillness'],
+    conversionStrategy: 'Earn the calm first; the CTA arrives as the exhale, not a shout.',
+    performanceProfile: 'cinematic',
+    capabilityHints: ['commerce.catalog', 'content.management', 'auth'],
+    pageLayout: 'single-scroll',
+    audienceHints: ['transformation', 'scroll-journey', 'sound-to-silence', 'immersive', 'premium', 'calm'],
+    impliedPrimitives: ['transformation', 'scroll-journey', 'sound-to-silence', 'calm', 'immersive', 'narrative', 'cinematic', 'curiosity'],
+  },
 ];
 
 // ─── Generation ─────────────────────────────────────────────────────

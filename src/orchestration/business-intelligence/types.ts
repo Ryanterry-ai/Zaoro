@@ -104,7 +104,8 @@ export type SignalDimension =
   | 'audience'
   | 'goal'
   | 'quality'
-  | 'locale';
+  | 'locale'
+  | 'experience-theme';
 
 // ─── People: personas, roles ────────────────────────────────────────────────
 
@@ -360,6 +361,10 @@ export interface BusinessKnowledge {
   contentStrategy: ContentStrategy;
   designStrategy: DesignStrategy;
   experienceGoals: ExperienceGoals;
+
+  /** Experience themes detected from narrative/scroll cues (e.g. transformation,
+   *  scroll-journey, sound-to-silence). Drives experience-concept selection. */
+  experienceThemes?: string[];
 }
 
 /** Input to the engine. Minimal today (prompt); extensible tomorrow. */

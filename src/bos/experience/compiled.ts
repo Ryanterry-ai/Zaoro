@@ -46,6 +46,12 @@ export interface CompiledExperience {
   coherence: number;
   rendererTarget: 'react' | 'flutter' | 'unity' | 'webgl' | 'native';
   motionLanguage: 'organic' | 'mechanical' | 'elegant' | 'luxury' | 'playful' | 'scientific' | 'precise' | 'calm' | 'aggressive';
+  /** True when the selected concept/theme is scroll-driven (e.g. a
+   *  noise→silence transformation). Tells the renderer to emit scroll-linked
+   *  animation rather than static section reveals. */
+  scrollDriven?: boolean;
+  /** Scroll-linked animation specs emitted for scroll-driven experiences. */
+  scrollTriggers?: Array<{ selector: string; property: string; scrollRange: [number, number]; outputRange: [number, number]; easing: string }>;
   cameraLanguage: 'macro' | 'orbit' | 'tracking' | 'close-up' | 'wide' | 'push' | 'pull' | 'parallax' | 'rack-focus';
   typographyPersonality: 'luxury' | 'friendly' | 'technical' | 'editorial' | 'playful' | 'corporate' | 'experimental';
   reasoning: string[];
