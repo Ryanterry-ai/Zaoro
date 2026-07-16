@@ -20,8 +20,8 @@ export const ApiSpecSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']),
   path: z.string(),
   description: z.string().optional(),
-  requestBody: z.record(z.string()).optional(),
-  responseShape: z.record(z.string()).optional(),
+  requestBody: z.record(z.string(), z.string()).optional(),
+  responseShape: z.record(z.string(), z.string()).optional(),
   auth: z.boolean().default(false),
 });
 export type ApiSpec = z.infer<typeof ApiSpecSchema>;
@@ -102,6 +102,6 @@ export const SkillPackSchema = VersionedObject.extend({
       description: z.string().optional(),
     })).default([]),
     generationRules: z.array(RuleRef).default([]),
-  }).default({}),
+  }).optional(),
 });
 export type SkillPack = z.infer<typeof SkillPackSchema>;

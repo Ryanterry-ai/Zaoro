@@ -25,7 +25,7 @@ export const JourneySchema = VersionedObject.extend({
   name: z.string().min(1),
   description: z.string().optional(),
   stages: z.array(JourneyStageSchema).default([]),
-  influences: JourneyInfluenceRulesSchema.default({}),
+  influences: JourneyInfluenceRulesSchema.optional(),
   roles: z.array(z.string()).default([]),
   permissions: z.array(z.string()).default([]),
 });

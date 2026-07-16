@@ -60,6 +60,30 @@ const FOOD_UNSPLASH_PHOTOS: string[] = [
 ];
 
 /**
+ * Perfume/luxury-specific Unsplash photo IDs.
+ * Real existing photos for dark/gold/luxury/fragrance themes.
+ */
+const PERFUME_UNSPLASH_PHOTOS: string[] = [
+  '1774682060910', '1605463967516', '1655177475832', '1611146264101',
+  '1541643600914-78b084683601', '1594035910387-fbd1b4887e40', '1608571423902-eed4a5ad8108',
+  '1596462502278-27bfdc403348', '1600585154340-be6161a56a0c', '1523293182086-7651a899d37f',
+  '1588405748880-12d1d2a59f75', '1563170351-be82bc888aa4', '1585386959984-a4155224a1ad',
+  '1611930022073-b7a4ba5fcccd', '1549488344-cbb6c34cf1ac', '1612817288484-6f916006741a',
+];
+
+/**
+ * Footwear/sneaker-specific Unsplash photo IDs.
+ * Real existing photos for athletic shoes, sneakers, boots, and footwear design.
+ */
+const FOOTWEAR_UNSPLASH_PHOTOS: string[] = [
+  '1542291026-7eec264c27ff', '1606107557195-0e29a4b5b4aa', '1608231387042-66d1773070a5',
+  '1595950653106-6c9ebd614d3a', '1600185365926-3a2ce3cdb9eb', '1551107696-a4b0c5a0d9a2',
+  '1549298916-b41d501d3772', '1584735175315-9d5df23860e6', '1539185441755-769473a23570',
+  '1579338854402-35dca4ce8b2d', '1560769629-975ec94e6a86', '1460353581641-37baddab0fa2',
+  '1491553895911-0055eca6402d', '1525966222134-fcfa99b8ae77', '1600269452121-4f2416e55c28',
+];
+
+/**
  * Map keyword patterns to category-specific Unsplash photo pools.
  * When a keyword matches a key in this map, photos are drawn from the
  * corresponding pool instead of the default pool, ensuring semantically
@@ -77,6 +101,14 @@ const KEYWORD_POOL_MAP: Array<{ patterns: string[]; pool: string[] }> = [
   {
     patterns: ['food', 'restaurant', 'cooking', 'chef', 'cuisine', 'dining', 'gourmet', 'grocery'],
     pool: FOOD_UNSPLASH_PHOTOS,
+  },
+  {
+    patterns: ['perfume', 'fragrance', 'scent', 'parfum', 'eau de', 'olfactory', 'luxury', 'luxury brand', 'premium brand', 'artisan', 'atelier', 'maison'],
+    pool: PERFUME_UNSPLASH_PHOTOS,
+  },
+  {
+    patterns: ['footwear', 'shoes', 'sneakers', 'boots', 'heels', 'sandals', 'running shoes', 'athletic shoes', 'casual shoes', 'formal shoes', 'leather shoes', 'kicks', 'sole'],
+    pool: FOOTWEAR_UNSPLASH_PHOTOS,
   },
 ];
 

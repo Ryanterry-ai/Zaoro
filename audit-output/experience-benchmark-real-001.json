@@ -1,0 +1,19 @@
+{
+  "id": "real-001",
+  "industry": "real-estate",
+  "prompt": "a real estate listings site with property search and agent contact",
+  "checks": {
+    "blueprintProduced": true,
+    "scenesPresent": true,
+    "narrativePresent": true,
+    "hoverBehaviorsPresent": true,
+    "motionDrivenCode": true,
+    "motionAnchorPresent": true,
+    "lineageProvenance": true
+  },
+  "passed": 7,
+  "total": 7,
+  "verdict": "PASS",
+  "sceneCount": 3,
+  "hoverCount": 5
+}

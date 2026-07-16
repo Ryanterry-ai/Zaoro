@@ -1,0 +1,9 @@
+{
+  "skill": "UI/UX Pro Max + Design Intelligence",
+  "test": "Body font in CSS",
+  "skillBodyFont": "Inter",
+  "diBodyFont": "Plus Jakarta Sans, sans-serif",
+  "hasSkillFont": false,
+  "hasDIFont": true,
+  "verdict": "PASS"
+}

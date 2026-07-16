@@ -20,6 +20,7 @@ import type { RenderedFile } from '../../generation/renderers/renderer.js';
 import type { ApplicationGraph } from '../../bos/graph/application-graph.js';
 import type { ApplicationSpec } from '../../bos/schemas/blueprint/execution-blueprint.schema.js';
 import type { SolutionArchitectureDecision } from '../../bos/types-solution-architecture.js';
+import type { BusinessKnowledge } from '../../orchestration/business-intelligence/types.js';
 
 // ─── Agent Status ────────────────────────────────────────────────────────────
 
@@ -40,6 +41,8 @@ export interface PhaseContext {
   prompt: string;
   /** Parsed BRE context from intake */
   breContext: BREContext;
+  /** Business Knowledge from Business Intelligence layer (preferred) */
+  businessKnowledge?: BusinessKnowledge | undefined;
   /** Business research (filled after Phase 1) */
   businessResearch?: BusinessResearch | undefined;
   /** BRE result (filled after Phase 2) */

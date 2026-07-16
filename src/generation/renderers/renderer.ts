@@ -131,11 +131,22 @@ export interface RenderContext {
     additionalCapabilities: string[];
   };
 
+  /** Skill Integrator design recommendations — lowest-priority color/typography source. */
+  skillRecommendations?: import('../skill-integrator.js').DesignRecommendation;
+
   /** Design Brief from DesignAgent — industry-specific design rules, colors, typography, layout, animation, UX guidelines. */
   designBrief?: import('../../agents/orchestrator/subagents/design-agent.js').DesignBrief;
 
   /** Solution architecture decision from SAP — single authority for technology selection. */
   solutionArchitecture?: import('../../bos/types-solution-architecture.js').SolutionArchitectureDecision;
+
+  /** Experience Intelligence Blueprint — scene orchestration, scroll narrative, motion, hover. */
+  experienceBlueprint?: import('../../orchestration/design-intelligence/types-experience.js').ExperienceBlueprint;
+
+  /** Business Intelligence Engine output — the single source of truth for
+   *  business understanding. The renderer reads vocabulary/capabilities from
+   *  here; it never infers business logic itself. */
+  businessKnowledge?: import('../../orchestration/business-intelligence/types.js').BusinessKnowledge;
 
   /** Which engines contributed design output — used for provenance reporting. */
   designLineage?: DesignLineage;
@@ -156,6 +167,7 @@ export interface DesignLineage {
   layout: string;
   motion: string;
   components: string;
+  experience: string;
   polish: string;
   knowledgeGraph: string;
   classification: string;

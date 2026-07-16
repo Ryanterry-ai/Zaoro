@@ -58,6 +58,36 @@ export const FITNESS_GYM: Pattern = {
   compatibleBusinessModels: ['subscription', 'direct-sales'],
 };
 
+export const WHOLESALE_B2B: Pattern = {
+  id: 'pattern.wholesale.b2b',
+  version: '1.3.0',
+  status: 'active',
+  createdAt: '2025-01-01T00:00:00+00:00',
+  updatedAt: '2025-01-01T00:00:00+00:00',
+  evidenceRefs: [],
+  kind: 'Pattern',
+  name: 'Wholesale & B2B',
+  description: 'B2B wholesale distributor with product catalog, quote requests, NET-30 terms, and bulk ordering',
+  navigation: { items: [{ label: 'Home', href: '/' }, { label: 'Catalog', href: '/catalog' }, { label: 'Quote Request', href: '/quote' }, { label: 'Account', href: '/account' }, { label: 'Contact', href: '/contact' }], style: 'horizontal', sticky: true, logo: true },
+  pages: [
+    { path: '/', name: 'Home', type: 'home', sections: ['hero', 'featured-products', 'stats', 'testimonials', 'cta'] },
+    { path: '/catalog', name: 'Product Catalog', type: 'listing', sections: ['product-grid', 'category-nav', 'filters', 'bulk-pricing'] },
+    { path: '/product/:id', name: 'Product Detail', type: 'detail', sections: ['product-gallery', 'specs', 'bulk-pricing-tiers', 'related-products'] },
+    { path: '/quote', name: 'Quote Request', type: 'auth', sections: ['quote-form', 'product-selector', 'delivery-info'] },
+    { path: '/account', name: 'Account', type: 'dashboard', sections: ['order-history', 'invoices', 'payment-terms', 'reorder'] },
+    { path: '/orders', name: 'Orders', type: 'listing', sections: ['filters', 'data-table', 'order-status'] },
+    { path: '/contact', name: 'Contact', type: 'page', sections: ['contact-form', 'account-manager', 'map', 'hours'] },
+  ],
+  components: ['ProductCard', 'QuoteForm', 'BulkPricingTable', 'OrderHistory', 'InvoiceList', 'AccountManagerCard'],
+  relationships: [],
+  workflows: ['Request Quote', 'Place Bulk Order', 'Track Shipment', 'Pay Invoice', 'Reorder'],
+  integrations: [{ type: 'payment', name: 'Stripe', config: {}, required: true }, { type: 'analytics', name: 'PostHog', config: {}, required: false }, { type: 'email', name: 'Resend', config: {}, required: false }],
+  design: { restrictions: ['clean-professional', 'data-forward'] },
+  generationRules: [],
+  compatibleIndustries: ['wholesale', 'b2b', 'distribution', 'supply-chain', 'procurement', 'industrial', 'office-supplies', 'raw-materials'],
+  compatibleBusinessModels: ['wholesale', 'direct-sales', 'marketplace'],
+};
+
 export const EDUCATION_ELEARNING: Pattern = {
   id: 'pattern.education.elearning',
   version: '1.3.0',

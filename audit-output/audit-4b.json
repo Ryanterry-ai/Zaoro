@@ -1,0 +1,13 @@
+{
+  "skill": "Frontend Design",
+  "test": "Banned patterns check",
+  "bannedPatterns": [
+    "Inter, Roboto, Arial, system fonts as primary",
+    "Purple gradients on white backgrounds",
+    "Predictable card layouts with equal spacing",
+    "Cookie-cutter design lacking context-specific character",
+    "Space Grotesk across all generations"
+  ],
+  "violations": [],
+  "verdict": "PASS"
+}

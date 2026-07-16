@@ -1,0 +1,64 @@
+{
+  "auditDate": "2026-07-15T18:00:51.358Z",
+  "testApplication": "NutriPeak Performance (Luxury Supplement Store)",
+  "classifications": {
+    "UI/UX Pro Max": {
+      "status": "INTEGRATED",
+      "evidence": "Palette colors in CSS custom properties"
+    },
+    "Design Intelligence": {
+      "status": "INTEGRATED",
+      "evidence": "DI primary #2563EB in CSS"
+    },
+    "DesignDNA": {
+      "status": "INTEGRATED",
+      "evidence": "Industry ecommerce determines template selection"
+    },
+    "Frontend Design": {
+      "status": "INTEGRATED",
+      "evidence": "BannedDefaults prevent generic AI patterns"
+    },
+    "Taste": {
+      "status": "INTEGRATED",
+      "evidence": "No generic AI patterns found"
+    },
+    "Impeccable": {
+      "status": "INTEGRATED",
+      "evidence": "Polish patterns in code"
+    },
+    "Framer Motion": {
+      "status": "INTEGRATED",
+      "evidence": "motion components in TSX"
+    },
+    "21st.dev": {
+      "status": "ADVISORY",
+      "evidence": "Engine generates recommendations; runtime install required"
+    },
+    "Find-Skills": {
+      "status": "INTEGRATED",
+      "evidence": "Auto-discovery in orchestrator before pipeline"
+    },
+    "UI/UX Polish": {
+      "status": "ADVISORY",
+      "evidence": "Polish passes are guidelines, not code transformers"
+    }
+  },
+  "summary": {
+    "integrated": [
+      "UI/UX Pro Max",
+      "Design Intelligence",
+      "DesignDNA",
+      "Frontend Design",
+      "Taste",
+      "Impeccable",
+      "Framer Motion",
+      "Find-Skills"
+    ],
+    "advisory": [
+      "21st.dev",
+      "UI/UX Polish"
+    ],
+    "integratedCount": 8,
+    "advisoryCount": 2
+  }
+}

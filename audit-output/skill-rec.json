@@ -1,0 +1,200 @@
+{
+  "colors": {
+    "palette": {
+      "primary": "#059669",
+      "onPrimary": "#FFFFFF",
+      "secondary": "#10B981",
+      "accent": "#EA580C",
+      "background": "#ECFDF5",
+      "foreground": "#064E3B",
+      "card": "#FFFFFF",
+      "muted": "#E8F1F3",
+      "border": "#A7F3D0",
+      "destructive": "#DC2626",
+      "ring": "#059669"
+    },
+    "primary": "#059669",
+    "secondary": "#10B981",
+    "accent": "#EA580C",
+    "background": "#ECFDF5",
+    "foreground": "#064E3B",
+    "reasoning": "Selected ecommerce palette for ecommerce industry"
+  },
+  "typography": {
+    "headingFont": "Plus Jakarta Sans",
+    "bodyFont": "Inter",
+    "monoFont": "JetBrains Mono",
+    "scale": {
+      "display": {
+        "size": "4.5rem",
+        "lineHeight": "1",
+        "weight": "800"
+      },
+      "h1": {
+        "size": "3.5rem",
+        "lineHeight": "1.1",
+        "weight": "700"
+      },
+      "h2": {
+        "size": "2.5rem",
+        "lineHeight": "1.2",
+        "weight": "600"
+      },
+      "h3": {
+        "size": "1.875rem",
+        "lineHeight": "1.3",
+        "weight": "600"
+      },
+      "h4": {
+        "size": "1.375rem",
+        "lineHeight": "1.4",
+        "weight": "500"
+      },
+      "body": {
+        "size": "1rem",
+        "lineHeight": "1.6",
+        "weight": "400"
+      },
+      "small": {
+        "size": "0.875rem",
+        "lineHeight": "1.5",
+        "weight": "400"
+      }
+    },
+    "reasoning": "Selected modern font pairing for ecommerce"
+  },
+  "layout": {
+    "heroLayout": "centered",
+    "sectionSpacing": "py-24 sm:py-32",
+    "containerMaxWidth": "max-w-7xl",
+    "gridColumns": {
+      "sm": 1,
+      "md": 2,
+      "lg": 3
+    },
+    "reasoning": "Layout optimized for target implementation with 7 UI components"
+  },
+  "animation": {
+    "library": "framer-motion",
+    "scrollReveal": true,
+    "staggerAnimations": true,
+    "hoverEffects": true,
+    "pageTransitions": false,
+    "reasoning": "Framer Motion orchestration layer using scroll reveals and component stagger patterns"
+  },
+  "components": [
+    {
+      "name": "Navbar",
+      "source": "custom",
+      "props": [],
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "name": "Hero",
+      "source": "custom",
+      "props": [],
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "name": "Featured-products",
+      "source": "custom",
+      "props": [],
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "name": "Categories",
+      "source": "custom",
+      "props": [],
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "name": "Testimonials",
+      "source": "custom",
+      "props": [],
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "name": "Newsletter",
+      "source": "custom",
+      "props": [],
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "name": "Footer",
+      "source": "custom",
+      "props": [],
+      "variants": [
+        "default"
+      ]
+    }
+  ],
+  "uxGuidelines": [
+    "Touch targets minimum 44x44px",
+    "Color contrast ratio 4.5:1 for text",
+    "Visible focus states on interactive elements",
+    "Loading states for async operations",
+    "Error messages near the input field",
+    "Mobile-first responsive design",
+    "Progressive disclosure for complex forms",
+    "Consistent navigation patterns",
+    "Accessible color palette",
+    "Reduced motion support",
+    "Maximum 7±2 navigation items",
+    "Form labels always visible (not just placeholders)",
+    "Confirmation dialogs for destructive actions",
+    "Skeleton loading instead of spinners",
+    "Sticky CTAs on mobile",
+    "Max 3 form fields per row on desktop",
+    "Password strength indicator",
+    "Auto-save for long forms",
+    "Optimistic UI updates",
+    "Infinite scroll with load-more fallback",
+    "BOLD aesthetic direction — never generic, never safe",
+    "Distinctive typography — avoid Inter, Roboto, Arial; use characterful font pairings",
+    "Cohesive color theme — dominant colors with sharp accents, not timid palettes",
+    "Motion for micro-interactions — CSS-only for HTML, Framer Motion for React",
+    "Spatial composition — asymmetry, overlap, diagonal flow, generous negative space",
+    "Backgrounds & atmosphere — gradient meshes, noise textures, geometric patterns",
+    "No generic AI aesthetics — every design must feel handcrafted",
+    "Typography must be distinctive and context-appropriate",
+    "Color palette must be cohesive, not random",
+    "Layout must break grid intentionally, not accidentally",
+    "Animations must serve purpose, not distract",
+    "Spacing must be deliberate, not default",
+    "Every pixel must be intentional",
+    "Every animation must be smooth and purposeful",
+    "Every interaction must feel responsive",
+    "Every visual must be cohesive",
+    "Every detail must be refined"
+  ],
+  "designPhilosophy": {
+    "aestheticDirection": "soft/pastel",
+    "bannedDefaults": [
+      "Inter, Roboto, Arial, system fonts as primary",
+      "Purple gradients on white backgrounds",
+      "Predictable card layouts with equal spacing",
+      "Cookie-cutter design lacking context-specific character",
+      "Space Grotesk across all generations"
+    ],
+    "qualityLevel": "agency-quality",
+    "polishPasses": [
+      "First pass: Layout and structure",
+      "Second pass: Typography and spacing",
+      "Third pass: Color and contrast",
+      "Fourth pass: Animations and micro-interactions",
+      "Fifth pass: Details and edge cases"
+    ]
+  }
+}

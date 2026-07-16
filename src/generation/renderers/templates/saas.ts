@@ -25,7 +25,7 @@ interface PricingCardProps {
 
 export default function PricingCard({ name, price, period = 'month', features, highlighted, cta = 'Get Started', onSelect }: PricingCardProps) {
   return (
-    <motion.div whileHover={{ y: -8 }} transition={{ duration: 0.3 }} className={\`rounded-2xl p-8 flex flex-col \${highlighted ? 'bg-indigo-600 text-white ring-2 ring-indigo-600 ring-offset-4' : 'bg-white border border-neutral-200'}\`}>
+    <motion.div whileHover={{ y: -8 }} transition={{ duration: 0.3 }} className={\`rounded-2xl p-8 flex flex-col \${highlighted ? 'bg-indigo-600 text-white ring-2 ring-indigo-600 ring-offset-4' : 'bg-white border border-border'}\`}>
       <h3 className="font-display font-bold text-xl mb-2">{name}</h3>
       <div className="mb-6">
         <span className="text-4xl font-bold">₹{price.toLocaleString('en-IN')}</span>
@@ -71,14 +71,14 @@ export default function FeatureGrid({ title, subtitle, features }: FeatureGridPr
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="font-display font-bold text-3xl md:text-4xl mb-4">{title}</h2>
-          <p className="text-neutral-600 max-w-2xl mx-auto">{subtitle}</p>
+          <p className="text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
               <div className="text-3xl mb-4">{feature.icon}</div>
               <h3 className="font-display font-bold text-lg mb-2">{feature.title}</h3>
-              <p className="text-neutral-600 text-sm">{feature.description}</p>
+              <p className="text-muted-foreground text-sm">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -117,14 +117,14 @@ export default function DashboardLayout({ children, sidebarItems }: DashboardLay
 
   return (
     <div className="flex h-screen bg-neutral-50">
-      <aside className={\`bg-white border-r border-neutral-200 transition-all duration-300 \${sidebarOpen ? 'w-64' : 'w-20'}\`}>
-        <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
+      <aside className={\`bg-white border-r border-border transition-all duration-300 \${sidebarOpen ? 'w-64' : 'w-20'}\`}>
+        <div className="p-4 border-b border-border flex items-center justify-between">
           <h1 className="font-display font-bold text-xl">Dashboard</h1>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-neutral-100 rounded-xl"><Menu size={20} /></button>
         </div>
         <nav className="p-4 space-y-2">
           {items.map((item, i) => (
-            <button key={i} className={\`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors \${item.active ? 'bg-indigo-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'}\`}>
+            <button key={i} className={\`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors \${item.active ? 'bg-indigo-600 text-white' : 'text-muted-foreground hover:bg-neutral-100'}\`}>
               <item.icon size={20} />
               {sidebarOpen && <span>{item.label}</span>}
             </button>
@@ -132,9 +132,9 @@ export default function DashboardLayout({ children, sidebarItems }: DashboardLay
         </nav>
       </aside>
       <div className="flex-grow flex flex-col">
-        <header className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
+        <header className="bg-white border-b border-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Search size={20} className="text-neutral-400" />
+            <Search size={20} className="text-muted-foreground" />
             <input placeholder="Search..." className="bg-transparent focus:outline-none text-sm" />
           </div>
           <div className="flex items-center gap-4">
@@ -169,7 +169,7 @@ export default function StatsCard({ title, value, change, icon }: StatsCardProps
   return (
     <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm text-neutral-500">{title}</span>
+        <span className="text-sm text-muted-foreground">{title}</span>
         {icon && <span className="text-2xl">{icon}</span>}
       </div>
       <div className="flex items-end gap-2">

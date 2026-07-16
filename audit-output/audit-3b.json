@@ -1,0 +1,8 @@
+{
+  "skill": "DesignDNA",
+  "test": "DNA primary fallback",
+  "dnaPrimary": "263.4 83.5% 57.8%",
+  "found": true,
+  "note": "DNA is fallback — DI takes precedence when present",
+  "verdict": "PASS"
+}

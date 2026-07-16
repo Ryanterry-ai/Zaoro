@@ -34,7 +34,12 @@ import {
   type DbSchema,
   type TechStack,
 } from '../../generation/scaffold-generators.js';
+import { getIndustryCopy } from '../../bos/industry-copy-schema.js';
 import { SkillIntegrator } from '../../generation/skill-integrator.js';
+import { renderWith, registerRenderer } from '../../generation/renderers/renderer.js';
+import { ReactRenderer } from '../../generation/renderers/react-renderer.js';
+import type { ApplicationSpec, ComponentSpec, PageSpec } from '../../bos/schemas/blueprint/execution-blueprint.schema.js';
+import type { RenderContext, RenderedFile } from '../../generation/renderers/renderer.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,96 +139,110 @@ export class CodeWriterStage extends BaseStage {
     fs.mkdirSync(projectRoot, { recursive: true });
     ctx.log.info(`Project root: ${projectRoot}`);
 
-    // ─── 3. Generate config files ──────────────────────────────────────────
+    // ─── 3. Build ApplicationSpec from orchestrator artifacts ──────────────
 
-    const files: Array<{ path: string; content: string }> = [];
+    const appName = (typeof manifest.name === 'string' ? manifest.name : projectName) || projectName;
+    const industry = (manifest as unknown as Record<string, unknown>)['industry'] as string ?? 'general';
 
-    // package.json
-    files.push({
-      path: 'package.json',
-      content: generatePackageJson(manifest as ProjectManifest, techStack),
-    });
+    // Map orchestrator PageDef[] to ApplicationSpec PageSpec[]
+    // Pages may have components as string[] (PageDef) or sections[].components (agent-generators)
+    const specPages: PageSpec[] = pages.map(page => {
+      let pageComponents: ComponentSpec[] = [];
 
-    // tsconfig.json
-    files.push({
-      path: 'tsconfig.json',
-      content: generateTsConfig(),
-    });
-
-    // tailwind.config.ts
-    files.push({
-      path: 'tailwind.config.ts',
-      content: generateTailwindConfig(tokens),
-    });
-
-    // next.config.mjs
-    files.push({
-      path: 'next.config.mjs',
-      content: generateNextConfig(),
-    });
-
-    // postcss.config.mjs
-    files.push({
-      path: 'postcss.config.mjs',
-      content: generatePostcssConfig(),
-    });
-
-    // ─── 4. Generate CSS and layout ────────────────────────────────────────
-
-    // globals.css
-    files.push({
-      path: 'src/app/globals.css',
-      content: generateGlobalCss(tokens),
-    });
-
-    // layout.tsx — pass pages for nav and extract business content from components
-    const navPages = pages.map(p => ({ name: p.name, path: p.path }));
-    // Extract business content from hero component's content field
-    const heroComp = components.find(c => c.type === 'hero');
-    const heroContent = heroComp?.content as Record<string, unknown> | undefined;
-    const bizContent = {
-      ...(heroContent?.subtitle && typeof heroContent.subtitle === 'string' ? { description: heroContent.subtitle } : {}),
-      ...(manifest.description && typeof manifest.description === 'string' ? { description: manifest.description } : {}),
-      contact: {} as Record<string, string>,
-    };
-    // Try to extract contact from any component's content
-    for (const comp of components) {
-      if (comp.content && typeof comp.content === 'object') {
-        const c = comp.content as Record<string, unknown>;
-        if (c.contact && typeof c.contact === 'object') {
-          Object.assign(bizContent.contact, c.contact);
-        }
+      // Handle agent-generators format: page.sections[].components[]
+      if (page.sections && Array.isArray(page.sections)) {
+        pageComponents = (page.sections as unknown as Array<{ name?: string; type?: string; components?: Array<{ name: string; type?: string; props?: Record<string, string>; content?: Record<string, unknown> }> }>)
+          .flatMap(s => s.components ?? [])
+          .map(comp => this.componentDefToSpec(comp as unknown as ComponentDef, industry, appName));
       }
-    }
-    files.push({
-      path: 'src/app/layout.tsx',
-      content: generateRootLayout(manifest as ProjectManifest, tokens, navPages, bizContent),
+      // Handle PageDef format: page.components as string[]
+      else if (page.components && Array.isArray(page.components)) {
+        pageComponents = (page.components as unknown as string[])
+          .map(compName => {
+            const comp = components.find(c => c.name === compName);
+            if (!comp) return null;
+            return this.componentDefToSpec(comp, industry, appName);
+          })
+          .filter((c): c is ComponentSpec => c !== null);
+      }
+
+      // If no components mapped from the page definition, add all components to the root page
+      return {
+        pageId: `page-${page.path}`,
+        path: page.path,
+        name: page.name,
+        type: 'landing',
+        layout: page.layout ?? 'default',
+        components: pageComponents,
+      };
     });
 
-    // ─── 5. Generate pages ─────────────────────────────────────────────────
-
-    for (const page of pages) {
-      const rawPath = typeof page.path === 'string' ? page.path : '/';
-      const route = rawPath === '/' ? 'page.tsx' : `${rawPath.slice(1).replace(/^\//, '')}/page.tsx`;
-      const pageContent = this.generatePageFile(page, components, tokens, endpoints);
-      files.push({
-        path: `src/app/${route}`,
-        content: pageContent,
+    // Ensure root page exists
+    if (!specPages.some(p => p.path === '/')) {
+      specPages.unshift({
+        pageId: 'page-home',
+        path: '/',
+        name: 'Home',
+        type: 'landing',
+        layout: 'default',
+        components: components.map(c => this.componentDefToSpec(c, industry, appName)),
       });
     }
 
-    // ─── 6. Generate components ────────────────────────────────────────────
+    const appSpec: ApplicationSpec = {
+      id: `spec-${projectName}`,
+      createdAt: new Date().toISOString(),
+      appId: projectName,
+      appName,
+      industry,
+      themeId: `theme-${projectName}`,
+      pages: specPages,
+      metadata: {
+        ...(manifest.description ? { description: manifest.description as string } : {}),
+      },
+    };
 
-    for (const comp of components) {
-      const rawName = typeof comp.name === 'string' ? comp.name : 'Component';
-      const componentContent = this.generateComponentFile(comp, tokens);
-      files.push({
-        path: `src/components/${rawName}.tsx`,
-        content: componentContent,
-      });
+    // ─── 4. Build RenderContext from artifacts ─────────────────────────────
+
+    const renderContext: RenderContext = {
+      theme: {
+        colors: tokens.colors ?? {},
+        typography: tokens.typography ?? {},
+        spacing: tokens.spacing ?? {},
+      },
+      includeComments: false,
+      includeTests: false,
+      outputDir: path.join(projectRoot, 'src'),
+      agentMode: true,
+    };
+
+    // ─── 5. Render via ReactRenderer (replaces hardcoded templates) ───────
+
+    // Register the ReactRenderer so renderWith() can find it
+    registerRenderer(new ReactRenderer());
+
+    const renderResult = renderWith(appSpec, 'react', renderContext);
+
+    if (renderResult.warnings.length > 0) {
+      warnings.push(...renderResult.warnings);
     }
 
-    // ─── 7. Generate Prisma schema ─────────────────────────────────────────
+    // Convert RenderedFile[] to our file list format
+    const files: Array<{ path: string; content: string }> = [];
+    for (const rf of renderResult.files) {
+      // ReactRenderer uses ../ prefix for root config files; normalize paths
+      let normalizedPath = rf.path;
+      if (normalizedPath.startsWith('../')) {
+        normalizedPath = normalizedPath.slice(3);
+      } else if (!normalizedPath.startsWith('src/') && !normalizedPath.startsWith('prisma/')) {
+        normalizedPath = `src/${normalizedPath}`;
+      }
+      files.push({ path: normalizedPath, content: rf.content });
+    }
+
+    ctx.log.info(`Code Writer: ReactRenderer produced ${renderResult.files.length} files`);
+
+    // ─── 6. Generate Prisma schema ─────────────────────────────────────────
 
     if (schema && (schema.tables?.length ?? 0) > 0) {
       files.push({
@@ -237,7 +256,7 @@ export class CodeWriterStage extends BaseStage {
       });
     }
 
-    // ─── 8. Generate API routes ────────────────────────────────────────────
+    // ─── 7. Generate API routes ────────────────────────────────────────────
 
     for (const endpoint of endpoints) {
       // Remove leading slash and /api prefix if present
@@ -247,20 +266,11 @@ export class CodeWriterStage extends BaseStage {
       }
       files.push({
         path: `src/app/api/${routePath}/route.ts`,
-        content: generateApiRoute(endpoint),
+        content: generateApiRoute(endpoint, schema),
       });
     }
 
-    // ─── 9. Generate index page if no root page exists ─────────────────────
-
-    if (!pages.some(p => p.path === '/')) {
-      files.push({
-        path: 'src/app/page.tsx',
-        content: this.generateIndexPage(manifest, components, tokens),
-      });
-    }
-
-    // ─── 10. Write all files to disk ───────────────────────────────────────
+    // ─── 8. Write all files to disk ───────────────────────────────────────
 
     let writtenCount = 0;
     for (const file of files) {
@@ -272,7 +282,7 @@ export class CodeWriterStage extends BaseStage {
 
     ctx.log.info(`Code Writer: wrote ${writtenCount} files to ${projectRoot}`);
 
-    // ─── 11. Set artifacts ─────────────────────────────────────────────────
+    // ─── 10. Set artifacts ─────────────────────────────────────────────────
 
     ctx.setArtifact('code.files', files.map(f => f.path));
     ctx.setArtifact('code.fileCount', writtenCount);
@@ -296,6 +306,103 @@ export class CodeWriterStage extends BaseStage {
       warnings,
       md,
     );
+  }
+
+  // ─── Artifact Conversion ────────────────────────────────────────────────
+
+  /**
+   * Convert an orchestrator ComponentDef to a ReactRenderer ComponentSpec.
+   * This bridges the orchestrator's flat data model to the renderer's rich spec.
+   */
+  private componentDefToSpec(comp: ComponentDef, industry?: string, appName?: string): ComponentSpec {
+    const type = this.mapComponentType(comp.type ?? 'text');
+    const content: Record<string, { value: string; type: 'text' }> = {};
+
+    // Map props/content to ComponentSpec content fields
+    const src = { ...(comp.props ?? {}), ...(comp.content ?? {}) };
+    for (const [key, val] of Object.entries(src)) {
+      if (typeof val === 'string') {
+        content[key] = { value: val, type: 'text' };
+      } else if (typeof val === 'object' && val !== null && 'value' in val) {
+        content[key] = val as { value: string; type: 'text' };
+      }
+    }
+
+    // Enrich HeroBanner with industry-specific content
+    if (type === 'HeroBanner' && industry) {
+      try {
+        const copy = getIndustryCopy(industry);
+        const name = appName ?? 'your business';
+        
+        // Use industry-specific copy if not already set by LLM
+        if (!content.title || content.title.value === 'Section' || content.title.value === comp.name) {
+          content.title = { value: copy.heroPrimaryHeading.replace('{appName}', name), type: 'text' };
+        }
+        if (!content.subtitle || content.subtitle.value === '') {
+          content.subtitle = { value: copy.heroSubheading, type: 'text' };
+        }
+        if (!content.badge || content.badge.value === '') {
+          content.badge = { value: copy.heroTrustBadges[0] ?? industry, type: 'text' };
+        }
+        
+        // Set actions from industry copy if not present
+        if (!src.actions || (Array.isArray(src.actions) && src.actions.length === 0)) {
+          (src as any).actions = [
+            { label: copy.heroPrimaryButton, action: '#features', style: 'primary' },
+            { label: copy.heroSecondaryButton, action: '#about', style: 'ghost' },
+          ];
+        }
+      } catch {
+        // Industry copy not available, use defaults
+      }
+    }
+
+    // Ensure common fields have defaults
+    if (!content.title) content.title = { value: comp.name ?? 'Section', type: 'text' };
+
+    return {
+      type,
+      content,
+      items: Array.isArray(src.items) ? src.items : undefined,
+      stats: Array.isArray(src.stats) ? src.stats : undefined,
+      tiers: Array.isArray(src.tiers) ? src.tiers : undefined,
+      fields: Array.isArray(src.fields) ? src.fields : undefined,
+      actions: Array.isArray(src.actions) ? src.actions : undefined,
+      layout: typeof src.layout === 'object' ? src.layout as { alignment?: 'center' | 'left' | 'right'; columns?: number; maxWidth?: string; padding?: string } : undefined,
+    };
+  }
+
+  /**
+   * Map orchestrator component type strings to ReactRenderer component type names.
+   */
+  private mapComponentType(type: string): string {
+    const typeMap: Record<string, string> = {
+      hero: 'HeroBanner',
+      banner: 'HeroBanner',
+      features: 'FeatureGrid',
+      grid: 'FeatureGrid',
+      pricing: 'PricingTable',
+      testimonials: 'Testimonials',
+      cta: 'CTASection',
+      about: 'AboutSection',
+      team: 'TeamSection',
+      contact: 'ContactForm',
+      footer: 'GlobalFooter',
+      stats: 'StatsSection',
+      gallery: 'GallerySection',
+      carousel: 'CarouselSection',
+      form: 'ContactForm',
+      map: 'MapSection',
+      calendar: 'CalendarSection',
+      details: 'DetailsSection',
+      card: 'CardSection',
+      price: 'PricingTable',
+      text: 'TextSection',
+      nav: 'Navbar',
+      navbar: 'Navbar',
+      mission: 'MissionSection',
+    };
+    return typeMap[type.toLowerCase()] ?? type;
   }
 
   // ─── Page Generator ──────────────────────────────────────────────────────

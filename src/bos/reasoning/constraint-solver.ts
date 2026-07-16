@@ -78,7 +78,8 @@ export function createDefaultConstraints(): Constraint[] {
       type: 'required',
       description: 'Any e-commerce app must have a payment gateway',
       check: (ctx, decisions) => {
-        const isEcommerce = ctx.industry.toLowerCase().includes('commerce') || ctx.businessModels.includes('direct-sales');
+        const industry = (ctx.industry ?? '').toLowerCase();
+        const isEcommerce = industry.includes('commerce') || ctx.businessModels.includes('direct-sales');
         if (!isEcommerce) return { satisfied: true, violations: [], suggestions: [] };
 
         const hasPayment = decisions.some(d => d.action.type === 'add_integration');
@@ -95,7 +96,8 @@ export function createDefaultConstraints(): Constraint[] {
       type: 'required',
       description: 'Subscription business model requires a pricing page',
       check: (ctx, decisions) => {
-        const isSubscription = ctx.businessModels.includes('subscription') || ctx.businessModels.includes('Subscription');
+        const businessModels = ctx.businessModels ?? [];
+        const isSubscription = businessModels.includes('subscription') || businessModels.includes('Subscription');
         if (!isSubscription) return { satisfied: true, violations: [], suggestions: [] };
 
         const hasPricing = decisions.some(d => d.action.type === 'add_page' && d.action.path === '/pricing');
@@ -112,7 +114,8 @@ export function createDefaultConstraints(): Constraint[] {
       type: 'required',
       description: 'Healthcare industry requires HIPAA or similar compliance',
       check: (ctx, decisions) => {
-        const isHealthcare = ctx.industry.toLowerCase().includes('healthcare') || ctx.industry.toLowerCase().includes('medical');
+        const industry = (ctx.industry ?? '').toLowerCase();
+        const isHealthcare = industry.includes('healthcare') || industry.includes('medical');
         if (!isHealthcare) return { satisfied: true, violations: [], suggestions: [] };
 
         const hasCompliance = decisions.some(d => d.action.type === 'add_compliance');

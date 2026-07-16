@@ -286,6 +286,18 @@ describe('getPrimitivesForCapabilities', () => {
     const names = prims.map(p => p.name);
     expect(names).toContain('SubscriptionSelector');
   });
+
+  it('should resolve canonical ids via the registry (Phase R2)', () => {
+    // Legacy alias `commerce` and canonical id `commerce.checkout` both route to ecommerce.
+    const fromAlias = getPrimitivesForCapabilities(['commerce']).map(p => p.name);
+    const fromCanonical = getPrimitivesForCapabilities(['commerce.checkout']).map(p => p.name);
+    expect(fromAlias).toContain('ProductCard');
+    expect(fromCanonical).toContain('ProductCard');
+
+    // Canonical CRM id routes to crm primitives.
+    const crm = getPrimitivesForCapabilities(['crm.contacts']).map(p => p.name);
+    expect(crm).toContain('CRMBoard');
+  });
 });
 
 describe('buildPrimitivesCatalog', () => {

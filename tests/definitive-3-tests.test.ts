@@ -4,7 +4,7 @@ import { buildBREContext } from '../src/bos/intake-parser.js';
 
 describe('Definitive Test 1 — Content Specificity (not just structure)', () => {
   it('coffee shop produces real coffee content, not generic filler', async () => {
-    const ctx = buildBREContext('a coffee shop in Austin with online ordering');
+    const ctx = await buildBREContext('a coffee shop in Austin with online ordering');
     const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
 
     const allContent = result.renderResult.files.map(f => f.content).join('\n').toLowerCase();
@@ -27,7 +27,7 @@ describe('Definitive Test 1 — Content Specificity (not just structure)', () =>
 
 describe('Definitive Test 2 — Original Broken Prompt (regression)', () => {
   it('supplement store for Indian customers produces correct content', async () => {
-    const ctx = buildBREContext('Build a fully functional interactive responsive multi brands e commerce supplement store for Indian customers');
+    const ctx = await buildBREContext('Build a fully functional interactive responsive multi brands e commerce supplement store for Indian customers');
     const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
 
     // App name must NOT be just "Indian"
@@ -61,7 +61,7 @@ describe('Definitive Test 2 — Original Broken Prompt (regression)', () => {
 
 describe('Definitive Test 3 — B2B Regression Check', () => {
   it('B2B wholesale distributor classified correctly', async () => {
-    const ctx = buildBREContext('B2B wholesale supplement distributor selling proteins to gyms across India');
+    const ctx = await buildBREContext('B2B wholesale supplement distributor selling proteins to gyms across India');
     const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
 
     // Should NOT be classified as FITNESS_GYM

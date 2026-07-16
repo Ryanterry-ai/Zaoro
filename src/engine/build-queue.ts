@@ -233,7 +233,7 @@ try {
   writeProgress('init', 'started', 'Build started — analyzing prompt');
   writeProgress('init', 'info', 'Loading orchestrator and dependencies...');
   const tBi = Date.now();
-  await orch.processGenerationIntent(payload.id, { type: payload.type, prompt: payload.prompt }, { provider: config.provider, apiKey: config.apiKey });
+  await orch.processInput(payload.id, payload.prompt || payload.type, { provider: config.provider, apiKey: config.apiKey });
   writeProgress('compile', 'info', 'Compilation finished', { duration: Date.now() - tBi });
 
   // ═══ SELF-HEALING: Auto-repair TypeScript errors ═══════════════════════

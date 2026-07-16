@@ -4,7 +4,7 @@ import { VersionedObject, EvidenceRef } from '../common.js';
 export const IntegrationProviderSchema = z.object({
   name: z.string(),
   type: z.enum(['database', 'auth', 'payment', 'email', 'analytics', 'cms', 'storage', 'maps', 'social', 'messaging', 'erp', 'crm']),
-  config: z.record(z.string()).default({}),
+  config: z.record(z.string(), z.string()).default({}),
   required: z.boolean().default(false),
   rateLimits: z.object({
     requests: z.number().optional(),

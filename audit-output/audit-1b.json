@@ -1,0 +1,9 @@
+{
+  "skill": "UI/UX Pro Max + Design Intelligence",
+  "test": "Heading font in CSS",
+  "skillHeadingFont": "Plus Jakarta Sans",
+  "diHeadingFont": "Plus Jakarta Sans, sans-serif",
+  "hasSkillFont": true,
+  "hasDIFont": true,
+  "verdict": "PASS"
+}

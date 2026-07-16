@@ -73,14 +73,14 @@ async function runTests(prompts: string[]): Promise<void> {
       console.log('\n[test] Running deterministic pipeline...');
       const tPipeline = Date.now();
 
-      const breContext = buildBREContext(prompt);
+      const breContext = await buildBREContext(prompt);
       breContext.appName = enriched.businessName;
 
       const pipelineResult = await runBuildPipeline(breContext, {
         platform: 'react',
         outputDir: path.join(workspaceDir, 'src'),
         workspaceDir,
-      });
+      }, undefined, (breContext as any).__industryScore);
 
       const { renderResult, applicationSpec } = pipelineResult;
 

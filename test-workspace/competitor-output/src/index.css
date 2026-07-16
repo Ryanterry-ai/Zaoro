@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+}
+
+/* Custom styles for professional fitness vibe */
+body {
+  font-family: var(--font-sans);
+  background-color: #fafafa;
+  color: #171717;
+}
+
+.veg-dot-green {
+  border: 1px solid #22c55e;
+  padding: 2px;
+}
+
+.veg-dot-green::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e;
+  border-radius: 50%;
+}
+
+.nonveg-dot-red {
+  border: 1px solid #ef4444;
+  padding: 2px;
+}
+
+.nonveg-dot-red::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+}
+

@@ -16,8 +16,10 @@
  * - audience is now populated (B2C vs B2B vs internal)
  */
 
-import type { BREContext } from './reasoning/rules-engine.js';
-import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema.js';
+import type { BREContext } from './reasoning/rules-engine';
+import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema';
+import type { BusinessResearch, ScrapedContent } from './types';
+import { understandBusiness } from '../orchestration/business-intelligence/engine.js';
 
 interface IndustryMapping {
   industry: string;
@@ -84,6 +86,21 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
     audience: 'b2b',
   },
   {
+    industry: 'perfume',
+    subIndustries: {
+      niche: ['perfume', 'fragrance', 'scent', 'parfum', 'eau de toilette',
+        'eau de parfum', 'niche perfume', 'luxury perfume', 'signature scent',
+        'olfactory', 'perfumery'],
+    },
+    keywords: ['perfume', 'fragrance', 'scent', 'parfum', 'eau de', 'perfumery',
+      'olfactory', 'niche perfume', 'luxury perfume', 'signature scent',
+      'wearable fragrance', 'bespoke scent'],
+    businessModels: ['direct-sales'],
+    capabilities: ['commerce', 'payments', 'gallery', 'search', 'reviews'],
+    entities: ['Product', 'Scent', 'Collection', 'Order', 'Review'],
+    audience: 'b2c',
+  },
+  {
     industry: 'ecommerce',
     subIndustries: {
       fashion: ['fashion', 'clothing', 'apparel', 'wear', 'style', 'outfit'],
@@ -96,6 +113,9 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
         'multivitamin', 'glutamine', 'mass gainer', 'fat burner', 'omega',
         'calcium', 'iron', 'zinc', 'magnesium', 'probiotic', 'collagen',
         'ashwagandha', 'saffron', 'shilajit', 'gokhru', 'yohimbine'],
+      footwear: ['footwear', 'shoes', 'sneakers', 'boots', 'heels', 'sandals', 'sneaker',
+        'kicks', 'sole', 'insole', 'outsole', 'running shoes', 'athletic shoes',
+        'casual shoes', 'formal shoes', 'leather shoes', 'shoe brand', 'shoe store'],
     },
     keywords: ['ecommerce', 'e-commerce', 'shop', 'store', 'sell', 'product', 'cart',
       'buy', 'purchase', 'retail', 'catalog', 'checkout', 'shipping', 'inventory',
@@ -104,6 +124,10 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
       'supplement', 'supplements', 'whey protein', 'protein powder', 'gym supplements',
       'bodybuilding supplements', 'nutrition store', 'health store', 'health shop',
       'online supplement', 'supplement store', 'buy supplements',
+      // Footwear specific
+      'footwear', 'shoes', 'sneakers', 'boots', 'heels', 'sandals', 'sneaker',
+      'kicks', 'running shoes', 'athletic shoes', 'casual shoes', 'formal shoes',
+      'leather shoes', 'shoe brand', 'shoe store', 'shop shoes', 'buy shoes',
     ],
     businessModels: ['direct-sales', 'marketplace'],
     capabilities: ['commerce', 'payments', 'inventory', 'orders', 'analytics', 'search',
@@ -492,7 +516,8 @@ export function detectIndustryWithScore(prompt: string): IndustryDetectionResult
     for (const [sub, subKws] of Object.entries(bestMatch.subIndustries)) {
       let subScore = 0;
       for (const kw of subKws) {
-        if (lower.includes(kw)) subScore += kw.split(' ').length;
+        const kwRegex = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+        if (kwRegex.test(lower)) subScore += kw.split(' ').length;
       }
       if (subScore > maxSubScore) {
         maxSubScore = subScore;
@@ -620,9 +645,11 @@ function extractAppName(prompt: string): string | undefined {
     /["']([A-Z][A-Za-z0-9\s&'.-]{1,40})["']/,
     // Capital-letter multi-word after "for": "ERP for HospitalOS"
     /(?:for|called|named)\s+([A-Z][A-Za-z0-9]{1,20}(?:\s+[A-Z][A-Za-z0-9]{1,20}){0,2})/,
+    // Leading name: "Austin Kitchen, a modern restaurant..." or "Blue Bottle Coffee — specialty..."
+    /^([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+){0,3})(?:\s*[,\u2014\u2013\-:]|\s+(?:a|an|the|is|are|was|serving|specializing|offering|with|for|that)\b)/,
   ];
 
-  // Words that are NOT business names — adjectives, descriptors, generic nouns
+  // Words that are NOT business names — adjectives, descriptors, generic nouns, action verbs
   const notNames = new Set([
     'indian', 'american', 'chinese', 'japanese', 'korean', 'french', 'german', 'italian',
     'british', 'european', 'african', 'asian', 'australian', 'canadian', 'mexican',
@@ -635,6 +662,9 @@ function extractAppName(prompt: string): string | undefined {
     'fully', 'interactive', 'responsive', 'functional', 'dynamic', 'static',
     'small', 'medium', 'large', 'big', 'tiny', 'huge', 'massive',
     'the', 'a', 'an', 'this', 'that', 'these', 'those', 'my', 'your', 'our',
+    'build', 'create', 'make', 'design', 'develop', 'set', 'get', 'start',
+    'need', 'want', 'looking', 'trying', 'help', 'give', 'show', 'find',
+    'wanting', 'looking', 'trying', 'thinking', 'planning', 'working',
   ]);
 
   for (const pat of patterns) {
@@ -655,12 +685,12 @@ function extractAppName(prompt: string): string | undefined {
  * NEVER returns words from the prompt verbatim as a brand name.
  * Combines location + industry keyword creatively to produce brand-sounding names.
  */
-function generateAppName(prompt: string, industry: string, country?: string): string {
+function generateAppName(prompt: string, industry: string, country?: string, subIndustry?: string): string {
   const lower = prompt.toLowerCase()
 
   // Strategy 1: Check for explicit business name in prompt
   const explicitMatch = prompt.match(
-    /(?:called|named|brand(?:\s+name)?(?:\s+is)?)\s+["']?([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)["']?/i
+    /(?:called|named|brand(?:\s+name)?(?:\s+is)?)\s+["']?([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)["']?/
   )
   if (explicitMatch && explicitMatch[1]) {
     const candidate = explicitMatch[1].trim()
@@ -675,7 +705,22 @@ function generateAppName(prompt: string, industry: string, country?: string): st
   const cityMatch = prompt.match(/\bin\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b/)
   const city = cityMatch ? cityMatch[1] : ''
 
-  // Industry-specific brand words
+  // Niche-specific brand words — detect from prompt text directly, not just industry
+  // This ensures "supplement store" gets supplement words even if industry = 'ecommerce'
+  const nicheWords: Array<{ keywords: string[]; words: string[] }> = [
+    { keywords: ['supplement', 'supplements', 'protein', 'whey', 'creatine', 'vitamin', 'nutrition', 'fitness supplement'], words: ['Nutri', 'Fuel', 'Core', 'Build', 'Vita', 'Peak', 'Forge'] },
+    { keywords: ['coffee', 'cafe', 'espresso', 'latte', 'brew', 'roast'], words: ['Brew', 'Roast', 'Grind', 'Press', 'Bean'] },
+    { keywords: ['restaurant', 'dining', 'food', 'kitchen', 'menu', 'dish'], words: ['Table', 'Kitchen', 'Feast', 'Plate', 'Spice', 'Savora'] },
+    { keywords: ['gym', 'fitness', 'workout', 'exercise', 'training'], words: ['Fit', 'Forge', 'Peak', 'Strong', 'Edge'] },
+    { keywords: ['dental', 'dentist', 'teeth', 'oral'], words: ['Smile', 'Dent', 'Care', 'Bright', 'White'] },
+    { keywords: ['salon', 'beauty', 'hair', 'style'], words: ['Glow', 'Style', 'Bloom', 'Lux', 'Aura'] },
+    { keywords: ['spa', 'wellness', 'massage', 'relax'], words: ['Zen', 'Serene', 'Bliss', 'Pure', 'Tranquil'] },
+    { keywords: ['wholesale', 'b2b', 'bulk', 'distributor', 'reseller', 'procurement'], words: ['Supply', 'Trade', 'Source', 'Pro', 'Connect', 'Network'] },
+    { keywords: ['perfume', 'fragrance', 'scent', 'parfum', 'eau de', 'olfactory', 'niche perfume', 'luxury perfume', 'bespoke scent'], words: ['Aetheria', 'Maison', 'Noir', 'Essence', 'Oud', 'Velvet', 'Aura', 'Lumière'] },
+    { keywords: ['footwear', 'shoes', 'sneakers', 'boots', 'heels', 'sandals', 'sneaker', 'kicks', 'sole', 'insole', 'outsole', 'running shoes', 'athletic shoes', 'casual shoes', 'formal shoes', 'leather shoes'], words: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'] },
+  ]
+
+  // Industry-specific brand words (fallback when no niche matches)
   const industryNames: Record<string, string[]> = {
     coffee: ['Brew', 'Roast', 'Grind', 'Press', 'Bean'],
     restaurant: ['Table', 'Kitchen', 'Feast', 'Plate', 'Spice', 'Savora'],
@@ -697,19 +742,42 @@ function generateAppName(prompt: string, industry: string, country?: string): st
     media: ['Press', 'Media', 'Pulse', 'Daily', 'Scope'],
     travel: ['Voyage', 'Travel', 'Trips', 'Go', 'Wander'],
     technology: ['Tech', 'Digital', 'Sys', 'Net', 'Logic'],
+    wholesale: ['Supply', 'Trade', 'Source', 'Pro', 'Connect', 'Network'],
+    perfume: ['Aetheria', 'Maison', 'Noir', 'Essence', 'Oud', 'Velvet', 'Lumière', 'Parfum'],
+    fragrance: ['Aetheria', 'Maison', 'Noir', 'Essence', 'Oud', 'Velvet', 'Lumière', 'Parfum'],
+    beauty: ['Glow', 'Lux', 'Aura', 'Bloom', 'Velvet', 'Lumière'],
+    luxury: ['Maison', 'Atelier', 'Noir', 'Velvet', 'Lumière', 'Essence'],
+    footwear: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'],
+    shoes: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'],
+    sneakers: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'],
   }
 
-  const words = industryNames[industry] || ['Studio', 'Hub', 'Works', 'Space', 'Co']
+  // Pick niche words from prompt text, or fall back to industry words
+  let words: string[] | undefined
+  for (const niche of nicheWords) {
+    if (niche.keywords.some(kw => lower.includes(kw))) {
+      words = niche.words
+      break
+    }
+  }
+  if (!words) {
+    words = industryNames[industry] || ['Studio', 'Hub', 'Works', 'Space', 'Co']
+  }
+
   // Deterministic selection — hash the prompt to pick a word index
   const hash = [...lower].reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
   const word = words[Math.abs(hash) % words.length]
 
+  // India-specific brand patterns — always produce two-word brand names
   if (country === 'IN' || lower.includes('india') || lower.includes('indian') || lower.includes('rupee') || lower.includes('₹')) {
-    if (lower.includes('supplement') || lower.includes('protein') || lower.includes('nutrition')) return 'NutriMart'
-    if (lower.includes('food') || lower.includes('restaurant') || lower.includes('cafe') || lower.includes('tiffin')) return 'TasteHub'
-    if (lower.includes('fashion') || lower.includes('clothing') || lower.includes('wear')) return 'StyleIndia'
-    if (lower.includes('fitness') || lower.includes('gym') || lower.includes('workout')) return 'FitIndia'
-    return city ? `${city}${word}` : `${word}India`
+    if (lower.includes('supplement') || lower.includes('protein') || lower.includes('nutrition')) return `${city || word} Nutrition`
+    if (lower.includes('food') || lower.includes('restaurant') || lower.includes('cafe') || lower.includes('tiffin')) return `${city || word} Kitchen`
+    if (lower.includes('fashion') || lower.includes('clothing') || lower.includes('wear')) return `${city || word} Fashion`
+    if (lower.includes('fitness') || lower.includes('gym') || lower.includes('workout')) return `${city || word} Fitness`
+    if (lower.includes('wholesale') || lower.includes('b2b') || lower.includes('bulk')) return `${city || word} Supply`
+    // Fallback: always combine city + word, or word + industry. Never single word.
+    if (city && city.length > 2) return `${city}${word}`
+    return `${word} ${industry || 'Co'}`
   }
 
   // Combine city + industry word
@@ -722,7 +790,400 @@ function generateAppName(prompt: string, industry: string, country?: string): st
     }
   }
 
-  return `${word} Co`
+  // Never return a single word — always two words minimum
+  const result = `${word} Co`
+  return result.length > 2 ? result : `${word} Studio`
+}
+
+// ─── Business Research extraction ────────────────────────────────────────────
+// Analyzes the prompt to answer the fundamental business questions:
+// What is the business? Who are the users? How does revenue flow?
+// How does the customer flow? How does the business workflow operate?
+
+const PERSONA_KEYWORDS: Record<string, string[]> = {
+  fitness: ['gym enthusiast', 'fitness beginner', 'athlete', 'bodybuilder', 'yoga practitioner', 'health-conscious'],
+  ecommerce: ['shopper', 'buyer', 'bargain hunter', 'brand loyalist', 'first-time buyer', 'bulk buyer'],
+  restaurant: ['foodie', 'diner', 'takeout customer', 'health-conscious eater', 'family diner'],
+  healthcare: ['patient', 'health-conscious', 'senior', 'parent', 'chronic condition manager'],
+  saas: ['developer', 'project manager', 'team lead', 'startup founder', 'enterprise admin'],
+  realestate: ['home buyer', 'investor', 'renter', 'first-time buyer', 'property developer'],
+  education: ['student', 'professional learner', 'career changer', 'certification seeker'],
+  legal: ['individual seeking legal help', 'small business owner', 'corporate legal team'],
+  salon: ['beauty enthusiast', 'professional', 'bride-to-be', 'regular client'],
+  travel: ['adventure traveler', 'business traveler', 'family vacationer', 'budget traveler'],
+};
+
+const REVENUE_FLOW_KEYWORDS: Record<string, string[]> = {
+  'direct-sales': ['product sales', 'sell products', 'online store', 'shop'],
+  'subscription': ['monthly plan', 'annual plan', 'recurring', 'subscribe'],
+  'commission': ['marketplace', 'commission', 'platform fee', 'service fee'],
+  'freemium': ['free plan', 'premium upgrade', 'basic plan', 'pro plan'],
+  'advertising': ['ads', 'sponsorship', 'banner ads', 'affiliate'],
+  'service-booking': ['booking', 'appointment', 'consultation', 'session'],
+  'membership': ['membership', 'club', 'vip', 'exclusive access'],
+};
+
+const PAYMENT_METHOD_KEYWORDS: Record<string, string[]> = {
+  upi: ['upi', 'google pay', 'phonepe', 'paytm', 'bhim'],
+  'credit-card': ['credit card', 'visa', 'mastercard', 'amex'],
+  'debit-card': ['debit card', 'atm card'],
+  cod: ['cash on delivery', 'cod', 'pay on delivery'],
+  emi: ['emi', 'installment', 'easy payment', 'no cost emi'],
+  netbanking: ['net banking', 'online banking', 'bank transfer'],
+  wallet: ['wallet', 'digital wallet', 'amazon pay'],
+  paypal: ['paypal', 'stripe'],
+  crypto: ['bitcoin', 'crypto', 'ethereum', 'usdt'],
+};
+
+const WORKFLOW_KEYWORDS: Record<string, string[]> = {
+  inventory: ['inventory', 'stock', 'warehouse', 'sku'],
+  'order-processing': ['order processing', 'fulfillment', 'shipping', 'dispatch'],
+  'customer-support': ['support', 'helpdesk', 'ticket', 'complaint'],
+  'quality-check': ['quality', 'inspection', 'qc', 'testing'],
+  'marketing': ['marketing', 'campaign', 'promotion', 'social media'],
+  accounting: ['accounting', 'invoice', 'billing', 'tax'],
+  hr: ['hiring', 'recruitment', 'onboarding', 'payroll'],
+  procurement: ['procurement', 'supplier', 'vendor', 'purchase order'],
+};
+
+const KPI_KEYWORDS: Record<string, string[]> = {
+  revenue: ['revenue', 'sales', 'mrr', 'arr', 'daily orders'],
+  customers: ['customers', 'users', 'subscribers', 'members'],
+  conversion: ['conversion rate', 'conversion', 'checkout rate'],
+  retention: ['retention', 'churn', 'repeat purchase', 'lifetime value'],
+  acquisition: ['acquisition', 'cac', 'cost per', 'marketing roi'],
+  satisfaction: ['satisfaction', 'nps', 'reviews', 'ratings'],
+  inventory: ['stock level', 'inventory turnover', 'out of stock'],
+  traffic: ['traffic', 'visitors', 'page views', 'bounce rate'],
+};
+
+const VOCABULARY_MAPS: Record<string, Record<string, string>> = {
+  restaurant: { product: 'dish', customer: 'guest', order: 'reservation', staff: 'chef' },
+  healthcare: { product: 'treatment', customer: 'patient', order: 'appointment', staff: 'provider' },
+  fitness: { product: 'membership', customer: 'member', order: 'enrollment', staff: 'trainer' },
+  ecommerce: { product: 'product', customer: 'customer', order: 'order', staff: 'team' },
+  'ecommerce-supplement': { product: 'supplement', customer: 'athlete', order: 'order', staff: 'nutritionist', category: 'product line', brand: 'brand' },
+  saas: { product: 'feature', customer: 'user', order: 'subscription', staff: 'team' },
+  realestate: { product: 'property', customer: 'buyer', order: 'offer', staff: 'agent' },
+  education: { product: 'course', customer: 'student', order: 'enrollment', staff: 'instructor' },
+  legal: { product: 'service', customer: 'client', order: 'case', staff: 'attorney' },
+  salon: { product: 'service', customer: 'client', order: 'booking', staff: 'stylist' },
+  travel: { product: 'package', customer: 'traveler', order: 'booking', staff: 'guide' },
+};
+
+function detectPersonas(prompt: string, industry: string): string[] {
+  const lower = prompt.toLowerCase();
+  const personas: string[] = [];
+
+  // Check industry-specific personas
+  const industryPersonas = PERSONA_KEYWORDS[industry] || [];
+  for (const persona of industryPersonas) {
+    const firstWord = persona.split(' ')[0] ?? '';
+    if (firstWord && lower.includes(firstWord)) {
+      personas.push(persona);
+    }
+  }
+
+  // Sub-industry specific personas (e.g., supplement store → fitness personas)
+  if (lower.includes('supplement') || lower.includes('protein') || lower.includes('whey') || lower.includes('nutrition')) {
+    personas.push('fitness enthusiast', 'athlete', 'bodybuilder', 'health-conscious consumer');
+  }
+  if (lower.includes('gym') || lower.includes('fitness') || lower.includes('workout')) {
+    personas.push('gym member', 'personal training client');
+  }
+
+  // Check for explicit audience mentions
+  if (lower.includes('beginner') || lower.includes('new to')) personas.push('beginners');
+  if (lower.includes('professional') || lower.includes('expert')) personas.push('professionals');
+  if (lower.includes('family') || lower.includes('families')) personas.push('families');
+  if (lower.includes('student') || lower.includes('students')) personas.push('students');
+  if (lower.includes('senior') || lower.includes('elderly')) personas.push('seniors');
+  if (lower.includes('corporate') || lower.includes('enterprise')) personas.push('enterprise clients');
+
+  // B2B signals
+  if (lower.includes('b2b') || lower.includes('wholesale') || lower.includes('bulk')) {
+    personas.push('business buyers');
+  }
+
+  // Multi-brand signals
+  if (lower.includes('multi brand') || lower.includes('multi-brand') || lower.includes('multiple brand')) {
+    personas.push('brand comparison shopper', 'value-conscious buyer');
+  }
+
+  // Indian market signals
+  if (lower.includes('indian') || lower.includes('india')) {
+    personas.push('Indian consumer', 'price-sensitive buyer');
+  }
+
+  return personas.length > 0 ? personas : ['general consumers'];
+}
+
+function detectCustomerFlow(prompt: string, industry: string): string[] {
+  const lower = prompt.toLowerCase();
+  const flow: string[] = [];
+
+  // Universal flow steps
+  if (lower.includes('browse') || lower.includes('search') || lower.includes('discover')) {
+    flow.push('discover and browse');
+  }
+  if (lower.includes('compare') || lower.includes('review') || lower.includes('compare prices')) {
+    flow.push('compare and evaluate');
+  }
+  if (lower.includes('cart') || lower.includes('add to') || lower.includes('select')) {
+    flow.push('select and add to cart');
+  }
+  if (lower.includes('checkout') || lower.includes('payment') || lower.includes('pay')) {
+    flow.push('checkout and payment');
+  }
+  if (lower.includes('delivery') || lower.includes('shipping') || lower.includes('fulfillment')) {
+    flow.push('receive delivery');
+  }
+  if (lower.includes('review') || lower.includes('feedback') || lower.includes('rating')) {
+    flow.push('leave review');
+  }
+
+  // Industry-specific flows
+  if (industry === 'restaurant') {
+    flow.push('make reservation');
+    flow.push('dine in or order takeaway');
+  }
+  if (industry === 'healthcare') {
+    flow.push('book appointment');
+    flow.push('consult with provider');
+  }
+  if (industry === 'saas') {
+    flow.push('sign up for trial');
+    flow.push('onboard and configure');
+  }
+  if (industry === 'fitness') {
+    flow.push('join membership');
+    flow.push('attend classes');
+  }
+
+  return flow.length > 0 ? flow : ['discover', 'evaluate', 'purchase', 'receive'];
+}
+
+function detectRevenueFlow(prompt: string, industry: string): string[] {
+  const lower = prompt.toLowerCase();
+  const flows: string[] = [];
+
+  for (const [model, keywords] of Object.entries(REVENUE_FLOW_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        flows.push(model);
+        break;
+      }
+    }
+  }
+
+  // Industry defaults if nothing detected
+  if (flows.length === 0) {
+    if (industry === 'ecommerce' || industry === 'restaurant') flows.push('direct-sales');
+    else if (industry === 'saas') flows.push('subscription');
+    else if (industry === 'fitness') flows.push('membership');
+    else flows.push('direct-sales');
+  }
+
+  return flows;
+}
+
+function detectPaymentMethods(prompt: string, country?: string): string[] {
+  const lower = prompt.toLowerCase();
+  const methods: string[] = [];
+
+  for (const [method, keywords] of Object.entries(PAYMENT_METHOD_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        methods.push(method);
+        break;
+      }
+    }
+  }
+
+  // Country defaults
+  if (methods.length === 0) {
+    if (country === 'IN') {
+      methods.push('upi', 'credit-card', 'cod', 'netbanking');
+    } else if (country === 'US' || country === 'GB') {
+      methods.push('credit-card', 'debit-card', 'paypal');
+    } else {
+      methods.push('credit-card', 'debit-card');
+    }
+  }
+
+  return methods;
+}
+
+function detectBusinessWorkflow(prompt: string, industry: string): string[] {
+  const lower = prompt.toLowerCase();
+  const workflow: string[] = [];
+
+  for (const [step, keywords] of Object.entries(WORKFLOW_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        workflow.push(step);
+        break;
+      }
+    }
+  }
+
+  // Industry defaults
+  if (workflow.length === 0) {
+    if (industry === 'ecommerce') {
+      workflow.push('inventory', 'order-processing', 'marketing');
+    } else if (industry === 'restaurant') {
+      workflow.push('order-processing', 'quality-check');
+    } else if (industry === 'healthcare') {
+      workflow.push('customer-support', 'accounting');
+    } else if (industry === 'saas') {
+      workflow.push('customer-support', 'marketing');
+    } else if (industry === 'perfume' || industry === 'fragrance' || industry === 'luxury') {
+      workflow.push('collection-browse', 'vip-inquiry', 'bespoke-consultation');
+    }
+  }
+
+  return workflow;
+}
+
+/**
+ * Format a workflow key into human-readable text.
+ * e.g. "vip-inquiry" → "VIP Inquiry", "order-processing" → "Order Processing"
+ */
+function formatWorkflowKey(key: string): string {
+  return key
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function detectKPIs(prompt: string, industry: string): string[] {
+  const lower = prompt.toLowerCase();
+  const kpis: string[] = [];
+
+  for (const [kpi, keywords] of Object.entries(KPI_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        kpis.push(kpi);
+        break;
+      }
+    }
+  }
+
+  // Industry defaults
+  if (kpis.length === 0) {
+    kpis.push('revenue', 'customers');
+    if (industry === 'ecommerce') kpis.push('conversion', 'inventory');
+    if (industry === 'saas') kpis.push('retention', 'acquisition');
+    if (industry === 'restaurant') kpis.push('satisfaction');
+  }
+
+  return kpis;
+}
+
+/**
+ * Build a BusinessResearch object from the user's prompt.
+ * Extracts business context: what the business is, who the users are,
+ * how revenue flows, how customers interact, and how the business operates.
+ *
+ * This is the FOUNDATION — all downstream consumers read from this.
+ */
+export function buildBusinessResearch(prompt: string, industry: string, subIndustry?: string, country?: string): BusinessResearch {
+  const lower = prompt.toLowerCase();
+
+  // Business type from prompt
+  const businessType = lower
+    .replace(/\b(build|create|make|a|an|the|for|with|that|and|or|but|in|on|at|to|of|is|it|my|our|your|want|need|looking|site|website|app|application|platform|system|store|shop|business|company|brand|customer|customers|client|clients|people|users|user|audience|market|industry|type|kind|best|top|new|online|local|small|large|great|good|better|perfect|indian|india|american|us|usa|uk|british|dubai|uae|australian|canadian|german|french|japanese|chinese)\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 100) || `${industry} business`;
+
+  // User personas
+  const userPersonas = detectPersonas(prompt, industry);
+
+  // Customer flow
+  const customerFlow = detectCustomerFlow(prompt, industry);
+
+  // Revenue flow
+  const revenueFlow = detectRevenueFlow(prompt, industry);
+
+  // Payment methods
+  const paymentMethods = detectPaymentMethods(prompt, country);
+
+  // Business workflow
+  const businessWorkflow = detectBusinessWorkflow(prompt, industry);
+
+  // KPIs
+  const kpis = detectKPIs(prompt, industry);
+
+  // Vocabulary — check sub-industry first, then industry
+  const vocabulary = (subIndustry && VOCABULARY_MAPS[`${industry}-${subIndustry}`]) || VOCABULARY_MAPS[industry] || {};
+
+  return {
+    businessType,
+    industry,
+    subIndustry: subIndustry || industry,
+    domain: industry,
+    userPersonas,
+    customerFlow,
+    revenueFlow,
+    paymentMethods,
+    businessWorkflow,
+    kpis,
+    vocabulary,
+    referenceUrls: [],
+    realProducts: [],
+    realTestimonials: [],
+  };
+}
+
+// ─── Scraped Data Merge ───────────────────────────────────────────────────────
+
+/**
+ * Merge scraped content back into BusinessResearch.
+ * After the scraper succeeds, this populates realProducts, realTestimonials,
+ * and extracts domain vocabulary (customer term, currency, CTAs) from scraped text.
+ */
+export function mergeScrapedIntoResearch(ctx: BREContext, scraped: ScrapedContent): void {
+  if (!ctx.businessResearch) return;
+
+  ctx.businessResearch.realProducts = scraped.prices.map(p => ({
+    name: p.name,
+    price: p.price,
+    description: p.description,
+  }));
+  ctx.businessResearch.realTestimonials = scraped.testimonials.map(t => ({
+    text: t.text,
+    author: t.author,
+    role: t.role,
+  }));
+  ctx.businessResearch.scrapedContent = scraped;
+
+  // Extract domain vocabulary from scraped text
+  const allText = [
+    scraped.heroHeadline,
+    scraped.aboutText,
+    scraped.contactAddress,
+    ...scraped.prices.map(p => `${p.name} ${p.description ?? ''}`),
+    ...scraped.teamMembers.map(t => `${t.name} ${t.role}`),
+    ...scraped.productSpecs,
+  ].join(' ').toLowerCase();
+
+  // Detect customer term from scraped content
+  const customerTerms = ['member', 'patient', 'client', 'guest', 'student', 'subscriber', 'rider', 'learner'];
+  const detectedCustomerTerm = customerTerms.find(t => allText.includes(t));
+
+  // Detect currency from prices
+  const hasRupee = scraped.prices.some(p => p.price?.includes('₹') || p.price?.includes('Rs'));
+  const hasEuro = scraped.prices.some(p => p.price?.includes('€'));
+
+  ctx.businessResearch.vocabulary = {
+    ...ctx.businessResearch.vocabulary,
+    customerTerm: detectedCustomerTerm ?? ctx.businessResearch.vocabulary?.customerTerm ?? 'customer',
+    currency: hasRupee ? 'INR' : hasEuro ? 'EUR' : 'USD',
+    currencySymbol: hasRupee ? '₹' : hasEuro ? '€' : '$',
+    primaryCTA: ctx.businessResearch.vocabulary?.primaryCTA ?? 'Get in Touch',
+    secondaryCTA: 'Learn More',
+  };
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────
@@ -734,7 +1195,7 @@ function generateAppName(prompt: string, industry: string, country?: string): st
  * Returns both the BREContext and the raw industry score so the confidence gate
  * can evaluate match quality without re-running detection.
  */
-export function buildBREContext(prompt: string): BREContext {
+export async function buildBREContext(prompt: string): Promise<BREContext> {
   const lower = prompt.toLowerCase();
   const { mapping: industryMapping, score: industryScore, subIndustry } = detectIndustryWithScore(prompt);
 
@@ -743,7 +1204,7 @@ export function buildBREContext(prompt: string): BREContext {
   const capabilities = detectCapabilities(prompt, industryMapping);
   const journeys = detectJourneys(prompt, industryMapping);
   const country = detectCountry(prompt);
-  const appName = extractAppName(prompt) ?? generateAppName(prompt, industry, country);
+  const appName = extractAppName(prompt) ?? generateAppName(prompt, industry, country, subIndustry);
   const entities = industryMapping?.entities ?? ['User'];
   const audience = industryMapping?.audience ?? 'mixed';
 
@@ -778,9 +1239,23 @@ export function buildBREContext(prompt: string): BREContext {
 
   if (country) result.country = country;
   if (appName) result.appName = appName;
-  if (prompt) result.description = prompt.slice(0, 200);
+  // Store a cleaned description — NOT the raw prompt (which leaks into UI)
+  if (prompt) {
+    const cleaned = prompt
+      .replace(/\b(build|create|make|design|develop|set up)\b/gi, '')
+      .replace(/\b(for|a|an|the|that|with|and|or)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 200);
+    result.description = cleaned || `${appName ?? 'the business'} — ${industry}`;
+  }
   if (subIndustry) result.subIndustry = subIndustry;
   if (audience === 'b2b' || audience === 'internal') result.audience = audience;
+
+  // Build business research — the FOUNDATION for all downstream consumers.
+  // Extracts: what the business is, who the users are, how revenue flows,
+  // how customers interact, how the business operates.
+  result.businessResearch = buildBusinessResearch(prompt, industry, subIndustry, country);
 
   // Load revenue intelligence from BOS entry if available
   try {
@@ -803,6 +1278,17 @@ export function buildBREContext(prompt: string): BREContext {
   // The confidence gate reads it via the exported detectIndustryWithScore function.
   // This keeps BREContext clean while still making the score available.
   (result as any).__industryScore = industryScore;
+
+// ── Business Intelligence Engine (Layer 1) ───────────────────────────────
+  // Produce the single source of truth for business understanding. This is
+  // vertical-agnostic: it reasons about workflows / customers / goals from
+  // primitive signals, never a keyword→vertical lookup. Legacy fields above
+  // are preserved for compatibility; downstream layers migrate to read this.
+  try {
+    result.businessKnowledge = understandBusiness(prompt);
+  } catch (biErr) {
+    console.warn('[BI Engine] failed (continuing without):', (biErr as Error).message);
+  }
 
   return result;
 }

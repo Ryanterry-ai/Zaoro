@@ -133,6 +133,76 @@ export interface ScrapedContent {
 }
 
 /**
+ * Business Research — the intelligence gathered by analyzing the user's prompt
+ * and researching real businesses in the industry/domain.
+ *
+ * @deprecated Use `BusinessKnowledge` from `orchestration/business-intelligence/types.ts` instead.
+ * BusinessResearch is a legacy flat model with no per-field confidence, provenance, or source metadata.
+ * BusinessKnowledge is the canonical, vertically-agnostic, provenance-aware representation.
+ *
+ * Migration guide:
+ * - `businessType` → `BusinessKnowledge.discovery.businessType`
+ * - `industry` → `BusinessKnowledge.discovery.industry`
+ * - `subIndustry` → `BusinessKnowledge.discovery.subIndustry`
+ * - `userPersonas` → `BusinessKnowledge.customerPersonas`
+ * - `customerFlow` → `BusinessKnowledge.customerJourney`
+ * - `revenueFlow` → `BusinessKnowledge.revenue`
+ * - `kpis` → `BusinessKnowledge.kpis`
+ * - `vocabulary` → `BusinessKnowledge.vocabulary`
+ * - `realProducts` → `BusinessKnowledge.entities` (via adapter)
+ * - `realTestimonials` → Content Intelligence output
+ * - `scrapedContent` → `EvidenceCollection` via Knowledge Acquisition
+ *
+ * Use `orchestration/business-intelligence/adapters.ts` to bridge to legacy consumers.
+ */
+export interface BusinessResearch {
+  /** What the business is (e.g., "ecommerce supplement store") */
+  businessType: string;
+
+  /** Industry (e.g., "ecommerce") */
+  industry: string;
+
+  /** Sub-industry (e.g., "supplement-store") */
+  subIndustry: string;
+
+  /** Domain context (e.g., "health-fitness") */
+  domain: string;
+
+  /** Who are the customers? (e.g., "gym enthusiasts, fitness beginners, athletes") */
+  userPersonas: string[];
+
+  /** What do customers do on the site? (e.g., "browse supplements, compare prices, read reviews") */
+  customerFlow: string[];
+
+  /** How does the business make money? (e.g., "product sales, bundles, subscriptions") */
+  revenueFlow: string[];
+
+  /** How do customers pay? (e.g., "UPI, credit card, COD, EMI") */
+  paymentMethods: string[];
+
+  /** Internal business operations (e.g., "inventory management, order processing, supplier coordination") */
+  businessWorkflow: string[];
+
+  /** Key metrics the business tracks (e.g., "daily orders, revenue, top sellers, stock levels") */
+  kpis: string[];
+
+  /** What vocabulary does this industry use? (e.g., "product" → "supplement", "customer" → "member") */
+  vocabulary: Record<string, string>;
+
+  /** Real competitor/reference URLs discovered during research */
+  referenceUrls: string[];
+
+  /** Real product data scraped from reference sites */
+  realProducts: Array<{ name: string; price: string; description?: string }>;
+
+  /** Real testimonials from reference sites */
+  realTestimonials: Array<{ text: string; author: string; role?: string }>;
+
+  /** Raw scraped content from reference sites */
+  scrapedContent?: ScrapedContent;
+}
+
+/**
  * Research bundle from the Research Swarm
  */
 export interface ResearchBundle {

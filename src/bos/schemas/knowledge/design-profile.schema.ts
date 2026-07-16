@@ -5,7 +5,7 @@ export const TypographySpecSchema = z.object({
   displayFamily: z.string(),
   bodyFamily: z.string(),
   monoFamily: z.string().optional(),
-  scale: z.record(z.object({
+  scale: z.record(z.string(), z.object({
     size: z.string(),
     lineHeight: z.string(),
     weight: z.string(),
@@ -25,19 +25,19 @@ export const ColorPsychologySchema = z.object({
   success: z.string(),
   warning: z.string(),
   info: z.string(),
-  psychology: z.record(z.string()).default({}),
-  gradients: z.record(z.string()).default({}),
+  psychology: z.record(z.string(), z.string()).default({}),
+  gradients: z.record(z.string(), z.string()).default({}),
 });
 export type ColorPsychology = z.infer<typeof ColorPsychologySchema>;
 
-export const SpacingScaleSchema = z.record(z.string());
+export const SpacingScaleSchema = z.record(z.string(), z.string());
 export type SpacingScale = z.infer<typeof SpacingScaleSchema>;
 
 export const GridSystemSchema = z.object({
   columns: z.number().default(12),
   gutter: z.string().default('1rem'),
   margin: z.string().default('1.5rem'),
-  breakpoints: z.record(z.string()).default({}),
+  breakpoints: z.record(z.string(), z.string()).default({}),
 });
 export type GridSystem = z.infer<typeof GridSystemSchema>;
 
@@ -70,7 +70,7 @@ export type A11yGuidelines = z.infer<typeof A11yGuidelinesSchema>;
 export const IconographySpecSchema = z.object({
   library: z.string().default('lucide'),
   style: z.enum(['outline', 'filled', 'duotone', 'sharp']).default('outline'),
-  size: z.record(z.string()).default({}),
+  size: z.record(z.string(), z.string()).default({}),
 });
 export type IconographySpec = z.infer<typeof IconographySpecSchema>;
 
@@ -88,15 +88,15 @@ export const PhotographySpecSchema = z.object({
 export type PhotographySpec = z.infer<typeof PhotographySpecSchema>;
 
 export const ComponentStyleCatalogSchema = z.object({
-  button: z.record(z.string()).default({}),
-  card: z.record(z.string()).default({}),
-  input: z.record(z.string()).default({}),
-  badge: z.record(z.string()).default({}),
-  avatar: z.record(z.string()).default({}),
-  dialog: z.record(z.string()).default({}),
-  table: z.record(z.string()).default({}),
-  form: z.record(z.string()).default({}),
-  chart: z.record(z.string()).default({}),
+  button: z.record(z.string(), z.string()).default({}),
+  card: z.record(z.string(), z.string()).default({}),
+  input: z.record(z.string(), z.string()).default({}),
+  badge: z.record(z.string(), z.string()).default({}),
+  avatar: z.record(z.string(), z.string()).default({}),
+  dialog: z.record(z.string(), z.string()).default({}),
+  table: z.record(z.string(), z.string()).default({}),
+  form: z.record(z.string(), z.string()).default({}),
+  chart: z.record(z.string(), z.string()).default({}),
 });
 export type ComponentStyleCatalog = z.infer<typeof ComponentStyleCatalogSchema>;
 

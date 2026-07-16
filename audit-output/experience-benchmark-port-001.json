@@ -1,0 +1,19 @@
+{
+  "id": "port-001",
+  "industry": "portfolio",
+  "prompt": "a photographer portfolio with gallery and inquiry form",
+  "checks": {
+    "blueprintProduced": true,
+    "scenesPresent": true,
+    "narrativePresent": true,
+    "hoverBehaviorsPresent": true,
+    "motionDrivenCode": true,
+    "motionAnchorPresent": false,
+    "lineageProvenance": true
+  },
+  "passed": 6,
+  "total": 7,
+  "verdict": "WARN",
+  "sceneCount": 2,
+  "hoverCount": 5
+}

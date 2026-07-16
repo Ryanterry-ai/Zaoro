@@ -1,10 +1,17 @@
 import { WebSearcher } from '../business-intelligence/core/web-searcher.js';
 import { AgentReachBridge } from '../business-intelligence/core/agent-reach-bridge.js';
 import type { CrawlResult } from '../business-intelligence/core/agent-reach-bridge.js';
+import type { BusinessKnowledge } from '../orchestration/business-intelligence/types.js';
 
 export interface ContentResearchResult {
   businessName: string;
+  /**
+   * @deprecated Use BusinessKnowledge.discovery.businessType instead
+   */
   businessType: string;
+  /**
+   * @deprecated Use BusinessKnowledge.discovery.industry instead
+   */
   industry: string;
   competitors: Array<{
     name: string;
@@ -85,9 +92,21 @@ export class ContentResearchAgent {
   /**
    * Research a business from the user's prompt.
    * Extracts real content from competitor websites for LLM injection.
+   *
+   * @param prompt - User prompt
+   * @param businessKnowledge - Upstream BusinessKnowledge (preferred)
+   * @returns Content research results
    */
-  async research(prompt: string): Promise<ContentResearchResult> {
-    const { businessName, businessType, industry, searchQuery } = this.parsePrompt(prompt);
+  async research(
+    prompt: string,
+    businessKnowledge?: BusinessKnowledge
+  ): Promise<ContentResearchResult> {
+    // CONSUME from BusinessKnowledge if provided (single source of truth)
+    const businessName = businessKnowledge?.discovery.businessType ?? this.extractBusinessName(prompt);
+    const businessType = businessKnowledge?.discovery.businessType ?? 'business';
+    const industry = businessKnowledge?.discovery.industry ?? 'general';
+    const searchQuery = this.buildSearchQuery(businessName, businessType);
+
     console.log(`[content-research] Researching: "${businessName}" (${businessType}) in ${industry}`);
     console.log(`[content-research] Search query: "${searchQuery}"`);
 
@@ -175,14 +194,28 @@ export class ContentResearchAgent {
     return result;
   }
 
+  /**
+   * @deprecated Use extractBusinessName(prompt) and buildSearchQuery(name, type) instead.
+   * This method is kept for backward compatibility only.
+   */
   private parsePrompt(prompt: string): {
     businessName: string;
     businessType: string;
     industry: string;
     searchQuery: string;
   } {
-    const lower = prompt.toLowerCase();
+    console.warn('[content-research-agent] parsePrompt is deprecated. Use BusinessKnowledge instead.');
+    const businessName = this.extractBusinessName(prompt);
+    const businessType = 'business';
+    const industry = 'general';
+    const searchQuery = this.buildSearchQuery(businessName, businessType);
+    return { businessName, businessType, industry, searchQuery };
+  }
 
+  /**
+   * Extract business name from prompt.
+   */
+  private extractBusinessName(prompt: string): string {
     // Extract business name — usually after "Build a", "Create a", "Make a", "for my"
     const nameMatch = prompt.match(/(?:build|create|make|design)\s+(?:a\s+)?(?:website\s+(?:for|of|about)\s+)?(?:the\s+)?([A-Z][A-Za-z0-9\s&.'-]+?)(?:\s+website|\s+app|\s+platform|\s+store|\s+shop|\s+site|\s+online|\s+for|\s+that|\s+with|\s*$)/i);
     let businessName = nameMatch?.[1]?.trim() || '';
@@ -197,44 +230,16 @@ export class ContentResearchAgent {
       }
     }
 
-    // Detect business type from keywords
-    let businessType = 'business';
-    let industry = 'general';
+    return businessName;
+  }
 
-    const typePatterns: Array<[RegExp, string, string]> = [
-      [/(?:luxury|premium|high-end|watch|watches|timepiece|jewelry|horology)/, 'luxury-brand', 'luxury'],
-      [/(?:restaurant|cafe|coffee|food|dining|bakery|pizza|burger|sushi)/, 'restaurant', 'food-beverage'],
-      [/(?:fitness|gym|yoga|wellness|health|workout|personal trainer)/, 'fitness-studio', 'fitness'],
-      [/(?:ecommerce|e-commerce|store|shop|marketplace|online store|retail)/, 'ecommerce-store', 'commerce'],
-      [/(?:saas|software|app|platform|dashboard|tool)/, 'saas-product', 'technology'],
-      [/(?:agency|consulting|marketing|creative|design studio)/, 'agency', 'professional-services'],
-      [/(?:real estate|property|realtor|listing|home|apartment)/, 'real-estate', 'real-estate'],
-      [/(?:healthcare|clinic|doctor|medical|dental|hospital)/, 'healthcare-clinic', 'healthcare'],
-      [/(?:education|school|university|course|learning|training|academy)/, 'education-platform', 'education'],
-      [/(?:travel|hotel|resort|tour|vacation|booking)/, 'travel-service', 'travel'],
-      [/(?:law|legal|attorney|lawyer|firm)/, 'law-firm', 'legal'],
-      [/(?:portfolio|personal|blog|resume)/, 'portfolio', 'content'],
-      [/(?:nonprofit|charity|ngo|foundation)/, 'nonprofit', 'nonprofit'],
-      [/(?:event|wedding|party|conference)/, 'event-service', 'events'],
-      [/(?:photo|video|media|studio|production)/, 'creative-studio', 'media'],
-      [/(?:auto|car|automotive|vehicle)/, 'automotive', 'automotive'],
-      [/(?:pet|animal|veterinary)/, 'pet-service', 'pets'],
-    ];
-
-    for (const [pattern, type, ind] of typePatterns) {
-      if (pattern.test(lower)) {
-        businessType = type;
-        industry = ind;
-        break;
-      }
-    }
-
-    // Build search query
-    const searchQuery = businessName
+  /**
+   * Build search query from business name and type.
+   */
+  private buildSearchQuery(businessName: string, businessType: string): string {
+    return businessName
       ? `${businessName} ${businessType.replace(/-/g, ' ')} website`
       : `${businessType.replace(/-/g, ' ')} website examples pricing services`;
-
-    return { businessName, businessType, industry, searchQuery };
   }
 
   private extractCompetitorData(

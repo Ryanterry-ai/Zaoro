@@ -28,6 +28,7 @@ import type { DesignProfile } from './schemas/knowledge/design-profile.schema.js
 import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema.js';
 import type { ScrapedContent } from './types.js';
 import { stageLogger } from '../core/debug-logger.js';
+import { getIndustryCopy, detectForbiddenPhrase } from './industry-copy-schema.js';
 import {
   ContentProviderRegistry,
   BOSKnowledgeProvider,
@@ -56,8 +57,25 @@ function getCurrencySymbol(country?: string): string {
 
 // ─── Vocabulary Helper ────────────────────────────────────────────────────────
 
-/** Detect sub-category keywords from the description for content enrichment */
+/** Detect sub-category from BusinessKnowledge — NOT keyword matching */
 function detectSubCategory(ctx: ContentResolverContext): string | undefined {
+  // BusinessKnowledge-driven: use domain nouns and discovery
+  if (ctx.businessKnowledge) {
+    const bk = ctx.businessKnowledge;
+    const nouns = bk.vocabulary.domainNouns.map(n => n.toLowerCase());
+    const domain = bk.discovery.domain.toLowerCase();
+    const subIndustry = (bk.discovery.subIndustry ?? '').toLowerCase();
+    const combined = `${domain} ${subIndustry} ${nouns.join(' ')}`;
+
+    if (combined.includes('coffee') || combined.includes('cafe') || combined.includes('roastery')) return 'coffee';
+    if (combined.includes('wholesale') || combined.includes('b2b') || combined.includes('distributor')) return 'wholesale';
+    if (combined.includes('supplement') || combined.includes('nutrition') || combined.includes('protein')) return 'supplement';
+    if (combined.includes('fitness') || combined.includes('gym') || combined.includes('yoga')) return 'fitness';
+    if (combined.includes('hotel') || combined.includes('lodge') || combined.includes('motel')) return 'hotel';
+    if (combined.includes('footwear') || combined.includes('shoe') || combined.includes('sneaker') || combined.includes('boot')) return 'footwear';
+  }
+
+  // Legacy fallback: keyword-based (deprecated)
   const desc = (ctx.blueprint.description ?? '').toLowerCase();
   const name = (ctx.blueprint.name ?? '').toLowerCase();
   const combined = `${desc} ${name}`;
@@ -67,6 +85,7 @@ function detectSubCategory(ctx: ContentResolverContext): string | undefined {
   if (combined.includes('supplement') || combined.includes('protein') || combined.includes('nutrition') || combined.includes('whey')) return 'supplement';
   if (combined.includes('gym') || combined.includes('fitness') || combined.includes('yoga')) return 'fitness';
   if (combined.includes('hotel') || combined.includes('motel') || combined.includes('lodge')) return 'hotel';
+  if (combined.includes('footwear') || combined.includes('shoe') || combined.includes('sneaker') || combined.includes('boot')) return 'footwear';
   return undefined;
 }
 
@@ -81,7 +100,7 @@ function getWorkflowNames(ctx: ContentResolverContext): string[] {
   return ctx.blueprint.workflows.map(w => w.name);
 }
 
-/** Get industry-specific feature items from capabilities and workflows */
+/** Get feature items — BusinessKnowledge-driven, NOT keyword lookup */
 function getIndustryFeatures(ctx: ContentResolverContext): ItemSpec[] {
   // Use real scraped product specs if available
   if (ctx.scrapedContent?.productSpecs && ctx.scrapedContent.productSpecs.length > 0) {
@@ -92,10 +111,51 @@ function getIndustryFeatures(ctx: ContentResolverContext): ItemSpec[] {
     }));
   }
 
+  // ─── BusinessKnowledge-driven feature derivation ──────────────────────
+  // If BusinessKnowledge is available, derive features from workflows and entities
+  if (ctx.businessKnowledge) {
+    const bk = ctx.businessKnowledge;
+    const items: ItemSpec[] = [];
+
+    // Derive features from customer-facing workflows
+    const customerWorkflows = bk.workflows.filter(w => w.scope === 'customer');
+    for (const wf of customerWorkflows.slice(0, 4)) {
+      items.push({
+        title: wf.description.split(' ').slice(0, 4).join(' '),
+        description: `${wf.steps[0] ?? wf.description} — ${wf.steps.slice(1).join(' → ')}`,
+        icon: workflowIcon(wf.kind),
+      });
+    }
+
+    // Derive features from entities if more needed
+    for (const entity of bk.entities.slice(0, 4 - items.length)) {
+      items.push({
+        title: `${vocab('Manage', ctx)} ${entity.name}`,
+        description: `${entity.fields.slice(0, 3).join(', ')} — ${entity.relationships[0] ?? entity.archetype}`,
+        icon: 'database',
+      });
+    }
+
+    // Pad from pages if still needed
+    if (items.length < 3) {
+      for (const page of bk.pages.slice(0, 3 - items.length)) {
+        items.push({
+          title: page.purpose,
+          description: page.workflows.length > 0
+            ? `Workflows: ${page.workflows.join(', ')}`
+            : page.purpose,
+          icon: 'zap',
+        });
+      }
+    }
+
+    if (items.length > 0) return items;
+  }
+
+  // ─── Legacy fallback (BOSPack only) ──────────────────────────────────
   const items: ItemSpec[] = [];
   const workflows = getWorkflowNames(ctx);
   const entities = ctx.blueprint.entities.map(e => e.name);
-  const industry = ctx.blueprint.industry;
 
   // Add workflow-based features
   for (const wf of workflows.slice(0, 4)) {
@@ -115,150 +175,34 @@ function getIndustryFeatures(ctx: ContentResolverContext): ItemSpec[] {
     });
   }
 
-  // Add sub-category specific features based on description keywords
-  const subCat = detectSubCategory(ctx);
-  if (subCat === 'coffee' && items.length < 6) {
-    items.push(
-      { title: 'Fresh Roasted Beans', description: 'Single-origin and blended beans roasted in-house daily', icon: 'coffee' },
-      { title: 'Online Order & Pickup', description: 'Skip the line — order ahead and pick up when ready', icon: 'shopping-bag' },
-      { title: 'Barista Crafted Drinks', description: 'Espresso, pour-over, cold brew, and seasonal specials', icon: 'cup-soda' },
-    );
-  } else if (subCat === 'wholesale' && items.length < 6) {
-    items.push(
-      { title: 'Bulk Pricing Tiers', description: 'Volume-based pricing with MOQ thresholds for distributors', icon: 'package' },
-      { title: 'Dealer Portal', description: 'Self-service ordering, invoice management, and inventory tracking', icon: 'layout-dashboard' },
-      { title: 'Purchase Order System', description: 'Automated PO generation and approval workflows', icon: 'file-text' },
-    );
-  } else if (subCat === 'supplement' && items.length < 6) {
-    items.push(
-      { title: 'Lab-Tested Products', description: 'Third-party verified purity and potency for every batch', icon: 'flask-conical' },
-      { title: 'Brand Catalog', description: 'Multi-brand inventory with real-time stock and pricing', icon: 'grid' },
-      { title: 'Subscription Bundles', description: 'Monthly supplement stacks delivered to your door', icon: 'repeat' },
-    );
-  }
-
-  // Pad with industry-specific features if needed
+  // Pad with generic features if still needed
   if (items.length < 3) {
-    const industryFeatures: Record<string, { title: string; desc: string; icon: string }[]> = {
-      restaurant: [
-        { title: 'Online Ordering', desc: 'Let customers order ahead for pickup or delivery', icon: 'shopping-bag' },
-        { title: 'Table Reservations', desc: 'Real-time availability and instant booking', icon: 'calendar' },
-        { title: 'Menu Management', desc: 'Update dishes, prices, and specials instantly', icon: 'book-open' },
-      ],
-      healthcare: [
-        { title: 'Appointment Booking', desc: 'Patients book visits online 24/7', icon: 'calendar' },
-        { title: 'Patient Portal', desc: 'Secure access to records and communications', icon: 'shield' },
-        { title: 'Telehealth', desc: 'Virtual consultations from anywhere', icon: 'video' },
-      ],
-      saas: [
-        { title: 'Usage Analytics', desc: 'Track feature adoption and user engagement', icon: 'bar-chart' },
-        { title: 'Team Management', desc: 'Invite members and control permissions', icon: 'users' },
-        { title: 'API Access', desc: 'Integrate with your existing tools', icon: 'code' },
-      ],
-      ecommerce: [
-        { title: 'Product Catalog', desc: 'Showcase your products with rich media', icon: 'grid' },
-        { title: 'Secure Checkout', desc: 'Fast, frictionless payment processing', icon: 'lock' },
-        { title: 'Order Tracking', desc: 'Real-time shipping updates for customers', icon: 'truck' },
-      ],
-      fitness: [
-        { title: 'Class Booking', desc: 'Reserve your spot in any class', icon: 'calendar' },
-        { title: 'Membership Plans', desc: 'Flexible pricing for every commitment level', icon: 'credit-card' },
-        { title: 'Workout Tracking', desc: 'Monitor progress and celebrate milestones', icon: 'activity' },
-      ],
-      education: [
-        { title: 'Course Library', desc: 'Browse and enroll in courses instantly', icon: 'book-open' },
-        { title: 'Progress Tracking', desc: 'See where you left off and what is next', icon: 'trending-up' },
-        { title: 'Certificates', desc: 'Earn credentials for completed courses', icon: 'award' },
-      ],
-      realestate: [
-        { title: 'Property Search', desc: 'Find your perfect property with smart filters', icon: 'search' },
-        { title: 'Virtual Tours', desc: 'Explore properties from the comfort of home', icon: 'eye' },
-        { title: 'Agent Connect', desc: 'Get matched with local market experts', icon: 'users' },
-      ],
-      legal: [
-        { title: 'Case Management', desc: 'Track cases from intake to resolution', icon: 'briefcase' },
-        { title: 'Document Assembly', desc: 'Generate legal documents from templates', icon: 'file-text' },
-        { title: 'Client Portal', desc: 'Secure communication and document sharing', icon: 'lock' },
-      ],
-      agency: [
-        { title: 'Project Pipeline', desc: 'Track leads from pitch to signed contract', icon: 'funnel' },
-        { title: 'Client Portal', desc: 'Share deliverables and collect feedback', icon: 'users' },
-        { title: 'Time Tracking', desc: 'Log hours and manage team workloads', icon: 'clock' },
-      ],
-      nonprofit: [
-        { title: 'Donation Management', desc: 'Accept and track donations across channels', icon: 'heart' },
-        { title: 'Volunteer Coordination', desc: 'Sign up, schedule, and manage volunteers', icon: 'users' },
-        { title: 'Impact Reports', desc: 'Show donors the difference they make', icon: 'bar-chart' },
-      ],
-      media: [
-        { title: 'Content Publishing', desc: 'Draft, review, and publish articles', icon: 'edit' },
-        { title: 'Subscriber Management', desc: 'Grow and engage your audience', icon: 'users' },
-        { title: 'Analytics Dashboard', desc: 'Track views, engagement, and growth', icon: 'bar-chart' },
-      ],
-      travel: [
-        { title: 'Trip Builder', desc: 'Create custom itineraries in minutes', icon: 'map' },
-        { title: 'Booking Engine', desc: 'Reserve flights, hotels, and activities', icon: 'calendar' },
-        { title: 'Travel Guides', desc: 'Curated local insights and recommendations', icon: 'compass' },
-      ],
-      luxury: [
-        { title: 'VIP Experience', desc: 'Exclusive access to limited editions', icon: 'gem' },
-        { title: 'Concierge Service', desc: 'Personalized assistance for every need', icon: 'headphones' },
-        { title: 'Private Viewings', desc: 'Book one-on-one appointments', icon: 'eye' },
-      ],
-      beauty: [
-        { title: 'Service Menu', desc: 'Browse treatments and book online', icon: 'scissors' },
-        { title: 'Stylist Profiles', desc: 'Find your perfect match by specialty', icon: 'user' },
-        { title: 'Loyalty Rewards', desc: 'Earn points with every visit', icon: 'gift' },
-      ],
-      event: [
-        { title: 'Event Discovery', desc: 'Find events that match your interests', icon: 'search' },
-        { title: 'Ticket Purchase', desc: 'Secure your spot in seconds', icon: 'ticket' },
-        { title: 'Event Calendar', desc: 'Never miss an upcoming event', icon: 'calendar' },
-      ],
-      portfolio: [
-        { title: 'Project Showcase', desc: 'Display your best work with rich media', icon: 'image' },
-        { title: 'Case Studies', desc: 'Tell the story behind each project', icon: 'file-text' },
-        { title: 'Contact Form', desc: 'Make it easy for clients to reach you', icon: 'mail' },
-      ],
-      automotive: [
-        { title: 'Vehicle Inventory', desc: 'Browse our complete vehicle lineup', icon: 'car' },
-        { title: 'Test Drive Booking', desc: 'Schedule a test drive at your convenience', icon: 'calendar' },
-        { title: 'Financing Calculator', desc: 'Estimate monthly payments instantly', icon: 'calculator' },
-      ],
-      enterprise: [
-        { title: 'Workflow Automation', desc: 'Automate repetitive business processes', icon: 'zap' },
-        { title: 'Reporting & Analytics', desc: 'Real-time insights across all departments', icon: 'bar-chart' },
-        { title: 'Role-Based Access', desc: 'Granular permissions for every team member', icon: 'shield' },
-      ],
-      logistics: [
-        { title: 'Shipment Tracking', desc: 'Monitor deliveries in real time', icon: 'truck' },
-        { title: 'Route Optimization', desc: 'Reduce costs with smart routing', icon: 'map' },
-        { title: 'Warehouse Management', desc: 'Track inventory across all locations', icon: 'package' },
-      ],
-      manufacturing: [
-        { title: 'Production Planning', desc: 'Schedule and optimize manufacturing runs', icon: 'settings' },
-        { title: 'Quality Control', desc: 'Track defect rates and ensure compliance', icon: 'check-circle' },
-        { title: 'Supply Chain', desc: 'Manage suppliers and raw materials', icon: 'link' },
-      ],
-      fintech: [
-        { title: 'Transaction Processing', desc: 'Accept payments with industry-leading security', icon: 'credit-card' },
-        { title: 'Fraud Detection', desc: 'AI-powered monitoring for suspicious activity', icon: 'shield' },
-        { title: 'Financial Reporting', desc: 'Real-time dashboards and compliance reports', icon: 'bar-chart' },
-      ],
-      proptech: [
-        { title: 'Tenant Management', desc: 'Onboard and manage tenants efficiently', icon: 'users' },
-        { title: 'Lease Tracking', desc: 'Never miss a renewal or payment deadline', icon: 'file-text' },
-        { title: 'Maintenance Requests', desc: 'Submit and track repair requests', icon: 'tool' },
-      ],
-    };
-    const extra = industryFeatures[industry] ?? industryFeatures['saas'] ?? [];
-    for (const f of extra) {
+    const genericFeatures = [
+      { title: vocab('Dashboard', ctx), description: vocab('Real-time overview of key metrics', ctx), icon: 'bar-chart' },
+      { title: vocab('Search & Filter', ctx), description: vocab('Find what you need instantly', ctx), icon: 'search' },
+      { title: vocab('Notifications', ctx), description: vocab('Stay informed with smart alerts', ctx), icon: 'bell' },
+    ];
+    for (const f of genericFeatures) {
       if (items.length >= 4) break;
-      items.push({ title: f.title, description: f.desc, icon: f.icon });
+      items.push(f);
     }
   }
 
   return items;
+}
+
+/** Map workflow kind to a lucide icon name */
+function workflowIcon(kind: string): string {
+  if (kind.includes('cart') || kind.includes('checkout')) return 'shopping-cart';
+  if (kind.includes('booking')) return 'calendar';
+  if (kind.includes('subscription')) return 'repeat';
+  if (kind.includes('auth')) return 'lock';
+  if (kind.includes('content')) return 'edit';
+  if (kind.includes('search')) return 'search';
+  if (kind.includes('browse')) return 'layout-grid';
+  if (kind.includes('contact') || kind.includes('lead')) return 'mail';
+  if (kind.includes('marketplace')) return 'store';
+  return 'zap';
 }
 
 // ─── Component Resolvers ────────────────────────────────────────────────────
@@ -285,6 +229,10 @@ export interface ContentResolverContext {
   revenueIntelligence?: BusinessIntelligenceProfile;
   /** Raw scraped content — preserves real testimonials, about text, product specs, team members */
   scrapedContent?: ScrapedContent;
+  /** Business research — the FOUNDATION for dynamic content generation */
+  businessResearch?: import('./types.js').BusinessResearch;
+  /** Business Intelligence Engine output — the single source of truth for business understanding */
+  businessKnowledge?: import('../orchestration/business-intelligence/types.js').BusinessKnowledge;
   /** Skill recommendations from UI/UX Pro Max, framer-motion, 21st.dev, etc. */
   skillRecommendations?: import('../generation/skill-integrator.js').DesignRecommendation;
   /** Design intelligence from DesignIntelligenceEngine (6 sub-engines) */
@@ -319,10 +267,12 @@ export function resolveContent(
     ...(subCategory != null ? { subCategory } : {}),
     ...(ctx.revenueIntelligence != null ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
     ...(ctx.scrapedContent != null ? { scrapedContent: ctx.scrapedContent } : {}),
+    ...(ctx.businessResearch != null ? { businessResearch: ctx.businessResearch } : {}),
     ...(ctx.designDNA != null ? { designDNA: ctx.designDNA } : {}),
     ...(ctx.appFamily != null ? { appFamily: ctx.appFamily } : {}),
     ...(ctx.skillRecommendations != null ? { skillRecommendations: ctx.skillRecommendations } : {}),
     ...(ctx.designDecision != null ? { designDecision: ctx.designDecision } : {}),
+    ...(ctx.businessKnowledge != null ? { businessKnowledge: ctx.businessKnowledge } : {}),
   };
   const contentBag = registry.aggregate(providerCtx);
   log.info('Content aggregated from providers', {
@@ -475,6 +425,34 @@ const COMPONENT_RESOLVERS: Record<string, ComponentResolver> = {
   SortBar: resolveSortBar,
 };
 
+/**
+ * Sanitize hero subtitle text — never return raw prompt text or build instructions.
+ * If the text looks like a user prompt (contains build/create/functional/responsive
+ * or matches the original prompt verbatim), rewrite as an industry value proposition.
+ */
+function safeHeroSubtitle(text: string, industry: string, appName: string): string {
+  if (!text) return text;
+  const lower = text.toLowerCase();
+
+  // If it contains build-instruction words, it's raw prompt — rewrite
+  const promptWords = ['build', 'create', 'make', 'develop', 'functional',
+    'responsive', 'interactive', 'dynamic', 'static', 'website', 'web app', 'landing page'];
+  const hasPromptWord = promptWords.some(w => lower.includes(w));
+  if (hasPromptWord) {
+    const copy = getIndustryCopy(industry);
+    return copy.heroSubheading ?? `Premium ${industry} experience — crafted for ${appName}`;
+  }
+
+  // If it's longer than 150 chars, it's probably raw prompt text — truncate to value prop
+  if (text.length > 150) {
+    const sentences = text.split(/[.!]+/).filter(s => s.trim().length > 10);
+    if (sentences.length > 0) return sentences[0]!.trim();
+    return text.slice(0, 120).trim();
+  }
+
+  return text;
+}
+
 function resolveHeroBanner(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
@@ -482,31 +460,30 @@ function resolveHeroBanner(
   contentBag: ContentBag,
 ): ComponentSpec {
   const hero = contentBag.hero ?? {};
-  const ctaLabel = ctx.pattern?.workflows[0]
-    ? `Start ${ctx.pattern.workflows[0]}`
-    : vocab('Get Started', ctx);
+  const copy = getIndustryCopy(ctx.blueprint.industry ?? 'restaurant');
+  const appName = ctx.blueprint.name ?? 'your business';
+
+  const ctaLabel = hero.actions?.[0]?.label
+    ?? copy.heroPrimaryButton;
 
   const leadCapture = ctx.revenueIntelligence?.leadCaptureMechanisms?.[0];
-
-  // Generate industry-aware subtitle fallback
-  const name = ctx.blueprint.name ?? 'your team';
-  const defaultSubtitle = `Built for how ${name} works`;
 
   return {
     type: 'HeroBanner',
     content: {
-      title: { value: hero.title ?? ctx.blueprint.name, type: 'text' },
-      subtitle: { value: hero.subtitle ?? defaultSubtitle, type: 'text' },
-      badge: { value: hero.badge ?? ctx.blueprint.industry, type: 'text' },
+      title: { value: hero.title ?? copy.heroPrimaryHeading.replace('{appName}', appName), type: 'text' },
+      subtitle: { value: safeHeroSubtitle(hero.subtitle ?? copy.heroSubheading, ctx.blueprint.industry ?? 'restaurant', appName), type: 'text' },
+      badge: { 
+        value: hero.badge ?? copy.heroTrustBadges[0] ?? ctx.blueprint.industry, 
+        type: 'text' 
+      },
     },
-    items: hero.items ?? [
-      { title: vocab('Reliable', ctx), description: vocab('Enterprise-grade reliability', ctx), icon: 'shield' },
-      { title: vocab('Scalable', ctx), description: vocab('Built for growth', ctx), icon: 'trending-up' },
-      { title: vocab('Secure', ctx), description: vocab('Data protection first', ctx), icon: 'lock' },
-    ],
+    items: hero.items ?? copy.featureItems.slice(0, 3).map(f => ({
+      title: f.title, description: f.description, icon: f.icon,
+    })),
     actions: hero.actions ?? [
-      { label: leadCapture?.name ? `Start ${leadCapture.name}` : ctaLabel, action: '/signup', style: 'primary' },
-      { label: vocab('Learn More', ctx), action: '#features', style: 'ghost' },
+      { label: ctaLabel, action: '/signup', style: 'primary' },
+      { label: copy.heroSecondaryButton, action: '#features', style: 'ghost' },
     ],
     layout: { alignment: 'center', maxWidth: '4xl', padding: 'lg' },
   };
@@ -514,7 +491,8 @@ function resolveHeroBanner(
 
 
 /**
- * Generate an about section description from context — never the raw prompt.
+ * Generate an about section description from context.
+ * BusinessKnowledge vocabulary takes precedence over keyword matching.
  */
 function generateAboutDescription(ctx: ContentResolverContext): string {
   // Use real scraped about text if available
@@ -522,15 +500,24 @@ function generateAboutDescription(ctx: ContentResolverContext): string {
     return ctx.scrapedContent.aboutText;
   }
 
+  // BusinessKnowledge-driven: use vocabulary + discovery
+  if (ctx.businessKnowledge) {
+    const bk = ctx.businessKnowledge;
+    const noun = bk.vocabulary.domainNouns[0] ?? bk.discovery.domain;
+    const tone = bk.vocabulary.tone.join(' ');
+    const productTerm = bk.vocabulary.terms['product'] ?? bk.discovery.businessType;
+    return `A ${tone} ${noun} business — ${bk.discovery.intent}. Specializing in ${productTerm} with ${bk.revenue.model} model.`;
+  }
+
+  // Legacy fallback: keyword-based (deprecated path)
   const industry = ctx.blueprint.industry;
-  const country = ctx.blueprint.country;
   const desc = ctx.blueprint.description?.toLowerCase() ?? '';
 
   if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition')) {
     if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) {
       return 'A trusted B2B wholesale distributor of premium supplements, serving gyms and retailers nationwide';
     }
-    return country === 'IN'
+    return ctx.blueprint.country === 'IN'
       ? 'India\'s trusted destination for genuine supplements from top international and Indian brands'
       : 'Your trusted destination for genuine supplements from top brands';
   }
@@ -568,12 +555,13 @@ function resolveFeatureGrid(
   contentBag: ContentBag,
 ): ComponentSpec {
   const features = contentBag.features ?? {};
+  const copy = getIndustryCopy(ctx.blueprint.industry ?? 'restaurant');
 
   return {
     type: 'FeatureGrid',
     content: {
-      title: { value: features.title ?? vocab('Features', ctx), type: 'text' },
-      subtitle: { value: features.subtitle ?? `What makes ${ctx.blueprint.name ?? 'us'} different`, type: 'text' },
+      title: { value: features.title ?? copy.featuresHeading, type: 'text' },
+      subtitle: { value: features.subtitle ?? copy.featuresSubheading, type: 'text' },
     },
     items: features.items ?? resolveFeatures(ctx),
     layout: { alignment: 'center', maxWidth: '7xl' },
@@ -584,8 +572,11 @@ function resolveProductGrid(
   _slot: ComponentSlot,
   _page: PageExecutionPlan,
   ctx: ContentResolverContext,
+  contentBag?: ContentBag,
 ): ComponentSpec {
   const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  const products = contentBag?.products?.items ?? [];
+  
   return {
     type: 'ProductGrid',
     content: {
@@ -593,6 +584,17 @@ function resolveProductGrid(
       subtitle: { value: vocab('Browse our collection', ctx), type: 'text' },
       entity: { value: entity?.name ?? 'Product', type: 'text' },
     },
+    items: products.map(p => ({
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      tag: p.tag,
+      rating: p.rating,
+      reviews: p.reviews,
+      emoji: p.emoji,
+      details: p.details,
+      image: p.image,
+    })),
     columns: entity?.fields.map(f => ({
       key: f.name,
       label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
@@ -610,11 +612,12 @@ function resolvePricingTable(
   ctx: ContentResolverContext,
   contentBag: ContentBag,
 ): ComponentSpec {
+  const copy = getIndustryCopy(ctx.blueprint.industry ?? 'restaurant');
   return {
     type: 'PricingTable',
     content: {
-      title: { value: vocab('Pricing', ctx), type: 'text' },
-      subtitle: { value: vocab('Choose your plan', ctx), type: 'text' },
+      title: { value: copy.pricingHeading, type: 'text' },
+      subtitle: { value: copy.pricingSubheading, type: 'text' },
     },
     tiers: contentBag.pricing?.tiers ?? resolvePricingTiers(ctx),
     layout: { alignment: 'center', maxWidth: '6xl' },
@@ -627,13 +630,14 @@ function resolveTestimonials(
   ctx: ContentResolverContext,
   contentBag: ContentBag,
 ): ComponentSpec {
+  const copy = getIndustryCopy(ctx.blueprint.industry ?? 'restaurant');
   const testimonials = contentBag.testimonials?.items ?? [];
 
   return {
     type: 'Testimonials',
     content: {
-      title: { value: vocab('What Our Users Say', ctx), type: 'text' },
-      subtitle: { value: vocab('Trusted by thousands', ctx), type: 'text' },
+      title: { value: copy.testimonialsHeading, type: 'text' },
+      subtitle: { value: copy.testimonialsSubheading, type: 'text' },
     },
     items: testimonials.map(t => ({
       title: t.name,
@@ -651,22 +655,20 @@ function resolveCTASection(
   contentBag: ContentBag,
 ): ComponentSpec {
   const cta = contentBag.cta ?? {};
-  const ctaLabel = ctx.pattern?.workflows[0]
-    ? ctx.pattern.workflows[0]
-    : vocab('Get Started Free', ctx);
+  const copy = getIndustryCopy(ctx.blueprint.industry ?? 'restaurant');
 
   return {
     type: 'CTASection',
     content: {
-      title: { value: cta.title ?? vocab('Ready to get started?', ctx), type: 'text' },
+      title: { value: cta.title ?? copy.ctaHeading, type: 'text' },
       subtitle: { value: cta.subtitle ?? `Join ${ctx.blueprint.name} today`, type: 'text' },
     },
     items: [
-      { title: vocab('No credit card required', ctx), description: vocab('Start free and upgrade anytime', ctx), icon: 'credit-card' },
-      { title: vocab('Instant setup', ctx), description: vocab('Get up and running in minutes', ctx), icon: 'zap' },
+      { title: copy.ctaTrustLine.split('·')[0]?.trim() ?? 'No reservation fee', description: '', icon: 'check-circle' },
+      { title: copy.ctaTrustLine.split('·')[1]?.trim() ?? 'Instant confirmation', description: '', icon: 'check-circle' },
     ],
     actions: cta.actions ?? [
-      { label: ctaLabel, action: '/signup', style: 'primary' },
+      { label: copy.ctaPrimaryButton, action: '/signup', style: 'primary' },
     ],
     layout: { alignment: 'center', maxWidth: '4xl', padding: 'lg' },
   };
@@ -2041,36 +2043,36 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
   if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition') || industry === 'ecommerce-supplement') {
     const paymentText = country === 'IN' ? 'UPI, Razorpay, cards, and COD — pay your way' : 'Secure checkout with multiple payment options';
     return [
-      { title: 'Multi-Brand Catalog', description: 'Browse 500+ supplements from MuscleBlaze, Nutrabay, MyProtein, and more', icon: 'grid' },
-      { title: 'Authentic Products', description: '100% genuine supplements with FSSAI certification and lab reports', icon: 'shield' },
-      { title: 'Fast Delivery', description: country === 'IN' ? 'Free shipping across India with express delivery in metro cities' : 'Free shipping with express delivery available', icon: 'truck' },
-      { title: 'Expert Guidance', description: 'Personalized supplement recommendations based on your fitness goals', icon: 'compass' },
-      { title: 'Easy Returns', description: 'Hassle-free returns within 7 days for unopened products', icon: 'refresh-cw' },
-      { title: 'Secure Payments', description: paymentText, icon: 'credit-card' },
+      { title: 'Multi-Brand Catalog', description: 'Browse 500+ supplements from MuscleBlaze, Nutrabay, MyProtein, and more', icon: 'Grid' },
+      { title: 'Authentic Products', description: '100% genuine supplements with FSSAI certification and lab reports', icon: 'ShieldCheck' },
+      { title: 'Fast Delivery', description: country === 'IN' ? 'Free shipping across India with express delivery in metro cities' : 'Free shipping with express delivery available', icon: 'Truck' },
+      { title: 'Expert Guidance', description: 'Personalized supplement recommendations based on your fitness goals', icon: 'Compass' },
+      { title: 'Easy Returns', description: 'Hassle-free returns within 7 days for unopened products', icon: 'RotateCcw' },
+      { title: 'Secure Payments', description: paymentText, icon: 'CreditCard' },
     ];
   }
 
   // Restaurant-specific features
   if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('food') || industry === 'restaurant') {
     return [
-      { title: 'Online Ordering', description: 'Order ahead for pickup or delivery in minutes', icon: 'shopping-bag' },
-      { title: 'Table Reservations', description: 'Book your table in real-time, no waiting', icon: 'calendar' },
-      { title: 'Dynamic Menu', description: 'Seasonal specials and daily rotating dishes', icon: 'book-open' },
-      { title: 'Loyalty Rewards', description: 'Earn points on every order, redeem for free meals', icon: 'award' },
-      { title: 'Fresh Ingredients', description: 'Locally sourced, seasonal produce from trusted farms', icon: 'leaf' },
-      { title: 'Gift Cards', description: 'Share the experience with friends and family', icon: 'credit-card' },
+      { title: 'Online Ordering', description: 'Order ahead for pickup or delivery in minutes', icon: 'ShoppingBag' },
+      { title: 'Table Reservations', description: 'Book your table in real-time, no waiting', icon: 'Calendar' },
+      { title: 'Dynamic Menu', description: 'Seasonal specials and daily rotating dishes', icon: 'BookOpen' },
+      { title: 'Loyalty Rewards', description: 'Earn points on every order, redeem for free meals', icon: 'Award' },
+      { title: 'Fresh Ingredients', description: 'Locally sourced, seasonal produce from trusted farms', icon: 'Leaf' },
+      { title: 'Gift Cards', description: 'Share the experience with friends and family', icon: 'CreditCard' },
     ];
   }
 
   // Fitness-specific features
   if (desc.includes('fitness') || desc.includes('gym') || desc.includes('yoga') || industry === 'fitness') {
     return [
-      { title: 'Class Booking', description: 'Reserve your spot in yoga, HIIT, spinning, and more', icon: 'calendar' },
-      { title: 'Personal Training', description: 'One-on-one sessions with certified trainers', icon: 'users' },
-      { title: 'Workout Tracking', description: 'Log exercises, track progress, celebrate milestones', icon: 'activity' },
-      { title: 'Nutrition Plans', description: 'Custom meal plans tailored to your fitness goals', icon: 'heart' },
-      { title: 'Member Community', description: 'Connect with fellow members and share your journey', icon: 'users' },
-      { title: 'Flexible Memberships', description: 'Plans that fit your schedule and budget', icon: 'credit-card' },
+      { title: 'Class Booking', description: 'Reserve your spot in yoga, HIIT, spinning, and more', icon: 'Calendar' },
+      { title: 'Personal Training', description: 'One-on-one sessions with certified trainers', icon: 'Users' },
+      { title: 'Workout Tracking', description: 'Log exercises, track progress, celebrate milestones', icon: 'Activity' },
+      { title: 'Nutrition Plans', description: 'Custom meal plans tailored to your fitness goals', icon: 'Heart' },
+      { title: 'Member Community', description: 'Connect with fellow members and share your journey', icon: 'Users' },
+      { title: 'Flexible Memberships', description: 'Plans that fit your schedule and budget', icon: 'CreditCard' },
     ];
   }
 
@@ -2079,7 +2081,7 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
     items.push({
       title: vocab(`${entity.name} Management`, ctx),
       description: vocab(`Create, edit, and manage ${entity.name.toLowerCase()}s with ease`, ctx),
-      icon: 'layers',
+      icon: 'Layers',
     });
   }
 
@@ -2090,7 +2092,7 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
       items.push({
         title: workflow,
         description: `${workflow} seamlessly through our platform`,
-        icon: 'zap',
+        icon: 'Zap',
       });
     }
     // Pattern component-based features
@@ -2099,7 +2101,7 @@ function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
       items.push({
         title: vocab(component.replace(/([A-Z])/g, ' $1').trim(), ctx),
         description: `Integrated ${component.toLowerCase()} for your workflow`,
-        icon: 'box',
+        icon: 'Box',
       });
     }
   }

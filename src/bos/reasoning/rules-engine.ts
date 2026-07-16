@@ -26,6 +26,14 @@ export interface BREContext {
    * This is the FOUNDATION — all downstream consumers read from this.
    */
   businessResearch?: BusinessResearch;
+  /**
+   * Business Intelligence Engine output — the single source of truth for
+   * business understanding. Consumed by Knowledge Acquisition, Content,
+   * Design, Experience Intelligence, Tech Planner, Blueprint Generator and
+   * Renderer. Legacy fields (industry, capabilities, …) are preserved for
+   * compatibility during migration.
+   */
+  businessKnowledge?: import('../../orchestration/business-intelligence/types.js').BusinessKnowledge;
   /** Design brief from DesignAgent — industry-specific design rules, colors, typography, layout, animation, UX guidelines. */
   designBrief?: import('../../agents/orchestrator/subagents/design-agent.js').DesignBrief;
   /** Solution architecture decision from SAP — single authority for technology selection. */
@@ -288,7 +296,7 @@ export function createDefaultRules(): Rule[] {
       actions: [
         { type: 'add_page', path: '/shop', name: 'Shop', sections: ['product-grid', 'filters', 'categories'] },
         { type: 'add_page', path: '/cart', name: 'Cart', sections: ['cart-items', 'order-summary', 'checkout-form'] },
-        { type: 'add_page', path: '/product/:handle', name: 'Product Detail', sections: ['product-info', 'product-gallery', 'recommended'] },
+        { type: 'add_page', path: '/product/:id', name: 'Product Detail', sections: ['product-info', 'product-gallery', 'recommended'] },
         { type: 'add_entity', name: 'Product', fields: ['name', 'price', 'description', 'image', 'stock', 'sku', 'category'] },
         { type: 'add_entity', name: 'Order', fields: ['items', 'total', 'status', 'customerId', 'shippingAddress', 'createdAt'] },
         { type: 'add_entity', name: 'Category', fields: ['name', 'slug', 'image', 'parent'] },
@@ -420,7 +428,7 @@ export function createDefaultRules(): Rule[] {
       condition: (ctx) => is(ctx, 'education'),
       actions: [
         { type: 'add_page', path: '/courses', name: 'Courses', sections: ['product-grid', 'filters', 'category-grid'] },
-        { type: 'add_page', path: '/course/:slug', name: 'Course Detail', sections: ['product-info', 'features', 'pricing-table'] },
+        { type: 'add_page', path: '/course/:id', name: 'Course Detail', sections: ['product-info', 'features', 'pricing-table'] },
         { type: 'add_page', path: '/dashboard', name: 'My Learning', sections: ['stats-cards', 'data-table', 'activity-feed'] },
         { type: 'add_entity', name: 'Course', fields: ['title', 'description', 'instructor', 'price', 'duration', 'level', 'category', 'thumbnail'] },
         { type: 'add_entity', name: 'Student', fields: ['name', 'email', 'enrolledCourses', 'progress', 'certificates'] },
@@ -462,7 +470,7 @@ export function createDefaultRules(): Rule[] {
       actions: [
         { type: 'add_page', path: '/work', name: 'Our Work', sections: ['product-grid', 'filters', 'category-grid'] },
         { type: 'add_page', path: '/services', name: 'Services', sections: ['features', 'pricing-table'] },
-        { type: 'add_page', path: '/case-study/:slug', name: 'Case Study', sections: ['product-info', 'product-gallery', 'testimonials'] },
+        { type: 'add_page', path: '/case-study/:id', name: 'Case Study', sections: ['product-info', 'product-gallery', 'testimonials'] },
         { type: 'add_entity', name: 'Project', fields: ['title', 'client', 'industry', 'services', 'results', 'images', 'slug'] },
         { type: 'add_entity', name: 'Client', fields: ['name', 'logo', 'industry', 'testimonial'] },
         { type: 'add_entity', name: 'Service', fields: ['name', 'description', 'deliverables', 'timeline', 'price'] },

@@ -1122,6 +1122,7 @@ export class BOSLoader {
       pack: pack ?? undefined,
       industry,
       detectionConfidence: confidence,
+      businessKnowledge: undefined,
     };
   }
 

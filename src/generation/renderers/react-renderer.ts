@@ -23,6 +23,7 @@ import type {
 import { SkillIntegrator } from '../skill-integrator.js';
 import type { PageLayout, SectionLayout } from '../skill-integrator.js';
 import { stageLogger } from '../../core/debug-logger.js';
+import { compileMotion, createRevealBlueprint } from '../../motion/compiler.js';
 import { ECOMMERCE_TEMPLATES } from './templates/ecommerce.js';
 import { SAAS_TEMPLATES } from './templates/saas.js';
 import { RESTAURANT_TEMPLATES } from './templates/restaurant.js';
@@ -144,7 +145,9 @@ ${componentRenders}
 `;
 
     // Convert Express-style :param to Next.js App Router [param] for dynamic routes
-    const nextPath = spec.path.replace(/:([a-zA-Z]+)/g, '[$1]');
+    const nextPath = spec.path
+      .replace(/:([a-zA-Z]+)/g, '[$1]')
+      .replace(/\[(?:slug|handle|key|pid)\]/g, '[id]');
     files.push({
       path: `app${nextPath === '/' ? '' : nextPath}/page.tsx`,
       content: pageCode,
@@ -155,16 +158,36 @@ ${componentRenders}
   }
 
   renderApplication(spec: ApplicationSpec, context: RenderContext): RenderResult {
-    log.info('Rendering application', {
-      pages: spec.pages.length,
-      appName: spec.appName,
-    });
     this.currentContext = context;
 
     const t = Date.now();
     const files: RenderedFile[] = [];
     const warnings: string[] = [];
     const skipSingletons = context.skipSingletons === true;
+
+    // Deduplicate pages by normalized path — prevents Next.js "different slug names" error
+    // when two pages resolve to the same route (e.g. /course/:id and /course/:slug)
+    const seenPaths = new Map<string, PageSpec>();
+    const dedupedPages: PageSpec[] = [];
+    for (const page of spec.pages) {
+      // Normalize: replace all dynamic params with [param] and pick the first param name
+      const normalized = page.path.replace(/:([a-zA-Z]+)/g, (_match, paramName: string) => `[${paramName}]`);
+      // Further normalize: if path already has [id], strip [slug] variants and vice versa
+      const canonical = normalized.replace(/\[(?:slug|handle|key|pid)\]/g, '[id]');
+      if (!seenPaths.has(canonical)) {
+        seenPaths.set(canonical, page);
+        dedupedPages.push(page);
+      } else {
+        log.debug('Deduplicating page', { path: page.path, canonical });
+      }
+    }
+
+    const dedupedSpec = { ...spec, pages: dedupedPages };
+
+    log.info('Rendering application', {
+      pages: dedupedSpec.pages.length,
+      appName: dedupedSpec.appName,
+    });
 
     // Generate shell (config files, CSS, layout) — the runnable scaffolding
     if (!skipSingletons) {
@@ -176,16 +199,23 @@ ${componentRenders}
       files.push(this.renderIconComponent());
     }
 
+    // Scroll-accumulation: a `useScroll`-linked intensity meter that
+    // makes the user FEEL a quality grow the more they scroll.
+    if (!skipSingletons) {
+      const scrollIntensity = this.renderScrollIntensity(context);
+      if (scrollIntensity) files.push(scrollIntensity);
+    }
+
     // Agent mode: generate components from resolved content (agent can override later)
     if (context.agentMode) {
       // Generate nav data (needed for shell completeness)
       if (!skipSingletons) {
-        files.push(...this.renderNavData(spec, context));
+        files.push(...this.renderNavData(dedupedSpec, context));
       }
 
       // Generate components from the resolved application spec
       const generatedComponents = new Set<string>();
-      for (const page of spec.pages) {
+      for (const page of dedupedSpec.pages) {
         for (const component of page.components) {
           if (!generatedComponents.has(component.type)) {
             generatedComponents.add(component.type);
@@ -195,7 +225,7 @@ ${componentRenders}
       }
 
       // Generate pages
-      for (const page of spec.pages) {
+      for (const page of dedupedSpec.pages) {
         files.push(...this.renderPage(page, context));
       }
 
@@ -209,7 +239,7 @@ ${componentRenders}
 
     // Generate components
     const generatedComponents = new Set<string>();
-    for (const page of spec.pages) {
+    for (const page of dedupedSpec.pages) {
       for (const component of page.components) {
         if (!generatedComponents.has(component.type)) {
           generatedComponents.add(component.type);
@@ -219,13 +249,13 @@ ${componentRenders}
     }
 
     // Generate pages
-    for (const page of spec.pages) {
+    for (const page of dedupedSpec.pages) {
       files.push(...this.renderPage(page, context));
     }
 
     // Generate nav data
     if (!skipSingletons) {
-      files.push(...this.renderNavData(spec, context));
+      files.push(...this.renderNavData(dedupedSpec, context));
     }
 
     log.info('Application rendered', {
@@ -313,35 +343,39 @@ export type NavItem = (typeof navItems)[number];
     const pick = (...vals: (string | undefined)[]): string | undefined =>
       vals.find(v => typeof v === 'string' && v.length > 0);
 
-    const primary = pick(bc?.primary, ct.primary, dc?.primary, sc?.primary, themeColors.primary) ?? '#6366f1';
-    const secondary = pick(bc?.secondary, ct.secondary, dc?.secondary, sc?.secondary, themeColors.secondary) ?? primary;
-    const accent = pick(bc?.accent, ct.accent, dc?.accent, sc?.accent, themeColors.accent) ?? primary;
-    const background = pick(bc?.background, ct.background, dc?.background, sc?.background, themeColors.background) ?? '#0a0a0b';
-    const foreground = pick(bc?.foreground, ct.text, dc?.foreground, sc?.foreground, themeColors.foreground) ?? '#fafafa';
-    const card = pick(bc?.card, dc?.card, sc?.card, themeColors.card) ?? '#18181b';
-    const cardForeground = pick(dc?.cardForeground, sc?.cardForeground, themeColors.cardForeground) ?? foreground;
-    const muted = pick(bc?.muted, dc?.muted, sc?.muted, themeColors.muted) ?? card;
-    const mutedForeground = pick(dc?.mutedForeground, ct.textMuted, sc?.mutedForeground, themeColors.mutedForeground) ?? '#a1a1aa';
-    const border = pick(bc?.border, dc?.border, ct.border, sc?.border, themeColors.border) ?? '#27272a';
-    const input = pick(dc?.input, ct.border, sc?.input, themeColors.input) ?? border;
-    const ring = pick(ct.ring, dc?.ring, sc?.ring, themeColors.ring) ?? primary;
-    const destructive = pick(bc?.destructive, ct.error, dc?.destructive, sc?.destructive, themeColors.destructive) ?? '#ef4444';
-    const success = pick(bc?.success, ct.success, dc?.success, sc?.success, themeColors.success) ?? '#22c55e';
-    const warning = pick(bc?.warning, ct.warning, dc?.warning, sc?.warning, themeColors.warning) ?? '#f59e0b';
-    const info = pick(ct.info, dc?.info, sc?.info, themeColors.info) ?? '#3b82f6';
+    // Theme tokens from generateDesignTokens() are industry-specific (e.g., dark for perfume/luxury).
+    // They must be the highest priority for background/foreground/card/muted/border to ensure
+    // the correct dark/light mode is applied. Other sources (Brief, Decision, DNA) only fill gaps
+    // for primary/secondary/accent where theme tokens may not have values.
+    const primary = pick(themeColors.primary, bc?.primary, ct.primary, dc?.primary, sc?.primary) ?? '#6366f1';
+    const secondary = pick(themeColors.secondary, bc?.secondary, ct.secondary, dc?.secondary, sc?.secondary) ?? primary;
+    const accent = pick(themeColors.accent, bc?.accent, ct.accent, dc?.accent, sc?.accent) ?? primary;
+    const background = pick(themeColors.background, bc?.background, ct.background, dc?.background, sc?.background) ?? '#0a0a0b';
+    const foreground = pick(themeColors.foreground, bc?.foreground, ct.text, dc?.foreground, sc?.foreground) ?? '#fafafa';
+    const card = pick(themeColors.card, bc?.card, dc?.card, sc?.card) ?? '#18181b';
+    const cardForeground = pick(themeColors.cardForeground, dc?.cardForeground, sc?.cardForeground) ?? foreground;
+    const muted = pick(themeColors.muted, bc?.muted, dc?.muted, sc?.muted) ?? card;
+    const mutedForeground = pick(themeColors.mutedForeground, dc?.mutedForeground, ct.textMuted, sc?.mutedForeground) ?? '#a1a1aa';
+    const border = pick(themeColors.border, bc?.border, dc?.border, ct.border, sc?.border) ?? '#27272a';
+    const input = pick(themeColors.input, dc?.input, ct.border, sc?.input) ?? border;
+    const ring = pick(themeColors.ring, ct.ring, dc?.ring, sc?.ring) ?? primary;
+    const destructive = pick(themeColors.destructive, bc?.destructive, ct.error, dc?.destructive, sc?.destructive) ?? '#ef4444';
+    const success = pick(themeColors.success, bc?.success, ct.success, dc?.success, sc?.success) ?? '#22c55e';
+    const warning = pick(themeColors.warning, bc?.warning, ct.warning, dc?.warning, sc?.warning) ?? '#f59e0b';
+    const info = pick(themeColors.info, ct.info, dc?.info, sc?.info) ?? '#3b82f6';
 
-    // Typography precedence: Design Brief > Design Intelligence > Design DNA > Skill Integrator theme > system
+    // Typography precedence: theme tokens (industry-specific) > Design Brief > Design Intelligence > Design DNA > system
     const tt = (dd?.typographyTokens?.fontFamily ?? {}) as Record<string, string | undefined>;
     const dt = dna?.typography;
     const bt = brief?.typography;
-    const heading = pick(bt?.headingFont, tt.heading, dt?.heading, themeType.heading) ?? 'Inter';
-    const body = pick(bt?.bodyFont, tt.body, dt?.body, themeType.body) ?? 'Inter';
-    const mono = pick(bt?.monoFont, tt.mono, dt?.mono, themeType.mono) ?? 'ui-monospace';
+    const heading = pick(themeType.heading, bt?.headingFont, tt.heading, dt?.heading) ?? 'Inter';
+    const body = pick(themeType.body, bt?.bodyFont, tt.body, dt?.body) ?? 'Inter';
+    const mono = pick(themeType.mono, bt?.monoFont, tt.mono, dt?.mono) ?? 'ui-monospace';
 
     const radius = pick(
+      themeColors.radius,
       typeof dd?.layoutTokens?.borderRadius === 'string' ? dd.layoutTokens.borderRadius : undefined,
       typeof dna?.radius === 'string' ? dna.radius : undefined,
-      themeColors.radius,
     ) ?? '0.75rem';
 
     return {
@@ -757,8 +791,48 @@ const icons: Record<string, React.ReactNode> = {
 
 const fallback = <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>;
 
+const emojiToLucide: Record<string, string> = {
+  '🌿': 'leaf', '🍃': 'leaf',
+  '🍷': 'sparkles', '🥂': 'sparkles', '✨': 'sparkles', '💫': 'sparkles',
+  '👨‍🍳': 'chef-hat', '🍳': 'chef-hat',
+  '🎵': 'music', '🎶': 'music', '🎸': 'music',
+  '🚗': 'truck', '🚕': 'car', '🏎️': 'car',
+  '📱': 'smartphone', '📲': 'smartphone',
+  '🏠': 'home', '🏡': 'home', '🏘️': 'home',
+  '💰': 'dollar-sign', '💵': 'dollar-sign', '💲': 'dollar-sign',
+  '⚡': 'zap', '🔥': 'flame', '💥': 'zap',
+  '🛡️': 'shield', '🔒': 'lock', '🔐': 'lock',
+  '📊': 'bar-chart', '📈': 'trending-up', '📉': 'trending-down',
+  '🎯': 'target', '🏹': 'target',
+  '📋': 'file-text', '📝': 'file-text', '📄': 'file-text',
+  '🏋️': 'dumbbell', '💪': 'strong', '🏃': 'activity',
+  '❤️': 'heart', '💜': 'heart', '💙': 'heart',
+  '⭐': 'star', '🌟': 'star', '🏆': 'award',
+  '🛒': 'shopping-cart', '🛍️': 'shopping-bag', '💳': 'credit-card',
+  '🔍': 'search', '🔎': 'search',
+  '📞': 'phone', '📧': 'mail', '💌': 'mail',
+  '⏰': 'clock', '🕐': 'clock',
+  '🗺️': 'map', '📍': 'map-pin',
+  '🎁': 'gift', '🎀': 'tag',
+  '🤝': 'users', '👥': 'users', '👨‍👩‍👧': 'users',
+  '🧬': 'dna', '🔬': 'microscope', '💊': 'pill',
+  '🏗️': 'building', '🏛️': 'building',
+  '✈️': 'plane', '🚢': 'ship', '🚂': 'train',
+  '🌱': 'sprout', '♻️': 'refresh-cw',
+  '🎓': 'graduation-cap', '📚': 'book-open',
+  '🔧': 'wrench', '⚙️': 'settings', '🛠️': 'wrench',
+  '🎪': 'tent', '🎭': 'palette', '🎨': 'palette',
+};
+
+function kebabToPascal(s: string): string {
+  return s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+}
+
 export default function Icon({ name }: { name: string }) {
-  return <>{icons[name] ?? fallback}</>;
+  // Resolve emoji to Lucide name, then look up SVG
+  const resolved = emojiToLucide[name] ?? name;
+  const pascal = kebabToPascal(resolved);
+  return <>{icons[pascal] ?? icons[resolved] ?? icons[name] ?? fallback}</>;
 }
 `,
       type: 'component',
@@ -821,13 +895,21 @@ export default function GlobalFooter() {
       ? `<link rel="preconnect" href="https://fonts.googleapis.com" />\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />\n    <link href="${googleFontsUrl}" rel="stylesheet" />`
       : '';
 
+    // Scroll-accumulation: inject the live intensity meter when enabled.
+    const acc = context?.experienceBlueprint?.scrollAccumulation?.value;
+    const intensityName = acc?.enabled
+      ? (acc.metric === 'scent' ? 'ScentIntensity' : 'ScrollIntensity')
+      : undefined;
+    const intensityImport = intensityName ? `import ${intensityName} from '@/components/${intensityName}';\n` : '';
+    const intensityEl = intensityName ? `        <${intensityName} />\n` : '';
+
     return {
       path: 'app/layout.tsx',
       content: `import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import GlobalFooter from '@/components/GlobalFooter';
-
+${intensityImport}
 export const metadata: Metadata = {
   title: '${appName}',
   description: '${appName} — built with Build Engine',
@@ -843,12 +925,80 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         <main className="pt-16">{children}</main>
         <GlobalFooter />
-      </body>
+${intensityEl}      </body>
     </html>
   );
 }
 `,
       type: 'layout',
+    };
+  }
+
+  /**
+   * Scroll-Intensity meter — a `useScroll`-linked component that makes
+   * the user FEEL a quality (scent, atmosphere) GROW the more they
+   * scroll. Continuous, not a one-shot reveal. Emitted only when the
+   * ExperienceBlueprint enables `scrollAccumulation`.
+   */
+  private renderScrollIntensity(context?: RenderContext): RenderedFile | undefined {
+    const acc = context?.experienceBlueprint?.scrollAccumulation?.value;
+    if (!acc || !acc.enabled) return undefined;
+
+    const name = acc.metric === 'scent' ? 'ScentIntensity' : 'ScrollIntensity';
+    const label = acc.label;
+    const accent = acc.accent;
+
+    const content = `'use client';
+
+import React, { useRef } from 'react';
+import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
+
+export default function ${name}() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ['start start', 'end end'],
+  });
+
+  // Continuous intensity — grows the more you scroll (not a one-shot reveal)
+  const intensity = useSpring(scrollYProgress, { stiffness: 120, damping: 24 });
+  const width = useTransform(intensity, [0, 1], [8, 100]);
+  const glow = useTransform(intensity, [0, 1], [0.2, 1]);
+  const scale = useTransform(intensity, [0, 1], [0.9, 1.15]);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-5 py-2.5 rounded-full bg-background/60 backdrop-blur-md border border-primary/20"
+      aria-hidden
+    >
+      <span className="text-[10px] tracking-[0.3em] uppercase text-primary/70">${label}</span>
+      <div className="relative w-36 h-1.5 rounded-full bg-border overflow-hidden">
+        <motion.div
+          className="absolute left-0 top-0 h-full rounded-full"
+          style={{
+            width,
+            background: 'linear-gradient(90deg, ${accent}40, ${accent})',
+            boxShadow: '0 0 16px ${accent}',
+            opacity: glow,
+          }}
+        />
+      </div>
+      <motion.span
+        className="text-[10px] tracking-[0.2em] uppercase text-foreground/50"
+        style={{ scale }}
+      >
+        ${label}
+      </motion.span>
+    </div>
+  );
+}
+`;
+
+    return {
+      path: `components/${name}.tsx`,
+      content,
+      type: 'component' as const,
     };
   }
 
@@ -889,144 +1039,113 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }
 
-  private resolveCurrentScene(context?: RenderContext): import('../../orchestration/design-intelligence/types-experience').Scene | undefined {
-    const bp = context?.experienceBlueprint;
-    if (!bp?.scenes) return undefined;
-    return bp.scenes[this.currentSectionIndex] ?? bp.scenes[0];
+  private resolveCurrentScene(_context?: RenderContext): import('../../orchestration/design-intelligence/types-experience').Scene | undefined {
+    // sectionOrder contains SectionDefinition[], not Scene[] — choreography data
+    // comes from the design-intelligence engine, not from sectionOrder.
+    // Return undefined so callers fall back to defaults.
+    return undefined;
   }
 
   private resolveHoverProps(context?: RenderContext): string {
     const bp = context?.experienceBlueprint;
-    if (!bp?.hoverBehaviors) return '';
-    const hover = bp.hoverBehaviors[this.currentSectionIndex] ?? bp.hoverBehaviors[0];
-    if (!hover || hover.strategy === 'none') return '';
-    const dur = `${(hover.animation.duration / 1000).toFixed(2)}`;
-    const ease = hover.animation.easing;
-    const feedback = hover.feedback;
-    switch (hover.strategy) {
-      case 'magnetic':
-        return `whileHover={{ scale: ${feedback.scale ?? 1.02}, x: 4, y: 4 }}`;
-      case 'elevation':
-        return `whileHover={{ y: -4, boxShadow: "${feedback.shadow ?? '0 12px 24px rgba(0,0,0,0.12)'}" }}`;
-      case 'glow':
-        return `whileHover={{ boxShadow: "0 0 20px ${feedback.backgroundShift ?? 'rgba(124,58,237,0.4)'}" }}`;
-      case 'image-zoom':
-        return `whileHover={{ scale: ${feedback.scale ?? 1.05} }}`;
-      case 'tilt-3d':
-        return `whileHover={{ rotateY: 5, rotateX: -3, scale: ${feedback.scale ?? 1.02} }}`;
-      case 'glass-movement':
-        return `whileHover={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(12px)", scale: ${feedback.scale ?? 1.01} }}`;
-      case 'text-reveal':
-        return `whileHover={{ letterSpacing: "0.05em" }}`;
-      case 'border-draw':
-        return `whileHover={{ borderColor: "${feedback.borderColor ?? 'currentColor'}" }}`;
-      case 'background-shift':
-        return `whileHover={{ backgroundColor: "${feedback.backgroundShift ?? 'var(--primary)'}" }}`;
-      case 'scale-subtle':
-        return `whileHover={{ scale: ${feedback.scale ?? 1.02} }}`;
-      case 'depth-shift':
-        return `whileHover={{ y: -2 }}`;
-      case 'icon-movement':
-        return `whileHover={{ x: 4 }}`;
-      case 'cursor-follow':
-        return `whileHover={{ scale: ${feedback.scale ?? 1.02} }}`;
-      default:
-        return `whileHover={{ scale: ${feedback.scale ?? 1.02} }}`;
-    }
+    if (!bp?.hoverBehavior) return '';
+    const hover = bp.hoverBehavior.value ?? bp.hoverBehavior;
+    if (!hover || hover.philosophy === 'professional') return '';
+    const defaults = hover.defaults;
+    if (!defaults) return '';
+    const scale = defaults.scale ?? 1.02;
+    const shadow = defaults.shadow ?? '0 8px 30px rgba(0,0,0,0.12)';
+    return `whileHover={{ scale: ${scale}, boxShadow: "${shadow}" }}`;
   }
 
   private resolveAnimationProps(animation: SectionLayout['animation'], context?: RenderContext): string {
-    const scene = this.resolveCurrentScene(context);
-    const motion = context?.designDecision?.motionTokens;
-    const dur = motion?.duration ?? {};
-    const ease = motion?.easing ?? {};
-    const reduced = motion?.reducedMotion ?? false;
+    // ─── Motion Architecture: Section wrappers NEVER animate for visibility ───
+    // This is Rule 1: SSR HTML must always be fully visible.
+    // Section wrappers return empty string — no initial opacity: 0.
+    const isSectionWrapper = !animation || animation === 'none';
 
-    // Check for industry-specific animation suggestions from MotionEngine
-    const animSuggestions = context?.designDecision?.recommendations
-      ?.filter(r => r.domain === 'motion' && r.animations)
-      .flatMap(r => r.animations ?? []) ?? [];
-
-    if (reduced) {
-      return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.2 }}`;
+    if (isSectionWrapper) {
+      return '';
     }
 
-    const fast = dur.fast ?? '150ms';
-    const normal = dur.normal ?? '250ms';
-    const slow = dur.slow ?? '400ms';
-    const easeOut = ease.out ?? 'cubic-bezier(0, 0, 0.2, 1)';
-    const easeDefault = ease.default ?? 'cubic-bezier(0.4, 0, 0.2, 1)';
+    // Delegate to the Motion Compiler
+    const scene = this.resolveCurrentScene(context);
+    const motionTokens = context?.designDecision?.motionTokens;
+    const reduced = motionTokens?.reducedMotion ?? false;
 
-    // Experience Intelligence: use scene-specific animation config when available
+    // Map animation type to MotionBlueprint purpose
+    const purposeMap: Record<string, string> = {
+      'fade-up': 'reveal', 'fade-down': 'reveal', 'fade-left': 'reveal', 'fade-right': 'reveal',
+      'scale-in': 'scale-in', 'scale-up': 'scale-in',
+      'slide-left': 'reveal', 'slide-right': 'reveal', 'slide-up': 'reveal', 'slide-down': 'reveal',
+      'zoom-in': 'scale-in', 'bounce-in': 'bounce-in',
+      'parallax': 'parallax', 'card-lift': 'hover',
+      'text-reveal': 'text-reveal', 'marquee': 'marquee',
+      'countup': 'countup', 'unveil': 'unveil',
+      'glitch': 'glitch', 'blur-in': 'blur-in', 'rotate-in': 'rotate-in',
+      'stagger': 'stagger',
+    };
+
+    const directionMap: Record<string, 'up' | 'down' | 'left' | 'right' | 'scale' | 'none'> = {
+      'fade-up': 'up', 'fade-down': 'down', 'fade-left': 'left', 'fade-right': 'right',
+      'slide-up': 'up', 'slide-down': 'down', 'slide-left': 'left', 'slide-right': 'right',
+      'scale-in': 'scale', 'scale-up': 'scale', 'zoom-in': 'scale',
+    };
+
     const sceneEntry = scene?.entry;
     const sceneScroll = scene?.scrollTrigger;
     const sceneDurMs = sceneEntry?.duration ?? 500;
-    const sceneDur = `${(sceneDurMs / 1000).toFixed(2)}`;
-    const sceneEase = sceneEntry?.easing ?? easeOut;
-    const sceneType = sceneEntry?.type ?? animation;
-
-    // Build viewport string from scroll trigger
+    const sceneEase = sceneEntry?.easing ?? motionTokens?.easing?.out ?? 'cubic-bezier(0, 0, 0.2, 1)';
     const viewportAmount = sceneScroll?.start ? parseFloat(sceneScroll.start) / 100 : 0.3;
-    const viewportOnce = true;
-    const viewportParts = [`once: ${viewportOnce}`, `amount: ${viewportAmount}`];
-    const viewportStr = viewportParts.join(', ');
 
-    // Get stagger delay from choreography
-    const staggerDelay = scene?.choreography?.stagger?.childDelay ? scene.choreography.stagger.childDelay / 1000 : 0.08;
+    const blueprint = createRevealBlueprint({
+      id: `section-${animation}`,
+      target: 'section-inner',
+      direction: directionMap[animation as string] ?? 'up',
+      purpose: (purposeMap[animation as string] ?? 'reveal') as any,
+      trigger: { viewportAmount, once: true },
+      physics: { type: 'tween', durationMs: sceneDurMs, easing: sceneEase as any },
+    });
 
-    // Use scene motion type to override animation, falling back to layout animation
-    const motionType = (sceneType as string) ?? animation;
+    const result = compileMotion(blueprint, { reducedMotion: reduced });
 
-    switch (motionType) {
-      case 'fade-up':
-      case 'fade-up':
-        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'fade-down':
-        return `initial={{ opacity: 0, y: -24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'fade-left':
-        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'fade-right':
-        return `initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'stagger':
-        return `initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}", staggerChildren: ${staggerDelay} }}`;
-      case 'scale-in':
-      case 'scale-up':
-        return `initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'slide-left':
-        return `initial={{ opacity: 0, x: -32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'slide-right':
-        return `initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'slide-up':
-        return `initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'slide-down':
-        return `initial={{ opacity: 0, y: -32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'zoom-in':
-        return `initial={{ opacity: 0, scale: 1.1 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'bounce-in':
-        return `initial={{ opacity: 0, scale: 0 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ ${viewportStr} }} transition={{ type: "spring", stiffness: 400, damping: 15 }}`;
-      case 'parallax':
-        return `initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'card-lift':
-        return `whileHover={{ y: -4, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'text-reveal':
-        return `initial={{ clipPath: "inset(0 100% 0 0)" }} whileInView={{ clipPath: "inset(0 0% 0 0)" }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'marquee':
-        return `animate={{ x: [0, -1000] }} transition={{ duration: 20, ease: "linear", repeat: Infinity }}`;
-      case 'countup':
-        return `initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'unveil':
-        return `initial={{ clipPath: "inset(100% 0 0 0)" }} whileInView={{ clipPath: "inset(0% 0 0 0)" }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'glitch':
-        return `initial={{ opacity: 0, x: -4 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'blur-in':
-        return `initial={{ opacity: 0, filter: "blur(8px)" }} whileInView={{ opacity: 1, filter: "blur(0px)" }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'rotate-in':
-        return `initial={{ opacity: 0, rotate: -8 }} whileInView={{ opacity: 1, rotate: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
-      case 'none':
-        return '';
-      default:
-        return `initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ ${viewportStr} }} transition={{ duration: ${sceneDur}, ease: "${sceneEase}" }}`;
+    // Convert compiled props back to string format for JSX interpolation
+    return this.propsToString(result.props as unknown as Record<string, unknown>);
+  }
+
+  /**
+   * Convert CompiledMotionProps to a string for JSX template interpolation.
+   * This maintains backward compatibility with the string-based rendering approach.
+   */
+  private propsToString(props: Record<string, unknown>): string {
+    const parts: string[] = [];
+
+    if (props.initial && Object.keys(props.initial).length > 0) {
+      parts.push(`initial={${JSON.stringify(props.initial)}}`);
     }
+    if (props.whileInView && Object.keys(props.whileInView).length > 0) {
+      parts.push(`whileInView={${JSON.stringify(props.whileInView)}}`);
+    }
+    if (props.animate && Object.keys(props.animate).length > 0) {
+      parts.push(`animate={${JSON.stringify(props.animate)}}`);
+    }
+    if (props.exit && Object.keys(props.exit).length > 0) {
+      parts.push(`exit={${JSON.stringify(props.exit)}}`);
+    }
+    if (props.whileHover && Object.keys(props.whileHover).length > 0) {
+      parts.push(`whileHover={${JSON.stringify(props.whileHover)}}`);
+    }
+    if (props.whileTap && Object.keys(props.whileTap).length > 0) {
+      parts.push(`whileTap={${JSON.stringify(props.whileTap)}}`);
+    }
+    if (props.viewport && Object.keys(props.viewport).length > 0) {
+      parts.push(`viewport={${JSON.stringify(props.viewport)}}`);
+    }
+    if (props.transition && Object.keys(props.transition).length > 0) {
+      parts.push(`transition={${JSON.stringify(props.transition)}}`);
+    }
+
+    return parts.join(' ');
   }
 
   private generateComponentCode(spec: ComponentSpec, context?: RenderContext): string {
@@ -1147,9 +1266,7 @@ ${body}
     const subtitle = this.getContentView(spec, 'subtitle');
     const badge = this.getContentView(spec, 'badge');
     const animProps = this.resolveAnimationProps(layout.animation, this.currentContext);
-    const ds = this.currentContext ? this.resolveDesignSystem(this.currentContext) : null;
-    const primaryColor = ds?.colors.primary ?? '#6366f1';
-    const bgColor = ds?.colors.background ?? '#0a0a0b';
+    const primaryColor = this.currentContext ? this.resolveDesignSystem(this.currentContext).colors.primary : '';
     const bgClass = this.resolveBackgroundClass(layout.background, primaryColor);
     const hasOverlay = layout.flags?.darkOverlay;
     const isSplit = layout.heroVariant === 'split';
@@ -1158,7 +1275,7 @@ ${body}
     if (isFullscreen) {
       return [
         `  return (`,
-        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} min-h-screen px-0 bg-cover bg-center bg-no-repeat flex items-end" style={{ background: 'linear-gradient(135deg, ${bgColor} 0%, ${primaryColor}33 60%, ${bgColor} 100%)' }}>`,
+        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} min-h-screen px-0 bg-cover bg-center bg-no-repeat flex items-end" style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #3d1a00 50%, #1a0a00 100%)' }}>`,
         hasOverlay ? `      <div className="absolute inset-0 bg-background/60 z-10" />` : '',
         `      <div className="relative z-20 max-w-4xl mx-auto px-8 pb-20 w-full">`,
         badge !== '{badge}' ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-white/20 bg-white/10 text-white mb-6">{badge}</div>` : '',
@@ -1847,8 +1964,13 @@ ${body}
   }
 
   private getContentView(spec: ComponentSpec, key: string): string {
-    const content = spec.content?.[key];
-    return content?.value ?? `{${key}}`;
+    const content = spec.content?.[key] as { value?: string } | undefined;
+    const val = content?.value ?? `{${key}}`;
+    if (key === 'subtitle' && spec.type === 'HeroBanner') {
+      console.log(`[react-renderer] HeroBanner subtitle content:`, JSON.stringify(spec.content?.subtitle)?.substring(0, 120));
+      console.log(`[react-renderer] HeroBanner subtitle value:`, val?.substring(0, 120));
+    }
+    return val;
   }
 
   private buildComponentProps(spec: ComponentSpec): string {
@@ -1899,7 +2021,7 @@ ${body}
     if ((spec.actions?.length ?? 0) === 0) return [];
 
     const hoverProps = this.resolveHoverProps(this.currentContext);
-    const useMotion = hoverProps && this.currentContext?.experienceBlueprint;
+    const useMotion = !!this.currentContext?.experienceBlueprint;
 
     const buttons = (spec.actions ?? []).map((action: { label: string; style?: string }) => {
       const styleClass = action.style === 'primary'
@@ -1939,10 +2061,9 @@ ${body}
     const scene = this.resolveCurrentScene(context);
     const stagger = scene?.choreography?.stagger;
     if (!stagger) return '';
-    const delayMs = stagger.childDelay ?? 80;
+    const delayMs = stagger.delay ?? 80;
     const delay = (delayMs / 1000).toFixed(2);
-    const fromCenter = stagger.direction === 'center-out';
-    return `transition={{ staggerChildren: ${delay}, delayChildren: ${fromCenter ? delay : 0} }}`;
+    return `transition={{ staggerChildren: ${delay} }}`;
   }
 
   private resolveChildMotion(context?: RenderContext): string {

@@ -1,0 +1,11 @@
+{
+  "skill": "UI/UX Pro Max",
+  "test": "Palette colors in CSS",
+  "skillPrimaryColor": "#059669",
+  "diPrimaryColor": "#2563EB",
+  "foundSkillPrimary": false,
+  "foundDIPrimary": true,
+  "found": true,
+  "cssSnippet": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n:root {\n  --background: #FFFFFF;\n  --foreground: #0F172A;\n  --primary: #2563EB;\n  --primary-foreground: #ffffff;\n  --secondary: #7C3AED;\n  --secondary-foreground: #ffffff;\n  --accent: #F59E0B;\n  --muted: 217.2 32.6% 17.5%;\n  --muted-foreground: 215.4 16.3% 46.9%;\n  --card: 222.2 84% 6.9%;\n  --card-foreground: 210 40% 98%;\n  --border: 217.2 32.6% 17.5%;\n  --input: 217.2 32.6% 17.5%;\n  --ring: 263.4 83.5% 57.8%;\n  --destructive: #EF4444;\n",
+  "verdict": "PASS"
+}

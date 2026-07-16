@@ -154,6 +154,7 @@ export class SiteAnalyzer {
   private parseSitemapXml(xml: string, origin: string): SitemapEntry[] {
     const entries: SitemapEntry[] = [];
     // Strip CDATA sections: <![CDATA[content]]> → content
+    // @ts-ignore — regex s flag works at runtime (ES2018+)
     const cleanXml = xml.replace(/<!\[CDATA\[(.*?)\]\]>/gs, '$1');
     const urlBlocks = cleanXml.split('<url>').slice(1);
 

@@ -35,16 +35,16 @@ export const IntegrationSpecSchema = z.object({
   type: z.enum(['database', 'auth', 'payment', 'email', 'analytics', 'cms', 'storage', 'maps', 'social', 'messaging', 'erp', 'crm', 'booking', 'video']),
   name: z.string(),
   provider: z.string().optional(),
-  config: z.record(z.string()).default({}),
+  config: z.record(z.string(), z.string()).default({}),
   required: z.boolean().default(false),
 });
 export type IntegrationSpec = z.infer<typeof IntegrationSpecSchema>;
 
 export const DesignConstraintsSchema = z.object({
   profileRef: z.string().optional(),
-  palette: z.record(z.string()).optional(),
-  typography: z.record(z.string()).optional(),
-  motion: z.record(z.string()).optional(),
+  palette: z.record(z.string(), z.string()).optional(),
+  typography: z.record(z.string(), z.string()).optional(),
+  motion: z.record(z.string(), z.string()).optional(),
   restrictions: z.array(z.string()).default([]),
 });
 export type DesignConstraints = z.infer<typeof DesignConstraintsSchema>;
@@ -70,7 +70,7 @@ export const PatternSchema = VersionedObject.extend({
   roles: z.array(z.string()).optional(),
   departments: z.array(z.string()).optional(),
   kpis: z.array(z.string()).optional(),
-  vocabulary: z.record(z.string()).optional(),
+  vocabulary: z.record(z.string(), z.string()).optional(),
   businessRules: z.array(z.string()).optional(),
   // Revenue intelligence: how this pattern makes money
   revenueModel: z.array(z.object({

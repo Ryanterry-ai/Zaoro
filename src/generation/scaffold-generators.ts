@@ -629,23 +629,30 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma`;
 
 // ─── API Route Generator ──────────────────────────────────────────────────────
 
-export function generateApiRoute(endpoint: { method: string; path: string; description?: string }): string {
+export function generateApiRoute(
+  endpoint: { method: string; path: string; description?: string },
+  schema?: DbSchema,
+): string {
   const method = endpoint.method.toUpperCase();
   const pathParts = endpoint.path.replace(/^\//, '').split('/');
-  const routeName = pathParts[pathParts.length - 1] ?? 'index';
+  const resourceName = pathParts[pathParts.length - 1] ?? 'index';
 
-  const methodMap: Record<string, string> = {
-    'DELETE': 'DELETE',
-    'NEW': 'CREATE',
-  };
-  const funcName = methodMap[method] ?? method;
+  // Find matching table in schema for real CRUD generation
+  const table = schema?.tables?.find(t =>
+    t.name.toLowerCase() === resourceName.toLowerCase() ||
+    t.name.toLowerCase() === resourceName.toLowerCase() + 's' ||
+    resourceName.toLowerCase().includes(t.name.toLowerCase())
+  );
 
+  if (table && table.columns && table.columns.length > 0) {
+    return generateCrudRoute(resourceName, table, method);
+  }
+
+  // Fallback: stub route
+  const funcName = method === 'DELETE' ? 'DELETE' : method === 'NEW' ? 'CREATE' : method;
   return `import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-/**
- * ${endpoint.description ?? `${endpoint.method} ${endpoint.path}`}
- */
 export async function ${funcName}(request: NextRequest) {
   try {
     return NextResponse.json({ message: '${endpoint.method} ${endpoint.path} - not yet implemented' })
@@ -654,6 +661,137 @@ export async function ${funcName}(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }`;
+}
+
+function generateCrudRoute(
+  resourceName: string,
+  table: { name: string; columns?: Array<{ name: string; type: string; primaryKey?: boolean; unique?: boolean; nullable?: boolean; references?: { table: string; column: string } }> },
+  method: string,
+): string {
+  const modelName = toPascalCase(table.name);
+  const camelName = modelName.charAt(0).toLowerCase() + modelName.slice(1);
+  const columns = table.columns ?? [];
+  const nonIdColumns = columns.filter(c => !c.primaryKey);
+  const inputFields = nonIdColumns.filter(c => !c.name.endsWith('At') && c.name !== 'id');
+  const scalarFields = columns.filter(c => !c.references);
+
+  // Build input type from columns
+  const inputType = inputFields.map(c => {
+    const tsType = prismaToTsType(c.type);
+    const optional = c.nullable ? '?' : '';
+    return `  ${c.name}${optional}: ${tsType}`;
+  }).join('\n');
+
+  if (method === 'GET') {
+    return `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { prisma } from '@/lib/db'
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (id) {
+      const item = await prisma.${camelName}.findUnique({ where: { id } })
+      if (!item) {
+        return NextResponse.json({ error: '${modelName} not found' }, { status: 404 })
+      }
+      return NextResponse.json(item)
+    }
+
+    const items = await prisma.${camelName}.findMany({
+      orderBy: { createdAt: 'desc' },
+    })
+    return NextResponse.json(items)
+  } catch (error) {
+    console.error('GET ${resourceName} error:', error)
+    return NextResponse.json({ error: 'Failed to fetch ${resourceName}' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const item = await prisma.${camelName}.create({ data: body })
+    return NextResponse.json(item, { status: 201 })
+  } catch (error) {
+    console.error('POST ${resourceName} error:', error)
+    return NextResponse.json({ error: 'Failed to create ${modelName}' }, { status: 500 })
+  }
+}`;
+  }
+
+  if (method === 'PUT' || method === 'PATCH') {
+    return `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { prisma } from '@/lib/db'
+
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const body = await request.json()
+    const item = await prisma.${camelName}.update({
+      where: { id: params.id },
+      data: body,
+    })
+    return NextResponse.json(item)
+  } catch (error) {
+    console.error('PUT ${resourceName} error:', error)
+    return NextResponse.json({ error: 'Failed to update ${modelName}' }, { status: 500 })
+  }
+}`;
+  }
+
+  if (method === 'DELETE') {
+    return `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { prisma } from '@/lib/db'
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    await prisma.${camelName}.delete({ where: { id: params.id } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('DELETE ${resourceName} error:', error)
+    return NextResponse.json({ error: 'Failed to delete ${modelName}' }, { status: 500 })
+  }
+}`;
+  }
+
+  // Default: list + create
+  return `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { prisma } from '@/lib/db'
+
+export async function GET() {
+  try {
+    const items = await prisma.${camelName}.findMany({ orderBy: { createdAt: 'desc' } })
+    return NextResponse.json(items)
+  } catch (error) {
+    console.error('GET ${resourceName} error:', error)
+    return NextResponse.json({ error: 'Failed to fetch ${resourceName}' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const item = await prisma.${camelName}.create({ data: body })
+    return NextResponse.json(item, { status: 201 })
+  } catch (error) {
+    console.error('POST ${resourceName} error:', error)
+    return NextResponse.json({ error: 'Failed to create ${modelName}' }, { status: 500 })
+  }
+}`;
+}
+
+function prismaToTsType(prismaType: string): string {
+  const t = prismaType.toUpperCase();
+  if (t.includes('INT') || t.includes('FLOAT') || t.includes('DOUBLE') || t.includes('DECIMAL')) return 'number';
+  if (t.includes('BOOL')) return 'boolean';
+  if (t.includes('DATE') || t.includes('TIME') || t.includes('TIMESTAMP')) return 'string';
+  if (t.includes('JSON')) return 'Record<string, unknown>';
+  return 'string';
 }
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────

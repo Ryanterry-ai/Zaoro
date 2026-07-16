@@ -74,3 +74,6 @@ validation-output/
 .build-anything/projects/
 .build-anything/e2e-test/
 validation-output/
+
+# Phase 1 runtime knowledge (Candidate Knowledge store + promotion log — disposable)
+knowledge-candidates/

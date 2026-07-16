@@ -1,0 +1,12 @@
+{
+  "skill": "Taste",
+  "totalGuidelines": 37,
+  "tasteRules": [
+    "BOLD aesthetic direction — never generic, never safe",
+    "No generic AI aesthetics — every design must feel handcrafted",
+    "Typography must be distinctive and context-appropriate",
+    "Color palette must be cohesive, not random",
+    "Every visual must be cohesive"
+  ],
+  "verdict": "PASS"
+}

@@ -13,6 +13,7 @@ import { EvidenceCollectorManager } from './evidence/collectors.js';
 import { KnowledgeBuilder, KnowledgeQuery } from './knowledge/builder.js';
 import { BusinessReasoningEngine, BusinessIntent, ReasoningResult } from './reasoning/engine.js';
 import { Blueprint, BlueprintCompiler, serializeBlueprint } from './reasoning/blueprint-compiler.js';
+import { GraphGovernor } from './graph/governor.js';
 import {
   PrimitiveCapability, IndustryTemplate,
 } from './knowledge/builder.js';
@@ -181,6 +182,7 @@ const INDUSTRY_TEMPLATES: IndustryTemplate[] = [
 
 export class BOS {
   private graph: KnowledgeGraph;
+  private governor: GraphGovernor;
   private evidenceStore: EvidenceStore;
   private evidenceManager: EvidenceCollectorManager;
   private knowledgeBuilder: KnowledgeBuilder;
@@ -190,6 +192,7 @@ export class BOS {
 
   private constructor() {
     this.graph = new KnowledgeGraph();
+    this.governor = new GraphGovernor(this.graph);
     this.evidenceStore = new EvidenceStore();
     this.evidenceManager = new EvidenceCollectorManager(this.evidenceStore);
     this.knowledgeBuilder = new KnowledgeBuilder(this.graph, this.evidenceStore);
@@ -233,9 +236,19 @@ export class BOS {
 
   /**
    * Get raw knowledge graph
+   * @deprecated Use `graph` (the immutable runtime view) or the Promotion
+   * Pipeline via `governor` to update it. The Business Graph is immutable at
+   * runtime; this getter returns the read-only proxy.
    */
   get graphInstance(): KnowledgeGraph {
-    return this.graph;
+    return this.governor.getReadonlyGraph();
+  }
+
+  /**
+   * The governor is the only runtime path that may mutate the Business Graph.
+   */
+  get governorInstance(): GraphGovernor {
+    return this.governor;
   }
 
   /**

@@ -12,7 +12,7 @@ export const BusinessModelSchema = VersionedObject.extend({
     kpis: z.array(InfluenceRule).default([]),
     integrations: z.array(InfluenceRule).default([]),
     workflows: z.array(InfluenceRule).default([]),
-  }).default({}),
+  }).optional(),
   compatibleIndustries: z.array(z.string()).default([]),
   keywords: z.array(z.string()).default([]),
 });

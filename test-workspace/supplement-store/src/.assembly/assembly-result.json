@@ -1,0 +1,398 @@
+{
+  "conflicts": [
+    {
+      "filePath": "components/HeroBanner.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-1"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/FeatureGrid.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-1"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/Testimonials.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-1"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CTASection.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-1"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/page.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-1"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/HeroBanner.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/FeatureGrid.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/Testimonials.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CTASection.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/ProductGallery.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/ProductInfo.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/RecommendedProducts.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CheckoutForm.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/page.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-2"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/HeroBanner.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/FeatureGrid.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/Testimonials.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CTASection.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CheckoutForm.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/PaymentForm.tsx",
+      "sources": [
+        "build-group-2",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/OrderReview.tsx",
+      "sources": [
+        "build-group-2",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/FilterSidebar.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/OrderHistory.tsx",
+      "sources": [
+        "build-group-1",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/Wishlist.tsx",
+      "sources": [
+        "build-group-1",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CartItems.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/page.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/checkout/page.tsx",
+      "sources": [
+        "build-group-2",
+        "build-group-3"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/HeroBanner.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/FeatureGrid.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/Testimonials.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CTASection.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/FilterSidebar.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/DataTable.tsx",
+      "sources": [
+        "build-group-3",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/OrderStatus.tsx",
+      "sources": [
+        "build-group-3",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/OrderHistory.tsx",
+      "sources": [
+        "build-group-1",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/AddressBook.tsx",
+      "sources": [
+        "build-group-3",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/Wishlist.tsx",
+      "sources": [
+        "build-group-1",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/CartItems.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "components/OrderTracking.tsx",
+      "sources": [
+        "build-group-3",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/page.tsx",
+      "sources": [
+        "build-group-0",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/orders/page.tsx",
+      "sources": [
+        "build-group-3",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/account/page.tsx",
+      "sources": [
+        "build-group-3",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    },
+    {
+      "filePath": "app/account/orders/[id]/page.tsx",
+      "sources": [
+        "build-group-3",
+        "build-group-4"
+      ],
+      "resolution": "deduplicated"
+    }
+  ],
+  "specFilesProcessed": 0,
+  "totalErrors": 0,
+  "fileCount": 52,
+  "warnings": [
+    "Conflict: components/HeroBanner.tsx (deduplicated)",
+    "Conflict: components/FeatureGrid.tsx (deduplicated)",
+    "Conflict: components/Testimonials.tsx (deduplicated)",
+    "Conflict: components/CTASection.tsx (deduplicated)",
+    "Conflict: app/page.tsx (deduplicated)",
+    "Conflict: components/HeroBanner.tsx (deduplicated)",
+    "Conflict: components/FeatureGrid.tsx (deduplicated)",
+    "Conflict: components/Testimonials.tsx (deduplicated)",
+    "Conflict: components/CTASection.tsx (deduplicated)",
+    "Conflict: components/ProductGallery.tsx (deduplicated)",
+    "Conflict: components/ProductInfo.tsx (deduplicated)",
+    "Conflict: components/RecommendedProducts.tsx (deduplicated)",
+    "Conflict: components/CheckoutForm.tsx (deduplicated)",
+    "Conflict: app/page.tsx (deduplicated)",
+    "Conflict: components/HeroBanner.tsx (deduplicated)",
+    "Conflict: components/FeatureGrid.tsx (deduplicated)",
+    "Conflict: components/Testimonials.tsx (deduplicated)",
+    "Conflict: components/CTASection.tsx (deduplicated)",
+    "Conflict: components/CheckoutForm.tsx (deduplicated)",
+    "Conflict: components/PaymentForm.tsx (deduplicated)",
+    "Conflict: components/OrderReview.tsx (deduplicated)",
+    "Conflict: components/FilterSidebar.tsx (deduplicated)",
+    "Conflict: components/OrderHistory.tsx (deduplicated)",
+    "Conflict: components/Wishlist.tsx (deduplicated)",
+    "Conflict: components/CartItems.tsx (deduplicated)",
+    "Conflict: app/page.tsx (deduplicated)",
+    "Conflict: app/checkout/page.tsx (deduplicated)",
+    "Conflict: components/HeroBanner.tsx (deduplicated)",
+    "Conflict: components/FeatureGrid.tsx (deduplicated)",
+    "Conflict: components/Testimonials.tsx (deduplicated)",
+    "Conflict: components/CTASection.tsx (deduplicated)",
+    "Conflict: components/FilterSidebar.tsx (deduplicated)",
+    "Conflict: components/DataTable.tsx (deduplicated)",
+    "Conflict: components/OrderStatus.tsx (deduplicated)",
+    "Conflict: components/OrderHistory.tsx (deduplicated)",
+    "Conflict: components/AddressBook.tsx (deduplicated)",
+    "Conflict: components/Wishlist.tsx (deduplicated)",
+    "Conflict: components/CartItems.tsx (deduplicated)",
+    "Conflict: components/OrderTracking.tsx (deduplicated)",
+    "Conflict: app/page.tsx (deduplicated)",
+    "Conflict: app/orders/page.tsx (deduplicated)",
+    "Conflict: app/account/page.tsx (deduplicated)",
+    "Conflict: app/account/orders/[id]/page.tsx (deduplicated)",
+    "Assembly processed 0/38 spec files (38 missing)"
+  ],
+  "valid": false
+}

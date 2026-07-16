@@ -1,11 +1,19 @@
 /**
- * PromptProvider — content from user prompt requirements.
+ * PromptProvider — content from user prompt + BusinessResearch.
  *
- * Provides: business name, description, key requirements, sub-category detection.
+ * Uses BusinessResearch to generate dynamic content based on:
+ * - userPersonas → hero subtitle targeting
+ * - customerFlow → feature descriptions
+ * - revenueFlow → CTA actions
+ * - vocabulary → industry-specific terminology
+ *
  * Priority: 20 (above base knowledge).
  */
 
 import type { ContentProvider, ContentBag, ProviderContext } from './interfaces.js';
+import type { BusinessResearch } from '../types.js';
+import { getDomainData } from '../../generation/domain-data.js';
+import { getIndustryCopy } from '../industry-copy-schema.js';
 
 export class PromptProvider implements ContentProvider {
   readonly name = 'prompt';
@@ -18,95 +26,85 @@ export class PromptProvider implements ContentProvider {
   provide(ctx: ProviderContext): ContentBag {
     const desc = (ctx.blueprint.description ?? '').toLowerCase();
     const name = ctx.blueprint.name ?? 'Business';
+    const research = ctx.businessResearch;
 
-    // Detect sub-categories from prompt
-    const subCat = this.detectSubCategory(desc);
+    // Use domain data as fallback for richer content
+    const domainData = getDomainData(research?.industry ?? 'ecommerce', research?.subIndustry);
+
+    const copy = getIndustryCopy(ctx.blueprint.industry ?? 'restaurant');
 
     return {
       hero: {
         title: name,
-        subtitle: this.generateSubtitle(desc, name, subCat),
+        subtitle: this.generateSubtitle(desc, name, research, domainData),
       },
       features: {
-        title: `${name} Features`,
-        subtitle: `What ${name} offers`,
-        items: this.extractFeatures(desc, subCat),
+        title: copy.featuresHeading,
+        subtitle: copy.featuresSubheading,
+        items: this.generateFeatures(desc, research, domainData),
       },
       about: {
         title: `About ${name}`,
-        description: this.generateAbout(desc, name, subCat),
+        description: this.generateAbout(desc, name, research, domainData),
       },
       cta: {
-        title: `Get Started with ${name}`,
-        subtitle: this.generateCTASubtitle(desc, subCat),
-        actions: [
-          { label: this.generatePrimaryCTA(desc, subCat), action: '/signup', style: 'primary' },
-          { label: 'Learn More', action: '#features', style: 'ghost' },
-        ],
+        title: copy.ctaHeading,
+        subtitle: copy.ctaTrustLine,
+        actions: this.generateCTAActions(research, copy),
       },
+      ...(research?.vocabulary ? { vocabulary: research.vocabulary } : {}),
     };
   }
 
-  private detectSubCategory(desc: string): string | undefined {
-    if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe')) return 'coffee';
-    if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) return 'wholesale';
-    if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition') || desc.includes('whey')) return 'supplement';
-    if (desc.includes('gym') || desc.includes('fitness') || desc.includes('yoga')) return 'fitness';
-    if (desc.includes('restaurant') || desc.includes('food') || desc.includes('dining')) return 'restaurant';
-    if (desc.includes('hotel') || desc.includes('motel') || desc.includes('lodge')) return 'hotel';
-    if (desc.includes('course') || desc.includes('learn') || desc.includes('education')) return 'education';
-    if (desc.includes('property') || desc.includes('real estate')) return 'realestate';
-    if (desc.includes('health') || desc.includes('dental') || desc.includes('medical')) return 'healthcare';
-    return undefined;
-  }
+  /**
+   * Generate hero subtitle from BusinessResearch.userPersonas.
+   * Falls back to domain data for richer content.
+   */
+  private generateSubtitle(desc: string, name: string, research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): string {
+    // Use domain data subtitle if available (e.g., supplement-specific)
+    if (domainData?.hero?.subtitle) {
+      return domainData.hero.subtitle;
+    }
 
-  private generateSubtitle(desc: string, name: string, subCat: string | undefined): string {
-    if (subCat === 'coffee') return `Freshly roasted beans, handcrafted drinks, and a space worth waking up for`;
-    if (subCat === 'wholesale') return `B2B wholesale distribution — bulk pricing, dealer network, nationwide supply chain`;
-    if (subCat === 'supplement') return `Premium supplements from top brands, lab-tested and delivered`;
-    if (subCat === 'fitness') return `Transform your body with expert-led programs and state-of-the-art facilities`;
-    if (subCat === 'restaurant') return `Fresh, seasonal food prepared with care and served with pride`;
-    if (subCat === 'education') return `Learn from industry experts and advance your career at your own pace`;
-    if (subCat === 'realestate') return `Find your perfect property with expert guidance and local market insights`;
-    if (subCat === 'healthcare') return `Compassionate care with modern technology for your whole family`;
+    if (research?.userPersonas && research.userPersonas.length > 0) {
+      const personas = research.userPersonas.slice(0, 3).join(', ');
+      // Use a clean description — never echo raw prompt text
+      const cleanIndustry = research.industry.replace(/-/g, ' ');
+      return `Designed for ${personas} — ${cleanIndustry} made simple`;
+    }
     return `Built for how ${name} actually works`;
   }
 
-  private extractFeatures(desc: string, subCat: string | undefined): Array<{ title: string; description: string; icon: string }> {
+  /**
+   * Generate features from BusinessResearch.customerFlow or domain data.
+   */
+  private generateFeatures(desc: string, research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): Array<{ title: string; description: string; icon: string }> {
+    // Use domain data features if available (e.g., supplement-specific)
+    if (domainData?.features && domainData.features.length > 0) {
+      return domainData.features.slice(0, 6).map(f => ({
+        title: f.title,
+        description: f.description,
+        icon: f.iconKeyword ?? f.icon,
+      }));
+    }
+
     const features: Array<{ title: string; description: string; icon: string }> = [];
 
-    if (subCat === 'coffee') {
-      features.push(
-        { title: 'Fresh Roasted Beans', description: 'Single-origin and blended beans roasted in-house daily', icon: 'coffee' },
-        { title: 'Online Order & Pickup', description: 'Skip the line — order ahead and pick up when ready', icon: 'shopping-bag' },
-        { title: 'Barista Crafted Drinks', description: 'Espresso, pour-over, cold brew, and seasonal specials', icon: 'cup-soda' },
-      );
-    } else if (subCat === 'wholesale') {
-      features.push(
-        { title: 'Bulk Pricing Tiers', description: 'Volume-based pricing with MOQ thresholds for distributors', icon: 'package' },
-        { title: 'Dealer Portal', description: 'Self-service ordering, invoice management, and inventory tracking', icon: 'layout-dashboard' },
-        { title: 'Purchase Order System', description: 'Automated PO generation and approval workflows', icon: 'file-text' },
-      );
-    } else if (subCat === 'supplement') {
-      features.push(
-        { title: 'Lab-Tested Products', description: 'Third-party verified purity and potency for every batch', icon: 'flask-conical' },
-        { title: 'Brand Catalog', description: 'Multi-brand inventory with real-time stock and pricing', icon: 'grid' },
-        { title: 'Subscription Bundles', description: 'Monthly supplement stacks delivered to your door', icon: 'repeat' },
-      );
-    } else if (subCat === 'fitness') {
-      features.push(
-        { title: 'Class Booking', description: 'Reserve your spot in any class', icon: 'calendar' },
-        { title: 'Membership Plans', description: 'Flexible pricing for every commitment level', icon: 'credit-card' },
-        { title: 'Workout Tracking', description: 'Monitor progress and celebrate milestones', icon: 'activity' },
-      );
-    } else if (subCat === 'restaurant') {
-      features.push(
-        { title: 'Online Ordering', description: 'Let customers order ahead for pickup or delivery', icon: 'shopping-bag' },
-        { title: 'Table Reservations', description: 'Real-time availability and instant booking', icon: 'calendar' },
-        { title: 'Menu Management', description: 'Update dishes, prices, and specials instantly', icon: 'book-open' },
-      );
-    } else {
-      // Generic features from description keywords
+    if (research?.customerFlow && research.customerFlow.length > 0) {
+      const icons = ['search', 'layout-grid', 'shopping-cart', 'credit-card', 'truck', 'star', 'heart', 'bell'];
+      for (let i = 0; i < Math.min(research.customerFlow.length, 6); i++) {
+        const flow = research.customerFlow[i] ?? '';
+        const title = flow.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        features.push({
+          title,
+          description: `${title} — designed for ${research.userPersonas?.[0] || 'your users'}`,
+          icon: icons[i % icons.length] ?? 'zap',
+        });
+      }
+    }
+
+    // Fallback: generic features from description keywords
+    if (features.length === 0) {
       if (desc.includes('analytics') || desc.includes('dashboard')) {
         features.push({ title: 'Analytics Dashboard', description: 'Real-time data visualization and reporting', icon: 'bar-chart' });
       }
@@ -128,32 +126,79 @@ export class PromptProvider implements ContentProvider {
     return features;
   }
 
-  private generateAbout(desc: string, name: string, subCat: string | undefined): string {
-    if (subCat === 'coffee') return `A neighborhood coffee house committed to ethically sourced beans, expert roasting, and a warm community atmosphere`;
-    if (subCat === 'wholesale') return `A trusted B2B wholesale distributor serving gyms and retailers with premium products and reliable logistics`;
-    if (subCat === 'supplement') return `Your trusted destination for genuine supplements from top brands, lab-tested and verified`;
-    if (subCat === 'fitness') return `Empowering your fitness journey with expert coaching and state-of-the-art facilities`;
-    if (subCat === 'restaurant') return `A passion for great food, fresh ingredients, and unforgettable dining experiences`;
-    if (subCat === 'education') return `Making quality education accessible and engaging for learners everywhere`;
-    if (subCat === 'realestate') return `Connecting people with their dream properties through expertise and trust`;
-    if (subCat === 'healthcare') return `Delivering compassionate, modern healthcare with a patient-first approach`;
+  /**
+   * Generate about text from BusinessResearch.
+   * Uses businessType, userPersonas, and revenueFlow.
+   */
+  /**
+   * Generate about text from BusinessResearch or domain data.
+   */
+  private generateAbout(desc: string, name: string, research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): string {
+    // Use domain data about if available
+    if (domainData?.hero?.subtitle) {
+      return `${name} — ${domainData.hero.subtitle}`;
+    }
+
+    if (research) {
+      const personas = research.userPersonas?.slice(0, 2).join(' and ') || 'your users';
+      const revenueDesc = research.revenueFlow?.[0]?.replace(/-/g, ' ') || 'direct sales';
+      return `${name} — a ${research.businessType} serving ${personas} through ${revenueDesc}`;
+    }
     return `${name} — purpose-built for how your team actually works`;
   }
 
-  private generateCTASubtitle(desc: string, subCat: string | undefined): string {
-    if (subCat === 'coffee') return 'Join our community of coffee lovers';
-    if (subCat === 'wholesale') return 'Start ordering in bulk today';
-    if (subCat === 'supplement') return 'Fuel your goals with trusted nutrition';
-    if (subCat === 'fitness') return 'Start your transformation today';
+  /**
+   * Generate CTA subtitle from BusinessResearch.revenueFlow or domain data.
+   */
+  private generateCTASubtitle(research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): string {
+    // Use domain data CTA if available
+    if (domainData?.cta?.subtitle) {
+      return domainData.cta.subtitle;
+    }
+
+    if (research?.revenueFlow?.includes('subscription')) return 'Start your subscription today';
+    if (research?.revenueFlow?.includes('membership')) return 'Join our community';
+    if (research?.revenueFlow?.includes('service-booking')) return 'Book your first session';
+    if (research?.revenueFlow?.includes('marketplace')) return 'Start selling today';
     return 'Get started in minutes';
   }
 
-  private generatePrimaryCTA(desc: string, subCat: string | undefined): string {
-    if (subCat === 'coffee') return 'Order Now';
-    if (subCat === 'wholesale') return 'Request a Quote';
-    if (subCat === 'supplement') return 'Shop Supplements';
-    if (subCat === 'fitness') return 'Join Now';
-    if (subCat === 'restaurant') return 'Reserve a Table';
-    return 'Get Started';
+  /**
+   * Generate CTA actions from BusinessResearch.revenueFlow.
+   */
+  private generateCTAActions(research?: BusinessResearch, copy?: ReturnType<typeof getIndustryCopy>): Array<{ label: string; action: string; style: 'link' | 'primary' | 'secondary' | 'ghost' }> {
+    const revenueFlow = research?.revenueFlow?.[0] || 'direct-sales';
+    const ctaLabel = copy?.ctaPrimaryButton ?? 'Get Started';
+    const secondaryLabel = copy?.heroSecondaryButton ?? 'Learn More';
+
+    if (revenueFlow === 'subscription') {
+      return [
+        { label: 'Start Free Trial', action: '/register', style: 'primary' },
+        { label: 'View Plans', action: '#pricing', style: 'ghost' },
+      ];
+    }
+    if (revenueFlow === 'membership') {
+      return [
+        { label: 'Join Now', action: '/register', style: 'primary' },
+        { label: 'View Membership', action: '#pricing', style: 'ghost' },
+      ];
+    }
+    if (revenueFlow === 'service-booking') {
+      return [
+        { label: 'Book Now', action: '/booking', style: 'primary' },
+        { label: 'View Services', action: '#services', style: 'ghost' },
+      ];
+    }
+    if (revenueFlow === 'marketplace') {
+      return [
+        { label: 'Start Selling', action: '/register', style: 'primary' },
+        { label: 'Browse Marketplace', action: '/browse', style: 'ghost' },
+      ];
+    }
+    // direct-sales, freemium, etc. — use industry schema
+    return [
+      { label: ctaLabel, action: '/register', style: 'primary' },
+      { label: secondaryLabel, action: '#features', style: 'ghost' },
+    ];
   }
 }

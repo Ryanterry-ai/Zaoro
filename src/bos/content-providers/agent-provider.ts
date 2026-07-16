@@ -1,205 +1,242 @@
 /**
  * AgentProvider — content from AI agent reasoning.
  *
- * Provides: domain-specific copy, business artifacts, enriched content.
- * Priority: 50 (highest — agent has final say on content).
+ * Uses BusinessResearch for dynamic content generation:
+ * - userPersonas → testimonials, hero badge
+ * - revenueFlow → CTA actions and titles
+ * - kpis → stats section
+ * - vocabulary → industry-specific terminology
+ * - businessWorkflow → mission items
  *
- * In agent mode, the agent generates TSX directly from the spec.
- * This provider supplies the enriched context the agent needs.
+ * Priority: 50 (highest — agent has final say on content).
  */
 
 import type { ContentProvider, ContentBag, ProviderContext } from './interfaces.js';
+import type { BusinessResearch } from '../types.js';
+import { getIndustryCopy } from '../industry-copy-schema.js';
 
 export class AgentProvider implements ContentProvider {
   readonly name = 'agent';
   readonly priority = 50;
 
   canProvide(_ctx: ProviderContext): boolean {
-    // Agent provider always contributes — it enriches everything
     return true;
   }
 
   provide(ctx: ProviderContext): ContentBag {
-    const { blueprint, vocabulary, subCategory, revenueIntelligence } = ctx;
+    const { blueprint, vocabulary, subCategory, revenueIntelligence, businessResearch, scrapedContent } = ctx;
 
-    // The agent provider enriches content with domain-aware terminology
-    // and provides the highest-quality fallback content
+    // Use industry copy trust badges instead of raw businessType (avoids prompt leaking)
+    const industryCopy = getIndustryCopy(blueprint.industry ?? 'restaurant');
+    const badge = industryCopy.heroTrustBadges?.[0] ?? blueprint.industry;
+
+    // Only generate testimonials if scraped content doesn't have them
+    const hasScrapedTestimonials = scrapedContent?.testimonials && scrapedContent.testimonials.length > 0;
+
+    // Only generate stats if no scraped or BI stats exist
+    const hasScrapedStats = scrapedContent?.productSpecs && scrapedContent.productSpecs.length > 0;
+    const hasBIStats = revenueIntelligence?.kpis && revenueIntelligence.kpis.length > 0;
+
     return {
       hero: {
-        badge: subCategory
-          ? `${subCategory.charAt(0).toUpperCase() + subCategory.slice(1)} — ${blueprint.industry}`
-          : blueprint.industry,
+        badge,
+        // Do NOT set title here — let ScrapedContentProvider or DomainDataProvider provide it
       },
       features: {
-        title: `${blueprint.name ?? blueprint.industry} Capabilities`,
-        subtitle: `What makes ${blueprint.name ?? 'this platform'} different`,
+        title: getIndustryCopy(blueprint.industry ?? 'restaurant').featuresHeading,
+        subtitle: getIndustryCopy(blueprint.industry ?? 'restaurant').featuresSubheading,
       },
       about: {
         title: `About ${blueprint.name ?? blueprint.industry}`,
       },
-      testimonials: {
-        items: this.generateTestimonials(blueprint, vocabulary, subCategory),
-      },
+      // Only provide testimonials if scraped content doesn't have them
+      ...(hasScrapedTestimonials ? {} : {
+        testimonials: {
+          items: this.generateTestimonials(blueprint, vocabulary, businessResearch),
+        },
+      }),
       mission: {
-        items: [
-          { title: 'Domain Expertise', description: `Deep ${blueprint.industry} knowledge built into every feature`, icon: 'target' as const },
-          { title: 'Continuous Innovation', description: 'Always evolving to meet industry demands', icon: 'refresh-cw' as const },
-          { title: 'Client Success', description: 'Dedicated support and measurable outcomes', icon: 'heart' as const },
-        ],
+        items: this.generateMission(businessResearch, blueprint.industry),
       },
-      stats: {
-        items: revenueIntelligence?.kpis?.slice(0, 4).map(kpi => ({
-          label: kpi.label,
-          value: kpi.benchmark ?? '—',
-          trend: 'neutral' as const,
-        })) ?? [
-          { label: 'Clients', value: '500+', trend: 'up' as const },
-          { label: 'Uptime', value: '99.9%', trend: 'neutral' as const },
-          { label: 'Support', value: '24/7', trend: 'neutral' as const },
-          { label: 'Growth', value: '40%', trend: 'up' as const },
-        ],
-      },
+      // Only provide stats if no scraped or BI stats exist
+      ...(hasScrapedStats || hasBIStats ? {} : {
+        stats: {
+          items: this.generateStats(businessResearch, revenueIntelligence),
+        },
+      }),
       cta: {
-        title: this.generateCTATitle(blueprint),
-        subtitle: this.generateCTASubtitle(blueprint),
-        actions: this.generateCTAActions(blueprint),
+        title: this.generateCTATitle(blueprint, businessResearch),
+        subtitle: this.generateCTASubtitle(businessResearch),
+        actions: this.generateCTAActions(blueprint, businessResearch),
       },
     };
   }
 
-  private generateCTATitle(blueprint: ProviderContext['blueprint']): string {
-    const name = blueprint.name ?? 'us';
-    const industry = blueprint.industry;
-    const ctaMap: Record<string, string> = {
-      ecommerce: `Shop ${name} Today`,
-      restaurant: `Reserve Your Table at ${name}`,
-      cafe: `Visit ${name} for Fresh Brews`,
-      gym: `Join ${name} and Start Training`,
-      fitness: `Start Your Fitness Journey with ${name}`,
-      supplement: `Order from ${name} — Lab-Tested & Trusted`,
-      healthcare: `Book an Appointment at ${name}`,
-      dental: `Schedule Your Visit to ${name}`,
-      salon: `Book Your Session at ${name}`,
-      spa: `Experience ${name} — Relax & Rejuvenate`,
-      saas: `Get Started with ${name}`,
-      realestate: `Explore Properties with ${name}`,
-      legal: `Consult with ${name} Today`,
-      agency: `Partner with ${name}`,
-      education: `Enroll at ${name}`,
-      travel: `Plan Your Trip with ${name}`,
-      technology: `Try ${name} Now`,
-      media: `Subscribe to ${name}`,
-      nonprofit: `Support ${name}`,
-      portfolio: `View Our Work at ${name}`,
-    };
-    return ctaMap[industry] ?? `Get Started with ${name}`;
-  }
-
-  private generateCTASubtitle(blueprint: ProviderContext['blueprint']): string {
-    const industry = blueprint.industry;
-    const subMap: Record<string, string> = {
-      ecommerce: `Browse our curated collection and find exactly what you need.`,
-      restaurant: `Fresh ingredients, crafted dishes, and an unforgettable dining experience.`,
-      cafe: ` specialty coffee, fresh pastries, and a welcoming space every morning.`,
-      gym: `State-of-the-art equipment, expert trainers, and a community that keeps you going.`,
-      fitness: `Personalized programs, group classes, and results you can see.`,
-      supplement: `Premium, lab-tested supplements delivered to your door.`,
-      healthcare: `Compassionate care with experienced professionals.`,
-      dental: `Modern dentistry for a healthier, brighter smile.`,
-      salon: `Expert stylists and premium treatments for every look.`,
-      spa: `Unwind with our luxury treatments and peaceful atmosphere.`,
-      saas: `Streamline your workflow and boost productivity.`,
-      realestate: `Find your perfect property with our expert guidance.`,
-      legal: `Trusted legal counsel for your business and personal needs.`,
-      agency: `Creative solutions that drive real results for your brand.`,
-      education: `Quality education that empowers lifelong success.`,
-      travel: `Curated experiences and unforgettable destinations.`,
-      technology: `Cutting-edge solutions built for your success.`,
-      media: `Stay informed with quality content and journalism.`,
-      nonprofit: `Every contribution makes a meaningful difference.`,
-      portfolio: `See our creative work and innovative projects.`,
-    };
-    return subMap[industry] ?? `Join thousands who trust ${blueprint.name ?? 'us'} for quality and reliability.`;
-  }
-
-  private generateCTAActions(blueprint: ProviderContext['blueprint']): Array<{ label: string; action: string; style: 'primary' | 'ghost' }> {
-    const name = blueprint.name ?? 'us';
-    const industry = blueprint.industry;
-    const actionMap: Record<string, Array<{ label: string; action: string; style: 'primary' | 'ghost' }>> = {
-      ecommerce: [
-        { label: `Shop Now`, action: '/shop', style: 'primary' },
-        { label: 'Browse Categories', action: '/shop', style: 'ghost' },
-      ],
-      restaurant: [
-        { label: 'Reserve a Table', action: '/contact', style: 'primary' },
-        { label: 'View Menu', action: '/menu', style: 'ghost' },
-      ],
-      cafe: [
-        { label: 'Visit Us', action: '/contact', style: 'primary' },
-        { label: 'See Menu', action: '/menu', style: 'ghost' },
-      ],
-      gym: [
-        { label: 'Join Now', action: '/register', style: 'primary' },
-        { label: 'View Plans', action: '/pricing', style: 'ghost' },
-      ],
-      fitness: [
-        { label: 'Start Free Trial', action: '/register', style: 'primary' },
-        { label: 'See Programs', action: '/programs', style: 'ghost' },
-      ],
-      supplement: [
-        { label: 'Order Now', action: '/shop', style: 'primary' },
-        { label: 'View Products', action: '/shop', style: 'ghost' },
-      ],
-      saas: [
-        { label: `Start with ${name}`, action: '/register', style: 'primary' },
-        { label: 'Schedule a Demo', action: '/contact', style: 'ghost' },
-      ],
-    };
-    return actionMap[industry] ?? [
-      { label: `Get Started`, action: '/register', style: 'primary' as const },
-      { label: 'Learn More', action: '/about', style: 'ghost' as const },
+  /**
+   * Generate mission items from BusinessResearch.businessWorkflow.
+   */
+  private generateMission(research?: BusinessResearch, industry?: string): Array<{ title: string; description: string; icon: string }> {
+    if (research?.businessWorkflow && research.businessWorkflow.length > 0) {
+      const icons = ['target', 'refresh-cw', 'heart', 'shield', 'zap'];
+      return research.businessWorkflow.slice(0, 3).map((workflow, i) => ({
+        title: workflow.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        description: `Expert ${workflow.replace(/-/g, ' ')} for ${research.industry}`,
+        icon: icons[i % icons.length] ?? 'target',
+      }));
+    }
+    return [
+      { title: 'Domain Expertise', description: `Deep ${industry || 'business'} knowledge built into every feature`, icon: 'target' },
+      { title: 'Continuous Innovation', description: 'Always evolving to meet industry demands', icon: 'refresh-cw' },
+      { title: 'Client Success', description: 'Dedicated support and measurable outcomes', icon: 'heart' },
     ];
   }
 
+  /**
+   * Generate stats from BusinessResearch.kpis.
+   */
+  private generateStats(
+    research?: BusinessResearch,
+    revenueIntelligence?: ProviderContext['revenueIntelligence'],
+  ): Array<{ label: string; value: string; trend: 'up' | 'down' | 'neutral' }> {
+    // Use BI profile KPIs if available
+    if (revenueIntelligence?.kpis && revenueIntelligence.kpis.length > 0) {
+      return revenueIntelligence.kpis.slice(0, 4).map(kpi => ({
+        label: kpi.label,
+        value: kpi.benchmark ?? '—',
+        trend: 'neutral' as const,
+      }));
+    }
+
+    // Use BusinessResearch KPIs
+    if (research?.kpis && research.kpis.length > 0) {
+      return research.kpis.slice(0, 4).map(kpi => ({
+        label: kpi.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).slice(0, 20),
+        value: '—',
+        trend: 'neutral' as const,
+      }));
+    }
+
+    return [
+      { label: 'Clients', value: '—', trend: 'neutral' as const },
+      { label: 'Uptime', value: '99.9%', trend: 'neutral' as const },
+      { label: 'Support', value: '24/7', trend: 'neutral' as const },
+    ];
+  }
+
+  /**
+   * Generate CTA title from BusinessResearch.revenueFlow.
+   */
+  private generateCTATitle(blueprint: ProviderContext['blueprint'], research?: BusinessResearch): string {
+    const name = blueprint.name ?? 'us';
+    const copy = getIndustryCopy(blueprint.industry ?? 'restaurant');
+    return copy.ctaHeading;
+  }
+
+  /**
+   * Generate CTA subtitle from BusinessResearch.
+   */
+  private generateCTASubtitle(research?: BusinessResearch): string {
+    return '';  // Let content-resolver.ts fill this from schema
+  }
+
+  /**
+   * Generate CTA actions from BusinessResearch.revenueFlow.
+   */
+  private generateCTAActions(
+    blueprint: ProviderContext['blueprint'],
+    research?: BusinessResearch,
+  ): Array<{ label: string; action: string; style: 'primary' | 'ghost' }> {
+    const name = blueprint.name ?? 'us';
+    const revenueFlow = research?.revenueFlow?.[0] || 'direct-sales';
+
+    if (revenueFlow === 'subscription') {
+      return [
+        { label: 'Start Free Trial', action: '/register', style: 'primary' },
+        { label: 'View Plans', action: '#pricing', style: 'ghost' },
+      ];
+    }
+    if (revenueFlow === 'membership') {
+      return [
+        { label: 'Join Now', action: '/register', style: 'primary' },
+        { label: 'View Membership', action: '#pricing', style: 'ghost' },
+      ];
+    }
+    if (revenueFlow === 'service-booking') {
+      return [
+        { label: 'Book Now', action: '/booking', style: 'primary' },
+        { label: 'View Services', action: '#services', style: 'ghost' },
+      ];
+    }
+    if (revenueFlow === 'marketplace') {
+      return [
+        { label: 'Start Selling', action: '/register', style: 'primary' },
+        { label: 'Browse Marketplace', action: '/browse', style: 'ghost' },
+      ];
+    }
+    if (revenueFlow === 'freemium') {
+      return [
+        { label: `Try ${name} Free`, action: '/register', style: 'primary' },
+        { label: 'See Features', action: '#features', style: 'ghost' },
+      ];
+    }
+    const copy = getIndustryCopy(blueprint.industry ?? 'restaurant');
+    return [
+      { label: copy.ctaPrimaryButton, action: '/register', style: 'primary' },
+      { label: copy.heroSecondaryButton, action: '/about', style: 'ghost' },
+    ];
+  }
+
+  /**
+   * Generate testimonials from BusinessKnowledge (preferred) or BusinessResearch fallback.
+   * Uses customerPersonas, vocabulary, and businessType for relevant quotes.
+   */
   private generateTestimonials(
     blueprint: ProviderContext['blueprint'],
     vocabulary: Record<string, string>,
-    subCategory?: string,
+    research?: BusinessResearch,
   ): Array<{ name: string; role: string; quote: string }> {
-    const industry = blueprint.industry;
     const appName = blueprint.name ?? 'this platform';
     const customerTerm = vocabulary['customer'] ?? 'customer';
     const productTerm = vocabulary['product'] ?? 'solution';
+    const businessType = blueprint.industry;
+    const domain = research?.domain ?? '';
+    const domainNoun = domain.replace(/-/g, ' ');
 
-    if (subCategory === 'coffee') {
-      return [
-        { name: 'Maria Santos', role: 'Coffee Enthusiast', quote: `The cold brew at ${appName} is the best I've had — smooth, rich, and perfectly balanced every time.` },
-        { name: 'David Chen', role: 'Regular Customer', quote: `I order through the app every morning. The pickup is always ready when I arrive.` },
-        { name: 'Sarah Kim', role: 'Local Business Owner', quote: `We host our team meetings here. The space is welcoming and the espresso keeps us going.` },
+    // Prefer BusinessResearch userPersonas
+    const personas = research?.userPersonas ?? [];
+
+    if (personas.length > 0) {
+      const names = ['Alex Rivera', 'Jordan Lee', 'Sam Patel', 'Casey Morgan', 'Taylor Kim'];
+      
+      // Build domain-aware quotes using business knowledge
+      const revenueFlow = research?.revenueFlow?.[0] ?? 'one-time';
+      const primaryGoal = research?.customerFlow?.[2] ?? 'convert';
+      const domainLabel = domainNoun || domain.replace(/-/g, ' ') || 'business';
+      
+      const quotes = [
+        `${appName} transformed how we ${primaryGoal.toLowerCase()} ${domainLabel} — measurable improvement from day one.`,
+        `The ${productTerm} is exactly what we needed. Our ${customerTerm}s love the ${domainLabel} experience.`,
+        `Fast, reliable, and built for ${personas[0]?.toLowerCase() ?? 'our customers'}. Best decision we made.`,
       ];
+
+      return personas.slice(0, 3).map((persona, i) => ({
+        name: ['Alex Rivera', 'Jordan Lee', 'Sam Patel', 'Casey Morgan', 'Taylor Kim'][i % 5] ?? 'User',
+        role: persona.charAt(0).toUpperCase() + persona.slice(1),
+        quote: quotes[i % quotes.length] ?? `${appName} is great.`,
+      }));
     }
 
-    if (subCategory === 'wholesale') {
-      return [
-        { name: 'Rajesh Kumar', role: 'Gym Owner', quote: `Bulk ordering through ${appName} cut our procurement time by 60%. The dealer portal is excellent.` },
-        { name: 'Mike Thompson', role: 'Retail Chain Manager', quote: `Reliable supply chain and competitive wholesale pricing. Our shelves are always stocked.` },
-        { name: 'Priya Sharma', role: 'Distributor', quote: `The PO system automated our entire ordering workflow. No more manual spreadsheets.` },
-      ];
-    }
-
-    if (subCategory === 'supplement') {
-      return [
-        { name: 'Alex Rivera', role: 'Fitness Trainer', quote: `I recommend ${appName} to all my clients. The lab-tested quality gives me confidence.` },
-        { name: 'Jordan Lee', role: 'Athlete', quote: `Fast delivery and genuine products. The subscription bundle saves me time every month.` },
-        { name: 'Sam Patel', role: 'Health Enthusiast', quote: `Finally a supplement store I can trust. Every product is verified and the prices are fair.` },
-      ];
-    }
-
-    // Generic industry testimonials
+// Fallback: generic testimonials using business knowledge
+    const fallbackDomain = domainNoun || domain.replace(/-/g, ' ') || 'business';
     return [
-      { name: 'Alex Rivera', role: `${customerTerm.charAt(0).toUpperCase() + customerTerm.slice(1)}`, quote: `${appName} streamlined our ${industry} workflow — we saw measurable improvement in the first month.` },
-      { name: 'Jordan Lee', role: 'Operations Lead', quote: `The ${productTerm} is exactly what we needed. Integration took less than a day.` },
-      { name: 'Sam Patel', role: 'Manager', quote: `Our team adopted ${appName} faster than any other tool we've tried.` },
+      { 
+        name: 'Alex Rivera', 
+        role: customerTerm.charAt(0).toUpperCase() + customerTerm.slice(1), 
+        quote: `${appName} streamlined how we work with ${fallbackDomain} — we saw measurable improvement in the first month.` 
+      },
+      { name: 'Jordan Lee', role: 'Operations Lead', quote: `The ${productTerm} is exactly what we needed for ${fallbackDomain}. Integration took less than a day.` },
+      { name: 'Sam Patel', role: 'Manager', quote: `Our team adopted ${appName} faster than any other ${businessType.toLowerCase()} tool we've tried.` },
     ];
+
   }
 }

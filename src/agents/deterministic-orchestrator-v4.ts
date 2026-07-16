@@ -26,17 +26,31 @@ import { runBREV2Pipeline } from '../bos/bre-v2-pipeline.js';
 import { mapBlueprintToFullStack } from '../bos/blueprint-mapper.js';
 import { buildBREContext } from '../bos/intake-parser.js';
 import { runBuildPipeline } from '../generation/build-pipeline.js';
+import { LeadAgent } from './orchestrator/lead-agent.js';
 import { ProgressEmitter } from '../core/progress-emitter.js';
 import { saveIR, loadIR } from '../bos/ir-persistence.js';
 import { saveBuildArtifacts, inspectArtifacts } from '../bos/ir-inspector.js';
-import { connectKnowledgeGraph, getPatternRelationships } from '../bos/graph/connector.js';
-import { initializeKnowledgeGraph } from '../bos/knowledge/seeds/index.js';
+import {
+  initializeKnowledgeGraph,
+  getKnowledgeGraphGovernor,
+} from '../bos/knowledge/seeds/index.js';
+import {
+  CandidateKnowledgeStore,
+  PromotionPipeline,
+  DEFAULT_PROMOTION_CONFIG,
+} from '../bos/candidate/index.js';
+import { composeKnowledgePack, CompositionContext } from '../bos/knowledge/primitive-packs/index.js';
+import { capabilityRegistry } from '../bos/capabilities/index.js';
 import { KnowledgeRegistry } from '../bos/knowledge/registry.js';
 import { BuildHistoryManager } from '../engine/build-history.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { E2ETester } from '../testing/e2e-tester.js';
+import { RefinementEngine } from './refinement/index.js';
+import { DeployExecutor, DeployConfigGenerator, detectDeploymentPlatform } from './deployment/index.js';
+import { parseCommand, commandToIntent, isCommand, getHelpText } from './command-parser.js';
+import { RuntimeTracer } from './runtime-trace.js';
 
 export class DeterministicOrchestratorV4 {
   private sandbox: SandboxEngine;
@@ -67,6 +81,54 @@ export class DeterministicOrchestratorV4 {
     this.analyzer = new ImpactAnalyzer(this.graph);
     this.ranker = new PatchRanker(this.analyzer);
     this.predictor = new RegressionPredictor(this.graph);
+  }
+
+  /**
+   * Process a raw user input string.
+   * Detects slash commands and routes to the appropriate handler.
+   *
+   * Supported commands:
+   *   /build-anything "prompt"     → generative pipeline
+   *   /clone-website <url>         → clone pipeline
+   *   /refine "change"             → iterative refinement
+   *   /deploy <target>             → deployment
+   *   /help                        → show commands
+   */
+  public async processInput(
+    workspaceId: string,
+    input: string,
+    llmConfig?: LLMConfig,
+  ): Promise<GenerationResult> {
+    const startTime = Date.now();
+
+    if (!isCommand(input)) {
+      // Not a slash command — try to detect intent from natural language
+      const intent: GenerationIntent = { type: 'build-website', prompt: input };
+      return this.processGenerationIntent(workspaceId, intent, llmConfig);
+    }
+
+    const command = parseCommand(input);
+
+    if (!command.valid) {
+      return {
+        success: false,
+        intent: { type: 'build-website', prompt: input },
+        ...(command.error ? { error: command.error } : {}),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    if (command.command === 'help') {
+      return {
+        success: true,
+        intent: { type: 'build-website', prompt: input },
+        warnings: [getHelpText()],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const intent = commandToIntent(command) as GenerationIntent;
+    return this.processGenerationIntent(workspaceId, intent, llmConfig);
   }
 
   public async processGenerationIntent(
@@ -105,6 +167,12 @@ export class DeterministicOrchestratorV4 {
 
         case 'extract-design-system':
           return await this.handleExtractDesignSystemIntent(intent, startTime);
+
+        case 'refine':
+          return await this.handleRefineIntent(workspaceId, intent, startTime);
+
+        case 'deploy':
+          return await this.handleDeployIntent(workspaceId, intent, startTime);
 
         default:
           return {
@@ -151,23 +219,72 @@ export class DeterministicOrchestratorV4 {
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
     const progress = new ProgressEmitter(workspace.rootPath);
 
+    // RuntimeTrace (Phase R1, Step 1): every build emits a provenance trace.
+    const tracer = new RuntimeTracer();
+
     // BRE v2: deterministic business reasoning (zero LLM calls)
+    tracer.beginSpan({ layer: 'bre-v2', owner: 'BREContextBuilder', inputs: ['prompt'], dependencies: [] });
     progress.emit('bre', 'started', 'Analyzing business intent...');
-    const breContext = buildBREContext(prompt);
+    const breContext = await buildBREContext(prompt);
     progress.emit('bre', 'completed', `Business context: ${breContext.industry}, ${breContext.entities.length} entities`);
 
-    // ═══ New 4-layer pipeline: BRE v2 → Execution Blueprint → Content Resolver → Renderer ═══
-    progress.emit('architect', 'started', 'Running 4-layer build pipeline...');
-    const tPipeline = Date.now();
-    const pipelineResult = await runBuildPipeline(breContext, {
-      platform: 'react',
-      outputDir: path.join(workspace.rootPath, 'src'),
-      workspaceDir: workspace.rootPath,
-    }, llmConfig, undefined, progress);
+    // Phase R2: resolve the build's capabilities through the canonical registry
+    // once, so candidate learning and the manifest share one identity set.
+    const rawBuildCaps = Array.isArray((breContext as any).capabilities)
+      ? ((breContext as any).capabilities as string[])
+      : [];
+    const buildCapabilities = capabilityRegistry.resolve(rawBuildCaps, { industry: breContext.industry });
+    tracer.endSpan('bre-v2', {
+      outputs: ['bre-context'],
+      artifactIds: [],
+      confidence: 0.9,
+      evidence: [`industry=${breContext.industry}`, `entities=${breContext.entities.length}`],
+      hash: RuntimeTracer.hashContent(JSON.stringify(breContext)),
+    });
 
-    const { breResult, executionBlueprint, applicationSpec, renderResult, applicationGraph, graphStats, componentSpecManifest, assemblyResult, usedWorktrees } = pipelineResult;
+    // ═══ New 4-layer pipeline: BRE v2 → Execution Blueprint → Content Resolver → Renderer ═══
+    tracer.beginSpan({ layer: 'pipeline-4-layer', owner: 'LeadAgent', inputs: ['bre-context'], dependencies: ['bre-v2'] });
+    progress.emit('architect', 'started', 'Running orchestrator-subagent pipeline...');
+    const tPipeline = Date.now();
+
+    // Use the new orchestrator-subagent system
+    const orchestrator = new LeadAgent({
+      platform: 'react',
+      workspaceDir: workspace.rootPath,
+      outputDir: path.join(workspace.rootPath, 'src'),
+      maxRetries: 3,
+      qualityGateStrict: false, // Warn but don't block on quality gates
+    });
+    const orchestratorResult = await orchestrator.execute(prompt);
+
+    // Map orchestrator output to the format expected by downstream code
+    const breResult = orchestratorResult.phaseContext.breResult!;
+    const renderResult = { files: orchestratorResult.phaseContext.renderResult ?? [], warnings: [] };
+    const applicationGraph = orchestratorResult.phaseContext.applicationGraph!;
+    const applicationSpec = orchestratorResult.phaseContext.applicationSpec!;
     const appBlueprint = breResult.blueprint;
     const blueprint = mapBlueprintToFullStack(appBlueprint);
+
+    // Compute graph stats from the application graph
+    const { computeAppGraphStats } = await import('../bos/graph/application-graph.js');
+    const graphStats = computeAppGraphStats(applicationGraph);
+
+    // Create execution blueprint and component spec manifest from application spec
+    const executionBlueprint = {
+      id: `exec-${breContext.appName}`,
+      appId: breContext.appName ?? 'app',
+      appName: breContext.appName ?? 'Application',
+      industry: breContext.industry,
+      themeId: 'default',
+      pages: applicationSpec.pages.map((p: any) => ({ ...p, slots: p.components?.map((c: any) => c.id) ?? [] })),
+      metadata: {},
+    };
+    const componentSpecManifest = {
+      totalComponents: applicationSpec.pages.reduce((s: number, p: any) => s + (p.components ?? []).length, 0),
+      totalPages: applicationSpec.pages.length,
+    };
+    const usedWorktrees: string[] = [];
+    const assemblyResult: { mergedFiles: Map<string, unknown>; conflicts: unknown[]; specFilesProcessed: number } | null = null;
 
     progress.emit('architect', 'completed', `Pipeline complete: ${renderResult.files.length} files, confidence=${breResult.confidence.toFixed(2)}`, {
       duration: Date.now() - tPipeline,
@@ -187,9 +304,6 @@ export class DeterministicOrchestratorV4 {
     if (componentSpecManifest) {
       console.log(`[orchestrator] Component spec manifest: ${componentSpecManifest.totalComponents} components, ${componentSpecManifest.totalPages} pages`);
     }
-    if (assemblyResult) {
-      console.log(`[orchestrator] Assembly: ${assemblyResult.mergedFiles.size} files, ${assemblyResult.conflicts.length} conflicts, ${assemblyResult.specFilesProcessed} specs`);
-    }
     if (usedWorktrees?.length) {
       console.log(`[orchestrator] Used worktrees: ${usedWorktrees.join(', ')}`);
     }
@@ -202,7 +316,16 @@ export class DeterministicOrchestratorV4 {
       console.warn(`[orchestrator] Blueprint warnings: ${appBlueprint.warnings.join(' | ')}`);
     }
 
+    tracer.endSpan('pipeline-4-layer', {
+      outputs: ['render-result', 'application-graph', 'application-spec', 'execution-blueprint', 'full-stack-blueprint'],
+      artifactIds: [],
+      confidence: breResult.confidence,
+      evidence: [`files=${renderResult.files.length}`, `pages=${blueprint.pages.length}`, `models=${blueprint.dataModels.length}`],
+      hash: RuntimeTracer.hashContent(JSON.stringify({ files: renderResult.files.length, pages: blueprint.pages.length })),
+    });
+
     // Write planning artifacts for Live Object Inspector (Phase 11)
+    tracer.beginSpan({ layer: 'plan-inspect', owner: 'Orchestrator/Phase11', inputs: ['bre-context', 'bre-result', 'full-stack-blueprint', 'execution-blueprint', 'application-spec'], dependencies: ['pipeline-4-layer'] });
     try {
       const inspectPayload: Record<string, unknown> = {
         ts: Date.now(),
@@ -262,7 +385,15 @@ export class DeterministicOrchestratorV4 {
       console.warn('[orchestrator] Failed to write plan-inspect artifact:', (e as Error).message);
     }
 
+    tracer.endSpan('plan-inspect', {
+      outputs: ['plan-inspect'],
+      artifactIds: ['.plan-inspect.json'],
+      evidence: [`path=.plan-inspect.json`],
+      hash: RuntimeTracer.hashContent(JSON.stringify({ ts: Date.now(), industry: breContext.industry })),
+    });
+
     // Write generated files to workspace
+    tracer.beginSpan({ layer: 'file-write', owner: 'Orchestrator/Phase14', inputs: ['render-result'], dependencies: ['pipeline-4-layer'] });
     const pageResults: Array<{ path: string; succeeded: boolean; lastError?: string | undefined }> = [];
 
     progress.emit('compile', 'started', `Writing ${renderResult.files.length} generated files...`);
@@ -295,17 +426,32 @@ export class DeterministicOrchestratorV4 {
 
     progress.emit('compile', 'completed', `All ${renderResult.files.length} files written`);
 
+    tracer.addEvidence('file-write', `files=${renderResult.files.length}`);
+    tracer.endSpan('file-write', {
+      outputs: ['generated-files'],
+      artifactIds: renderResult.files.map((f: { path: string }) => f.path),
+      evidence: [`written=${renderResult.files.length}`],
+      hash: RuntimeTracer.hashContent(JSON.stringify(renderResult.files.map((f: { path: string }) => f.path))),
+    });
+
     // Install dependencies FIRST — required for TS audit to resolve imports
     // (without node_modules, ts.createProgram emits phantom TS2307 errors)
+    tracer.beginSpan({ layer: 'npm-install', owner: 'SandboxEngine', inputs: ['generated-files'], dependencies: ['file-write'] });
     progress.emit('install', 'started', 'Installing npm dependencies...');
     const tInstall = Date.now();
     console.log(`[orchestrator] Installing dependencies...`);
     await this.sandbox.runPackageInstall(workspace);
     progress.emit('install', 'completed', `Dependencies installed (${Date.now() - tInstall}ms)`);
+    tracer.endSpan('npm-install', {
+      outputs: ['node-modules-ready'],
+      artifactIds: ['node_modules'],
+      evidence: ['npm install completed'],
+    });
     console.log(`[orchestrator] Dependencies installed.`);
 
     // Phase 14b: Post-render TS audit + self-healing (runs AFTER npm install)
     // SelfHealingEngine runs its own audit internally — no separate TypeScriptAuditor needed.
+    tracer.beginSpan({ layer: 'self-healing', owner: 'SelfHealingEngine', inputs: ['node-modules-ready', 'generated-files'], dependencies: ['npm-install', 'file-write'] });
     let healingResult: { success: boolean; iterations: number; errorsFixed: number; remainingErrors: Array<{ file: string; message: string }> } | undefined;
     progress.emit('repair', 'started', 'Auditing generated code for TypeScript errors...');
     const tAudit = Date.now();
@@ -340,6 +486,15 @@ export class DeterministicOrchestratorV4 {
       progress.emit('repair', 'warning', `TS audit/healing failed: ${(auditErr as Error).message}`);
       console.warn('[orchestrator] TS audit/healing failed:', (auditErr as Error).message);
     }
+
+    tracer.endSpan('self-healing', {
+      outputs: ['healing-result'],
+      artifactIds: ['.build-artifacts/07-self-healing.json'],
+      repairs: healingResult?.errorsFixed ?? 0,
+      evidence: [`errorsFixed=${healingResult?.errorsFixed ?? 0}`, `remaining=${healingResult?.remainingErrors.length ?? 0}`],
+      validationPassed: (healingResult?.remainingErrors.length ?? 0) === 0,
+      validationChecks: ['ts-audit'],
+    });
 
     // Phase 14c: Optional E2E browser verification (only when E2E_TEST=1 is set)
     // Requires Playwright browsers installed and port availability on 4567.
@@ -390,8 +545,10 @@ export class DeterministicOrchestratorV4 {
     this.snapshot.clearSnapshots(workspace.rootPath);
 
     // Phase 16: Save .build-artifacts/ for inspection and replay
+    tracer.beginSpan({ layer: 'build-artifacts', owner: 'Orchestrator/Phase16', inputs: ['bre-context', 'bre-result', 'full-stack-blueprint', 'execution-blueprint', 'application-spec', 'render-result', 'healing-result'], dependencies: ['self-healing', 'pipeline-4-layer'] });
+    let phase16ArtifactFiles: string[] = [];
     try {
-      const artifactFiles = saveBuildArtifacts(
+      phase16ArtifactFiles = saveBuildArtifacts(
         workspace.rootPath,
         prompt,
         breContext as unknown as Record<string, unknown>,
@@ -418,12 +575,20 @@ export class DeterministicOrchestratorV4 {
         graphStats as any,
         healingResult,
       );
-      progress.emit('compile', 'info', `${artifactFiles.length} build artifacts saved`);
+      progress.emit('compile', 'info', `${phase16ArtifactFiles.length} build artifacts saved`);
     } catch (e) {
       console.warn('[orchestrator] Failed to write build artifacts:', (e as Error).message);
     }
 
+    tracer.endSpan('build-artifacts', {
+      outputs: ['build-artifacts-dir'],
+      artifactIds: phase16ArtifactFiles,
+      evidence: [`count=${phase16ArtifactFiles.length}`],
+      hash: RuntimeTracer.hashContent(JSON.stringify(phase16ArtifactFiles)),
+    });
+
     // Phase 16b: Save IR for follow-up builds
+    tracer.beginSpan({ layer: 'ir-save', owner: 'Orchestrator/Phase16b', inputs: ['bre-context', 'bre-result', 'full-stack-blueprint', 'execution-blueprint', 'application-spec', 'render-result'], dependencies: ['build-artifacts', 'pipeline-4-layer'] });
     try {
       saveIR(workspace.rootPath, {
         prompt,
@@ -449,17 +614,220 @@ export class DeterministicOrchestratorV4 {
       console.warn('[orchestrator] Failed to save IR:', (e as Error).message);
     }
 
-    // Phase 16c: Enrich Knowledge Graph with typed relationship edges
+    tracer.endSpan('ir-save', {
+      outputs: ['ir-artifact'],
+      artifactIds: ['.ir.json'],
+      evidence: ['IR persisted'],
+    });
+
+    // Phase 16c: Record runtime-learned knowledge as CANDIDATES.
+    // The Business Graph is immutable at runtime — a successful build must
+    // NEVER mutate it directly. Instead we write observations to the
+    // Candidate Knowledge store and run them through the Validation →
+    // Confidence → Promotion pipeline. A single build can never promote
+    // (the Promotion Pipeline requires multiple independent observations),
+    // so knowledge only enters the graph via trusted auto-promotion or
+    // explicit human review.
+    tracer.beginSpan({ layer: 'knowledge-candidates', owner: 'Orchestrator/Phase16c', inputs: ['full-stack-blueprint', 'bre-result'], dependencies: ['pipeline-4-layer'] });
+    let candidateRecordCount = 0;
     try {
-      const registry = new KnowledgeRegistry();
-      const kg = (await initializeKnowledgeGraph()).getGraph();
-      const connectorResult = connectKnowledgeGraph(kg, registry);
-      if (connectorResult.edgesAdded > 0 || connectorResult.nodesAdded > 0) {
-        progress.emit('architect', 'info', `Knowledge Graph: ${connectorResult.nodesAdded} nodes, ${connectorResult.edgesAdded} typed edges`);
+      const candidateStore = new CandidateKnowledgeStore();
+      const governor = getKnowledgeGraphGovernor();
+      const buildId = workspaceId;
+      const industry = breContext.industry;
+      const buildConfidence = breResult.confidence ?? 0.6;
+      const recorded: string[] = [];
+
+      // Candidate entities discovered by this build.
+      for (const entity of appBlueprint.entities ?? []) {
+        const name = typeof entity === 'string' ? entity : (entity as { name?: string }).name ?? String(entity);
+        if (!name) continue;
+        candidateStore.record({
+          kind: 'entity',
+          key: name,
+          label: name,
+          industry,
+          buildId,
+          confidence: buildConfidence,
+          payload: {
+            node: {
+              type: 'Entity',
+              properties: { name, slug: name.toLowerCase().replace(/\s+/g, '-') },
+            },
+            edges: industry ? [{ type: 'related_to', target: `industry-${industry}` }] : [],
+          },
+        });
+        recorded.push(`entity:${name}`);
+      }
+
+      // Candidate pattern used by this build.
+      const pattern = breResult.selectedPattern as unknown;
+      const patternId = typeof pattern === 'string' ? pattern : (pattern as { id?: string })?.id;
+      const patternName = typeof pattern === 'string' ? pattern : (pattern as { name?: string })?.name ?? patternId;
+      if (patternId || patternName) {
+        candidateStore.record({
+          kind: 'pattern',
+          key: String(patternId ?? patternName),
+          label: String(patternName ?? patternId),
+          industry,
+          capabilities: buildCapabilities.expanded,
+          buildId,
+          confidence: buildConfidence,
+          payload: {
+            node: {
+              type: 'DesignPattern',
+              properties: { name: String(patternName ?? patternId), slug: String(patternId ?? patternName) },
+            },
+          },
+        });
+        recorded.push(`pattern:${patternId ?? patternName}`);
+      }
+
+      // Candidate workflows.
+      for (const wf of appBlueprint.workflows ?? []) {
+        const name = typeof wf === 'string' ? wf : (wf as { name?: string }).name ?? String(wf);
+        if (!name) continue;
+        candidateStore.record({
+          kind: 'workflow',
+          key: name,
+          label: name,
+          industry,
+          capabilities: buildCapabilities.expanded,
+          buildId,
+          confidence: buildConfidence,
+          payload: {
+            node: {
+              type: 'Workflow',
+              properties: { name, slug: name.toLowerCase().replace(/\s+/g, '-') },
+            },
+          },
+        });
+        recorded.push(`workflow:${name}`);
+      }
+
+      // Candidate integrations.
+      for (const integ of appBlueprint.integrations ?? []) {
+        const name = typeof integ === 'string' ? integ : (integ as { name?: string }).name ?? String(integ);
+        if (!name) continue;
+        candidateStore.record({
+          kind: 'integration',
+          key: name,
+          label: name,
+          industry,
+          capabilities: buildCapabilities.expanded,
+          buildId,
+          confidence: buildConfidence,
+          payload: {
+            node: {
+              type: 'Integration',
+              properties: { name, slug: name.toLowerCase().replace(/\s+/g, '-') },
+            },
+          },
+        });
+        recorded.push(`integration:${name}`);
+      }
+
+      if (recorded.length > 0) {
+        candidateRecordCount = recorded.length;
+        progress.emit('architect', 'info', `Recorded ${recorded.length} candidate(s) to knowledge store`);
+      }
+
+      // Run the Promotion Pipeline (review-only for a single build).
+      if (governor) {
+        const pipeline = new PromotionPipeline(candidateStore, governor, DEFAULT_PROMOTION_CONFIG);
+        const report = pipeline.run();
+        const promoted = report.promoted.length;
+        const review = report.needsReview.length;
+        const rejected = report.rejected.length;
+        if (promoted > 0 || review > 0 || rejected > 0) {
+          progress.emit(
+            'architect',
+            'info',
+            `Promotion pipeline: ${promoted} promoted, ${review} to review, ${rejected} rejected`
+          );
+        }
       }
     } catch (e) {
-      console.warn('[orchestrator] Knowledge graph enrichment failed:', (e as Error).message);
+      console.warn('[orchestrator] Candidate knowledge recording failed (non-fatal):', (e as Error).message);
     }
+
+    tracer.endSpan('knowledge-candidates', {
+      outputs: ['candidate-records'],
+      artifactIds: ['candidate-store'],
+      evidence: [`recorded=${candidateRecordCount}`],
+      validationPassed: candidateRecordCount >= 0,
+      validationChecks: ['candidate-store-write'],
+    });
+
+    // Phase 16d: Compose a knowledge pack from primitive packs and persist it
+    // as a build artifact. This is an additive adapter — it does NOT change
+    // what the generator receives. Existing monolithic packs in taxonomy/packs/
+    // remain the source of truth for generation. This artifact is for
+    // inspection and future migration.
+    tracer.beginSpan({ layer: 'knowledge-pack-compose', owner: 'Orchestrator/Phase16d', inputs: ['bre-context'], dependencies: ['bre-v2'] });
+    try {
+      const compositionCtx: CompositionContext = {
+        industry: breContext.industry,
+        subIndustry: (breContext as any).subIndustry,
+        businessModels: breContext.businessModels,
+        journeys: breContext.journeys,
+        country: breContext.country,
+        capabilities: (breContext as any).capabilities,
+        taxonomyPath: breContext.industry,
+      };
+      const composed = composeKnowledgePack(compositionCtx);
+      const artifactsDir = path.join(workspace.rootPath, '.build-artifacts');
+      if (!fs.existsSync(artifactsDir)) fs.mkdirSync(artifactsDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(artifactsDir, 'knowledge-pack.json'),
+        JSON.stringify(composed, null, 2),
+        'utf-8'
+      );
+      progress.emit('compile', 'info', `Composed knowledge pack: ${composed.dimensions.length} dimensions, ${composed.composedFrom.length} packs`);
+
+      // Phase R2: emit a Capability Manifest — the single contract every
+      // downstream subsystem (evaluation, components, experience, renderer,
+      // learning, benchmarking, self-healing) reasons from.
+      const rawCaps = Array.isArray((breContext as any).capabilities)
+        ? ((breContext as any).capabilities as string[])
+        : [];
+      const manifest = capabilityRegistry.buildManifest(rawCaps, { industry: breContext.industry });
+      fs.writeFileSync(
+        path.join(artifactsDir, 'capability-manifest.json'),
+        JSON.stringify(manifest, null, 2),
+        'utf-8'
+      );
+      // Structural coverage: fraction of required (expanded) capabilities whose
+      // primitive-pack tags are present in the composed pack.
+      const requiredExpanded = manifest.capabilities;
+      const fulfilledTags = new Set(
+        composed.primitives.flatMap(p => (p as any).providesCapabilities ?? [])
+      );
+      const fulfilledCaps = new Set(
+        requiredExpanded.filter(id => {
+          const tags = capabilityRegistry.get(id)?.primitivePackTags ?? [];
+          return tags.some(t => fulfilledTags.has(t));
+        })
+      );
+      const coverageScore = capabilityRegistry.coverageScore(requiredExpanded, Array.from(fulfilledCaps));
+      fs.writeFileSync(
+        path.join(artifactsDir, 'capability-coverage.json'),
+        JSON.stringify({ score: coverageScore, required: requiredExpanded.length, matched: fulfilledCaps.size }, null, 2),
+        'utf-8'
+      );
+      if (manifest.unresolved.length > 0) {
+        console.warn(`[capability] Unresolved capabilities: ${manifest.unresolved.join(', ')}`);
+      }
+      progress.emit('compile', 'info', `Capability manifest: ${manifest.capabilities.length} capabilities (coverage ${(coverageScore * 100).toFixed(0)}%)`);
+    } catch (e) {
+      console.warn('[orchestrator] Knowledge pack composition failed (non-fatal):', (e as Error).message);
+    }
+
+    tracer.endSpan('knowledge-pack-compose', {
+      outputs: ['knowledge-pack'],
+      artifactIds: ['.build-artifacts/knowledge-pack.json'],
+      evidence: ['knowledge pack composed'],
+    });
 
     const succeeded = pageResults.filter(r => r.succeeded).length;
     const failed = pageResults.filter(r => !r.succeeded);
@@ -489,6 +857,7 @@ export class DeterministicOrchestratorV4 {
     }
 
     // Phase 17: Write build report
+    tracer.beginSpan({ layer: 'build-report', owner: 'Orchestrator/Phase17', inputs: ['render-result', 'full-stack-blueprint', 'bre-context', 'healing-result'], dependencies: ['file-write', 'self-healing'] });
     try {
       const fileTypes = new Map<string, number>();
       for (const f of renderResult.files) {
@@ -530,7 +899,15 @@ export class DeterministicOrchestratorV4 {
       console.warn('[orchestrator] Failed to write build report:', (e as Error).message);
     }
 
+    tracer.endSpan('build-report', {
+      outputs: ['build-report'],
+      artifactIds: ['.build-report.json'],
+      evidence: [`path=.build-report.json`],
+      hash: RuntimeTracer.hashContent(JSON.stringify({ ts: Date.now(), success: result.success })),
+    });
+
     // Phase 17b: Save to persistent build history (.build-history/)
+    tracer.beginSpan({ layer: 'build-history', owner: 'Orchestrator/Phase17b', inputs: ['build-report'], dependencies: ['build-report'] });
     try {
       const historyManager = new BuildHistoryManager(workspace.rootPath);
       historyManager.saveBuild({
@@ -556,6 +933,12 @@ export class DeterministicOrchestratorV4 {
       console.warn('[orchestrator] Failed to save build history:', (e as Error).message);
     }
 
+    tracer.endSpan('build-history', {
+      outputs: ['build-history-entry'],
+      artifactIds: ['.build-history'],
+      evidence: ['build history persisted'],
+    });
+
     TelemetryLayer.reportBuildComplete({
       workspaceId,
       prompt: prompt.slice(0, 200),
@@ -565,6 +948,17 @@ export class DeterministicOrchestratorV4 {
       duration: result.duration,
       success: result.success,
     });
+
+    // Phase R1, Step 1: emit RuntimeTrace for this build (every artifact above
+    // is recorded as a trace entry with provenance and validation).
+    try {
+      const runtimeTrace = tracer.finalize(workspaceId);
+      const tracePath = RuntimeTracer.persist(workspace.rootPath, runtimeTrace);
+      console.log(`[runtime-trace] Persisted ${runtimeTrace.entries.length} layer entries to ${tracePath}`);
+      progress.emit('compile', 'info', `RuntimeTrace: ${runtimeTrace.entries.length} layers, ${runtimeTrace.summary.totalArtifacts} artifacts`);
+    } catch (traceErr) {
+      console.warn('[runtime-trace] Failed to persist trace (non-fatal):', (traceErr as Error).message);
+    }
 
     return result;
   }
@@ -624,7 +1018,7 @@ Rules:
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
 
     // BRE v2: deterministic blueprint for clone scaffold
-    const breContext = buildBREContext(prompt);
+    const breContext = await buildBREContext(prompt);
     const progress = new ProgressEmitter(workspace.rootPath);
     progress.emit('bre', 'started', 'Analyzing business intent...');
     const breResult = await runBREV2Pipeline(breContext, llmConfig, undefined, progress);
@@ -680,7 +1074,7 @@ Rules:
     const workspace = this.sandbox.createWorkspace(this.workspaceBaseDir, workspaceId);
 
     // BRE v2: deterministic blueprint for hybrid scaffold
-    const breContext = buildBREContext(prompt);
+    const breContext = await buildBREContext(prompt);
     const progress = new ProgressEmitter(workspace.rootPath);
 
     // ═══ New 4-layer pipeline ═══
@@ -690,7 +1084,7 @@ Rules:
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
       workspaceDir: workspace.rootPath,
-    }, llmConfig, undefined, progress);
+    }, llmConfig, (breContext as any).__industryScore, progress);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;
     const appBlueprint = breResult.blueprint;
@@ -1043,6 +1437,171 @@ Rules:
     };
     walk(workspacePath);
     return modifiedFiles;
+  }
+
+  // ─── Refinement Intent Handler ──────────────────────────────────────────────
+
+  private async handleRefineIntent(
+    workspaceId: string,
+    intent: GenerationIntent,
+    startTime: number
+  ): Promise<GenerationResult> {
+    const workspacePath = path.join(this.workspaceBaseDir, workspaceId);
+    const refinementPrompt = intent.refinementPrompt || intent.prompt || '';
+
+    if (!refinementPrompt) {
+      return {
+        success: false,
+        intent,
+        error: 'No refinement prompt provided',
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Initialize refinement engine
+    const refinementEngine = new RefinementEngine(workspacePath);
+
+    // Collect current files from workspace
+    const currentFiles = new Map<string, string>();
+    const collectFiles = (dir: string) => {
+      if (!fs.existsSync(dir)) return;
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+      for (const item of items) {
+        const fullPath = path.join(dir, item.name);
+        if (item.name === 'node_modules' || item.name === '.next' || item.name.startsWith('.')) continue;
+        if (item.isDirectory()) {
+          collectFiles(fullPath);
+        } else if (item.isFile()) {
+          try {
+            const content = fs.readFileSync(fullPath, 'utf-8');
+            const relativePath = path.relative(workspacePath, fullPath);
+            currentFiles.set(relativePath, content);
+          } catch {
+            // Skip unreadable files
+          }
+        }
+      }
+    };
+    collectFiles(workspacePath);
+
+    // Process the refinement
+    const result = await refinementEngine.process(refinementPrompt, currentFiles);
+
+    if (result.needsFullBuild) {
+      // This is actually a new build request — delegate to build handler
+      return this.handleBuildIntent(workspaceId, intent, undefined, startTime);
+    }
+
+    if (result.result?.success) {
+      // Save snapshot after refinement
+      refinementEngine.saveSnapshot(currentFiles, {
+        appName: workspaceId,
+        industry: 'unknown',
+        platform: 'react',
+        prompt: refinementPrompt,
+      });
+
+      return {
+        success: true,
+        intent,
+        workspaceId,
+        warnings: [result.result.summary],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    return {
+      success: false,
+      intent,
+      error: `Refinement failed: ${result.result?.summary ?? 'Unknown error'}`,
+      duration: Date.now() - startTime,
+    };
+  }
+
+  // ─── Deploy Intent Handler ──────────────────────────────────────────────────
+
+  private async handleDeployIntent(
+    workspaceId: string,
+    intent: GenerationIntent,
+    startTime: number
+  ): Promise<GenerationResult> {
+    const workspacePath = path.join(this.workspaceBaseDir, workspaceId);
+
+    if (!fs.existsSync(workspacePath)) {
+      return {
+        success: false,
+        intent,
+        error: `Workspace not found: ${workspaceId}. Build the app first.`,
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Collect files to detect platform
+    const files = new Map<string, string>();
+    const collectFiles = (dir: string) => {
+      if (!fs.existsSync(dir)) return;
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+      for (const item of items) {
+        const fullPath = path.join(dir, item.name);
+        if (item.name === 'node_modules' || item.name === '.next' || item.name.startsWith('.')) continue;
+        if (item.isDirectory()) {
+          collectFiles(fullPath);
+        } else if (item.isFile()) {
+          try {
+            const content = fs.readFileSync(fullPath, 'utf-8');
+            const relativePath = path.relative(workspacePath, fullPath);
+            files.set(relativePath, content);
+          } catch {
+            // Skip unreadable files
+          }
+        }
+      }
+    };
+    collectFiles(workspacePath);
+
+    // Detect deployment platform
+    const detectedTarget = intent.deployTarget || detectDeploymentPlatform(files);
+
+    // Generate deployment config
+    const configFiles = DeployConfigGenerator.generateVercelJson({
+      target: detectedTarget,
+      projectName: workspaceId,
+      environment: intent.deployEnv,
+    });
+
+    // Write config files to workspace
+    for (const configFile of configFiles) {
+      const configPath = path.join(workspacePath, 'vercel.json');
+      try {
+        fs.writeFileSync(configPath, configFile, 'utf-8');
+      } catch {
+        // Continue if config write fails
+      }
+    }
+
+    // Execute deployment
+    const deployExecutor = new DeployExecutor(
+      {
+        target: detectedTarget,
+        projectName: workspaceId,
+        environment: intent.deployEnv,
+      },
+      workspacePath,
+      (progress) => {
+        console.log(`[deploy] ${progress.phase}: ${progress.message}`);
+      }
+    );
+
+    const deployResult = await deployExecutor.deploy();
+
+    return {
+      success: deployResult.success,
+      intent,
+      workspaceId,
+      warnings: deployResult.logs,
+      ...(deployResult.errors.length > 0 ? { error: deployResult.errors.join('\n') } : {}),
+      duration: Date.now() - startTime,
+    };
   }
 
 }

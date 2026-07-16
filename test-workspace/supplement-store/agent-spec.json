@@ -1,0 +1,1674 @@
+{
+  "appName": "NutriMart",
+  "industry": "ecommerce",
+  "description": "Build me a Multi brands e-commerce supplement store for Indian customers",
+  "entities": [
+    {
+      "name": "Product",
+      "fields": [
+        "name",
+        "price",
+        "description",
+        "image",
+        "stock",
+        "sku",
+        "category",
+        "userId"
+      ]
+    },
+    {
+      "name": "Order",
+      "fields": [
+        "items",
+        "total",
+        "status",
+        "customerId",
+        "shippingAddress",
+        "createdAt",
+        "userId"
+      ]
+    },
+    {
+      "name": "Category",
+      "fields": [
+        "name",
+        "slug",
+        "image",
+        "parent",
+        "userId"
+      ]
+    },
+    {
+      "name": "User",
+      "fields": [
+        "id",
+        "email",
+        "name",
+        "role",
+        "createdAt"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "name": "Add to Cart",
+      "steps": [
+        "transform"
+      ]
+    },
+    {
+      "name": "Checkout",
+      "steps": [
+        "transform"
+      ]
+    },
+    {
+      "name": "Return Request",
+      "steps": [
+        "transform"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "path": "/shop",
+      "name": "Shop",
+      "type": "page",
+      "components": [
+        {
+          "type": "ProductGrid",
+          "content": {
+            "title": {
+              "value": "All Products",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Browse our collection",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "FilterSidebar",
+          "content": {
+            "title": {
+              "value": "Filters",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Category",
+              "description": "",
+              "icon": "grid"
+            },
+            {
+              "title": "Price Range",
+              "description": "",
+              "icon": "dollar-sign"
+            },
+            {
+              "title": "Rating",
+              "description": "",
+              "icon": "star"
+            },
+            {
+              "title": "Availability",
+              "description": "",
+              "icon": "package"
+            }
+          ]
+        },
+        {
+          "type": "CategoryGrid",
+          "content": {
+            "title": {
+              "value": "Categories",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Browse by category",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "All",
+              "description": "",
+              "icon": "grid"
+            },
+            {
+              "title": "Featured",
+              "description": "",
+              "icon": "star"
+            },
+            {
+              "title": "New Arrivals",
+              "description": "",
+              "icon": "sparkles"
+            },
+            {
+              "title": "Sale",
+              "description": "",
+              "icon": "tag"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/cart",
+      "name": "Cart",
+      "type": "page",
+      "components": [
+        {
+          "type": "CartItems",
+          "content": {
+            "title": {
+              "value": "Shopping Cart",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "OrderSummary",
+          "content": {
+            "title": {
+              "value": "Order Summary",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Subtotal",
+              "description": ""
+            },
+            {
+              "title": "Shipping",
+              "description": ""
+            },
+            {
+              "title": "Tax",
+              "description": ""
+            },
+            {
+              "title": "Total",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "type": "CheckoutForm",
+          "content": {
+            "title": {
+              "value": "Checkout",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Complete your order",
+              "type": "text"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/product/:handle",
+      "name": "Product Detail",
+      "type": "page",
+      "components": [
+        {
+          "type": "ProductInfo",
+          "content": {
+            "title": {
+              "value": "Product Details",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "ProductGallery",
+          "content": {
+            "title": {
+              "value": "Product Gallery",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "RecommendedProducts",
+          "content": {
+            "title": {
+              "value": "You May Also Like",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Featured Item",
+              "description": "Top rated product",
+              "icon": "star"
+            },
+            {
+              "title": "Popular Choice",
+              "description": "Best seller in category",
+              "icon": "trending-up"
+            },
+            {
+              "title": "New Arrival",
+              "description": "Just added to collection",
+              "icon": "sparkles"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "name": "Login",
+      "type": "auth",
+      "components": [
+        {
+          "type": "AuthForm",
+          "content": {
+            "title": {
+              "value": "Welcome Back",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Sign in to your account",
+              "type": "text"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/register",
+      "name": "Register",
+      "type": "auth",
+      "components": [
+        {
+          "type": "AuthForm",
+          "content": {
+            "title": {
+              "value": "Create Account",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Get started with your free trial",
+              "type": "text"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/profile",
+      "name": "Profile",
+      "type": "page",
+      "components": [
+        {
+          "type": "ProfileSection",
+          "content": {
+            "title": {
+              "value": "My Profile",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Manage your account details",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "OrderHistory",
+          "content": {
+            "title": {
+              "value": "Order History",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "Wishlist",
+          "content": {
+            "title": {
+              "value": "My Wishlist",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Saved Item",
+              "description": "Added to wishlist",
+              "icon": "heart"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "name": "Home",
+      "type": "home",
+      "components": [
+        {
+          "type": "HeroBanner",
+          "content": {
+            "title": {
+              "value": "NutriMart",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Premium sports nutrition and health supplements trusted by fitness professionals across India. FSSAI certified, lab-tested, genuine products.",
+              "type": "text"
+            },
+            "badge": {
+              "value": "me multi brands e-commerce supplement — ecommerce",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Add to Cart",
+              "description": "Add to Cart workflow",
+              "icon": "zap"
+            },
+            {
+              "title": "Checkout",
+              "description": "Checkout workflow",
+              "icon": "zap"
+            },
+            {
+              "title": "Return Request",
+              "description": "Return Request workflow",
+              "icon": "zap"
+            }
+          ]
+        },
+        {
+          "type": "FeatureGrid",
+          "content": {
+            "title": {
+              "value": "NutriMart Capabilities",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "What makes NutriMart different",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Lab Tested",
+              "description": "Every product is third-party lab tested for purity and potency. Reports available on request.",
+              "icon": "🔬"
+            },
+            {
+              "title": "Free Delivery",
+              "description": "Free shipping on orders above ₹999. Express delivery in metro cities.",
+              "icon": "🚚"
+            },
+            {
+              "title": "Easy Returns",
+              "description": "7-day return policy on unopened products. No questions asked.",
+              "icon": "↩️"
+            },
+            {
+              "title": "100% Genuine",
+              "description": "Direct imports from authorized distributors. No grey market products.",
+              "icon": "🔒"
+            },
+            {
+              "title": "Expert Guidance",
+              "description": "Chat with certified nutritionists. Get personalized supplement stacks.",
+              "icon": "💬"
+            },
+            {
+              "title": "Track Orders",
+              "description": "Real-time GPS tracking from warehouse to your doorstep.",
+              "icon": "📱"
+            }
+          ]
+        },
+        {
+          "type": "Testimonials",
+          "content": {
+            "title": {
+              "value": "What Our Users Say",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Trusted by thousands",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Alex Rivera",
+              "description": "Brand loyalist"
+            },
+            {
+              "title": "Jordan Lee",
+              "description": "Fitness enthusiast"
+            },
+            {
+              "title": "Sam Patel",
+              "description": "Athlete"
+            }
+          ]
+        },
+        {
+          "type": "CTASection",
+          "content": {
+            "title": {
+              "value": "Get Started with NutriMart",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Trusted by brand loyalist and fitness enthusiast — direct sales made simple",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "No credit card required",
+              "description": "Start free and upgrade anytime",
+              "icon": "credit-card"
+            },
+            {
+              "title": "Instant setup",
+              "description": "Get up and running in minutes",
+              "icon": "zap"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/about",
+      "name": "About",
+      "type": "page",
+      "components": [
+        {
+          "type": "AboutSection",
+          "content": {
+            "title": {
+              "value": "About NutriMart",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "NutriMart — a me multi brands e-commerce supplement serving brand loyalist and fitness enthusiast through direct sales",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Our Domain",
+              "description": "Product, Order, Category, User",
+              "icon": "layers"
+            },
+            {
+              "title": "Our Process",
+              "description": "Add to Cart → Checkout → Return Request",
+              "icon": "workflow"
+            }
+          ]
+        },
+        {
+          "type": "TeamSection",
+          "content": {
+            "title": {
+              "value": "Meet Our Team",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "The people behind the product",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Operations",
+              "description": "Managing core business workflows",
+              "icon": "settings"
+            },
+            {
+              "title": "Technology",
+              "description": "Building and maintaining systems",
+              "icon": "code"
+            },
+            {
+              "title": "Customer Success",
+              "description": "Ensuring client satisfaction",
+              "icon": "heart"
+            }
+          ]
+        },
+        {
+          "type": "MissionSection",
+          "content": {
+            "title": {
+              "value": "Our Mission",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "What drives us every day",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Inventory",
+              "description": "Expert inventory for ecommerce",
+              "icon": "target"
+            },
+            {
+              "title": "Order Processing",
+              "description": "Expert order processing for ecommerce",
+              "icon": "refresh-cw"
+            },
+            {
+              "title": "Marketing",
+              "description": "Expert marketing for ecommerce",
+              "icon": "heart"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/contact",
+      "name": "Contact",
+      "type": "page",
+      "components": [
+        {
+          "type": "ContactForm",
+          "content": {
+            "title": {
+              "value": "Contact Us",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Get in touch with NutriMart",
+              "type": "text"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/product/:id",
+      "name": "Product Detail",
+      "type": "detail",
+      "components": [
+        {
+          "type": "ProductGallery",
+          "content": {
+            "title": {
+              "value": "Product Gallery",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "ProductInfo",
+          "content": {
+            "title": {
+              "value": "Product Details",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "Testimonials",
+          "content": {
+            "title": {
+              "value": "What Our Users Say",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Trusted by thousands",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Alex Rivera",
+              "description": "Brand loyalist"
+            },
+            {
+              "title": "Jordan Lee",
+              "description": "Fitness enthusiast"
+            },
+            {
+              "title": "Sam Patel",
+              "description": "Athlete"
+            }
+          ]
+        },
+        {
+          "type": "RecommendedProducts",
+          "content": {
+            "title": {
+              "value": "You May Also Like",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Featured Item",
+              "description": "Top rated product",
+              "icon": "star"
+            },
+            {
+              "title": "Popular Choice",
+              "description": "Best seller in category",
+              "icon": "trending-up"
+            },
+            {
+              "title": "New Arrival",
+              "description": "Just added to collection",
+              "icon": "sparkles"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/checkout",
+      "name": "Checkout",
+      "type": "page",
+      "components": [
+        {
+          "type": "CheckoutForm",
+          "content": {
+            "title": {
+              "value": "Checkout",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Complete your order",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "PaymentForm",
+          "content": {
+            "title": {
+              "value": "Payment Details",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "UPI, Card, Net Banking, or COD",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "OrderReview",
+          "content": {
+            "title": {
+              "value": "Review Your Order",
+              "type": "text"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/orders",
+      "name": "Orders",
+      "type": "page",
+      "components": [
+        {
+          "type": "FilterSidebar",
+          "content": {
+            "title": {
+              "value": "Filters",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Category",
+              "description": "",
+              "icon": "grid"
+            },
+            {
+              "title": "Price Range",
+              "description": "",
+              "icon": "dollar-sign"
+            },
+            {
+              "title": "Rating",
+              "description": "",
+              "icon": "star"
+            },
+            {
+              "title": "Availability",
+              "description": "",
+              "icon": "package"
+            }
+          ]
+        },
+        {
+          "type": "DataTable",
+          "content": {
+            "title": {
+              "value": "Record Management",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Record",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Record #001",
+              "description": ""
+            },
+            {
+              "title": "Record #002",
+              "description": ""
+            },
+            {
+              "title": "Record #003",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "type": "OrderStatus",
+          "content": {
+            "title": {
+              "value": "Order Status",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Track your order",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Order Placed",
+              "description": "Your order has been confirmed",
+              "icon": "check-circle"
+            },
+            {
+              "title": "Processing",
+              "description": "We are preparing your order",
+              "icon": "clock"
+            },
+            {
+              "title": "Shipped",
+              "description": "Your order is on the way",
+              "icon": "truck"
+            },
+            {
+              "title": "Delivered",
+              "description": "Package delivered",
+              "icon": "package"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/account",
+      "name": "My Account",
+      "type": "page",
+      "components": [
+        {
+          "type": "OrderHistory",
+          "content": {
+            "title": {
+              "value": "Order History",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "AddressBook",
+          "content": {
+            "title": {
+              "value": "Address Book",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Home",
+              "description": "123, MG Road, Mumbai, Maharashtra 400001",
+              "icon": "home"
+            }
+          ]
+        },
+        {
+          "type": "Wishlist",
+          "content": {
+            "title": {
+              "value": "My Wishlist",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Saved Item",
+              "description": "Added to wishlist",
+              "icon": "heart"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/account/orders/:id",
+      "name": "Order Detail",
+      "type": "detail",
+      "components": [
+        {
+          "type": "OrderStatus",
+          "content": {
+            "title": {
+              "value": "Order Status",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Track your order",
+              "type": "text"
+            }
+          },
+          "items": [
+            {
+              "title": "Order Placed",
+              "description": "Your order has been confirmed",
+              "icon": "check-circle"
+            },
+            {
+              "title": "Processing",
+              "description": "We are preparing your order",
+              "icon": "clock"
+            },
+            {
+              "title": "Shipped",
+              "description": "Your order is on the way",
+              "icon": "truck"
+            },
+            {
+              "title": "Delivered",
+              "description": "Package delivered",
+              "icon": "package"
+            }
+          ]
+        },
+        {
+          "type": "CartItems",
+          "content": {
+            "title": {
+              "value": "Shopping Cart",
+              "type": "text"
+            },
+            "entity": {
+              "value": "Product",
+              "type": "text"
+            }
+          }
+        },
+        {
+          "type": "OrderTracking",
+          "content": {
+            "title": {
+              "value": "Track Order",
+              "type": "text"
+            },
+            "subtitle": {
+              "value": "Enter your order number",
+              "type": "text"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "designTokens": {
+    "profileId": "design.luxury.dark-opulence",
+    "profileName": "Luxury: Dark Opulence",
+    "colors": {
+      "primary": "#D4AF37",
+      "secondary": "#1A1A1A",
+      "accent": "#C9B037",
+      "background": "#0A0A0A",
+      "foreground": "#F5F5F5",
+      "muted": "#2A2A2A",
+      "destructive": "#8B0000",
+      "success": "#2E7D32",
+      "warning": "#D4AF37",
+      "info": "#5C8A8A"
+    },
+    "typography": {
+      "heading": "Playfair Display",
+      "body": "Inter",
+      "mono": "JetBrains Mono"
+    },
+    "spacing": {
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem",
+      "3xl": "4rem",
+      "4xl": "6rem"
+    },
+    "motion": {
+      "durationFast": "150ms",
+      "durationNormal": "400ms",
+      "durationSlow": "700ms",
+      "easingDefault": "cubic-bezier(0.25, 0.1, 0.25, 1)"
+    }
+  },
+  "designDNA": {
+    "industry": "ecommerce",
+    "brandPersonality": "premium",
+    "designStyle": "glassmorphism",
+    "colors": {
+      "primary": "263.4 83.5% 57.8%",
+      "primaryForeground": "210 40% 98%",
+      "secondary": "270.7 76.4% 51.6%",
+      "secondaryForeground": "222.2 84% 4.9%",
+      "accent": "234.7 80.4% 59.8%",
+      "accentForeground": "222.2 84% 4.9%",
+      "muted": "210 40% 96.1%",
+      "mutedForeground": "215.4 16.3% 46.9%",
+      "destructive": "0 84.2% 60.2%",
+      "destructiveForeground": "210 40% 98%",
+      "success": "142.1 70.6% 45.3%",
+      "warning": "37.7 92.1% 50.2%",
+      "info": "217.2 91.2% 59.8%",
+      "background": "0 0% 100%",
+      "foreground": "222.2 84% 4.9%",
+      "card": "0 0% 100%",
+      "cardForeground": "222.2 84% 4.9%",
+      "popover": "0 0% 100%",
+      "popoverForeground": "222.2 84% 4.9%",
+      "border": "214.3 31.8% 91.4%",
+      "input": "214.3 31.8% 91.4%",
+      "ring": "263.4 83.5% 57.8%",
+      "paletteName": "violet",
+      "gradients": {
+        "hero": "linear-gradient(135deg, hsl(263.4 83.5% 57.8%) 0%, hsl(270.7 76.4% 51.6%) 100%)",
+        "card": "linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 40% 96.1%) 100%)",
+        "button": "linear-gradient(135deg, hsl(263.4 83.5% 57.8%) 0%, hsl(234.7 80.4% 59.8%) 100%)",
+        "subtle": "linear-gradient(180deg, transparent 0%, hsl(210 40% 96.1%) 100%)"
+      }
+    },
+    "typography": {
+      "heading": "Inter, system-ui, sans-serif",
+      "body": "Inter, system-ui, sans-serif",
+      "mono": "JetBrains Mono, monospace",
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
+      "scale": {
+        "display": {
+          "size": "4.5rem",
+          "lineHeight": "1",
+          "weight": "800",
+          "tracking": "-0.04em"
+        },
+        "h1": {
+          "size": "3.5rem",
+          "lineHeight": "1.1",
+          "weight": "800",
+          "tracking": "-0.03em"
+        },
+        "h2": {
+          "size": "2.5rem",
+          "lineHeight": "1.2",
+          "weight": "700",
+          "tracking": "-0.02em"
+        },
+        "h3": {
+          "size": "1.875rem",
+          "lineHeight": "1.3",
+          "weight": "700",
+          "tracking": "-0.01em"
+        },
+        "h4": {
+          "size": "1.5rem",
+          "lineHeight": "1.4",
+          "weight": "600",
+          "tracking": "0"
+        },
+        "bodyLg": {
+          "size": "1.125rem",
+          "lineHeight": "1.7",
+          "weight": "400",
+          "tracking": "0"
+        },
+        "body": {
+          "size": "1rem",
+          "lineHeight": "1.6",
+          "weight": "400",
+          "tracking": "0"
+        },
+        "bodySm": {
+          "size": "0.875rem",
+          "lineHeight": "1.5",
+          "weight": "400",
+          "tracking": "0"
+        },
+        "caption": {
+          "size": "0.75rem",
+          "lineHeight": "1.4",
+          "weight": "500",
+          "tracking": "0.02em"
+        },
+        "overline": {
+          "size": "0.75rem",
+          "lineHeight": "1.4",
+          "weight": "700",
+          "tracking": "0.08em"
+        }
+      },
+      "weights": {
+        "heading": "700",
+        "subheading": "600",
+        "body": "400",
+        "caption": "500",
+        "button": "600"
+      }
+    },
+    "spacing": {
+      "baseUnit": 4,
+      "scale": {
+        "0": "0",
+        "1": "0.25rem",
+        "2": "0.5rem",
+        "3": "0.75rem",
+        "4": "1rem",
+        "5": "1.25rem",
+        "6": "1.5rem",
+        "7": "1.75rem",
+        "8": "2rem",
+        "9": "2.25rem",
+        "10": "2.5rem",
+        "12": "3rem",
+        "14": "3.5rem",
+        "16": "4rem",
+        "20": "5rem",
+        "24": "6rem",
+        "28": "7rem",
+        "32": "8rem",
+        "px": "1px",
+        "0.5": "0.125rem",
+        "1.5": "0.375rem",
+        "2.5": "0.625rem",
+        "3.5": "0.875rem"
+      },
+      "section": {
+        "sm": "py-10 sm:py-14",
+        "md": "py-14 sm:py-20",
+        "lg": "py-20 sm:py-28",
+        "xl": "py-24 sm:py-32"
+      },
+      "container": {
+        "padding": "px-4 sm:px-6 lg:px-8",
+        "maxWidth": "max-w-7xl"
+      },
+      "card": {
+        "padding": "p-6",
+        "gap": "gap-6"
+      },
+      "stack": {
+        "gap": "gap-4"
+      },
+      "grid": {
+        "columns": {
+          "sm": 1,
+          "md": 2,
+          "lg": 3,
+          "xl": 4
+        },
+        "gap": "gap-6"
+      }
+    },
+    "radius": {
+      "none": "0",
+      "sm": "0.375rem",
+      "md": "0.5rem",
+      "lg": "0.75rem",
+      "xl": "1rem",
+      "2xl": "1rem",
+      "full": "9999px",
+      "button": "0.5rem",
+      "card": "0.75rem",
+      "input": "0.5rem",
+      "badge": "9999px",
+      "avatar": "50%",
+      "dialog": "1rem"
+    },
+    "shadows": {
+      "none": "none",
+      "xs": "0 1px 2px rgba(0,0,0,0.04)",
+      "sm": "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.08)",
+      "md": "0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06)",
+      "lg": "0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05)",
+      "xl": "0 20px 25px rgba(0,0,0,0.1), 0 8px 10px rgba(0,0,0,0.04)",
+      "2xl": "0 25px 50px rgba(0,0,0,0.25)",
+      "glow": "0 0 40px rgba(0,0,0,0.08)",
+      "card": "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.08)",
+      "cardHover": "0 8px 24px rgba(0,0,0,0.12)",
+      "button": "0 1px 2px rgba(0,0,0,0.05)",
+      "input": "0 1px 2px rgba(0,0,0,0.04)",
+      "dropdown": "0 4px 20px rgba(0,0,0,0.12)",
+      "modal": "0 8px 32px rgba(0,0,0,0.2)"
+    },
+    "motion": {
+      "duration": {
+        "instant": 100,
+        "fast": 150,
+        "normal": 250,
+        "slow": 350,
+        "verySlow": 500
+      },
+      "easing": {
+        "default": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "in": "cubic-bezier(0.4, 0, 1, 1)",
+        "out": "cubic-bezier(0, 0, 0.2, 1)",
+        "inOut": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "spring": "spring(100, 20)"
+      },
+      "spring": {
+        "gentle": {
+          "stiffness": 100,
+          "damping": 20
+        },
+        "wobbly": {
+          "stiffness": 200,
+          "damping": 10
+        },
+        "stiff": {
+          "stiffness": 400,
+          "damping": 30
+        },
+        "slow": {
+          "stiffness": 50,
+          "damping": 20
+        }
+      },
+      "gesture": {
+        "hover": {
+          "scale": 1.02,
+          "duration": 200
+        },
+        "tap": {
+          "scale": 0.98,
+          "duration": 100
+        },
+        "focus": {
+          "ring": "2px solid ring",
+          "offset": 2
+        }
+      },
+      "stagger": {
+        "children": 75,
+        "grid": 50,
+        "list": 60
+      },
+      "scrollReveal": {
+        "initial": {
+          "opacity": 0,
+          "y": 30
+        },
+        "whileInView": {
+          "opacity": 1,
+          "y": 0
+        },
+        "viewportOnce": true,
+        "viewportAmount": 0.3
+      },
+      "entranceDirection": "bottom"
+    },
+    "icons": {
+      "library": "lucide",
+      "mapping": {
+        "dashboard": "LayoutDashboard",
+        "analytics": "BarChart3",
+        "users": "Users",
+        "settings": "Settings",
+        "billing": "CreditCard",
+        "payments": "Wallet",
+        "revenue": "TrendingUp",
+        "search": "Search",
+        "filter": "Filter",
+        "download": "Download",
+        "upload": "Upload",
+        "share": "Share2",
+        "heart": "Heart",
+        "star": "Star",
+        "check": "Check",
+        "close": "X",
+        "plus": "Plus",
+        "edit": "Pencil",
+        "trash": "Trash2",
+        "eye": "Eye",
+        "lock": "Lock",
+        "mail": "Mail",
+        "phone": "Phone",
+        "calendar": "Calendar",
+        "clock": "Clock",
+        "map": "MapPin",
+        "globe": "Globe",
+        "shield": "Shield",
+        "lightning": "Zap",
+        "rocket": "Rocket",
+        "target": "Target",
+        "code": "Code",
+        "database": "Database",
+        "server": "Server",
+        "cloud": "Cloud",
+        "cart": "ShoppingCart",
+        "tag": "Tag",
+        "image": "Image",
+        "video": "Video",
+        "file": "File",
+        "folder": "Folder",
+        "link": "Link",
+        "menu": "Menu",
+        "chevron": "ChevronRight",
+        "arrow": "ArrowRight"
+      },
+      "sizes": {
+        "sm": 16,
+        "md": 24,
+        "lg": 32,
+        "xl": 48
+      },
+      "strokeWidth": 1.5
+    },
+    "photography": {
+      "queryTemplates": [
+        "online shopping",
+        "product photography",
+        "retail store display"
+      ],
+      "style": "lifestyle",
+      "moodKeywords": [
+        "elegant",
+        "refined",
+        "polished"
+      ],
+      "fallbackSource": "unsplash",
+      "heroStrategy": "photo",
+      "treatment": {
+        "overlay": true,
+        "overlayOpacity": 0.3,
+        "borderRadius": "0",
+        "aspectRatio": "16/9"
+      }
+    },
+    "illustration": {
+      "style": "line",
+      "colorTreatment": "duotone",
+      "complexity": "moderate",
+      "contexts": [
+        "onboarding",
+        "empty-state",
+        "features"
+      ]
+    },
+    "charts": {
+      "byDataType": {
+        "trend": "area",
+        "comparison": "bar",
+        "distribution": "donut",
+        "composition": "stackedBar",
+        "relationship": "scatter",
+        "kpi": "sparkline"
+      },
+      "seriesColors": [
+        "blue",
+        "sky",
+        "cyan",
+        "emerald",
+        "violet",
+        "amber",
+        "rose",
+        "slate"
+      ],
+      "style": {
+        "borderWidth": 2,
+        "borderRadius": 4,
+        "gridColor": "rgba(0,0,0,0.06)",
+        "labelColor": "rgba(0,0,0,0.5)",
+        "fontFamily": "Inter, system-ui, sans-serif"
+      }
+    },
+    "tables": {
+      "density": "compact",
+      "striped": true,
+      "bordered": false,
+      "hoverable": true,
+      "headerStyle": "filled",
+      "cellPadding": "px-3 py-2",
+      "fontSize": "text-sm"
+    },
+    "forms": {
+      "layout": "stacked",
+      "inputStyle": "outlined",
+      "labelPosition": "top",
+      "validation": "inline",
+      "submitStyle": "full-width"
+    },
+    "buttons": {
+      "variants": {
+        "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm rounded-md",
+        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md",
+        "outline": "border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md",
+        "ghost": "hover:bg-accent hover:text-accent-foreground rounded-md",
+        "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-md",
+        "link": "text-primary underline-offset-4 hover:underline"
+      },
+      "sizes": {
+        "sm": "h-9 px-3 text-sm",
+        "md": "h-10 px-4 text-sm",
+        "lg": "h-11 px-6 text-base",
+        "icon": "h-10 w-10"
+      },
+      "radius": "rounded-md",
+      "shadow": "0 1px 2px rgba(0,0,0,0.05)",
+      "shadowHover": "0 4px 12px rgba(0,0,0,0.15)"
+    },
+    "cards": {
+      "style": "glass",
+      "variants": {
+        "default": "bg-card border border-border shadow-sm rounded-lg",
+        "interactive": "bg-card border border-border shadow-sm rounded-lg hover:shadow-md transition-shadow cursor-pointer",
+        "featured": "bg-card border-2 border-primary/20 shadow-md rounded-lg"
+      },
+      "padding": "p-6",
+      "border": "border border-border",
+      "shadow": "shadow-sm",
+      "shadowHover": "shadow-md"
+    },
+    "navigation": {
+      "type": "top",
+      "style": "solid",
+      "sticky": true,
+      "mobileStyle": "hamburger",
+      "maxItems": 8
+    },
+    "layout": {
+      "heroLayout": "centered",
+      "sectionSpacing": "py-16 sm:py-24",
+      "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+      "grid": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6",
+      "maxWidth": "max-w-7xl",
+      "density": "comfortable",
+      "sidebar": true,
+      "sidebarWidth": "w-64"
+    },
+    "uxGuidelines": []
+  },
+  "appFamily": {
+    "family": "industry-specific",
+    "appType": "generic",
+    "complexity": "standard",
+    "uiMode": "hybrid",
+    "dataModel": "relational",
+    "confidence": 0.9,
+    "primaryEntity": null,
+    "reason": "Override: prompt contains business system keyword matching \\be-commerce\\b"
+  },
+  "vocabulary": {
+    "buyer": "customer",
+    "listing": "product",
+    "cart": "shopping bag"
+  },
+  "domainEntities": [],
+  "pageLayout": {
+    "industry": "ecommerce",
+    "primaryColor": "#6c757d",
+    "headingFont": "Plus Jakarta Sans",
+    "bodyFont": "Inter",
+    "spacingScale": "standard",
+    "sections": [
+      {
+        "componentType": "ProductGrid",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "FilterSidebar",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "CategoryGrid",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "CartItems",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "OrderSummary",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "CheckoutForm",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "ProductInfo",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "ProductGallery",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "RecommendedProducts",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "AuthForm",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "ProfileSection",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "OrderHistory",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "Wishlist",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "HeroBanner",
+        "spacing": "pt-24 pb-16 px-6",
+        "background": "gradient",
+        "animation": "scale-in",
+        "showHeading": true,
+        "heroVariant": "product"
+      },
+      {
+        "componentType": "FeatureGrid",
+        "spacing": "py-20 px-6",
+        "background": "transparent",
+        "animation": "stagger",
+        "showHeading": true,
+        "gridCols": "3"
+      },
+      {
+        "componentType": "Testimonials",
+        "spacing": "py-20 px-6",
+        "background": "surface",
+        "animation": "stagger",
+        "showHeading": true,
+        "gridCols": "3"
+      },
+      {
+        "componentType": "CTASection",
+        "spacing": "py-20 px-6",
+        "background": "gradient",
+        "animation": "scale-in",
+        "showHeading": true
+      },
+      {
+        "componentType": "AboutSection",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "TeamSection",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "MissionSection",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "ContactForm",
+        "spacing": "py-20 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "PaymentForm",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "OrderReview",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "DataTable",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "OrderStatus",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "AddressBook",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      },
+      {
+        "componentType": "OrderTracking",
+        "spacing": "py-16 px-6",
+        "background": "transparent",
+        "animation": "fade-up",
+        "showHeading": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "skill": "Frontend Design",
+  "aestheticDirection": "soft/pastel",
+  "bannedDefaults": [
+    "Inter, Roboto, Arial, system fonts as primary",
+    "Purple gradients on white backgrounds",
+    "Predictable card layouts with equal spacing",
+    "Cookie-cutter design lacking context-specific character",
+    "Space Grotesk across all generations"
+  ],
+  "verdict": "EXISTS"
+}

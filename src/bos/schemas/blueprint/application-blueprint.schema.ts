@@ -35,7 +35,7 @@ export const LayoutPlanSchema = z.object({
   name: z.string(),
   areas: z.array(z.string()),
   components: z.array(z.string()),
-  responsive: z.record(z.array(z.string())).default({}),
+  responsive: z.record(z.string(), z.array(z.string())).default({}),
 });
 export type LayoutPlan = z.infer<typeof LayoutPlanSchema>;
 
@@ -100,8 +100,8 @@ export const ApiPlanSchema = z.object({
   description: z.string().optional(),
   auth: z.boolean().default(false),
   rateLimit: z.number().optional(),
-  requestSchema: z.record(z.unknown()).optional(),
-  responseSchema: z.record(z.unknown()).optional(),
+  requestSchema: z.record(z.string(), z.unknown()).optional(),
+  responseSchema: z.record(z.string(), z.unknown()).optional(),
 });
 export type ApiPlan = z.infer<typeof ApiPlanSchema>;
 
@@ -178,12 +178,12 @@ export const IntegrationPlanSchema = z.object({
   type: z.enum(['database', 'auth', 'payment', 'email', 'analytics', 'cms', 'storage', 'maps', 'social', 'messaging', 'erp', 'crm']),
   name: z.string(),
   provider: z.string().optional(),
-  config: z.record(z.string()).default({}),
+  config: z.record(z.string(), z.string()).default({}),
   required: z.boolean().default(false),
 });
 export type IntegrationPlan = z.infer<typeof IntegrationPlanSchema>;
 
-export const TokenSetSchema = z.record(z.record(z.string()));
+export const TokenSetSchema = z.record(z.string(), z.record(z.string(), z.string()));
 export type TokenSet = z.infer<typeof TokenSetSchema>;
 
 export const ApplicationBlueprintSchema = z.object({
@@ -223,9 +223,9 @@ export const ApplicationBlueprintSchema = z.object({
   provenance: z.object({
     knowledge: z.array(KnowledgeRef).default([]),
     compilers: z.array(z.string()).default([]),
-  }).default({}),
+  }).optional(),
 
-  vocabulary: z.record(z.string()).default({}),
+  vocabulary: z.record(z.string(), z.string()).default({}),
   confidence: z.number().min(0).max(1).default(0.5),
   warnings: z.array(z.string()).default([]),
 });

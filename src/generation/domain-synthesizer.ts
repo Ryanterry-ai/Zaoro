@@ -1,5 +1,5 @@
 import { ArchitectDecision } from './architect.js';
-import { DomainContext, detectDomain } from './domain-detector.js';
+import { DomainContext, detectDomain, detectDomainFromPrompt } from './domain-detector.js';
 import { DomainMockData, getDomainData, getSectionData } from './domain-data.js';
 import { resolveDomainImages, ResolvedImages, SVG_ICONS, resolveIconSvg, resolveDashboardMockup } from './image-resolver.js';
 import { WebResearcher, WebResearchData } from './web-researcher.js';
@@ -65,15 +65,15 @@ export async function createDomainSynthesisAsync(
       mood: inferMoodFromPattern(resolvedPattern),
       features: resolvedPattern.components,
       contentKeywords: resolvedPattern.name.toLowerCase().split(/\s+/),
-      suggestedSections: resolvedPattern.pages.flatMap(p => p.sections).filter((s, i, a) => a.indexOf(s) === i),
+      suggestedSections: resolvedPattern.pages.flatMap((p: { sections: string[] }) => p.sections).filter((s: string, i: number, a: string[]) => a.indexOf(s) === i),
       colorHint: inferColorHintFromPattern(resolvedPattern),
-      imageKeywords: resolvedPattern.design?.restrictions?.map(r => r.replace(/-/g, ' ')) || [],
+      imageKeywords: resolvedPattern.design?.restrictions?.map((r: string) => r.replace(/-/g, ' ')) || [],
     };
     data = getDomainData(patternIndustry, domain.subIndustry);
     console.log(`[domain-synth] Using resolved pattern: ${resolvedPattern.name} → industry=${patternIndustry}`);
   } else {
     // Fallback: independent domain detection (legacy path)
-    domain = detectDomain(prompt);
+    domain = detectDomainFromPrompt(prompt);
     data = getDomainData(domain.industry, domain.subIndustry);
     console.log(`[domain-synth] Detected: ${domain.industry}/${domain.subIndustry || 'general'} mood=${domain.mood}`);
   }
@@ -106,7 +106,7 @@ export async function createDomainSynthesisAsync(
 }
 
 export function createDomainSynthesis(prompt: string, decision: ArchitectDecision, designDNA?: DesignDNA): DomainSynthesisContext {
-  const domain = detectDomain(prompt);
+  const domain = detectDomainFromPrompt(prompt);
   const data = getDomainData(domain.industry, domain.subIndustry);
   const images = resolveDomainImages(
     domain.imageKeywords.length > 0 ? domain.imageKeywords : data.imageKeywords,

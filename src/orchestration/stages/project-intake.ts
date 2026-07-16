@@ -34,16 +34,18 @@ export class ProjectIntakeStage extends BaseStage {
       return this.fail('No project description provided', Date.now() - start);
     }
 
-    // Build BOS-aware prompt
-    const bosHint = ctx.bos.pack
-      ? `\n## Industry context detected: ${ctx.bos.pack.name}\nDomain entities to consider: ${ctx.bos.pack.entities.map(e => e.name).join(', ')}\n`
-      : '';
+    // Build BusinessKnowledge-aware prompt
+    const bkHint = ctx.bk
+      ? `\n## Business Understanding\nType: ${ctx.bk.discovery.businessType}\nIndustry: ${ctx.bk.discovery.industry}\nDomain entities: ${ctx.bk.entities.map(e => e.name).join(', ')}\n`
+      : ctx.bos.pack
+        ? `\n## Industry context detected: ${ctx.bos.pack.name}\nDomain entities to consider: ${ctx.bos.pack.entities.map(e => e.name).join(', ')}\n`
+        : '';
 
     const prompt = `Parse the following project description into a structured manifest.
 
 ## User Input
 ${typeof userInput === 'string' ? userInput : JSON.stringify(userInput, null, 2)}
-${bosHint}
+${bkHint}
 
 ## Required Output (JSON)
 {

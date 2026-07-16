@@ -1,4 +1,18 @@
-import { detectIndustryWithScore } from '../bos/intake-parser.js';
+/**
+ * Domain Detector - Refactored to consume BusinessKnowledge
+ *
+ * This module now consumes BusinessKnowledge from the Business Intelligence layer
+ * instead of performing its own industry detection.
+ *
+ * OWNERSHIP: Business Intelligence owns industry classification.
+ * This module is a CONSUMER, not a PRODUCER.
+ */
+
+import type { BusinessKnowledge } from '../orchestration/business-intelligence/types.js';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 export interface DomainContext {
   industry: string;
@@ -11,7 +25,26 @@ export interface DomainContext {
   imageKeywords: string[];
 }
 
-// ─── Industry → Domain mapping (unified with intake-parser) ──────────────────
+// ============================================================================
+// MOOD KEYWORDS (kept for mood detection from prompt)
+// ============================================================================
+
+const MOOD_KEYWORDS: Record<string, string[]> = {
+  premium: ['luxury', 'premium', 'high-end', 'exclusive', 'elegant', 'sophisticated', 'refined', 'elite'],
+  modern: ['modern', 'contemporary', 'cutting-edge', 'innovative', 'futuristic', 'sleek'],
+  minimal: ['minimal', 'minimalist', 'clean', 'simple', 'bare', 'essential'],
+  bold: ['bold', 'striking', 'dramatic', 'powerful', 'intense', 'vibrant'],
+  playful: ['fun', 'playful', 'colorful', 'creative', 'whimsical', 'quirky'],
+  corporate: ['corporate', 'professional', 'business', 'enterprise', 'formal'],
+  warm: ['warm', 'cozy', 'friendly', 'welcoming', 'comfortable', 'homey'],
+  dark: ['dark', 'moody', 'noir', 'gothic', 'mysterious', 'shadowy'],
+  creative: ['creative', 'artistic', 'design', 'portfolio', 'showcase'],
+  clean: ['clean', 'clinical', 'hygienic', 'fresh', 'pure'],
+};
+
+// ============================================================================
+// INDUSTRY → DOMAIN MAPPING (consumed from BusinessKnowledge)
+// ============================================================================
 
 const INDUSTRY_DOMAIN_MAP: Record<string, { sections: string[]; color: string; mood: DomainContext['mood']; features: string[]; images: string[] }> = {
   restaurant: { sections: ['hero', 'menu-highlights', 'about', 'gallery', 'reservations', 'testimonials', 'contact-info'], color: 'amber', mood: 'warm', features: ['online-ordering', 'booking', 'gallery', 'testimonials', 'contact-form'], images: ['fine dining', 'restaurant interior', 'gourmet food', 'chef cooking'] },
@@ -38,34 +71,34 @@ const INDUSTRY_DOMAIN_MAP: Record<string, { sections: string[]; color: string; m
   proptech: { sections: ['hero', 'features', 'properties', 'pricing', 'testimonials', 'cta'], color: 'blue', mood: 'modern', features: ['property-management', 'tenant-portal', 'maintenance', 'testimonials'], images: ['property management', 'smart building', 'tenant portal', 'real estate tech'] },
 };
 
-const MOOD_KEYWORDS: Record<string, string[]> = {
-  premium: ['luxury', 'premium', 'high-end', 'exclusive', 'elegant', 'sophisticated', 'refined', 'elite'],
-  modern: ['modern', 'contemporary', 'cutting-edge', 'innovative', 'futuristic', 'sleek'],
-  minimal: ['minimal', 'minimalist', 'clean', 'simple', 'bare', 'essential'],
-  bold: ['bold', 'striking', 'dramatic', 'powerful', 'intense', 'vibrant'],
-  playful: ['fun', 'playful', 'colorful', 'creative', 'whimsical', 'quirky'],
-  corporate: ['corporate', 'professional', 'business', 'enterprise', 'formal'],
-  warm: ['warm', 'cozy', 'friendly', 'welcoming', 'comfortable', 'homey'],
-  dark: ['dark', 'moody', 'noir', 'gothic', 'mysterious', 'shadowy'],
-  creative: ['creative', 'artistic', 'design', 'portfolio', 'showcase'],
-  clean: ['clean', 'clinical', 'hygienic', 'fresh', 'pure'],
-};
+// ============================================================================
+// MAIN FUNCTION - Now consumes BusinessKnowledge
+// ============================================================================
 
 /**
- * Detect domain from prompt — unified with intake-parser industry detection.
- * Uses intake-parser for industry detection, then maps to DomainContext shape.
+ * Detect domain from BusinessKnowledge.
+ *
+ * This function now CONSUMES BusinessKnowledge instead of performing its own
+ * industry detection. The Business Intelligence layer is the single source of truth.
+ *
+ * @param businessKnowledge - Upstream BusinessKnowledge from Business Intelligence
+ * @param prompt - Original user prompt (for mood detection only)
+ * @returns DomainContext derived from BusinessKnowledge
  */
-export function detectDomain(prompt: string): DomainContext {
+export function detectDomain(
+  businessKnowledge: BusinessKnowledge,
+  prompt: string
+): DomainContext {
   const lower = prompt.toLowerCase();
 
-  // Use intake-parser for industry detection (single source of truth)
-  const { mapping, subIndustry } = detectIndustryWithScore(prompt);
-  const industry = mapping?.industry ?? 'general';
+  // CONSUME industry from BusinessKnowledge (single source of truth)
+  const industry = businessKnowledge.discovery.industry;
+  const subIndustry = businessKnowledge.discovery.subIndustry ?? '';
 
   // Get domain mapping for this industry
   const domain = INDUSTRY_DOMAIN_MAP[industry] ?? INDUSTRY_DOMAIN_MAP['saas']!;
 
-  // Detect mood from prompt
+  // Detect mood from prompt (this is the only place we still use the prompt directly)
   let mood: DomainContext['mood'] = domain.mood;
   let moodScore = 0;
   for (const [m, mKws] of Object.entries(MOOD_KEYWORDS)) {
@@ -79,75 +112,65 @@ export function detectDomain(prompt: string): DomainContext {
     }
   }
 
-  // Extract features from prompt
-  const features = extractFeatures(lower);
+  // CONSUME features from BusinessKnowledge workflows
+  const features = businessKnowledge.workflows.map(w => w.kind);
 
-  // Extract content keywords
-  const contentKeywords = extractKeywords(lower);
+  // CONSUME content keywords from BusinessKnowledge vocabulary
+  const contentKeywords = Object.keys(businessKnowledge.vocabulary.terms);
 
   return {
     industry,
-    subIndustry: subIndustry ?? '',
+    subIndustry,
     mood,
     features: features.length > 0 ? features : domain.features,
-    contentKeywords,
+    contentKeywords: contentKeywords.length > 0 ? contentKeywords : [],
     suggestedSections: domain.sections,
     colorHint: domain.color,
     imageKeywords: domain.images,
   };
 }
 
-function extractFeatures(prompt: string): string[] {
-  const featureMap: Record<string, string[]> = {
-    'virtual-tours': ['virtual tour', '360', 'tour', 'walkthrough'],
-    'online-ordering': ['online ordering', 'order online', 'delivery', 'takeout', 'takeaway'],
-    'booking': ['booking', 'appointment', 'schedule', 'reserve', 'reservation', 'calendar'],
-    'membership': ['membership', 'member', 'subscription', 'plan', 'tier'],
-    'ecommerce': ['shop', 'store', 'cart', 'checkout', 'buy', 'sell', 'product'],
-    'blog': ['blog', 'article', 'post', 'news', 'content', 'write'],
-    'gallery': ['gallery', 'portfolio', 'showcase', 'photos', 'images', 'collection'],
-    'testimonials': ['testimonial', 'review', 'feedback', 'rating', 'star'],
-    'contact-form': ['contact', 'form', 'inquiry', 'reach out', 'get in touch'],
-    'newsletter': ['newsletter', 'subscribe', 'email', 'updates'],
-    'faq': ['faq', 'questions', 'answers', 'help', 'support'],
-    'pricing': ['pricing', 'price', 'cost', 'plan', 'tier', 'subscription'],
-    'dashboard': ['dashboard', 'analytics', 'metrics', 'reporting', 'insights'],
-    'team': ['team', 'staff', 'people', 'about us', 'our people'],
-    'video': ['video', 'watch', 'youtube', 'vimeo', 'tutorial'],
-    'social': ['social', 'instagram', 'facebook', 'twitter', 'linkedin', 'tiktok'],
-    'multilingual': ['multilingual', 'multi-language', 'translation', 'i18n', 'spanish', 'french'],
+/**
+ * @deprecated Use detectDomain(businessKnowledge, prompt) instead.
+ * This function is kept for backward compatibility only.
+ * It will be removed in a future version.
+ */
+export function detectDomainFromPrompt(prompt: string): DomainContext {
+  console.warn('[domain-detector] detectDomainFromPrompt is deprecated. Use detectDomain(businessKnowledge, prompt) instead.');
+
+  // Create a minimal BusinessKnowledge for backward compatibility
+  const minimalBK: BusinessKnowledge = {
+    version: '1.0.0',
+    sources: [],
+    discovery: {
+      intent: 'deprecated',
+      businessType: 'business',
+      industry: 'general',
+      subIndustry: undefined,
+      domain: 'general',
+      signals: [],
+    },
+    customerPersonas: [],
+    businessPersonas: [],
+    userRoles: [],
+    entities: [],
+    workflows: [],
+    customerJourney: { stages: [], loops: [] },
+    revenue: { model: 'unknown', source: 'unknown', pricing: { structure: 'flat' }, payment: { methods: [], steps: [], considerations: [] }, currency: 'USD' },
+    acquisition: [],
+    retention: { strategy: 'none', mechanisms: [] },
+    compliance: [],
+    kpis: [],
+    relationships: [],
+    pages: [],
+    dashboards: [],
+    automations: [],
+    integrations: [],
+    vocabulary: { terms: {}, domainNouns: [], tone: [] },
+    contentStrategy: { pillars: [], formats: [], cadence: '', voice: '' },
+    designStrategy: { direction: 'modern', density: 'balanced', emphasis: [] },
+    experienceGoals: { arc: [], interactionDensity: 'moderate', motionLanguage: [], perStage: {} },
   };
 
-  const found: string[] = [];
-  for (const [feature, keywords] of Object.entries(featureMap)) {
-    for (const kw of keywords) {
-      if (prompt.includes(kw)) {
-        found.push(feature);
-        break;
-      }
-    }
-  }
-  return found;
-}
-
-function extractKeywords(prompt: string): string[] {
-  const stopWords = new Set(['a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may',
-    'might', 'shall', 'can', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
-    'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between',
-    'out', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there',
-    'when', 'where', 'why', 'how', 'all', 'both', 'each', 'few', 'more', 'most', 'other',
-    'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
-    'just', 'because', 'but', 'and', 'or', 'if', 'while', 'that', 'this', 'it', 'its',
-    'i', 'me', 'my', 'we', 'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'they',
-    'them', 'their', 'what', 'which', 'who', 'whom', 'these', 'those', 'am', 'about', 'up',
-    'also', 'like', 'want', 'need', 'make', 'build', 'create', 'platform', 'website', 'web',
-    'app', 'application', 'system', 'tool', 'solution']);
-
-  const words = prompt.replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
-  const freq = new Map<string, number>();
-  for (const w of words) {
-    freq.set(w, (freq.get(w) || 0) + 1);
-  }
-  return [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15).map(e => e[0]);
+  return detectDomain(minimalBK, prompt);
 }

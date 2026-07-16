@@ -140,6 +140,43 @@ export async function generateBatchFromSpecs(
   }
 }
 
+// ─── Agent File Polling ─────────────────────────────────────────────────────
+
+/**
+ * Wait for agent to write component files to disk.
+ * Polls specific expected file paths at 500ms intervals.
+ * Returns partial results on timeout so ReactRenderer can fill gaps.
+ */
+export async function waitForAgentComponents(
+  workspaceDir: string,
+  expectedPaths: string[],
+  timeoutMs = 30_000,
+): Promise<Array<{ path: string; content: string }>> {
+  const deadline = Date.now() + timeoutMs;
+  const pollInterval = 500;
+
+  while (Date.now() < deadline) {
+    const written = expectedPaths.filter(p =>
+      fs.existsSync(path.join(workspaceDir, p))
+    );
+    if (written.length === expectedPaths.length) {
+      return written.map(p => ({
+        path: p,
+        content: fs.readFileSync(path.join(workspaceDir, p), 'utf8'),
+      }));
+    }
+    await new Promise(r => setTimeout(r, pollInterval));
+  }
+
+  // Timeout — return partial results so fallback can fill gaps
+  return expectedPaths
+    .filter(p => fs.existsSync(path.join(workspaceDir, p)))
+    .map(p => ({
+      path: p,
+      content: fs.readFileSync(path.join(workspaceDir, p), 'utf8'),
+    }));
+}
+
 // ─── Task File Builders ──────────────────────────────────────────────────────
 
 function buildAgentTask(spec: unknown, skillMd: string, outputPath: string): string {

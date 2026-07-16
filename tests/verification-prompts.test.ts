@@ -5,8 +5,8 @@ import { Scorer, shouldUseNoPattern } from '../src/bos/reasoning/scorer.js';
 import { PATTERNS, DESIGN_PROFILES } from '../src/bos/knowledge/registry.js';
 import { RulesEngine } from '../src/bos/reasoning/rules-engine.js';
 
-function reason(prompt: string) {
-  const ctx = buildBREContext(prompt);
+async function reason(prompt: string) {
+  const ctx = await buildBREContext(prompt);
   const appFamily = classify(prompt, ctx);
   ctx.appFamilyResult = appFamily;
 
@@ -30,47 +30,53 @@ function reason(prompt: string) {
   return { ctx, appFamily, decisions, topPattern, useNoPattern, scoredPatterns };
 }
 
-describe('Verification: Productivity tools → no CRM output', () => {
-  it('task tracker → productivity-tool, NoPattern', () => {
-    const { appFamily, useNoPattern } = reason('Build a simple task tracker');
+describe('Verification: Productivity tools → pattern-based compilation', () => {
+  it('task tracker → productivity-tool, uses Task & Project Management pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build a simple task tracker');
     expect(appFamily.family).toBe('productivity-tool');
     expect(appFamily.appType).toBe('task-tracker');
     expect(appFamily.primaryEntity).toBe('Task');
-    expect(useNoPattern).toBe(true);
+    expect(useNoPattern).toBe(false);
+    expect(topPattern).toBeDefined();
+    expect(topPattern!.name).toMatch(/Task|Project/);
   });
 
-  it('habit tracker → productivity-tool, NoPattern', () => {
-    const { appFamily, useNoPattern } = reason('Build a habit tracker app');
+  it('habit tracker → productivity-tool, uses pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build a habit tracker app');
     expect(appFamily.family).toBe('productivity-tool');
     expect(appFamily.appType).toBe('habit-tracker');
-    expect(useNoPattern).toBe(true);
+    expect(useNoPattern).toBe(false);
+    expect(topPattern).toBeDefined();
   });
 
-  it('note taking app → productivity-tool, NoPattern', () => {
-    const { appFamily, useNoPattern } = reason('Build a note taking app');
+  it('note taking app → productivity-tool, uses pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build a note taking app');
     expect(appFamily.family).toBe('productivity-tool');
-    expect(useNoPattern).toBe(true);
+    expect(useNoPattern).toBe(false);
+    expect(topPattern).toBeDefined();
   });
 });
 
 describe('Verification: Developer tools', () => {
-  it('bug tracker → developer-tool, NoPattern', () => {
-    const { appFamily, useNoPattern } = reason('Build a bug tracker');
+  it('bug tracker → developer-tool, uses pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build a bug tracker');
     expect(appFamily.family).toBe('developer-tool');
     expect(appFamily.appType).toBe('bug-tracker');
-    expect(useNoPattern).toBe(true);
+    expect(useNoPattern).toBe(false);
+    expect(topPattern).toBeDefined();
   });
 
-  it('issue tracker → developer-tool, NoPattern', () => {
-    const { appFamily, useNoPattern } = reason('Build an issue tracker');
+  it('issue tracker → developer-tool, uses pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build an issue tracker');
     expect(appFamily.family).toBe('developer-tool');
-    expect(useNoPattern).toBe(true);
+    expect(useNoPattern).toBe(false);
+    expect(topPattern).toBeDefined();
   });
 });
 
 describe('Verification: Data organisers', () => {
-  it('recipe organiser → data-organiser, NoPattern', () => {
-    const { appFamily, useNoPattern } = reason('Build a recipe organiser');
+  it('recipe organiser → data-organiser, NoPattern', async () => {
+    const { appFamily, useNoPattern } = await reason('Build a recipe organiser');
     expect(appFamily.family).toBe('data-organiser');
     expect(appFamily.appType).toBe('recipe-organiser');
     expect(appFamily.primaryEntity).toBe('Recipe');
@@ -79,15 +85,15 @@ describe('Verification: Data organisers', () => {
 });
 
 describe('Verification: Industry-specific → existing patterns still work', () => {
-  it('gym CRM → industry-specific, uses a real pattern', () => {
-    const { appFamily, useNoPattern, topPattern } = reason('Build a gym CRM');
+  it('gym CRM → industry-specific, uses a real pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build a gym CRM');
     expect(appFamily.family).toBe('industry-specific');
     expect(useNoPattern).toBe(false);
     expect(topPattern).toBeDefined();
   });
 
-  it('hospital ERP → industry-specific, uses HOSPITAL_MANAGEMENT pattern', () => {
-    const { appFamily, useNoPattern, topPattern } = reason('Build a hospital ERP');
+  it('hospital ERP → industry-specific, uses HOSPITAL_MANAGEMENT pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build a hospital ERP');
     expect(appFamily.family).toBe('industry-specific');
     expect(useNoPattern).toBe(false);
     expect(topPattern).toBeDefined();
@@ -95,22 +101,22 @@ describe('Verification: Industry-specific → existing patterns still work', () 
     expect(patternName).toMatch(/hospital|healthcare|medical/);
   });
 
-  it('restaurant POS → industry-specific, uses restaurant pattern', () => {
-    const { appFamily, useNoPattern, ctx } = reason('Build a restaurant POS');
+  it('restaurant POS → industry-specific, uses restaurant pattern', async () => {
+    const { appFamily, useNoPattern, ctx } = await reason('Build a restaurant POS');
     expect(appFamily.family).toBe('industry-specific');
     expect(ctx.industry).toMatch(/restaurant/);
     expect(useNoPattern).toBe(false);
   });
 
-  it('ecommerce store → commerce family, uses ecommerce pattern', () => {
-    const { appFamily, useNoPattern, topPattern } = reason('Build an ecommerce store');
+  it('ecommerce store → commerce family, uses ecommerce pattern', async () => {
+    const { appFamily, useNoPattern, topPattern } = await reason('Build an ecommerce store');
     expect(appFamily.family).toBe('commerce');
     expect(useNoPattern).toBe(false);
     expect(topPattern).toBeDefined();
   });
 
-  it('LMS → industry-specific, uses education/LMS pattern', () => {
-    const { ctx, topPattern, useNoPattern } = reason('Build an LMS for our school');
+  it('LMS → industry-specific, uses education/LMS pattern', async () => {
+    const { ctx, topPattern, useNoPattern } = await reason('Build an LMS for our school');
     expect(ctx.industry).toMatch(/education/);
     expect(useNoPattern).toBe(false);
     expect(topPattern).toBeDefined();
@@ -128,8 +134,8 @@ describe('Verification: No regression on working prompts', () => {
   ];
 
   for (const prompt of workingPrompts) {
-    it(`"${prompt}" — still produces a real pattern (not NoPattern)`, () => {
-      const { useNoPattern, topPattern } = reason(prompt);
+    it(`"${prompt}" — still produces a real pattern (not NoPattern)`, async () => {
+      const { useNoPattern, topPattern } = await reason(prompt);
       expect(useNoPattern).toBe(false);
       expect(topPattern).toBeDefined();
       expect(topPattern!.score).toBeGreaterThan(30);

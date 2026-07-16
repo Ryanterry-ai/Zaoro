@@ -21,6 +21,7 @@ import type {
   FeatureDef,
   NavItemDef,
 } from '../pipeline-v2/stages.js';
+import type { ScrapedContent } from '../types.js';
 
 // ─── Graph Node Types ────────────────────────────────────────────────────────
 
@@ -124,6 +125,8 @@ export interface AppGraphMetadata {
   businessModels: string[];
   compliancePacks: string[];
   audience?: string;
+  scrapedContent?: ScrapedContent;
+  businessResearch?: import('../types.js').BusinessResearch;
   createdAt: string;
 }
 
@@ -171,6 +174,8 @@ export function buildApplicationGraph(opts: {
   businessModels: string[];
   compliancePacks: string[];
   audience?: string;
+  scrapedContent?: ScrapedContent;
+  businessResearch?: import('../types.js').BusinessResearch;
 }): ApplicationGraph {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
@@ -285,6 +290,8 @@ export function buildApplicationGraph(opts: {
   if (opts.subIndustry) metadata.subIndustry = opts.subIndustry;
   if (opts.country) metadata.country = opts.country;
   if (opts.audience) metadata.audience = opts.audience;
+  if (opts.scrapedContent) metadata.scrapedContent = opts.scrapedContent;
+  if (opts.businessResearch) metadata.businessResearch = opts.businessResearch;
 
   return { nodes, edges, metadata };
 }

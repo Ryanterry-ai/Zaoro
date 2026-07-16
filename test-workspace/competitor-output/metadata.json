@@ -1,0 +1,6 @@
+{
+  "name": "Multi-Brand Supplement Store (India)",
+  "description": "A premium multi-brand supplement e-commerce store designed for Indian health and fitness goals. Buy authentic whey proteins, mass gainers, vitamins, and Ayurvedic herbs with real-time cart, checkout, and authenticity checks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

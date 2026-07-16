@@ -1,0 +1,143 @@
+{
+  "skill": "21st.dev",
+  "test": "Component recommendations",
+  "count": 3,
+  "recommendations": [
+    {
+      "domain": "component",
+      "title": "Core Components",
+      "description": "6 industry-specific components from 21st.dev library",
+      "confidence": 0.9,
+      "priority": "must",
+      "components": [
+        {
+          "name": "ProductCard",
+          "source": "21st.dev",
+          "variant": "image-top",
+          "description": "Product card with image, title, price, and CTA"
+        },
+        {
+          "name": "ProductGrid",
+          "source": "21st.dev",
+          "variant": "responsive-3col",
+          "description": "Responsive product grid with filters"
+        },
+        {
+          "name": "CartDrawer",
+          "source": "21st.dev",
+          "variant": "slide-right",
+          "description": "Slide-in cart drawer"
+        },
+        {
+          "name": "CheckoutForm",
+          "source": "21st.dev",
+          "variant": "multi-step",
+          "description": "Multi-step checkout"
+        },
+        {
+          "name": "SearchBar",
+          "source": "21st.dev",
+          "variant": "autocomplete",
+          "description": "Search with autocomplete"
+        },
+        {
+          "name": "CategoryFilter",
+          "source": "21st.dev",
+          "variant": "sidebar",
+          "description": "Sidebar category filter"
+        }
+      ]
+    },
+    {
+      "domain": "component",
+      "title": "Base Components",
+      "description": "Shared primitive components",
+      "confidence": 1,
+      "priority": "must",
+      "components": [
+        {
+          "name": "Button",
+          "source": "21st.dev",
+          "variant": "primary",
+          "description": "Primary action button"
+        },
+        {
+          "name": "Input",
+          "source": "21st.dev",
+          "variant": "text",
+          "description": "Text input field"
+        },
+        {
+          "name": "Modal",
+          "source": "21st.dev",
+          "variant": "dialog",
+          "description": "Dialog modal"
+        },
+        {
+          "name": "Toast",
+          "source": "21st.dev",
+          "variant": "notification",
+          "description": "Toast notification"
+        },
+        {
+          "name": "Badge",
+          "source": "21st.dev",
+          "variant": "status",
+          "description": "Status badge"
+        },
+        {
+          "name": "Avatar",
+          "source": "21st.dev",
+          "variant": "image",
+          "description": "Avatar image"
+        },
+        {
+          "name": "Dropdown",
+          "source": "21st.dev",
+          "variant": "select",
+          "description": "Dropdown select"
+        },
+        {
+          "name": "Tabs",
+          "source": "21st.dev",
+          "variant": "underline",
+          "description": "Tab navigation"
+        }
+      ]
+    },
+    {
+      "domain": "component",
+      "title": "Layout Components",
+      "description": "Structural layout components",
+      "confidence": 0.85,
+      "priority": "should",
+      "components": [
+        {
+          "name": "Container",
+          "source": "21st.dev",
+          "variant": "centered",
+          "description": "Centered container"
+        },
+        {
+          "name": "Stack",
+          "source": "21st.dev",
+          "variant": "vertical",
+          "description": "Vertical stack"
+        },
+        {
+          "name": "Grid",
+          "source": "21st.dev",
+          "variant": "responsive",
+          "description": "Responsive grid"
+        },
+        {
+          "name": "Separator",
+          "source": "21st.dev",
+          "variant": "horizontal",
+          "description": "Horizontal divider"
+        }
+      ]
+    }
+  ],
+  "verdict": "PASS"
+}

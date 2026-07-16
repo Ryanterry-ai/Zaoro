@@ -1,0 +1,1014 @@
+{
+  "id": "design-1784138451316-um67th",
+  "timestamp": 1784138451316,
+  "context": {
+    "industry": "ecommerce",
+    "personality": "premium",
+    "stage": "frontend",
+    "artifacts": {}
+  },
+  "recommendations": [
+    {
+      "domain": "ux",
+      "title": "Navigation Architecture",
+      "description": "Use mega-menu navigation for ecommerce industry",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "navigationType": "mega-menu"
+      }
+    },
+    {
+      "domain": "ux",
+      "title": "Page Layout",
+      "description": "Apply grid-cards layout pattern",
+      "confidence": 0.85,
+      "priority": "must",
+      "tokens": {
+        "layoutPattern": "grid-cards"
+      }
+    },
+    {
+      "domain": "ux",
+      "title": "Hero Section",
+      "description": "Design product-showcase hero for maximum impact",
+      "confidence": 0.85,
+      "priority": "must",
+      "tokens": {
+        "heroStyle": "product-showcase"
+      }
+    },
+    {
+      "domain": "ux",
+      "title": "Conversion Pattern",
+      "description": "Optimize for quick-checkout",
+      "confidence": 0.8,
+      "priority": "should",
+      "tokens": {
+        "conversionPattern": "quick-checkout"
+      }
+    },
+    {
+      "domain": "ux",
+      "title": "Mobile Strategy",
+      "description": "Use bottom-nav mobile navigation",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "mobileStrategy": "bottom-nav"
+      }
+    },
+    {
+      "domain": "ux",
+      "title": "Accessibility",
+      "description": "Ensure WCAG 2.1 AA compliance with proper focus management, ARIA labels, and color contrast",
+      "confidence": 1,
+      "priority": "must",
+      "tokens": {
+        "wcagLevel": "AA",
+        "focusManagement": true,
+        "ariaLabels": true
+      }
+    },
+    {
+      "domain": "ux",
+      "title": "Information Architecture",
+      "description": "Structure content with category → subcategory → product hierarchy",
+      "confidence": 0.8,
+      "priority": "should",
+      "tokens": {
+        "iaPattern": "category → subcategory → product"
+      }
+    },
+    {
+      "domain": "visual",
+      "title": "Color Palette",
+      "description": "Industry-optimized color palette with #2563EB primary",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "primary": "#2563EB",
+        "primaryLight": "#60A5FA",
+        "primaryDark": "#1D4ED8",
+        "secondary": "#7C3AED",
+        "secondaryLight": "#A78BFA",
+        "secondaryDark": "#6D28D9",
+        "accent": "#F59E0B",
+        "background": "#FFFFFF",
+        "surface": "#F8FAFC",
+        "surfaceElevated": "#FFFFFF",
+        "text": "#0F172A",
+        "textSecondary": "#475569",
+        "textMuted": "#94A3B8",
+        "border": "#E2E8F0",
+        "borderLight": "#F1F5F9",
+        "success": "#10B981",
+        "warning": "#F59E0B",
+        "error": "#EF4444",
+        "info": "#3B82F6"
+      }
+    },
+    {
+      "domain": "visual",
+      "title": "Typography System",
+      "description": "Typography pairing: Plus Jakarta Sans, sans-serif / Plus Jakarta Sans, sans-serif",
+      "confidence": 0.85,
+      "priority": "must",
+      "tokens": {
+        "fontFamily": {
+          "heading": "Plus Jakarta Sans, sans-serif",
+          "body": "Plus Jakarta Sans, sans-serif",
+          "mono": "Fira Code, monospace"
+        },
+        "fontSize": {
+          "xs": "0.75rem",
+          "sm": "0.875rem",
+          "base": "1rem",
+          "lg": "1.125rem",
+          "xl": "1.25rem",
+          "2xl": "1.5rem",
+          "3xl": "1.875rem",
+          "4xl": "2.25rem",
+          "5xl": "3rem"
+        },
+        "fontWeight": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        },
+        "lineHeight": {
+          "tight": 1.2,
+          "normal": 1.6,
+          "relaxed": 1.8
+        },
+        "letterSpacing": {
+          "tight": "-0.02em",
+          "normal": "0em",
+          "wide": "0.05em"
+        }
+      }
+    },
+    {
+      "domain": "visual",
+      "title": "Visual Hierarchy",
+      "description": "Establish clear F-pattern or Z-pattern reading flow",
+      "confidence": 0.8,
+      "priority": "should",
+      "tokens": {
+        "hierarchyPattern": "F-pattern (product browsing)"
+      }
+    },
+    {
+      "domain": "visual",
+      "title": "Contrast & Readability",
+      "description": "Minimum 4.5:1 contrast ratio for text, 3:1 for large text",
+      "confidence": 1,
+      "priority": "must",
+      "tokens": {
+        "minContrast": 4.5,
+        "largeTextContrast": 3
+      }
+    },
+    {
+      "domain": "visual",
+      "title": "Spacing Scale",
+      "description": "4px base spacing unit with consistent scale",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "baseUnit": 4,
+        "scale": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          6,
+          8,
+          12,
+          16,
+          24,
+          32,
+          48,
+          64,
+          96,
+          128
+        ]
+      }
+    },
+    {
+      "domain": "design-system",
+      "title": "Layout System",
+      "description": "Grid system: 12 columns, 16px gap, 1400px max width",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "spacing": {
+          "0": "0px",
+          "1": "4px",
+          "2": "8px",
+          "3": "12px",
+          "4": "16px",
+          "5": "20px",
+          "6": "24px",
+          "8": "32px",
+          "10": "40px",
+          "12": "48px",
+          "16": "64px",
+          "20": "80px",
+          "24": "96px"
+        },
+        "borderRadius": {
+          "none": "0px",
+          "sm": "4px",
+          "md": "8px",
+          "lg": "12px",
+          "xl": "16px",
+          "2xl": "24px",
+          "full": "9999px"
+        },
+        "containerMaxWidth": "1400px",
+        "gridColumns": 12,
+        "gridGap": "16px",
+        "breakpoints": {
+          "sm": "640px",
+          "md": "768px",
+          "lg": "1024px",
+          "xl": "1280px",
+          "2xl": "1536px"
+        }
+      }
+    },
+    {
+      "domain": "design-system",
+      "title": "Elevation System",
+      "description": "Material-inspired shadow tokens for depth hierarchy",
+      "confidence": 0.85,
+      "priority": "should",
+      "tokens": {
+        "xs": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "sm": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "md": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        "lg": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "xl": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+        "inner": "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)"
+      }
+    },
+    {
+      "domain": "design-system",
+      "title": "Border Radius",
+      "description": "Consistent radius scale from sharp to fully round",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "none": "0px",
+        "sm": "4px",
+        "md": "8px",
+        "lg": "12px",
+        "xl": "16px",
+        "2xl": "24px",
+        "full": "9999px"
+      }
+    },
+    {
+      "domain": "design-system",
+      "title": "CSS Custom Properties",
+      "description": "Generate :root CSS variables for all design tokens",
+      "confidence": 1,
+      "priority": "must",
+      "css": {
+        "--font-heading": "Inter, sans-serif",
+        "--font-body": "Inter, sans-serif",
+        "--font-mono": "JetBrains Mono, monospace",
+        "--spacing-unit": "4px",
+        "--container-max": "1280px",
+        "--radius-sm": "4px",
+        "--radius-md": "8px",
+        "--radius-lg": "12px",
+        "--radius-xl": "16px"
+      }
+    },
+    {
+      "domain": "design-system",
+      "title": "Responsive Breakpoints",
+      "description": "Mobile-first with breakpoints: sm, md, lg, xl, 2xl",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "sm": "640px",
+        "md": "768px",
+        "lg": "1024px",
+        "xl": "1280px",
+        "2xl": "1536px"
+      }
+    },
+    {
+      "domain": "design-system",
+      "title": "Z-Index Scale",
+      "description": "Predictable z-index layering",
+      "confidence": 0.8,
+      "priority": "should",
+      "tokens": {
+        "dropdown": 1000,
+        "sticky": 1100,
+        "modal": 1300,
+        "popover": 1400,
+        "toast": 1500,
+        "tooltip": 1600
+      }
+    },
+    {
+      "domain": "component",
+      "title": "Core Components",
+      "description": "6 industry-specific components from 21st.dev library",
+      "confidence": 0.9,
+      "priority": "must",
+      "components": [
+        {
+          "name": "ProductCard",
+          "source": "21st.dev",
+          "variant": "image-top",
+          "description": "Product card with image, title, price, and CTA"
+        },
+        {
+          "name": "ProductGrid",
+          "source": "21st.dev",
+          "variant": "responsive-3col",
+          "description": "Responsive product grid with filters"
+        },
+        {
+          "name": "CartDrawer",
+          "source": "21st.dev",
+          "variant": "slide-right",
+          "description": "Slide-in cart drawer"
+        },
+        {
+          "name": "CheckoutForm",
+          "source": "21st.dev",
+          "variant": "multi-step",
+          "description": "Multi-step checkout"
+        },
+        {
+          "name": "SearchBar",
+          "source": "21st.dev",
+          "variant": "autocomplete",
+          "description": "Search with autocomplete"
+        },
+        {
+          "name": "CategoryFilter",
+          "source": "21st.dev",
+          "variant": "sidebar",
+          "description": "Sidebar category filter"
+        }
+      ]
+    },
+    {
+      "domain": "component",
+      "title": "Base Components",
+      "description": "Shared primitive components",
+      "confidence": 1,
+      "priority": "must",
+      "components": [
+        {
+          "name": "Button",
+          "source": "21st.dev",
+          "variant": "primary",
+          "description": "Primary action button"
+        },
+        {
+          "name": "Input",
+          "source": "21st.dev",
+          "variant": "text",
+          "description": "Text input field"
+        },
+        {
+          "name": "Modal",
+          "source": "21st.dev",
+          "variant": "dialog",
+          "description": "Dialog modal"
+        },
+        {
+          "name": "Toast",
+          "source": "21st.dev",
+          "variant": "notification",
+          "description": "Toast notification"
+        },
+        {
+          "name": "Badge",
+          "source": "21st.dev",
+          "variant": "status",
+          "description": "Status badge"
+        },
+        {
+          "name": "Avatar",
+          "source": "21st.dev",
+          "variant": "image",
+          "description": "Avatar image"
+        },
+        {
+          "name": "Dropdown",
+          "source": "21st.dev",
+          "variant": "select",
+          "description": "Dropdown select"
+        },
+        {
+          "name": "Tabs",
+          "source": "21st.dev",
+          "variant": "underline",
+          "description": "Tab navigation"
+        }
+      ]
+    },
+    {
+      "domain": "component",
+      "title": "Layout Components",
+      "description": "Structural layout components",
+      "confidence": 0.85,
+      "priority": "should",
+      "components": [
+        {
+          "name": "Container",
+          "source": "21st.dev",
+          "variant": "centered",
+          "description": "Centered container"
+        },
+        {
+          "name": "Stack",
+          "source": "21st.dev",
+          "variant": "vertical",
+          "description": "Vertical stack"
+        },
+        {
+          "name": "Grid",
+          "source": "21st.dev",
+          "variant": "responsive",
+          "description": "Responsive grid"
+        },
+        {
+          "name": "Separator",
+          "source": "21st.dev",
+          "variant": "horizontal",
+          "description": "Horizontal divider"
+        }
+      ]
+    },
+    {
+      "domain": "motion",
+      "title": "Motion Tokens",
+      "description": "moderate animation level with 250ms default duration",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "duration": {
+          "fast": "150ms",
+          "normal": "250ms",
+          "slow": "400ms",
+          "slower": "600ms"
+        },
+        "easing": {
+          "default": "cubic-bezier(0.4, 0, 0.2, 1)",
+          "in": "cubic-bezier(0.4, 0, 1, 1)",
+          "out": "cubic-bezier(0, 0, 0.2, 1)",
+          "bounce": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+        },
+        "reducedMotion": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Capability Set",
+      "description": "10 composable motion capabilities selected from strategy signals",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "capabilities": [
+          "framer-motion",
+          "motion-values",
+          "hover-choreography",
+          "configurator",
+          "live-pricing",
+          "physics-interactions",
+          "premium-transitions",
+          "mobile-performance",
+          "reduced-motion",
+          "ssr-safe"
+        ],
+        "dependencies": [
+          "framer-motion"
+        ]
+      },
+      "animations": [
+        {
+          "name": "Framer Motion · entrance",
+          "type": "entrance",
+          "config": {}
+        },
+        {
+          "name": "Framer Motion · exit",
+          "type": "exit",
+          "config": {}
+        },
+        {
+          "name": "Motion Values · scroll",
+          "type": "scroll",
+          "config": {}
+        },
+        {
+          "name": "Hover Choreography · hover",
+          "type": "hover",
+          "config": {}
+        },
+        {
+          "name": "Interactive Configurators · transition",
+          "type": "transition",
+          "config": {}
+        },
+        {
+          "name": "Interactive Configurators · hover",
+          "type": "hover",
+          "config": {}
+        },
+        {
+          "name": "Live Pricing · transition",
+          "type": "transition",
+          "config": {}
+        },
+        {
+          "name": "Physics-based Interactions · hover",
+          "type": "hover",
+          "config": {}
+        },
+        {
+          "name": "Premium Transitions · transition",
+          "type": "transition",
+          "config": {}
+        },
+        {
+          "name": "Premium Transitions · exit",
+          "type": "exit",
+          "config": {}
+        }
+      ]
+    },
+    {
+      "domain": "motion",
+      "title": "Framer Motion",
+      "description": "Declarative React animation primitives (whileInView, AnimatePresence, layout).",
+      "confidence": 0.85,
+      "priority": "should",
+      "tokens": {
+        "id": "framer-motion",
+        "category": "library",
+        "dependencies": [
+          "framer-motion"
+        ],
+        "ssrSafe": true,
+        "mobileSafe": true,
+        "reducedMotionSafe": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Motion Values",
+      "description": "useMotionValue / useTransform for smooth, derived, scroll-linked values without re-renders.",
+      "confidence": 0.85,
+      "priority": "should",
+      "tokens": {
+        "id": "motion-values",
+        "category": "interaction",
+        "dependencies": [
+          "framer-motion"
+        ],
+        "ssrSafe": true,
+        "mobileSafe": true,
+        "reducedMotionSafe": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Hover Choreography",
+      "description": "Coordinated multi-element hover sequences (lift, glow, reveal, cursor-follow).",
+      "confidence": 0.85,
+      "priority": "should",
+      "tokens": {
+        "id": "hover-choreography",
+        "category": "interaction",
+        "dependencies": [
+          "framer-motion"
+        ],
+        "ssrSafe": true,
+        "mobileSafe": false,
+        "reducedMotionSafe": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Interactive Configurators",
+      "description": "State-driven product/option configurators that update visuals and price in real time.",
+      "confidence": 0.85,
+      "priority": "nice",
+      "tokens": {
+        "id": "configurator",
+        "category": "commerce",
+        "dependencies": [
+          "framer-motion"
+        ],
+        "ssrSafe": true,
+        "mobileSafe": true,
+        "reducedMotionSafe": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Live Pricing",
+      "description": "Reactive price calculation from configuration/quantity/plan selection.",
+      "confidence": 0.85,
+      "priority": "should",
+      "tokens": {
+        "id": "live-pricing",
+        "category": "commerce",
+        "dependencies": [
+          "framer-motion"
+        ],
+        "ssrSafe": true,
+        "mobileSafe": true,
+        "reducedMotionSafe": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Physics-based Interactions",
+      "description": "Spring physics, drag, and momentum for tactile, natural-feeling UI.",
+      "confidence": 0.85,
+      "priority": "nice",
+      "tokens": {
+        "id": "physics-interactions",
+        "category": "interaction",
+        "dependencies": [
+          "framer-motion"
+        ],
+        "ssrSafe": true,
+        "mobileSafe": true,
+        "reducedMotionSafe": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Premium Transitions",
+      "description": "Page, route, and layout transitions with shared-element and crossfade choreography.",
+      "confidence": 0.85,
+      "priority": "nice",
+      "tokens": {
+        "id": "premium-transitions",
+        "category": "interaction",
+        "dependencies": [
+          "framer-motion"
+        ],
+        "ssrSafe": true,
+        "mobileSafe": true,
+        "reducedMotionSafe": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Reduced Motion",
+      "description": "Respect prefers-reduced-motion media query; content stays instantly visible.",
+      "confidence": 1,
+      "priority": "must",
+      "tokens": {
+        "respectReducedMotion": true,
+        "fallbackDuration": "0ms"
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Scroll Animations",
+      "description": "Scroll-triggered reveal animations with viewport detection",
+      "confidence": 0.8,
+      "priority": "nice",
+      "tokens": {
+        "scrollTrigger": "whileInView",
+        "viewportOnce": true
+      }
+    },
+    {
+      "domain": "motion",
+      "title": "Page Transitions",
+      "description": "AnimatePresence-based route and layout transitions",
+      "confidence": 0.75,
+      "priority": "nice",
+      "tokens": {
+        "transitionType": "fade",
+        "duration": "250ms"
+      }
+    },
+    {
+      "domain": "polish",
+      "title": "Visual Consistency",
+      "description": "Apply clean-and-professional tone across all elements",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "cornerStyle": "rounded",
+        "shadowIntensity": "subtle",
+        "hoverBehavior": "lift"
+      }
+    },
+    {
+      "domain": "polish",
+      "title": "Spacing Audit",
+      "description": "Use normal spacing rhythm for ecommerce",
+      "confidence": 0.85,
+      "priority": "must",
+      "tokens": {
+        "spacingTightness": "normal",
+        "guidelines": "Balanced whitespace; section gaps 64-96px; component gaps 24px"
+      }
+    },
+    {
+      "domain": "polish",
+      "title": "Typography Consistency",
+      "description": "Enforce consistent type scale and line heights",
+      "confidence": 0.85,
+      "priority": "should",
+      "tokens": {
+        "headingWeight": "700",
+        "bodyWeight": "400",
+        "lineHeight": 1.6,
+        "maxLineWidth": "65ch"
+      }
+    },
+    {
+      "domain": "polish",
+      "title": "Color Harmony",
+      "description": "Verify WCAG contrast ratios and color consistency",
+      "confidence": 0.9,
+      "priority": "must",
+      "tokens": {
+        "minContrastRatio": 4.5,
+        "largeTextContrastRatio": 3,
+        "maxColors": 5
+      }
+    },
+    {
+      "domain": "polish",
+      "title": "Micro-Interactions",
+      "description": "Configure lift hover behavior and ring focus ring",
+      "confidence": 0.8,
+      "priority": "should",
+      "tokens": {
+        "hoverBehavior": "lift",
+        "focusRing": "ring",
+        "transitionDuration": "200ms"
+      }
+    },
+    {
+      "domain": "polish",
+      "title": "Component Map",
+      "description": "Standardized component styling across the application",
+      "confidence": 0.85,
+      "priority": "must",
+      "tokens": {
+        "button": {
+          "variant": "primary",
+          "size": "md",
+          "style": {
+            "borderRadius": "12px",
+            "fontWeight": "600",
+            "padding": "10px 20px"
+          },
+          "variants": {
+            "primary": {
+              "background": "var(--color-primary)",
+              "color": "#fff"
+            },
+            "secondary": {
+              "background": "transparent",
+              "border": "1px solid var(--color-primary)",
+              "color": "var(--color-primary)"
+            },
+            "ghost": {
+              "background": "transparent",
+              "color": "var(--color-primary)"
+            }
+          }
+        },
+        "card": {
+          "variant": "default",
+          "size": "md",
+          "style": {
+            "borderRadius": "12px",
+            "boxShadow": "0 1px 3px rgba(0,0,0,0.1)",
+            "padding": "24px"
+          }
+        },
+        "input": {
+          "variant": "outline",
+          "size": "md",
+          "style": {
+            "borderRadius": "12px",
+            "border": "1px solid var(--color-border)",
+            "padding": "10px 14px"
+          }
+        },
+        "modal": {
+          "variant": "centered",
+          "size": "md",
+          "style": {
+            "borderRadius": "12px",
+            "boxShadow": "0 25px 50px rgba(0,0,0,0.25)",
+            "padding": "32px"
+          }
+        },
+        "navigation": {
+          "variant": "top",
+          "size": "lg",
+          "style": {
+            "height": "64px",
+            "padding": "0 24px"
+          }
+        }
+      }
+    }
+  ],
+  "colorTokens": {
+    "primary": "#2563EB",
+    "primaryLight": "#60A5FA",
+    "primaryDark": "#1D4ED8",
+    "secondary": "#7C3AED",
+    "secondaryLight": "#A78BFA",
+    "secondaryDark": "#6D28D9",
+    "accent": "#F59E0B",
+    "background": "#FFFFFF",
+    "surface": "#F8FAFC",
+    "surfaceElevated": "#FFFFFF",
+    "text": "#0F172A",
+    "textSecondary": "#475569",
+    "textMuted": "#94A3B8",
+    "border": "#E2E8F0",
+    "borderLight": "#F1F5F9",
+    "success": "#10B981",
+    "warning": "#F59E0B",
+    "error": "#EF4444",
+    "info": "#3B82F6"
+  },
+  "typographyTokens": {
+    "fontFamily": {
+      "heading": "Plus Jakarta Sans, sans-serif",
+      "body": "Plus Jakarta Sans, sans-serif",
+      "mono": "Fira Code, monospace"
+    },
+    "fontSize": {
+      "xs": "0.75rem",
+      "sm": "0.875rem",
+      "base": "1rem",
+      "lg": "1.125rem",
+      "xl": "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem",
+      "4xl": "2.25rem",
+      "5xl": "3rem"
+    },
+    "fontWeight": {
+      "normal": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "lineHeight": {
+      "tight": 1.2,
+      "normal": 1.6,
+      "relaxed": 1.8
+    },
+    "letterSpacing": {
+      "tight": "-0.02em",
+      "normal": "0em",
+      "wide": "0.05em"
+    }
+  },
+  "layoutTokens": {
+    "spacing": {
+      "0": "0px",
+      "1": "4px",
+      "2": "8px",
+      "3": "12px",
+      "4": "16px",
+      "5": "20px",
+      "6": "24px",
+      "8": "32px",
+      "10": "40px",
+      "12": "48px",
+      "16": "64px",
+      "20": "80px",
+      "24": "96px"
+    },
+    "borderRadius": {
+      "none": "0px",
+      "sm": "4px",
+      "md": "8px",
+      "lg": "12px",
+      "xl": "16px",
+      "2xl": "24px",
+      "full": "9999px"
+    },
+    "containerMaxWidth": "1400px",
+    "gridColumns": 12,
+    "gridGap": "16px",
+    "breakpoints": {
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px",
+      "2xl": "1536px"
+    }
+  },
+  "motionTokens": {
+    "duration": {
+      "fast": "150ms",
+      "normal": "250ms",
+      "slow": "400ms",
+      "slower": "600ms"
+    },
+    "easing": {
+      "default": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "in": "cubic-bezier(0.4, 0, 1, 1)",
+      "out": "cubic-bezier(0, 0, 0.2, 1)",
+      "bounce": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+    },
+    "reducedMotion": true
+  },
+  "componentMap": {
+    "button": {
+      "variant": "primary",
+      "size": "md",
+      "style": {
+        "borderRadius": "8px",
+        "fontWeight": "600",
+        "padding": "10px 20px"
+      },
+      "variants": {
+        "primary": {
+          "background": "var(--color-primary)",
+          "color": "#fff"
+        },
+        "secondary": {
+          "background": "transparent",
+          "border": "1px solid var(--color-primary)",
+          "color": "var(--color-primary)"
+        },
+        "ghost": {
+          "background": "transparent",
+          "color": "var(--color-primary)"
+        }
+      }
+    },
+    "card": {
+      "variant": "default",
+      "size": "md",
+      "style": {
+        "borderRadius": "12px",
+        "boxShadow": "0 1px 3px rgba(0,0,0,0.1)",
+        "padding": "24px"
+      }
+    },
+    "input": {
+      "variant": "outline",
+      "size": "md",
+      "style": {
+        "borderRadius": "12px",
+        "border": "1px solid var(--color-border)",
+        "padding": "10px 14px"
+      }
+    },
+    "modal": {
+      "variant": "centered",
+      "size": "md",
+      "style": {
+        "borderRadius": "12px",
+        "boxShadow": "0 25px 50px rgba(0,0,0,0.25)",
+        "padding": "32px"
+      }
+    },
+    "navigation": {
+      "variant": "top",
+      "size": "lg",
+      "style": {
+        "height": "64px",
+        "padding": "0 24px"
+      }
+    }
+  },
+  "cssCustomProperties": {
+    "--font-heading": "Inter, sans-serif",
+    "--font-body": "Inter, sans-serif",
+    "--font-mono": "JetBrains Mono, monospace",
+    "--spacing-unit": "4px",
+    "--container-max": "1280px",
+    "--radius-sm": "4px",
+    "--radius-md": "8px",
+    "--radius-lg": "12px",
+    "--radius-xl": "16px"
+  }
+}

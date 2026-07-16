@@ -749,7 +749,7 @@ export function generateFromPrompt(prompt: string): GeneratedArtifacts {
 
 // ─── Helper Generators ────────────────────────────────────────────────────────
 
-function generateDatabaseSchema(industry: Industry, slug: string): Record<string, unknown> {
+function generateDatabaseSchema(industry: string, slug: string): Record<string, unknown> {
   const baseTables: TableSpec[] = [
     {
       name: 'users',
@@ -865,7 +865,7 @@ function generateDatabaseSchema(industry: Industry, slug: string): Record<string
   }
 }
 
-function generateApiDesign(pages: PageSpec[], industry: Industry): Record<string, unknown> {
+function generateApiDesign(pages: PageSpec[], industry: string): Record<string, unknown> {
   const endpoints: EndpointSpec[] = [
     { method: 'POST', path: '/api/auth/register', description: 'Register new user', auth: false, requestBody: { email: 'string', password: 'string', name: 'string' } },
     { method: 'POST', path: '/api/auth/login', description: 'Login user', auth: false, requestBody: { email: 'string', password: 'string' } },
@@ -911,7 +911,7 @@ function generateApiDesign(pages: PageSpec[], industry: Industry): Record<string
   };
 }
 
-function generateDesignTokens(industry: Industry): Record<string, unknown> {
+function generateDesignTokens(industry: string): Record<string, unknown> {
   switch (industry) {
     case 'real-estate':
       return {
@@ -954,6 +954,53 @@ function generateDesignTokens(industry: Industry): Record<string, unknown> {
         },
         spacing: ['4px', '8px', '12px', '16px', '24px', '32px', '48px', '64px'],
         borderRadius: { sm: '4px', md: '8px', lg: '12px', full: '9999px' },
+      };
+    case 'perfume':
+    case 'fragrance':
+    case 'luxury':
+    case 'beauty':
+      return {
+        colors: {
+          primary: '#C9A96E',
+          secondary: '#D4AF37',
+          accent: '#8B7355',
+          background: '#0a0a0a',
+          foreground: '#f5f5f5',
+          muted: '#1a1a1a',
+          card: '#141414',
+          border: '#2a2a2a',
+        },
+        typography: {
+          fontFamily: 'Playfair Display, Georgia, serif',
+          headingFont: 'Playfair Display, Georgia, serif',
+          bodyFont: 'Inter, system-ui, sans-serif',
+          scale: ['12px', '14px', '16px', '20px', '24px', '32px', '48px', '64px'],
+        },
+        spacing: ['4px', '8px', '12px', '16px', '24px', '32px', '48px', '64px'],
+        borderRadius: { sm: '4px', md: '8px', lg: '12px', full: '9999px' },
+      };
+    case 'footwear':
+    case 'shoes':
+    case 'sneakers':
+      return {
+        colors: {
+          primary: '#171717',
+          secondary: '#FF4500',
+          accent: '#F97316',
+          background: '#0A0A0A',
+          foreground: '#FAFAFA',
+          muted: '#1A1A1A',
+          card: '#141414',
+          border: '#262626',
+        },
+        typography: {
+          fontFamily: 'Inter, system-ui, sans-serif',
+          headingFont: 'Oswald, Impact, sans-serif',
+          bodyFont: 'Inter, system-ui, sans-serif',
+          scale: ['12px', '14px', '16px', '20px', '24px', '32px', '48px', '64px'],
+        },
+        spacing: ['4px', '8px', '12px', '16px', '24px', '32px', '48px', '64px'],
+        borderRadius: { sm: '2px', md: '4px', lg: '8px', full: '9999px' },
       };
     default:
       return {

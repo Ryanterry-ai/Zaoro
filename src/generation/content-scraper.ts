@@ -4,7 +4,7 @@
 // Implements 7-day caching to avoid repeated scraping
 
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { BOSEntry, ScrapedContent, ReferenceSource } from '../bos/types.js';
+import { BOSEntry, ScrapedContent, ReferenceSource, BusinessResearch } from '../bos/types.js';
 import type { BusinessIntelligenceProfile } from '../bos/schemas/knowledge/business-intelligence.schema.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -369,43 +369,88 @@ export class ContentScraper {
    * Auto-discovers the business website without requiring BOS entry URLs.
    */
   async scrapePromptData(businessName: string, industry: string, country?: string, description?: string): Promise<ScrapedContent | null> {
-    const query = `${businessName} ${industry}${country ? ' ' + country : ''}`;
+    // Build search query from INDUSTRY + COUNTRY + DESCRIPTION — NOT the app name.
+    // The app name is generated/fictional; we need REAL businesses in the domain.
+    const industryLabel = industry.replace(/-/g, ' ');
+    const descKeywords = description?.replace(/[^a-zA-Z0-9\s]/g, '').trim() || '';
+    const stopWords = new Set([
+      'the', 'a', 'an', 'for', 'and', 'or', 'build', 'create', 'make', 'my', 'our', 'your',
+      'want', 'need', 'looking', 'site', 'website', 'app', 'application', 'platform', 'system',
+      'store', 'shop', 'business', 'company', 'brand', 'customer', 'customers', 'client', 'clients',
+      'people', 'users', 'user', 'audience', 'market', 'industry', 'type', 'kind', 'best', 'top',
+      'new', 'online', 'local', 'small', 'large', 'great', 'good', 'better', 'perfect',
+      'indian', 'india', 'american', 'us', 'usa', 'uk', 'british', 'dubai', 'uae',
+      'australian', 'canadian', 'german', 'french', 'japanese', 'chinese',
+    ]);
+    const descWords = descKeywords.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
+    const queryParts = [industryLabel];
+    if (descWords.length > 0) queryParts.push(descWords.slice(0, 2).join(' '));
+    if (country) queryParts.push(country);
+    const query = queryParts.join(' ');
     const cacheKey = `prompt-${query.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
 
     const cached = await this.loadFromCache(cacheKey);
     if (cached) return cached;
 
     let browser: Browser | null = null;
+    let browserContext: BrowserContext | null = null;
     try {
-      browser = await chromium.launch({ headless: true });
-      const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' });
-      const page = await context.newPage();
-
-      // Search Google
-      await page.goto(`https://www.google.com/search?q=${encodeURIComponent(query)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(1500);
-
-      // Get first organic result link
-      const links = await page.locator('a[href^="http"]').all();
+      // Try DuckDuckGo HTML (no JS required, no bot detection)
       let targetUrl = '';
-      for (const link of links) {
-        const href = await link.getAttribute('href');
-        if (href && !href.includes('google.com') && !href.includes('youtube.com') && !href.includes('facebook.com') && !href.includes('instagram.com')) {
-          targetUrl = href;
-          break;
+      try {
+        const ddgResp = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          signal: AbortSignal.timeout(5000),
+        });
+        const ddgHtml = await ddgResp.text();
+        const urlMatches = ddgHtml.match(/href="https?:\/\/[^"]+"/g) || [];
+        for (const match of urlMatches) {
+          const url = match.slice(6, -1);
+          if (!url.includes('duckduckgo.com') && !url.includes('google.com') && !url.includes('youtube.com') && !url.includes('facebook.com') && !url.includes('instagram.com') && !url.includes('twitter.com') && !url.includes('wikipedia.org')) {
+            targetUrl = url;
+            break;
+          }
+        }
+      } catch {
+        // DDG failed
+      }
+
+      // Fallback: Playwright with Bing
+      if (!targetUrl) {
+        browser = await chromium.launch({ headless: true });
+        browserContext = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' });
+        const page = await browserContext.newPage();
+        try {
+          await page.goto(`https://www.bing.com/search?q=${encodeURIComponent(query)}`, { waitUntil: 'domcontentloaded', timeout: 5000 });
+          await page.waitForTimeout(500);
+          const links = await page.locator('li.b_algo a[href^="http"]').all();
+          for (const link of links) {
+            const href = await link.getAttribute('href');
+            if (href && !href.includes('bing.com') && !href.includes('microsoft.com') && !href.includes('youtube.com') && !href.includes('facebook.com')) {
+              targetUrl = href;
+              break;
+            }
+          }
+        } catch {
+          // Bing also failed
         }
       }
 
       if (!targetUrl) {
-        console.log(`[ContentScraper] No website found for ${query}`);
-        await browser.close();
+        console.log(`[ContentScraper] No website found for query: "${query}"`);
         return this.createEmptyContent('');
       }
 
-      console.log(`[ContentScraper] Found website: ${targetUrl}`);
+      console.log(`[ContentScraper] Found website for "${query}": ${targetUrl}`);
+
+      // Ensure we have a browser context for scraping
+      if (!browserContext) {
+        browser = await chromium.launch({ headless: true });
+        browserContext = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' });
+      }
 
       // Scrape the found website
-      const content = await this.scrapeUrlGeneric(context, targetUrl, businessName, industry);
+      const content = await this.scrapeUrlGeneric(browserContext, targetUrl, businessName, industry);
 
       if (this.hasValidContent(content)) {
         await this.saveToCache(cacheKey, content);
@@ -426,8 +471,8 @@ export class ContentScraper {
   private async scrapeUrlGeneric(context: BrowserContext, url: string, businessName: string, industry: string): Promise<ScrapedContent> {
     const page = await context.newPage();
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(2000);
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+      await page.waitForTimeout(500);
 
       const content: ScrapedContent = {
         heroHeadline: '',
@@ -524,14 +569,50 @@ export class ContentScraper {
   }
 
   /**
-   * Convert ScrapedContent → partial BusinessIntelligenceProfile for the pipeline
+   * Convert ScrapedContent + BusinessResearch → partial BusinessIntelligenceProfile.
+   * Uses BusinessResearch for business model intelligence (revenue flow, customer journey, KPIs).
+   * Uses ScrapedContent for actual scraped data (headlines, prices, testimonials).
    */
-  scrapedToBusinessProfile(scraped: ScrapedContent | null, industry: string, businessName: string): Partial<BusinessIntelligenceProfile> {
+  scrapedToBusinessProfile(
+    scraped: ScrapedContent | null,
+    industry: string,
+    businessName: string,
+    research?: BusinessResearch,
+  ): Partial<BusinessIntelligenceProfile> {
     if (!scraped || !scraped.heroHeadline && !scraped.aboutText && scraped.prices.length === 0) {
       return {};
     }
 
-    const revenueItemName = scraped.prices[0]?.name || 'Service';
+    // Build revenue cycle from BusinessResearch.revenueFlow (NOT hardcoded)
+    const revenueSteps = (research?.revenueFlow || ['direct-sales']).map((flow, i, arr) => ({
+      name: flow.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      action: `Process ${flow.replace(/-/g, ' ')}`,
+      conversionRate: i === arr.length - 1 ? 0.5 : 0.3,
+      avgTimeToNext: i === arr.length - 1 ? 'immediate' : '1-3 days',
+      revenueImpact: i === arr.length - 1 ? 'critical' as const : 'high' as const,
+    }));
+
+    // Build conversion funnel from BusinessResearch.customerFlow (NOT hardcoded)
+    const funnelStages = research?.customerFlow || ['discover', 'evaluate', 'purchase', 'receive'];
+
+    // Build KPIs from BusinessResearch.kpis (NOT hardcoded)
+    const kpiEntries = (research?.kpis || ['revenue', 'customers']).map(kpi => ({
+      name: kpi.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      label: kpi.slice(0, 8).toUpperCase(),
+      formula: `Track ${kpi.replace(/-/g, ' ')}`,
+      unit: kpi === 'revenue' ? 'currency' as const : 'count' as const,
+      category: ['revenue', 'conversion'].includes(kpi) ? 'revenue' as const : 'growth' as const,
+    }));
+
+    // Build revenue models from BusinessResearch.revenueFlow (NOT hardcoded)
+    const revenueModels = (research?.revenueFlow || ['direct-sales']).map((flow, i, arr) => ({
+      name: flow.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      description: `${flow.replace(/-/g, ' ')} revenue stream`,
+      percentage: Math.round(100 / arr.length),
+    }));
+
+    // Use BusinessResearch.vocabulary (NOT hardcoded per-industry)
+    const vocabulary = research?.vocabulary || {};
 
     return {
       id: `scraped.${industry}.${businessName.toLowerCase().replace(/\s+/g, '-')}`,
@@ -541,19 +622,15 @@ export class ContentScraper {
       revenueCycle: {
         name: `${businessName} Revenue Cycle`,
         description: `Revenue cycle for ${businessName}`,
-        steps: [
-          { name: 'Customer discovers business', action: 'Marketing reach', conversionRate: 0.1, avgTimeToNext: '1-7 days', revenueImpact: 'critical' },
-          { name: 'Customer engages', action: 'Browse products/services', conversionRate: 0.3, avgTimeToNext: '1-3 days', revenueImpact: 'high' },
-          { name: 'Purchase completed', action: 'Transaction processed', conversionRate: 0.5, avgTimeToNext: 'immediate', revenueImpact: 'critical' },
-        ],
+        steps: revenueSteps,
         avgCycleLength: '7-14 days',
         avgRevenuePerCustomer: scraped.prices[0]?.price || 'Varies',
       },
       conversionFunnel: {
         name: `${businessName} Conversion Funnel`,
-        stages: ['Awareness', 'Interest', 'Decision', 'Purchase'],
+        stages: funnelStages,
         overallConversionRate: '2-5%',
-        biggestDropOff: 'Interest → Decision',
+        biggestDropOff: funnelStages.length > 2 ? `${funnelStages[1]} → ${funnelStages[2]}` : 'N/A',
       },
       churnSignals: [
         { name: 'Customer inactivity', detection: 'No engagement for 30+ days', window: '30 days', severity: 'medium' },
@@ -561,32 +638,24 @@ export class ContentScraper {
       retentionAutomations: [
         { name: 'Re-engagement email', trigger: '7 days inactive', action: 'Send personalized offer', expectedImpact: '15-20% reactivation' },
       ],
-      kpis: [
-        { name: 'Monthly Revenue', label: 'MRR', formula: 'Total monthly sales', unit: 'currency', category: 'revenue' },
-        { name: 'Customer Count', label: 'Customers', formula: 'Active customers this month', unit: 'count', category: 'growth' },
-      ],
-      dashboardWidgets: [
-        { name: 'Revenue Overview', type: 'chart', description: 'Monthly revenue trend', kpis: ['Monthly Revenue'], priority: 'primary' },
-        { name: 'Customer Stats', type: 'stat-card', description: 'Key customer metrics', kpis: ['Customer Count'], priority: 'primary' },
-      ],
+      kpis: kpiEntries,
+      dashboardWidgets: kpiEntries.slice(0, 3).map(kpi => ({
+        name: `${kpi.name} Overview`,
+        type: 'chart' as const,
+        description: `${kpi.name} trend`,
+        kpis: [kpi.name],
+        priority: 'primary' as const,
+      })),
       leadCaptureMechanisms: [
         { name: 'Contact Form', headline: 'Get in Touch', fields: ['name', 'email', 'message'], nextStep: 'Email response within 24h', conversionRate: '5-10%' },
       ],
       morningCheck: {
-        primaryMetrics: ['Monthly Revenue'],
-        secondaryMetrics: ['Customer Count'],
+        primaryMetrics: kpiEntries.slice(0, 2).map(k => k.name),
+        secondaryMetrics: kpiEntries.slice(2, 4).map(k => k.name),
         alertConditions: ['Revenue drop >20%', 'Customer count decline'],
       },
-      revenueModels: [
-        { name: 'Direct Sales', description: `Direct sales of ${revenueItemName}`, percentage: 100 },
-      ],
-      vocabulary: industry ? {
-        'business': industry === 'restaurant' ? 'restaurant' : industry === 'healthcare' ? 'practice' : 'business',
-        'customer': industry === 'restaurant' ? 'guest' : industry === 'healthcare' ? 'patient' : 'customer',
-        'product': industry === 'restaurant' ? 'dish' : industry === 'saas' ? 'feature' : 'product',
-        'order': industry === 'restaurant' ? 'reservation' : 'order',
-        'staff': industry === 'restaurant' ? 'chef' : industry === 'healthcare' ? 'provider' : 'staff',
-      } : {},
+      revenueModels,
+      vocabulary,
     };
   }
 }

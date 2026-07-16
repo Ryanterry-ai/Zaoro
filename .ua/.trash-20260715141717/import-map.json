@@ -1,0 +1,3092 @@
+{
+  "scriptCompleted": true,
+  "stats": {
+    "filesScanned": 1243,
+    "filesWithImports": 499,
+    "totalEdges": 1340
+  },
+  "importMap": {
+    ".build-anything/benchmark-test/benchmark-results.json": [],
+    ".build-anything/benchmark-test/benchmark-summary.md": [],
+    ".build-anything/benchmark-test/port-001/metadata/execution.json": [],
+    ".build-anything/benchmark/benchmark-results.json": [],
+    ".build-anything/benchmark/benchmark-summary.md": [],
+    ".build-artifacts/runtime-mode.json": [],
+    ".claude/skills/build-anything/examples.md": [],
+    ".claude/skills/build-anything/prompts/stage-prompts.json": [],
+    ".claude/skills/build-anything/SKILL.md": [],
+    ".claude/skills/find-skills/SKILL.md": [],
+    ".claude/skills/impeccable/SKILL.md": [],
+    ".claude/skills/motion-framer/SKILL.md": [],
+    ".claude/skills/ui-ux-polish/SKILL.md": [],
+    ".claude/skills/ui-ux-pro-max/SKILL.md": [],
+    ".dockerignore": [],
+    ".engine.jobid": [],
+    ".engine.pid": [],
+    ".env.example": [],
+    ".github/workflows/ci.yml": [],
+    ".test-block.js": [],
+    ".test-timeout-script.js": [],
+    ".tunnel.pid": [],
+    ".ua/.understandignore": [],
+    ".vercelignore": [],
+    "{}": [],
+    "adapters/llm-adapter.js": [],
+    "AGENTS_ANCHORED_SUMMARY.md": [],
+    "AGENTS.md": [],
+    "ARCHITECTURE-AUDIT.md": [],
+    "audit-output/audit-10a.json": [],
+    "audit-output/audit-1a.json": [],
+    "audit-output/audit-1b.json": [],
+    "audit-output/audit-1c.json": [],
+    "audit-output/audit-2a.json": [],
+    "audit-output/audit-2b.json": [],
+    "audit-output/audit-2c.json": [],
+    "audit-output/audit-2d.json": [],
+    "audit-output/audit-3a.json": [],
+    "audit-output/audit-3b.json": [],
+    "audit-output/audit-4a.json": [],
+    "audit-output/audit-4b.json": [],
+    "audit-output/audit-5a.json": [],
+    "audit-output/audit-5b.json": [],
+    "audit-output/audit-6a.json": [],
+    "audit-output/audit-7a.json": [],
+    "audit-output/audit-7b.json": [],
+    "audit-output/audit-8a.json": [],
+    "audit-output/audit-9a.json": [],
+    "audit-output/design-decision.json": [],
+    "audit-output/design-dna.json": [],
+    "audit-output/experience-benchmark-ecom-001.json": [],
+    "audit-output/experience-benchmark-edu-001.json": [],
+    "audit-output/experience-benchmark-fin-001.json": [],
+    "audit-output/experience-benchmark-fit-001.json": [],
+    "audit-output/experience-benchmark-health-001.json": [],
+    "audit-output/experience-benchmark-media-001.json": [],
+    "audit-output/experience-benchmark-port-001.json": [],
+    "audit-output/experience-benchmark-real-001.json": [],
+    "audit-output/experience-benchmark-rest-001.json": [],
+    "audit-output/experience-benchmark-saas-001.json": [],
+    "audit-output/FINAL-VERDICT.json": [],
+    "audit-output/rendered-css.css": [],
+    "audit-output/rendered-tsx.txt": [],
+    "audit-output/skill-rec.json": [],
+    "benchmarks/accounting/acceptance-tests.md": [],
+    "benchmarks/accounting/benchmark.json": [],
+    "benchmarks/accounting/expected-artifacts.json": [],
+    "benchmarks/accounting/expected-design.json": [],
+    "benchmarks/accounting/expected-entities.json": [],
+    "benchmarks/accounting/expected-workflows.json": [],
+    "benchmarks/accounting/prompt.md": [],
+    "benchmarks/agency/acceptance-tests.md": [],
+    "benchmarks/agency/benchmark.json": [],
+    "benchmarks/agency/expected-artifacts.json": [],
+    "benchmarks/agency/expected-design.json": [],
+    "benchmarks/agency/expected-entities.json": [],
+    "benchmarks/agency/expected-workflows.json": [],
+    "benchmarks/agency/prompt.md": [],
+    "benchmarks/ats/acceptance-tests.md": [],
+    "benchmarks/ats/benchmark.json": [],
+    "benchmarks/ats/expected-artifacts.json": [],
+    "benchmarks/ats/expected-design.json": [],
+    "benchmarks/ats/expected-entities.json": [],
+    "benchmarks/ats/expected-workflows.json": [],
+    "benchmarks/ats/prompt.md": [],
+    "benchmarks/crm/acceptance-tests.md": [],
+    "benchmarks/crm/benchmark.json": [],
+    "benchmarks/crm/expected-artifacts.json": [],
+    "benchmarks/crm/expected-design.json": [],
+    "benchmarks/crm/expected-entities.json": [],
+    "benchmarks/crm/expected-pages.json": [],
+    "benchmarks/crm/expected-workflows.json": [],
+    "benchmarks/crm/prompt.md": [],
+    "benchmarks/ecommerce/acceptance-tests.md": [],
+    "benchmarks/ecommerce/benchmark.json": [],
+    "benchmarks/ecommerce/expected-artifacts.json": [],
+    "benchmarks/ecommerce/expected-design.json": [],
+    "benchmarks/ecommerce/expected-entities.json": [],
+    "benchmarks/ecommerce/expected-pages.json": [],
+    "benchmarks/ecommerce/expected-workflows.json": [],
+    "benchmarks/ecommerce/prompt.md": [],
+    "benchmarks/education/acceptance-tests.md": [],
+    "benchmarks/education/benchmark.json": [],
+    "benchmarks/education/expected-artifacts.json": [],
+    "benchmarks/education/expected-design.json": [],
+    "benchmarks/education/expected-entities.json": [],
+    "benchmarks/education/expected-workflows.json": [],
+    "benchmarks/education/prompt.md": [],
+    "benchmarks/erp/acceptance-tests.md": [],
+    "benchmarks/erp/benchmark.json": [],
+    "benchmarks/erp/expected-artifacts.json": [],
+    "benchmarks/erp/expected-design.json": [],
+    "benchmarks/erp/expected-entities.json": [],
+    "benchmarks/erp/expected-pages.json": [],
+    "benchmarks/erp/expected-workflows.json": [],
+    "benchmarks/erp/prompt.md": [],
+    "benchmarks/fintech/acceptance-tests.md": [],
+    "benchmarks/fintech/benchmark.json": [],
+    "benchmarks/fintech/expected-artifacts.json": [],
+    "benchmarks/fintech/expected-design.json": [],
+    "benchmarks/fintech/expected-entities.json": [],
+    "benchmarks/fintech/expected-pages.json": [],
+    "benchmarks/fintech/expected-workflows.json": [],
+    "benchmarks/fintech/prompt.md": [],
+    "benchmarks/fitness/acceptance-tests.md": [],
+    "benchmarks/fitness/benchmark.json": [],
+    "benchmarks/fitness/expected-artifacts.json": [],
+    "benchmarks/fitness/expected-design.json": [],
+    "benchmarks/fitness/expected-entities.json": [],
+    "benchmarks/fitness/expected-workflows.json": [],
+    "benchmarks/fitness/prompt.md": [],
+    "benchmarks/healthcare/acceptance-tests.md": [],
+    "benchmarks/healthcare/benchmark.json": [],
+    "benchmarks/healthcare/expected-artifacts.json": [],
+    "benchmarks/healthcare/expected-design.json": [],
+    "benchmarks/healthcare/expected-entities.json": [],
+    "benchmarks/healthcare/expected-pages.json": [],
+    "benchmarks/healthcare/expected-workflows.json": [],
+    "benchmarks/healthcare/prompt.md": [],
+    "benchmarks/hotel/acceptance-tests.md": [],
+    "benchmarks/hotel/benchmark.json": [],
+    "benchmarks/hotel/expected-artifacts.json": [],
+    "benchmarks/hotel/expected-design.json": [],
+    "benchmarks/hotel/expected-entities.json": [],
+    "benchmarks/hotel/expected-workflows.json": [],
+    "benchmarks/hrms/acceptance-tests.md": [],
+    "benchmarks/hrms/benchmark.json": [],
+    "benchmarks/hrms/expected-artifacts.json": [],
+    "benchmarks/hrms/expected-design.json": [],
+    "benchmarks/hrms/expected-entities.json": [],
+    "benchmarks/hrms/expected-workflows.json": [],
+    "benchmarks/hrms/prompt.md": [],
+    "benchmarks/lms/acceptance-tests.md": [],
+    "benchmarks/lms/benchmark.json": [],
+    "benchmarks/lms/expected-artifacts.json": [],
+    "benchmarks/lms/expected-design.json": [],
+    "benchmarks/lms/expected-entities.json": [],
+    "benchmarks/lms/expected-workflows.json": [],
+    "benchmarks/lms/prompt.md": [],
+    "benchmarks/logistics/acceptance-tests.md": [],
+    "benchmarks/logistics/benchmark.json": [],
+    "benchmarks/logistics/expected-design.json": [],
+    "benchmarks/logistics/expected-entities.json": [],
+    "benchmarks/logistics/expected-workflows.json": [],
+    "benchmarks/logistics/prompt.md": [],
+    "benchmarks/marketplace/acceptance-tests.md": [],
+    "benchmarks/marketplace/benchmark.json": [],
+    "benchmarks/marketplace/expected-artifacts.json": [],
+    "benchmarks/marketplace/expected-design.json": [],
+    "benchmarks/marketplace/expected-entities.json": [],
+    "benchmarks/marketplace/expected-pages.json": [],
+    "benchmarks/marketplace/expected-workflows.json": [],
+    "benchmarks/marketplace/prompt.md": [],
+    "benchmarks/media/acceptance-tests.md": [],
+    "benchmarks/media/benchmark.json": [],
+    "benchmarks/media/expected-artifacts.json": [],
+    "benchmarks/media/expected-design.json": [],
+    "benchmarks/media/expected-entities.json": [],
+    "benchmarks/media/expected-workflows.json": [],
+    "benchmarks/media/prompt.md": [],
+    "benchmarks/nonprofit/acceptance-tests.md": [],
+    "benchmarks/nonprofit/benchmark.json": [],
+    "benchmarks/nonprofit/expected-artifacts.json": [],
+    "benchmarks/nonprofit/expected-design.json": [],
+    "benchmarks/nonprofit/expected-entities.json": [],
+    "benchmarks/nonprofit/expected-workflows.json": [],
+    "benchmarks/nonprofit/prompt.md": [],
+    "benchmarks/pharmacy/acceptance-tests.md": [],
+    "benchmarks/pharmacy/benchmark.json": [],
+    "benchmarks/pharmacy/expected-artifacts.json": [],
+    "benchmarks/pharmacy/expected-design.json": [],
+    "benchmarks/pharmacy/expected-entities.json": [],
+    "benchmarks/pharmacy/expected-workflows.json": [],
+    "benchmarks/pharmacy/prompt.md": [],
+    "benchmarks/portfolio/acceptance-tests.md": [],
+    "benchmarks/portfolio/benchmark.json": [],
+    "benchmarks/portfolio/expected-artifacts.json": [],
+    "benchmarks/portfolio/expected-design.json": [],
+    "benchmarks/portfolio/expected-entities.json": [],
+    "benchmarks/portfolio/expected-workflows.json": [],
+    "benchmarks/realestate/acceptance-tests.md": [],
+    "benchmarks/realestate/benchmark.json": [],
+    "benchmarks/realestate/expected-artifacts.json": [],
+    "benchmarks/realestate/expected-design.json": [],
+    "benchmarks/realestate/expected-entities.json": [],
+    "benchmarks/realestate/expected-workflows.json": [],
+    "benchmarks/realestate/prompt.md": [],
+    "benchmarks/restaurant/acceptance-tests.md": [],
+    "benchmarks/restaurant/benchmark.json": [],
+    "benchmarks/restaurant/expected-artifacts.json": [],
+    "benchmarks/restaurant/expected-design.json": [],
+    "benchmarks/restaurant/expected-entities.json": [],
+    "benchmarks/restaurant/expected-workflows.json": [],
+    "benchmarks/restaurant/prompt.md": [],
+    "benchmarks/saas/acceptance-tests.md": [],
+    "benchmarks/saas/benchmark.json": [],
+    "benchmarks/saas/expected-artifacts.json": [],
+    "benchmarks/saas/expected-design.json": [],
+    "benchmarks/saas/expected-entities.json": [],
+    "benchmarks/saas/expected-workflows.json": [],
+    "benchmarks/saas/prompt.md": [],
+    "content/schema.json": [],
+    "DEPLOY.md": [],
+    "Dockerfile": [],
+    "Dockerfile.engine": [],
+    "docs/architecture/ADR-001-event-bus.md": [],
+    "docs/architecture/ADR-001-intelligence-ownership.md": [],
+    "docs/architecture/ADR-002-experience-engine.md": [],
+    "docs/architecture/ADR-003-decision-engine.md": [],
+    "docs/architecture/ADR-004-knowledge-graph-enhancement.md": [],
+    "docs/architecture/ADR-005-execution-intelligence.md": [],
+    "docs/architecture/ADR-006-orchestrator-integration.md": [],
+    "docs/architecture/business-intelligence-engine.md": [],
+    "docs/architecture/business-intelligence-migration.md": [],
+    "docs/AUDIT-REPORT.md": [],
+    "docs/BRD-Business-Requirements-Document.md": [],
+    "docs/dependency-graph.md": [],
+    "docs/FINAL-ASSESSMENT.md": [],
+    "docs/FRD-Functional-Requirements-Document.md": [],
+    "docs/ownership-verification.md": [],
+    "docs/phase-1-foundation.md": [],
+    "docs/phase-2-complete.md": [],
+    "docs/phase-2-primitive-packs.md": [],
+    "docs/phase-3-artifact-graph.md": [],
+    "docs/phase-3-complete.md": [],
+    "docs/phase-r1-runtime-convergence.md": [],
+    "docs/phase-r2-capability-canonicalization.md": [],
+    "docs/REMEDIATION-SUMMARY.md": [],
+    "docs/reports/business-intelligence-ownership.md": [],
+    "docs/reports/content-intelligence-ownership.md": [],
+    "docs/reports/design-intelligence-ownership.md": [],
+    "docs/reports/experience-intelligence-ownership.md": [],
+    "docs/reports/runtime-convergence.md": [],
+    "docs/reports/technology-planner-ownership.md": [],
+    "docs/reports/type-convergence-updated.md": [],
+    "docs/reports/type-convergence.md": [],
+    "docs/reports/universal-industry-audit.md": [],
+    "docs/RTM-Requirements-Traceability-Matrix.md": [],
+    "docs/specifications/application-graph/01-architecture-spec.md": [],
+    "docs/specifications/application-graph/02-formal-schema/edges.ts": [
+      "docs/specifications/application-graph/02-formal-schema/nodes.ts"
+    ],
+    "docs/specifications/application-graph/02-formal-schema/graph.ts": [
+      "docs/specifications/application-graph/02-formal-schema/edges.ts",
+      "docs/specifications/application-graph/02-formal-schema/nodes.ts"
+    ],
+    "docs/specifications/application-graph/02-formal-schema/nodes.ts": [],
+    "docs/specifications/application-graph/02-formal-schema/validation.ts": [
+      "docs/specifications/application-graph/02-formal-schema/edges.ts",
+      "docs/specifications/application-graph/02-formal-schema/nodes.ts"
+    ],
+    "docs/specifications/application-graph/03-developer-guide.md": [],
+    "docs/specifications/application-graph/04-compiler-contract.md": [],
+    "docs/specifications/application-graph/05-extension-spec.md": [],
+    "docs/specifications/application-graph/06-adr/001-graph-as-canonical-ir.md": [],
+    "docs/specifications/application-graph/gap-analysis.md": [],
+    "docs/specifications/application-graph/migration/backward-compatibility.md": [],
+    "docs/specifications/application-graph/migration/MVP-to-v1.md": [],
+    "docs/specifications/application-graph/README.md": [],
+    "docs/specifications/application-graph/validation.md": [],
+    "docs/specifications/business-operating-system/README.md": [],
+    "docs/specifications/compiler/README.md": [],
+    "docs/specifications/execution-graph/01-execution-graph-spec.md": [],
+    "docs/specifications/execution-graph/02-execution-graph-types.ts": [],
+    "docs/specifications/execution-graph/03-compiler-to-execution.md": [],
+    "docs/specifications/execution-graph/04-scheduler-contract.md": [],
+    "docs/specifications/execution-graph/README.md": [],
+    "docs/specifications/execution-runtime/01-architecture.md": [],
+    "docs/specifications/execution-runtime/02-runtime-api.md": [],
+    "docs/specifications/execution-runtime/03-state-machine.md": [],
+    "docs/specifications/execution-runtime/04-runtime-manager.md": [],
+    "docs/specifications/execution-runtime/05-workspace-manager.md": [],
+    "docs/specifications/execution-runtime/06-port-manager.md": [],
+    "docs/specifications/execution-runtime/07-preview-lifecycle.md": [],
+    "docs/specifications/execution-runtime/08-queue-architecture.md": [],
+    "docs/specifications/execution-runtime/09-health-monitor.md": [],
+    "docs/specifications/execution-runtime/10-resource-limits.md": [],
+    "docs/specifications/execution-runtime/11-security-model.md": [],
+    "docs/specifications/execution-runtime/12-cache-strategy.md": [],
+    "docs/specifications/execution-runtime/13-provider-interfaces.md": [],
+    "docs/specifications/execution-runtime/14-sequence-diagrams.md": [],
+    "docs/specifications/execution-runtime/15-events-logging.md": [],
+    "docs/specifications/execution-runtime/16-extensibility.md": [],
+    "docs/specifications/execution-runtime/17-implementation-roadmap.md": [],
+    "docs/specifications/execution-runtime/migration/current-to-execution-runtime.md": [],
+    "docs/specifications/execution-runtime/README.md": [],
+    "docs/specifications/knowledge-graph/README.md": [],
+    "docs/specifications/provider-runtime/README.md": [],
+    "docs/specifications/resource-graph/01-resource-graph-spec.md": [],
+    "docs/specifications/resource-graph/02-resource-graph-types.ts": [],
+    "docs/specifications/resource-graph/03-capacity-planning.md": [],
+    "docs/specifications/resource-graph/04-resource-queries.md": [],
+    "docs/specifications/resource-graph/README.md": [],
+    "docs/specifications/scheduler/01-scheduler-spec.md": [],
+    "docs/specifications/scheduler/02-scheduling-policies.md": [],
+    "docs/specifications/scheduler/03-fairness-algorithms.md": [],
+    "docs/specifications/scheduler/04-provider-selection.md": [],
+    "docs/specifications/scheduler/05-retry-policies.md": [],
+    "docs/specifications/scheduler/06-scheduler-events.md": [],
+    "docs/specifications/scheduler/README.md": [],
+    "docs/superpowers/plans/2026-07-09-canonical-discovery-research-scraping-content-pipeline.md": [],
+    "docs/superpowers/plans/2026-07-09-tech-stack-planner-and-enhanced-renderer.md": [],
+    "docs/TARGET-ARCHITECTURE-COMPARISON.md": [],
+    "docs/VERIFICATION-REPORT.md": [],
+    "GAP-ANALYSIS.md": [],
+    "generate-preview.cjs": [],
+    "IMPLEMENTATION-PLAN.md": [],
+    "netlify.toml": [],
+    "next.config.mjs": [],
+    "ngrok-policy.yml": [],
+    "opencode.json": [],
+    "package.json": [],
+    "PHASE-1-DONE.md": [],
+    "postcss.config.mjs": [],
+    "prisma/platform.prisma": [],
+    "README.md": [],
+    "render.yaml": [],
+    "screenshot-preview.js": [],
+    "screenshots-final-20260623-063812/agency.html": [],
+    "screenshots-final-20260623-063812/auto-dealership.html": [],
+    "screenshots-final-20260623-063812/beauty-salon.html": [],
+    "screenshots-final-20260623-063812/coffee-shop.html": [],
+    "screenshots-final-20260623-063812/dental.html": [],
+    "screenshots-final-20260623-063812/education.html": [],
+    "screenshots-final-20260623-063812/fitness.html": [],
+    "screenshots-final-20260623-063812/pet-services.html": [],
+    "screenshots-final-20260623-063812/portfolio.html": [],
+    "screenshots-final-20260623-063812/real-estate.html": [],
+    "screenshots-final-20260623-063812/restaurant.html": [],
+    "screenshots-final-20260623-063812/saas.html": [],
+    "screenshots-fix-20260623-063408/auto-dealership.html": [],
+    "screenshots-fix-20260623-063408/beauty-salon.html": [],
+    "screenshots-fix-20260623-063408/pet-services.html": [],
+    "screenshots-fix-20260623-063408/saas.html": [],
+    "screenshots-industries-20260623-062458/agency.html": [],
+    "screenshots-industries-20260623-062458/auto-dealership.html": [],
+    "screenshots-industries-20260623-062458/beauty-salon.html": [],
+    "screenshots-industries-20260623-062458/coffee-shop.html": [],
+    "screenshots-industries-20260623-062458/dental.html": [],
+    "screenshots-industries-20260623-062458/education.html": [],
+    "screenshots-industries-20260623-062458/fitness.html": [],
+    "screenshots-industries-20260623-062458/pet-services.html": [],
+    "screenshots-industries-20260623-062458/portfolio.html": [],
+    "screenshots-industries-20260623-062458/real-estate.html": [],
+    "screenshots-industries-20260623-062458/restaurant.html": [],
+    "screenshots-industries-20260623-062458/saas.html": [],
+    "scripts/_spike-orch.ts": [
+      "src/orchestration/pipeline-orchestrator/wired.ts"
+    ],
+    "scripts/benchmark-20.ts": [
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/intake-parser.ts",
+      "src/bos/knowledge/registry.ts"
+    ],
+    "scripts/benchmark-5.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "scripts/benchmark-cli.ts": [
+      "src/orchestration/benchmark/benchmark-suite.ts",
+      "src/orchestration/types.ts"
+    ],
+    "scripts/benchmark-results.json": [],
+    "scripts/collect-evidence.ts": [
+      "src/bos/evidence/fingerprint.ts",
+      "src/bos/evidence/persistent-store.ts"
+    ],
+    "scripts/direct-build.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "scripts/generate-and-preview.ts": [
+      "src/agents/deterministic-orchestrator-v4.ts"
+    ],
+    "scripts/new-project.sh": [],
+    "scripts/promote-candidates.ts": [
+      "src/bos/candidate/index.ts",
+      "src/bos/knowledge/seeds/index.ts"
+    ],
+    "scripts/screenshot-apps.ts": [],
+    "scripts/setup-env.sh": [],
+    "scripts/shot-perfume.ts": [],
+    "scripts/sync-agent-rules.sh": [],
+    "scripts/test-agent-reach-integration.ts": [
+      "src/business-intelligence/core/agent-reach-bridge.ts"
+    ],
+    "scripts/test-all-domains.ts": [
+      "src/core/ast-patcher.ts",
+      "src/core/llm-gateway.ts",
+      "src/generation/architect.ts",
+      "src/generation/domain-detector.ts"
+    ],
+    "scripts/test-build-anything.ts": [
+      "src/orchestration/orchestrator.ts",
+      "src/orchestration/types.ts"
+    ],
+    "scripts/test-domain-patch.ts": [
+      "src/core/ast-patcher.ts",
+      "src/core/llm-gateway.ts",
+      "src/generation/architect.ts"
+    ],
+    "scripts/test-e2e-build.ts": [],
+    "scripts/test-e2e-debug.ts": [],
+    "scripts/test-e2e-debug2.ts": [],
+    "scripts/test-e2e-debug3.ts": [],
+    "scripts/test-e2e-production.ts": [],
+    "scripts/test-mcp-pipeline.ts": [
+      "src/graph/module-resolver.ts"
+    ],
+    "scripts/test-production-url.ts": [],
+    "scripts/test-prompt.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "scripts/test-self-healing.ts": [
+      "src/compiler/auditor.ts",
+      "src/core/llm-gateway.ts",
+      "src/engine/self-healing-engine.ts"
+    ],
+    "scripts/validate-hospital-erp.ts": [
+      "src/agents/deterministic-orchestrator-v4.ts",
+      "src/types/index.ts"
+    ],
+    "scripts/verify-bi.ts": [
+      "src/orchestration/business-intelligence/index.ts"
+    ],
+    "scripts/verify-bos-registry.ts": [
+      "src/bos/registry.ts"
+    ],
+    "scripts/verify-bos-three-layer.ts": [
+      "src/bos/evidence/types.ts",
+      "src/bos/graph/engine.ts",
+      "src/bos/index.ts",
+      "src/bos/reasoning/engine.ts"
+    ],
+    "scripts/verify-build-queue.ts": [
+      "src/engine/build-queue.ts"
+    ],
+    "scripts/verify-business-intelligence.ts": [
+      "src/core/api-compiler.ts",
+      "src/core/db-compiler.ts",
+      "src/generation/architect.ts",
+      "src/generation/primitives.ts",
+      "src/intelligence/business-intelligence-engine.ts",
+      "src/intelligence/capability-graph.ts"
+    ],
+    "scripts/verify-business-operating-system.ts": [
+      "src/business-intelligence/business-operating-system.ts",
+      "src/business-intelligence/customer-journey.ts",
+      "src/business-intelligence/revenue-engine.ts",
+      "src/business-intelligence/solution-architect.ts",
+      "src/business-intelligence/technical-architect.ts",
+      "src/business-intelligence/workflow-engine.ts"
+    ],
+    "scripts/verify-business-synthesis.ts": [
+      "src/core/api-compiler.ts",
+      "src/core/db-compiler.ts",
+      "src/generation/architect.ts",
+      "src/intelligence/business-intelligence-engine.ts",
+      "src/intelligence/capability-graph.ts"
+    ],
+    "scripts/verify-coffee.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "scripts/verify-content-scraper.ts": [
+      "src/bos/registry.ts",
+      "src/generation/content-scraper.ts"
+    ],
+    "scripts/verify-fullstack-db.ts": [
+      "src/core/api-compiler.ts",
+      "src/core/db-compiler.ts",
+      "src/types/index.ts"
+    ],
+    "scripts/verify-generation-layer.ts": [
+      "src/agents/deterministic-orchestrator-v4.ts",
+      "src/core/llm-gateway.ts",
+      "src/generation/architect.ts",
+      "src/types/index.ts"
+    ],
+    "scripts/verify-llm-discipline.cjs": [],
+    "scripts/verify-multi-file.ts": [
+      "src/agents/deterministic-orchestrator-v4.ts",
+      "src/core/llm-gateway.ts",
+      "src/generation/architect.ts",
+      "src/types/index.ts"
+    ],
+    "scripts/verify-persistence.ts": [
+      "src/core/persistence.ts"
+    ],
+    "scripts/verify-pipeline.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "scripts/verify-runtime-9-industries.ts": [
+      "src/agents/runtime-trace.ts",
+      "src/bos/capabilities/index.ts",
+      "src/engine/runtime-mode.ts",
+      "src/orchestration/artifact-graph/v4-adapter.ts"
+    ],
+    "scripts/verify-self-healing.ts": [
+      "src/compiler/auditor.ts",
+      "src/compiler/compressor.ts",
+      "src/engine/self-healing-engine.ts",
+      "src/types/index.ts"
+    ],
+    "scripts/verify-telemetry.ts": [
+      "src/core/telemetry.ts"
+    ],
+    "skills/_adapter/index.js": [],
+    "skills/_adapter/SKILL.md": [],
+    "skills/build-orchestrator/SKILL.md": [],
+    "skills/business-reasoning/automation/SKILL.md": [],
+    "skills/business-reasoning/business-problems/SKILL.md": [],
+    "skills/business-reasoning/business-research/SKILL.md": [],
+    "skills/business-reasoning/compliance/SKILL.md": [],
+    "skills/business-reasoning/content-strategy/SKILL.md": [],
+    "skills/business-reasoning/customer-journey/SKILL.md": [],
+    "skills/business-reasoning/dashboard-generator/SKILL.md": [],
+    "skills/business-reasoning/database-generator/SKILL.md": [],
+    "skills/business-reasoning/design-research/SKILL.md": [],
+    "skills/business-reasoning/industry-intelligence/SKILL.md": [],
+    "skills/business-reasoning/integrations/SKILL.md": [],
+    "skills/business-reasoning/mobile-app-architect/SKILL.md": [],
+    "skills/business-reasoning/orchestration/SKILL.md": [],
+    "skills/business-reasoning/reporting/SKILL.md": [],
+    "skills/business-reasoning/revenue-model/SKILL.md": [],
+    "skills/business-reasoning/solution-generator/SKILL.md": [],
+    "skills/business-reasoning/ui-research/SKILL.md": [],
+    "skills/business-reasoning/ux-research/SKILL.md": [],
+    "skills/business-reasoning/website-architect/SKILL.md": [],
+    "skills/business-reasoning/workflow-research/SKILL.md": [],
+    "skills/component-spec-writer/SKILL.md": [],
+    "skills/content-generator/SKILL.md": [],
+    "skills/crawl-site/SKILL.md": [],
+    "skills/data-model-extractor/SKILL.md": [],
+    "skills/deploy-target-selector/SKILL.md": [],
+    "skills/extract-design-tokens/SKILL.md": [],
+    "skills/localize-assets/SKILL.md": [],
+    "skills/orchestrator/SKILL.md": [],
+    "skills/parallel-builder/SKILL.md": [],
+    "skills/skill-integrator/SKILL.md": [],
+    "skills/state-weaver/SKILL.md": [],
+    "src/agents/command-parser.ts": [],
+    "src/agents/deployment/config-generator.ts": [
+      "src/agents/deployment/types.ts"
+    ],
+    "src/agents/deployment/deploy-executor.ts": [
+      "src/agents/deployment/config-generator.ts",
+      "src/agents/deployment/types.ts"
+    ],
+    "src/agents/deployment/index.ts": [],
+    "src/agents/deployment/platform-detect.ts": [
+      "src/agents/deployment/types.ts"
+    ],
+    "src/agents/deployment/types.ts": [],
+    "src/agents/deterministic-orchestrator-v4.ts": [
+      "src/agents/command-parser.ts",
+      "src/agents/deployment/index.ts",
+      "src/agents/orchestrator/lead-agent.ts",
+      "src/agents/refinement/index.ts",
+      "src/agents/runtime-trace.ts",
+      "src/bos/blueprint-mapper.ts",
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/candidate/index.ts",
+      "src/bos/capabilities/index.ts",
+      "src/bos/intake-parser.ts",
+      "src/bos/ir-inspector.ts",
+      "src/bos/ir-persistence.ts",
+      "src/bos/knowledge/primitive-packs/index.ts",
+      "src/bos/knowledge/registry.ts",
+      "src/bos/knowledge/seeds/index.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/compiler/auditor.ts",
+      "src/compiler/compressor.ts",
+      "src/core/api-compiler.ts",
+      "src/core/ast-patcher.ts",
+      "src/core/db-compiler.ts",
+      "src/core/llm-gateway.ts",
+      "src/core/patch-transaction.ts",
+      "src/core/progress-emitter.ts",
+      "src/core/snapshot.ts",
+      "src/core/telemetry.ts",
+      "src/engine/build-history.ts",
+      "src/engine/self-healing-engine.ts",
+      "src/generation/build-pipeline.ts",
+      "src/generation/content-research-agent.ts",
+      "src/graph/ast-dependency-graph.ts",
+      "src/graph/export-indexer.ts",
+      "src/graph/module-resolver.ts",
+      "src/intelligence/impact-analyzer.ts",
+      "src/intelligence/patch-ranker.ts",
+      "src/intelligence/regression-predictor.ts",
+      "src/sandbox/engine.ts",
+      "src/testing/e2e-tester.ts",
+      "src/types/index.ts",
+      "src/validation/ast-patch-validator.ts",
+      "src/validation/patch-simulator.ts"
+    ],
+    "src/agents/llm-providers/claude-desktop.ts": [
+      "src/agents/llm-providers/types.ts"
+    ],
+    "src/agents/llm-providers/codex.ts": [
+      "src/agents/llm-providers/types.ts"
+    ],
+    "src/agents/llm-providers/opencode.ts": [
+      "src/agents/llm-providers/types.ts"
+    ],
+    "src/agents/llm-providers/provider-factory.ts": [
+      "src/agents/llm-providers/claude-desktop.ts",
+      "src/agents/llm-providers/codex.ts",
+      "src/agents/llm-providers/opencode.ts",
+      "src/agents/llm-providers/types.ts"
+    ],
+    "src/agents/llm-providers/types.ts": [],
+    "src/agents/orchestrator/lead-agent.ts": [
+      "src/agents/orchestrator/subagents/blueprint-agent.ts",
+      "src/agents/orchestrator/subagents/build-agent.ts",
+      "src/agents/orchestrator/subagents/content-agent.ts",
+      "src/agents/orchestrator/subagents/design-agent.ts",
+      "src/agents/orchestrator/subagents/research-agent.ts",
+      "src/agents/orchestrator/subagents/solution-architecture-planner.ts",
+      "src/agents/orchestrator/types.ts",
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/graph/application-graph.ts",
+      "src/bos/intake-parser.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/types-solution-architecture.ts",
+      "src/bos/types.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "src/agents/orchestrator/skill-registry.ts": [],
+    "src/agents/orchestrator/subagents/blueprint-agent.ts": [
+      "src/agents/orchestrator/types.ts",
+      "src/bos/bre-v2-pipeline.ts"
+    ],
+    "src/agents/orchestrator/subagents/build-agent.ts": [
+      "src/agents/orchestrator/types.ts",
+      "src/bos/graph/application-graph.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/build-pipeline.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "src/agents/orchestrator/subagents/content-agent.ts": [
+      "src/agents/orchestrator/skill-registry.ts",
+      "src/agents/orchestrator/types.ts",
+      "src/bos/types.ts",
+      "src/generation/content-scraper.ts"
+    ],
+    "src/agents/orchestrator/subagents/design-agent.ts": [
+      "src/agents/orchestrator/types.ts",
+      "src/bos/reasoning/rules-engine.ts"
+    ],
+    "src/agents/orchestrator/subagents/research-agent.ts": [
+      "src/agents/orchestrator/skill-registry.ts",
+      "src/agents/orchestrator/types.ts",
+      "src/bos/intake-parser.ts",
+      "src/bos/types.ts",
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/agents/orchestrator/subagents/solution-architecture-planner.ts": [
+      "src/agents/orchestrator/types.ts",
+      "src/bos/types-solution-architecture.ts"
+    ],
+    "src/agents/orchestrator/types.ts": [
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/graph/application-graph.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/types-solution-architecture.ts",
+      "src/bos/types.ts",
+      "src/generation/renderers/renderer.ts",
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/agents/refinement/conversation-memory.ts": [
+      "src/agents/refinement/types.ts"
+    ],
+    "src/agents/refinement/diff-engine.ts": [
+      "src/agents/refinement/types.ts"
+    ],
+    "src/agents/refinement/index.ts": [
+      "src/agents/refinement/conversation-memory.ts",
+      "src/agents/refinement/diff-engine.ts",
+      "src/agents/refinement/intent-classifier.ts",
+      "src/agents/refinement/patch-applier.ts",
+      "src/agents/refinement/types.ts"
+    ],
+    "src/agents/refinement/intent-classifier.ts": [
+      "src/agents/refinement/conversation-memory.ts",
+      "src/agents/refinement/types.ts"
+    ],
+    "src/agents/refinement/patch-applier.ts": [
+      "src/agents/refinement/types.ts"
+    ],
+    "src/agents/refinement/types.ts": [],
+    "src/agents/runtime-trace.ts": [],
+    "src/app/build-anything-cli.ts": [
+      "src/generation/agent-generators.ts",
+      "src/orchestration/orchestrator.ts"
+    ],
+    "src/bos/blueprint-mapper.ts": [
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/types/index.ts"
+    ],
+    "src/bos/bre-v2-pipeline.ts": [
+      "src/bos/confidence-gate.ts",
+      "src/bos/intake-parser.ts",
+      "src/bos/knowledge/registry.ts",
+      "src/bos/llm-planning-agent.ts",
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/reasoning/blueprint-compiler-v2.ts",
+      "src/bos/reasoning/constraint-solver.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/reasoning/scorer.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts",
+      "src/bos/schemas/knowledge/design-profile.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts",
+      "src/core/debug-logger.ts",
+      "src/core/progress-emitter.ts",
+      "src/generation/content-scraper.ts",
+      "src/types/index.ts"
+    ],
+    "src/bos/candidate/confidence.ts": [
+      "src/bos/candidate/types.ts"
+    ],
+    "src/bos/candidate/index.ts": [],
+    "src/bos/candidate/promotion.ts": [
+      "src/bos/candidate/confidence.ts",
+      "src/bos/candidate/store.ts",
+      "src/bos/candidate/types.ts",
+      "src/bos/candidate/validation.ts",
+      "src/bos/graph/governor.ts"
+    ],
+    "src/bos/candidate/store.ts": [
+      "src/bos/candidate/types.ts"
+    ],
+    "src/bos/candidate/types.ts": [],
+    "src/bos/candidate/validation.ts": [
+      "src/bos/candidate/types.ts"
+    ],
+    "src/bos/capabilities/index.ts": [],
+    "src/bos/capabilities/registry-data.ts": [
+      "src/bos/capabilities/types.ts"
+    ],
+    "src/bos/capabilities/registry.ts": [
+      "src/bos/capabilities/registry-data.ts",
+      "src/bos/capabilities/types.ts"
+    ],
+    "src/bos/capabilities/types.ts": [],
+    "src/bos/components/component-library.ts": [
+      "src/bos/capabilities/index.ts"
+    ],
+    "src/bos/components/index.ts": [],
+    "src/bos/confidence-gate.ts": [
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/reasoning/scorer.ts",
+      "src/core/debug-logger.ts"
+    ],
+    "src/bos/content-providers/agent-provider.ts": [
+      "src/bos/content-providers/interfaces.ts",
+      "src/bos/industry-copy-schema.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/content-providers/bos-knowledge-provider.ts": [
+      "src/bos/content-providers/interfaces.ts"
+    ],
+    "src/bos/content-providers/design-dna-provider.ts": [
+      "src/bos/content-providers/interfaces.ts"
+    ],
+    "src/bos/content-providers/domain-data-provider.ts": [
+      "src/bos/content-providers/interfaces.ts",
+      "src/generation/domain-data.ts",
+      "src/generation/image-resolver.ts"
+    ],
+    "src/bos/content-providers/index.ts": [],
+    "src/bos/content-providers/interfaces.ts": [
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/bos/content-providers/prompt-provider.ts": [
+      "src/bos/content-providers/interfaces.ts",
+      "src/bos/industry-copy-schema.ts",
+      "src/bos/types.ts",
+      "src/generation/domain-data.ts"
+    ],
+    "src/bos/content-providers/scraped-content-provider.ts": [
+      "src/bos/content-providers/interfaces.ts"
+    ],
+    "src/bos/content-resolver.ts": [
+      "src/bos/content-providers/index.ts",
+      "src/bos/industry-copy-schema.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts",
+      "src/bos/schemas/knowledge/design-profile.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts",
+      "src/bos/types.ts",
+      "src/core/debug-logger.ts"
+    ],
+    "src/bos/entries/ecommerce.ts": [
+      "src/bos/knowledge/bi-profiles/ecommerce.ts",
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/entries/healthcare-dental.ts": [
+      "src/bos/knowledge/bi-profiles/healthcare-dental.ts",
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/entries/luxury-retail.ts": [
+      "src/bos/knowledge/bi-profiles/luxury-retail.ts",
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/entries/real-estate.ts": [
+      "src/bos/knowledge/bi-profiles/real-estate.ts",
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/entries/restaurant.ts": [
+      "src/bos/knowledge/bi-profiles/hospitality-restaurant.ts",
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/entries/saas.ts": [
+      "src/bos/knowledge/bi-profiles/saas.ts",
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/entries/supplement-marketplace.ts": [
+      "src/bos/knowledge/bi-profiles/supplement-marketplace.ts",
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/evidence/collectors.ts": [
+      "src/bos/evidence/types.ts"
+    ],
+    "src/bos/evidence/fingerprint.ts": [],
+    "src/bos/evidence/persistent-store.ts": [
+      "src/bos/evidence/fingerprint.ts"
+    ],
+    "src/bos/evidence/types.ts": [],
+    "src/bos/execution-planner.ts": [
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/section-mapper.ts",
+      "src/core/debug-logger.ts"
+    ],
+    "src/bos/graph/application-graph.ts": [
+      "src/bos/pipeline-v2/stages.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/graph/connector.ts": [
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/types.ts",
+      "src/bos/knowledge/registry.ts"
+    ],
+    "src/bos/graph/engine.ts": [
+      "src/bos/graph/types.ts"
+    ],
+    "src/bos/graph/governor.ts": [
+      "src/bos/candidate/types.ts",
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/types.ts"
+    ],
+    "src/bos/graph/seeds/decision-seeds.ts": [
+      "src/bos/graph/types.ts"
+    ],
+    "src/bos/graph/types.ts": [],
+    "src/bos/index.ts": [
+      "src/bos/evidence/collectors.ts",
+      "src/bos/evidence/types.ts",
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/governor.ts",
+      "src/bos/knowledge/builder.ts",
+      "src/bos/reasoning/blueprint-compiler.ts",
+      "src/bos/reasoning/engine.ts"
+    ],
+    "src/bos/industry-copy-schema.ts": [],
+    "src/bos/intake-parser.ts": [
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/registry.ts",
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts",
+      "src/bos/types.ts",
+      "src/orchestration/business-intelligence/engine.ts"
+    ],
+    "src/bos/ir-inspector.ts": [],
+    "src/bos/ir-persistence.ts": [],
+    "src/bos/knowledge/bi-profiles/agency.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/automotive.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/beauty.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/ecommerce.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/education.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/enterprise-software.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/event.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/fintech.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/fitness-gym.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/healthcare-dental.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/healthcare-general.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/hospitality-restaurant.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/index.ts": [
+      "src/bos/knowledge/bi-profiles/agency.ts",
+      "src/bos/knowledge/bi-profiles/automotive.ts",
+      "src/bos/knowledge/bi-profiles/beauty.ts",
+      "src/bos/knowledge/bi-profiles/ecommerce.ts",
+      "src/bos/knowledge/bi-profiles/education.ts",
+      "src/bos/knowledge/bi-profiles/enterprise-software.ts",
+      "src/bos/knowledge/bi-profiles/event.ts",
+      "src/bos/knowledge/bi-profiles/fintech.ts",
+      "src/bos/knowledge/bi-profiles/fitness-gym.ts",
+      "src/bos/knowledge/bi-profiles/healthcare-dental.ts",
+      "src/bos/knowledge/bi-profiles/healthcare-general.ts",
+      "src/bos/knowledge/bi-profiles/hospitality-restaurant.ts",
+      "src/bos/knowledge/bi-profiles/legal.ts",
+      "src/bos/knowledge/bi-profiles/logistics.ts",
+      "src/bos/knowledge/bi-profiles/luxury-retail.ts",
+      "src/bos/knowledge/bi-profiles/manufacturing.ts",
+      "src/bos/knowledge/bi-profiles/media.ts",
+      "src/bos/knowledge/bi-profiles/nonprofit.ts",
+      "src/bos/knowledge/bi-profiles/portfolio.ts",
+      "src/bos/knowledge/bi-profiles/proptech.ts",
+      "src/bos/knowledge/bi-profiles/real-estate.ts",
+      "src/bos/knowledge/bi-profiles/saas.ts",
+      "src/bos/knowledge/bi-profiles/supplement-marketplace.ts",
+      "src/bos/knowledge/bi-profiles/travel.ts",
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/legal.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/logistics.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/luxury-retail.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/manufacturing.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/media.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/nonprofit.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/portfolio.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/proptech.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/real-estate.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/saas.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/supplement-marketplace.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/bi-profiles/travel.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/bos/knowledge/builder.ts": [
+      "src/bos/evidence/types.ts",
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/types.ts"
+    ],
+    "src/bos/knowledge/design-profiles/healthcare-clean.ts": [
+      "src/bos/schemas/knowledge/design-profile.schema.ts"
+    ],
+    "src/bos/knowledge/design-profiles/industry-profiles.ts": [
+      "src/bos/schemas/knowledge/design-profile.schema.ts"
+    ],
+    "src/bos/knowledge/design-profiles/luxury-dark-opulence.ts": [
+      "src/bos/schemas/knowledge/design-profile.schema.ts"
+    ],
+    "src/bos/knowledge/design-profiles/saas-modern.ts": [
+      "src/bos/schemas/knowledge/design-profile.schema.ts"
+    ],
+    "src/bos/knowledge/design-profiles/supplement-marketplace.ts": [
+      "src/bos/schemas/knowledge/design-profile.schema.ts"
+    ],
+    "src/bos/knowledge/patterns/ecommerce-marketplace.ts": [
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/knowledge/patterns/enterprise-patterns.ts": [
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/knowledge/patterns/industry-templates.ts": [
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/knowledge/patterns/luxury-watch-brand.ts": [
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/capability-graph.ts": [
+      "src/bos/knowledge/primitive-packs/types.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/composer.ts": [
+      "src/bos/capabilities/index.ts",
+      "src/bos/knowledge/primitive-packs/capability-graph.ts",
+      "src/bos/knowledge/primitive-packs/content.ts",
+      "src/bos/knowledge/primitive-packs/design.ts",
+      "src/bos/knowledge/primitive-packs/industry.ts",
+      "src/bos/knowledge/primitive-packs/locale.ts",
+      "src/bos/knowledge/primitive-packs/registry-wrappers.ts",
+      "src/bos/knowledge/primitive-packs/technology.ts",
+      "src/bos/knowledge/primitive-packs/types.ts",
+      "src/taxonomy/types.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/content.ts": [
+      "src/bos/knowledge/primitive-packs/types.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/design.ts": [
+      "src/bos/knowledge/primitive-packs/types.ts",
+      "src/bos/knowledge/registry.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/index.ts": [],
+    "src/bos/knowledge/primitive-packs/industry.ts": [
+      "src/bos/knowledge/primitive-packs/types.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/locale.ts": [
+      "src/bos/knowledge/primitive-packs/types.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/registry-wrappers.ts": [
+      "src/bos/knowledge/primitive-packs/types.ts",
+      "src/bos/knowledge/registry.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/resolver.ts": [
+      "src/bos/knowledge/primitive-packs/composer.ts",
+      "src/bos/knowledge/primitive-packs/types.ts",
+      "src/taxonomy/types.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/technology.ts": [
+      "src/bos/knowledge/primitive-packs/types.ts"
+    ],
+    "src/bos/knowledge/primitive-packs/types.ts": [
+      "src/taxonomy/types.ts"
+    ],
+    "src/bos/knowledge/registry.ts": [
+      "src/bos/knowledge/design-profiles/healthcare-clean.ts",
+      "src/bos/knowledge/design-profiles/industry-profiles.ts",
+      "src/bos/knowledge/design-profiles/luxury-dark-opulence.ts",
+      "src/bos/knowledge/design-profiles/saas-modern.ts",
+      "src/bos/knowledge/design-profiles/supplement-marketplace.ts",
+      "src/bos/knowledge/patterns/ecommerce-marketplace.ts",
+      "src/bos/knowledge/patterns/enterprise-patterns.ts",
+      "src/bos/knowledge/patterns/industry-templates.ts",
+      "src/bos/knowledge/patterns/luxury-watch-brand.ts",
+      "src/bos/knowledge/skill-packs/cap-inventory-lite.ts",
+      "src/bos/knowledge/skill-packs/capability-packs.ts",
+      "src/bos/knowledge/skill-packs/enterprise-packs.ts",
+      "src/bos/schemas/knowledge/business-model.schema.ts",
+      "src/bos/schemas/knowledge/compliance-pack.schema.ts",
+      "src/bos/schemas/knowledge/design-profile.schema.ts",
+      "src/bos/schemas/knowledge/journey.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts",
+      "src/bos/schemas/knowledge/skill-pack.schema.ts"
+    ],
+    "src/bos/knowledge/seeds/index.ts": [
+      "src/bos/evidence/types.ts",
+      "src/bos/graph/connector.ts",
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/governor.ts",
+      "src/bos/knowledge/builder.ts",
+      "src/bos/knowledge/registry.ts",
+      "src/bos/knowledge/seeds/industry-templates.ts",
+      "src/bos/knowledge/seeds/primitives.ts"
+    ],
+    "src/bos/knowledge/seeds/industry-templates.ts": [
+      "src/bos/knowledge/builder.ts"
+    ],
+    "src/bos/knowledge/seeds/primitives.ts": [
+      "src/bos/knowledge/builder.ts"
+    ],
+    "src/bos/knowledge/skill-packs/cap-inventory-lite.ts": [
+      "src/bos/schemas/knowledge/skill-pack.schema.ts"
+    ],
+    "src/bos/knowledge/skill-packs/capability-packs.ts": [
+      "src/bos/schemas/knowledge/skill-pack.schema.ts"
+    ],
+    "src/bos/knowledge/skill-packs/enterprise-packs.ts": [
+      "src/bos/schemas/knowledge/skill-pack.schema.ts"
+    ],
+    "src/bos/learning/index.ts": [],
+    "src/bos/learning/promotion.ts": [
+      "src/bos/candidate/types.ts",
+      "src/bos/capabilities/index.ts"
+    ],
+    "src/bos/llm-planning-agent.ts": [
+      "src/bos/reasoning/rules-engine.ts",
+      "src/core/debug-logger.ts",
+      "src/core/llm-gateway.ts",
+      "src/types/index.ts"
+    ],
+    "src/bos/pipeline-v2/pipeline.ts": [
+      "src/bos/pipeline-v2/stages.ts",
+      "src/bos/pipeline-v2/stages/api-graph.ts",
+      "src/bos/pipeline-v2/stages/blueprint.ts",
+      "src/bos/pipeline-v2/stages/capability-graph.ts",
+      "src/bos/pipeline-v2/stages/database-graph.ts",
+      "src/bos/pipeline-v2/stages/entity-graph.ts",
+      "src/bos/pipeline-v2/stages/execution-dag.ts",
+      "src/bos/pipeline-v2/stages/navigation-graph.ts",
+      "src/bos/pipeline-v2/stages/workflow-graph.ts",
+      "src/core/debug-logger.ts"
+    ],
+    "src/bos/pipeline-v2/stages.ts": [
+      "src/bos/reasoning/constraint-solver.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/reasoning/scorer.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/schemas/knowledge/design-profile.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/pipeline-v2/stages/api-graph.ts": [
+      "src/bos/pipeline-v2/stages.ts"
+    ],
+    "src/bos/pipeline-v2/stages/blueprint.ts": [
+      "src/bos/knowledge/registry.ts",
+      "src/bos/pipeline-v2/stages.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts"
+    ],
+    "src/bos/pipeline-v2/stages/capability-graph.ts": [
+      "src/bos/pipeline-v2/stages.ts"
+    ],
+    "src/bos/pipeline-v2/stages/database-graph.ts": [
+      "src/bos/pipeline-v2/stages.ts"
+    ],
+    "src/bos/pipeline-v2/stages/entity-graph.ts": [
+      "src/bos/pipeline-v2/stages.ts"
+    ],
+    "src/bos/pipeline-v2/stages/execution-dag.ts": [
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/section-mapper.ts"
+    ],
+    "src/bos/pipeline-v2/stages/navigation-graph.ts": [
+      "src/bos/pipeline-v2/stages.ts"
+    ],
+    "src/bos/pipeline-v2/stages/workflow-graph.ts": [
+      "src/bos/pipeline-v2/stages.ts"
+    ],
+    "src/bos/reasoning/application-family-classifier.ts": [
+      "src/bos/reasoning/rules-engine.ts"
+    ],
+    "src/bos/reasoning/blueprint-compiler-v2.ts": [
+      "src/bos/knowledge/registry.ts",
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/reasoning/constraint-solver.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/reasoning/scorer.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/common.ts",
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/reasoning/blueprint-compiler.ts": [],
+    "src/bos/reasoning/constraint-solver.ts": [
+      "src/bos/reasoning/rules-engine.ts"
+    ],
+    "src/bos/reasoning/engine.ts": [
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/types.ts",
+      "src/bos/knowledge/builder.ts",
+      "src/bos/reasoning/blueprint-compiler.ts"
+    ],
+    "src/bos/reasoning/rules-engine.ts": [
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts",
+      "src/bos/types.ts"
+    ],
+    "src/bos/reasoning/scorer.ts": [
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/schemas/knowledge/design-profile.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/registry.ts": [
+      "src/bos/types.ts"
+    ],
+    "src/bos/schemas/blueprint/application-blueprint.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/blueprint/execution-blueprint.schema.ts": [],
+    "src/bos/schemas/common.ts": [],
+    "src/bos/schemas/compiled/graph.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/index.ts": [],
+    "src/bos/schemas/knowledge/business-intelligence.schema.ts": [],
+    "src/bos/schemas/knowledge/business-model.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/capability.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/compliance-pack.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/component.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/design-profile.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/entity.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/evidence.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/integration.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/journey.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/kpi.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/knowledge/pattern.schema.ts": [
+      "src/bos/schemas/common.ts",
+      "src/bos/schemas/knowledge/component.schema.ts"
+    ],
+    "src/bos/schemas/knowledge/skill-pack.schema.ts": [
+      "src/bos/schemas/common.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "src/bos/schemas/knowledge/workflow.schema.ts": [
+      "src/bos/schemas/common.ts"
+    ],
+    "src/bos/schemas/solution-architecture.schema.ts": [],
+    "src/bos/section-mapper.ts": [
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts"
+    ],
+    "src/bos/types-solution-architecture.ts": [],
+    "src/bos/types.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts"
+    ],
+    "src/business-intelligence/business-operating-system.ts": [
+      "src/business-intelligence/customer-journey.ts",
+      "src/business-intelligence/revenue-engine.ts",
+      "src/business-intelligence/solution-architect.ts",
+      "src/business-intelligence/technical-architect.ts",
+      "src/business-intelligence/workflow-engine.ts"
+    ],
+    "src/business-intelligence/core/agent-reach-bridge.ts": [
+      "src/business-intelligence/core/llm-caller.ts",
+      "src/business-intelligence/core/web-searcher.ts"
+    ],
+    "src/business-intelligence/core/llm-caller.ts": [
+      "src/types/index.ts"
+    ],
+    "src/business-intelligence/core/web-searcher.ts": [],
+    "src/business-intelligence/customer-journey.ts": [],
+    "src/business-intelligence/revenue-engine.ts": [],
+    "src/business-intelligence/solution-architect.ts": [
+      "src/business-intelligence/customer-journey.ts",
+      "src/business-intelligence/revenue-engine.ts",
+      "src/business-intelligence/workflow-engine.ts"
+    ],
+    "src/business-intelligence/technical-architect.ts": [
+      "src/business-intelligence/solution-architect.ts"
+    ],
+    "src/business-intelligence/types/index.ts": [],
+    "src/business-intelligence/workflow-engine.ts": [],
+    "src/cloning/clone-orchestrator-v2.ts": [
+      "src/cloning/clone-progress.ts",
+      "src/cloning/content-harvester.ts",
+      "src/cloning/site-analyzer.ts",
+      "src/core/llm-gateway.ts",
+      "src/types/index.ts"
+    ],
+    "src/cloning/clone-progress.ts": [],
+    "src/cloning/content-harvester.ts": [],
+    "src/cloning/site-analyzer.ts": [
+      "src/cloning/clone-progress.ts"
+    ],
+    "src/compiler/about/page.tsx": [],
+    "src/compiler/admin/collections/page.tsx": [],
+    "src/compiler/admin/dashboard/page.tsx": [],
+    "src/compiler/admin/layout.tsx": [
+      "src/compiler/globals.css"
+    ],
+    "src/compiler/admin/login/page.tsx": [],
+    "src/compiler/admin/media/page.tsx": [],
+    "src/compiler/admin/navigation/page.tsx": [],
+    "src/compiler/admin/pages/page.tsx": [],
+    "src/compiler/admin/products/page.tsx": [],
+    "src/compiler/admin/settings/page.tsx": [],
+    "src/compiler/api/auth/route.ts": [],
+    "src/compiler/api/collections/route.ts": [],
+    "src/compiler/api/navigation/route.ts": [],
+    "src/compiler/api/products/route.ts": [],
+    "src/compiler/api/settings/route.ts": [],
+    "src/compiler/auditor.ts": [
+      "src/types/index.ts"
+    ],
+    "src/compiler/blogs/[handle]/page.tsx": [],
+    "src/compiler/blogs/page.tsx": [],
+    "src/compiler/checkout/page.tsx": [],
+    "src/compiler/compressor.ts": [
+      "src/types/index.ts"
+    ],
+    "src/compiler/contact-us/page.tsx": [],
+    "src/compiler/faq/page.tsx": [],
+    "src/compiler/general/privacy-policy/page.tsx": [],
+    "src/compiler/general/refund-policy/page.tsx": [],
+    "src/compiler/general/shipping-policy/page.tsx": [],
+    "src/compiler/globals.css": [],
+    "src/compiler/layout.tsx": [
+      "src/compiler/globals.css"
+    ],
+    "src/compiler/page.tsx": [],
+    "src/compiler/products/[handle]/page.tsx": [],
+    "src/compiler/products/detail/[handle]/page.tsx": [],
+    "src/compiler/products/page.tsx": [],
+    "src/core/api-compiler.ts": [
+      "src/types/index.ts"
+    ],
+    "src/core/ast-patcher.ts": [
+      "src/types/index.ts"
+    ],
+    "src/core/db-compiler.ts": [
+      "src/types/index.ts"
+    ],
+    "src/core/debug-logger.ts": [],
+    "src/core/llm-gateway.ts": [
+      "src/business-intelligence/types/index.ts",
+      "src/core/llm-router.ts",
+      "src/generation/architect.ts",
+      "src/generation/content-research-agent.ts",
+      "src/generation/domain-synthesizer.ts",
+      "src/generation/self-evaluator.ts",
+      "src/generation/skill-integrator.ts",
+      "src/types/index.ts"
+    ],
+    "src/core/llm-router.ts": [
+      "src/types/index.ts"
+    ],
+    "src/core/patch-transaction.ts": [
+      "src/types/index.ts"
+    ],
+    "src/core/persistence.ts": [],
+    "src/core/progress-emitter.ts": [],
+    "src/core/resolve-llm-config.ts": [],
+    "src/core/skill-discovery.ts": [],
+    "src/core/snapshot.ts": [],
+    "src/core/telemetry.ts": [],
+    "src/engine/browser-verifier.ts": [
+      "src/engine/runtime-manager.ts"
+    ],
+    "src/engine/build-history.ts": [],
+    "src/engine/build-queue.ts": [
+      "src/core/progress-emitter.ts"
+    ],
+    "src/engine/build-runner.ts": [],
+    "src/engine/deterministic-healer.ts": [],
+    "src/engine/layout-detector.ts": [],
+    "src/engine/repair-loop.ts": [
+      "src/core/llm-gateway.ts",
+      "src/engine/browser-verifier.ts",
+      "src/engine/runtime-manager.ts",
+      "src/types/index.ts"
+    ],
+    "src/engine/runtime-manager.ts": [],
+    "src/engine/runtime-mode.ts": [],
+    "src/engine/screenshot-runner.ts": [
+      "src/engine/runtime-manager.ts"
+    ],
+    "src/engine/self-healing-engine.ts": [
+      "src/compiler/auditor.ts",
+      "src/compiler/compressor.ts",
+      "src/core/ast-patcher.ts",
+      "src/core/llm-gateway.ts",
+      "src/types/index.ts"
+    ],
+    "src/engine/visual-diff.ts": [],
+    "src/engine/visual-fix-loop.ts": [
+      "src/engine/layout-detector.ts",
+      "src/engine/visual-diff.ts"
+    ],
+    "src/generation/agent-generators.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/generation/architect.ts": [
+      "src/bos/schemas/knowledge/pattern.schema.ts",
+      "src/business-intelligence/business-operating-system.ts",
+      "src/generation/primitives.ts",
+      "src/intelligence/business-intelligence-engine.ts",
+      "src/intelligence/capability-graph.ts",
+      "src/types/index.ts"
+    ],
+    "src/generation/assembly-gate.ts": [
+      "src/generation/component-spec-writer.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "src/generation/auth-generator.ts": [],
+    "src/generation/build-pipeline.ts": [
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/content-resolver.ts",
+      "src/bos/execution-planner.ts",
+      "src/bos/graph/application-graph.ts",
+      "src/bos/knowledge/registry.ts",
+      "src/bos/knowledge/seeds/index.ts",
+      "src/bos/pipeline-v2/pipeline.ts",
+      "src/bos/pipeline-v2/stages.ts",
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/schemas/knowledge/design-profile.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts",
+      "src/core/debug-logger.ts",
+      "src/core/progress-emitter.ts",
+      "src/core/skill-discovery.ts",
+      "src/generation/assembly-gate.ts",
+      "src/generation/component-spec-writer.ts",
+      "src/generation/design-dna.ts",
+      "src/generation/pass3-code-generator.ts",
+      "src/generation/renderers/flutter-renderer.ts",
+      "src/generation/renderers/index.ts",
+      "src/generation/renderers/react-renderer.ts",
+      "src/generation/renderers/renderer.ts",
+      "src/generation/skill-integrator.ts",
+      "src/generation/worktree-manager.ts",
+      "src/orchestration/design-intelligence/engine.ts",
+      "src/orchestration/design-intelligence/experience-engine.ts",
+      "src/orchestration/design-intelligence/types-experience.ts",
+      "src/orchestration/design-intelligence/types.ts",
+      "src/orchestration/types.ts",
+      "src/pipeline/agent-mode.ts",
+      "src/pipeline/agent-prompt.ts"
+    ],
+    "src/generation/compiler-passes.ts": [
+      "src/bos/graph/application-graph.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "src/generation/component-spec-writer.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts"
+    ],
+    "src/generation/content-research-agent.ts": [
+      "src/business-intelligence/core/agent-reach-bridge.ts",
+      "src/business-intelligence/core/web-searcher.ts",
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/generation/content-scraper.ts": [
+      "src/bos/schemas/knowledge/business-intelligence.schema.ts",
+      "src/bos/types.ts"
+    ],
+    "src/generation/design-dna.ts": [
+      "src/generation/skill-integrator.ts"
+    ],
+    "src/generation/domain-data.ts": [],
+    "src/generation/domain-detector.ts": [
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/generation/domain-synthesizer.ts": [
+      "src/bos/schemas/knowledge/pattern.schema.ts",
+      "src/bos/types.ts",
+      "src/generation/architect.ts",
+      "src/generation/content-scraper.ts",
+      "src/generation/design-dna.ts",
+      "src/generation/domain-data.ts",
+      "src/generation/domain-detector.ts",
+      "src/generation/image-resolver.ts",
+      "src/generation/web-researcher.ts"
+    ],
+    "src/generation/image-resolver.ts": [],
+    "src/generation/mongo-schema-generator.ts": [
+      "src/bos/graph/application-graph.ts",
+      "src/bos/pipeline-v2/stages.ts"
+    ],
+    "src/generation/palettes.json": [],
+    "src/generation/pass3-code-generator.ts": [
+      "src/bos/graph/application-graph.ts",
+      "src/bos/pipeline-v2/stages.ts",
+      "src/bos/types.ts",
+      "src/generation/content-scraper.ts",
+      "src/generation/domain-data.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "src/generation/payment-generator.ts": [],
+    "src/generation/primitives.ts": [
+      "src/bos/capabilities/index.ts"
+    ],
+    "src/generation/reference-scraper.ts": [
+      "src/business-intelligence/core/agent-reach-bridge.ts",
+      "src/business-intelligence/core/web-searcher.ts"
+    ],
+    "src/generation/renderers/fastapi-renderer.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/core/debug-logger.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "src/generation/renderers/flutter-renderer.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/core/debug-logger.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "src/generation/renderers/index.ts": [],
+    "src/generation/renderers/react-renderer.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/core/debug-logger.ts",
+      "src/generation/renderers/renderer.ts",
+      "src/generation/renderers/templates/content.ts",
+      "src/generation/renderers/templates/ecommerce.ts",
+      "src/generation/renderers/templates/fitness.ts",
+      "src/generation/renderers/templates/healthcare.ts",
+      "src/generation/renderers/templates/legal.ts",
+      "src/generation/renderers/templates/realestate.ts",
+      "src/generation/renderers/templates/restaurant.ts",
+      "src/generation/renderers/templates/saas.ts",
+      "src/generation/skill-integrator.ts",
+      "src/motion/compiler.ts"
+    ],
+    "src/generation/renderers/renderer.ts": [
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/design-dna.ts",
+      "src/generation/skill-integrator.ts",
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "src/generation/renderers/templates/content.ts": [],
+    "src/generation/renderers/templates/ecommerce.ts": [],
+    "src/generation/renderers/templates/fitness.ts": [],
+    "src/generation/renderers/templates/healthcare.ts": [],
+    "src/generation/renderers/templates/legal.ts": [],
+    "src/generation/renderers/templates/realestate.ts": [],
+    "src/generation/renderers/templates/restaurant.ts": [],
+    "src/generation/renderers/templates/saas.ts": [],
+    "src/generation/scaffold-generators.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/generation/self-evaluator.ts": [
+      "src/generation/domain-detector.ts"
+    ],
+    "src/generation/skill-integrator.ts": [],
+    "src/generation/web-researcher.ts": [
+      "src/business-intelligence/core/agent-reach-bridge.ts",
+      "src/business-intelligence/core/web-searcher.ts"
+    ],
+    "src/generation/worktree-manager.ts": [],
+    "src/graph/ast-dependency-graph.ts": [
+      "src/graph/module-resolver.ts"
+    ],
+    "src/graph/export-indexer.ts": [
+      "src/graph/ast-dependency-graph.ts",
+      "src/graph/module-resolver.ts"
+    ],
+    "src/graph/module-resolver.ts": [],
+    "src/intelligence/business-intelligence-engine.ts": [],
+    "src/intelligence/capability-graph.ts": [],
+    "src/intelligence/impact-analyzer.ts": [
+      "src/graph/ast-dependency-graph.ts",
+      "src/graph/module-resolver.ts",
+      "src/types/index.ts"
+    ],
+    "src/intelligence/patch-ranker.ts": [
+      "src/intelligence/impact-analyzer.ts",
+      "src/types/index.ts"
+    ],
+    "src/intelligence/regression-predictor.ts": [
+      "src/graph/ast-dependency-graph.ts",
+      "src/graph/module-resolver.ts",
+      "src/types/index.ts"
+    ],
+    "src/mcp/index.ts": [],
+    "src/mcp/server.ts": [
+      "src/mcp/tools/audit.ts",
+      "src/mcp/tools/generate.ts",
+      "src/mcp/tools/github.ts",
+      "src/mcp/tools/playwright.ts",
+      "src/mcp/tools/supabase.ts",
+      "src/mcp/tools/workspace.ts",
+      "src/mcp/types.ts"
+    ],
+    "src/mcp/tools/audit.ts": [
+      "src/mcp/types.ts"
+    ],
+    "src/mcp/tools/generate.ts": [
+      "src/mcp/types.ts"
+    ],
+    "src/mcp/tools/github.ts": [
+      "src/mcp/types.ts"
+    ],
+    "src/mcp/tools/playwright.ts": [
+      "src/mcp/types.ts"
+    ],
+    "src/mcp/tools/supabase.ts": [
+      "src/mcp/types.ts"
+    ],
+    "src/mcp/tools/workspace.ts": [
+      "src/mcp/types.ts"
+    ],
+    "src/mcp/types.ts": [],
+    "src/motion/accessibility.ts": [
+      "src/motion/types.ts"
+    ],
+    "src/motion/budget.ts": [
+      "src/motion/tokens.ts",
+      "src/motion/types.ts"
+    ],
+    "src/motion/capabilities/index.ts": [],
+    "src/motion/capabilities/presets.ts": [
+      "src/motion/capabilities/types.ts"
+    ],
+    "src/motion/capabilities/registry.ts": [
+      "src/motion/capabilities/presets.ts",
+      "src/motion/capabilities/types.ts",
+      "src/motion/types.ts"
+    ],
+    "src/motion/capabilities/types.ts": [
+      "src/motion/types.ts"
+    ],
+    "src/motion/compiler.ts": [
+      "src/motion/tokens.ts",
+      "src/motion/types.ts"
+    ],
+    "src/motion/directors/animation-test-suite.ts": [],
+    "src/motion/directors/motion-director.ts": [
+      "src/motion/types.ts"
+    ],
+    "src/motion/directors/visual-validation.ts": [],
+    "src/motion/hooks.ts": [],
+    "src/motion/index.ts": [],
+    "src/motion/tokens.ts": [
+      "src/motion/types.ts"
+    ],
+    "src/motion/types.ts": [],
+    "src/orchestration/adapters/index.ts": [
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/bos/schemas/solution-architecture.schema.ts",
+      "src/orchestration/application-blueprint/types.ts",
+      "src/orchestration/execution-blueprint/types.ts",
+      "src/orchestration/technology-planner/types.ts"
+    ],
+    "src/orchestration/agent-registry.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/agentic-loop.ts": [
+      "src/orchestration/prompt-decomposer.ts",
+      "src/orchestration/skill-orchestrator.ts"
+    ],
+    "src/orchestration/application-blueprint/engine.ts": [
+      "src/orchestration/application-blueprint/types.ts",
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/content-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/technology-planner/types.ts"
+    ],
+    "src/orchestration/application-blueprint/index.ts": [],
+    "src/orchestration/application-blueprint/types.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/content-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/shared/types.ts",
+      "src/orchestration/technology-planner/types.ts"
+    ],
+    "src/orchestration/artifact-graph/artifact-graph.ts": [
+      "src/orchestration/artifact-graph/types.ts"
+    ],
+    "src/orchestration/artifact-graph/benchmark.ts": [
+      "src/orchestration/artifact-graph/types.ts"
+    ],
+    "src/orchestration/artifact-graph/executor.ts": [
+      "src/orchestration/artifact-graph/artifact-graph.ts",
+      "src/orchestration/artifact-graph/types.ts",
+      "src/orchestration/artifact-graph/validation.ts"
+    ],
+    "src/orchestration/artifact-graph/index.ts": [],
+    "src/orchestration/artifact-graph/integration.ts": [
+      "src/orchestration/artifact-graph/artifact-graph.ts",
+      "src/orchestration/artifact-graph/executor.ts",
+      "src/orchestration/artifact-graph/legacy-adapters.ts"
+    ],
+    "src/orchestration/artifact-graph/legacy-adapters.ts": [
+      "src/orchestration/artifact-graph/artifact-graph.ts",
+      "src/orchestration/artifact-graph/types.ts"
+    ],
+    "src/orchestration/artifact-graph/types.ts": [],
+    "src/orchestration/artifact-graph/v4-adapter.ts": [
+      "src/agents/deterministic-orchestrator-v4.ts",
+      "src/agents/runtime-trace.ts",
+      "src/orchestration/artifact-graph/artifact-graph.ts",
+      "src/orchestration/artifact-graph/validation.ts",
+      "src/types/index.ts"
+    ],
+    "src/orchestration/artifact-graph/validation.ts": [
+      "src/orchestration/artifact-graph/artifact-graph.ts"
+    ],
+    "src/orchestration/artifact-store.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/benchmark/benchmark-suite.ts": [
+      "src/orchestration/orchestrator.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/benchmark/runner.ts": [
+      "src/orchestration/benchmark/suite.ts",
+      "src/orchestration/pipeline-inspector/index.ts",
+      "src/orchestration/runtime-trace/types.ts"
+    ],
+    "src/orchestration/benchmark/suite.ts": [],
+    "src/orchestration/blueprint-explorer/index.ts": [
+      "src/orchestration/runtime-trace/types.ts"
+    ],
+    "src/orchestration/bos-loader.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/business-intelligence/adapters.ts": [
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/orchestration/business-intelligence/archetypes.ts": [
+      "src/orchestration/business-intelligence/dimensions.ts",
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/orchestration/business-intelligence/dimensions.ts": [
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/orchestration/business-intelligence/engine.ts": [
+      "src/orchestration/business-intelligence/archetypes.ts",
+      "src/orchestration/business-intelligence/dimensions.ts",
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "src/orchestration/business-intelligence/index.ts": [],
+    "src/orchestration/business-intelligence/types.ts": [],
+    "src/orchestration/capability-registry/index.ts": [],
+    "src/orchestration/command-router.ts": [
+      "src/orchestration/agentic-loop.ts",
+      "src/orchestration/prompt-decomposer.ts",
+      "src/orchestration/skill-orchestrator.ts"
+    ],
+    "src/orchestration/content-intelligence/engine.ts": [
+      "src/bos/industry-copy-schema.ts",
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/content-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/shared/types.ts"
+    ],
+    "src/orchestration/content-intelligence/index.ts": [],
+    "src/orchestration/content-intelligence/types.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/shared/types.ts"
+    ],
+    "src/orchestration/context-budget.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/context-manager.ts": [
+      "src/orchestration/artifact-store.ts",
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/execution-tracker.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/decision-engine.ts": [
+      "src/orchestration/event-bus.ts",
+      "src/orchestration/experience-engine.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/design-intelligence/engine.ts": [
+      "src/orchestration/design-intelligence/engines/component-engine.ts",
+      "src/orchestration/design-intelligence/engines/design-system-engine.ts",
+      "src/orchestration/design-intelligence/engines/motion-engine.ts",
+      "src/orchestration/design-intelligence/engines/polish-engine.ts",
+      "src/orchestration/design-intelligence/engines/ux-engine.ts",
+      "src/orchestration/design-intelligence/engines/visual-engine.ts",
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "src/orchestration/design-intelligence/engines/component-engine.ts": [
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "src/orchestration/design-intelligence/engines/design-system-engine.ts": [
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "src/orchestration/design-intelligence/engines/motion-engine.ts": [
+      "src/motion/capabilities/index.ts",
+      "src/motion/tokens.ts",
+      "src/motion/types.ts",
+      "src/orchestration/design-intelligence/types.ts",
+      "src/orchestration/experience-os/capability-selection.ts"
+    ],
+    "src/orchestration/design-intelligence/engines/polish-engine.ts": [
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "src/orchestration/design-intelligence/engines/ux-engine.ts": [
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "src/orchestration/design-intelligence/engines/visual-engine.ts": [
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "src/orchestration/design-intelligence/experience-engine.ts": [],
+    "src/orchestration/design-intelligence/experience-profiles.ts": [],
+    "src/orchestration/design-intelligence/hover-intelligence.ts": [],
+    "src/orchestration/design-intelligence/motion-language.ts": [],
+    "src/orchestration/design-intelligence/scene-planner.ts": [],
+    "src/orchestration/design-intelligence/scroll-narrative.ts": [],
+    "src/orchestration/design-intelligence/types-experience.ts": [
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/design-intelligence/types.ts": [
+      "src/orchestration/experience-os/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/event-bus.ts": [],
+    "src/orchestration/execution-blueprint/engine.ts": [
+      "src/orchestration/application-blueprint/types.ts",
+      "src/orchestration/execution-blueprint/types.ts",
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/execution-blueprint/index.ts": [],
+    "src/orchestration/execution-blueprint/types.ts": [
+      "src/orchestration/application-blueprint/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/shared/types.ts"
+    ],
+    "src/orchestration/execution-intelligence.ts": [
+      "src/orchestration/decision-engine.ts",
+      "src/orchestration/event-bus.ts",
+      "src/orchestration/experience-engine.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/execution-report.ts": [
+      "src/orchestration/progress-reporter.ts",
+      "src/orchestration/types.ts",
+      "src/orchestration/validation-pipeline.ts"
+    ],
+    "src/orchestration/execution-tracker.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/experience-engine.ts": [
+      "src/orchestration/event-bus.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/experience-engine.ts": [
+      "src/generation/design-dna.ts",
+      "src/orchestration/design-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/experience-profiles.ts",
+      "src/orchestration/experience-intelligence/hover-intelligence.ts",
+      "src/orchestration/experience-intelligence/motion-language.ts",
+      "src/orchestration/experience-intelligence/scene-planner.ts",
+      "src/orchestration/experience-intelligence/scroll-narrative.ts",
+      "src/orchestration/experience-intelligence/types-experience.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/experience-profiles.ts": [
+      "src/bos/capabilities/index.ts",
+      "src/orchestration/experience-intelligence/types-experience.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/hover-intelligence.ts": [
+      "src/orchestration/experience-intelligence/types-experience.ts",
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/index.ts": [],
+    "src/orchestration/experience-intelligence/motion-language.ts": [
+      "src/orchestration/experience-intelligence/types-experience.ts",
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/scene-planner.ts": [
+      "src/orchestration/experience-intelligence/types-experience.ts",
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/scroll-narrative.ts": [
+      "src/orchestration/experience-intelligence/types-experience.ts",
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/types-experience.ts": [
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/experience-intelligence/types.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/shared/types.ts"
+    ],
+    "src/orchestration/experience-os/adapter.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/experience-os/index.ts",
+      "src/orchestration/experience-os/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/experience-os/capability-selection.ts": [
+      "src/motion/capabilities/index.ts",
+      "src/motion/capabilities/types.ts",
+      "src/orchestration/experience-os/types.ts"
+    ],
+    "src/orchestration/experience-os/experience-graph.ts": [
+      "src/orchestration/experience-os/types.ts"
+    ],
+    "src/orchestration/experience-os/index.ts": [
+      "src/motion/capabilities/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/experience-os/capability-selection.ts",
+      "src/orchestration/experience-os/experience-graph.ts",
+      "src/orchestration/experience-os/knowledge-base.ts",
+      "src/orchestration/experience-os/scene-library/index.ts",
+      "src/orchestration/experience-os/strategy-engine.ts",
+      "src/orchestration/experience-os/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/experience-os/knowledge-base.ts": [
+      "src/orchestration/experience-os/types.ts"
+    ],
+    "src/orchestration/experience-os/scene-library/index.ts": [
+      "src/orchestration/experience-os/types.ts"
+    ],
+    "src/orchestration/experience-os/strategy-engine.ts": [
+      "src/orchestration/experience-os/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/experience-os/types.ts": [
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/index.ts": [],
+    "src/orchestration/input-adapters/api-adapter.ts": [
+      "src/orchestration/input-adapters/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/input-adapters/codebase-adapter.ts": [
+      "src/orchestration/input-adapters/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/input-adapters/database-adapter.ts": [
+      "src/orchestration/input-adapters/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/input-adapters/figma-adapter.ts": [
+      "src/orchestration/input-adapters/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/input-adapters/index.ts": [
+      "src/orchestration/input-adapters/api-adapter.ts",
+      "src/orchestration/input-adapters/codebase-adapter.ts",
+      "src/orchestration/input-adapters/database-adapter.ts",
+      "src/orchestration/input-adapters/figma-adapter.ts",
+      "src/orchestration/input-adapters/prd-adapter.ts",
+      "src/orchestration/input-adapters/types.ts",
+      "src/orchestration/input-adapters/website-adapter.ts"
+    ],
+    "src/orchestration/input-adapters/prd-adapter.ts": [
+      "src/orchestration/input-adapters/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/input-adapters/types.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/input-adapters/website-adapter.ts": [
+      "src/orchestration/input-adapters/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/intent-router.ts": [
+      "src/orchestration/input-adapters/index.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/knowledge-acquisition/engine.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/knowledge-acquisition/types.ts"
+    ],
+    "src/orchestration/knowledge-acquisition/index.ts": [],
+    "src/orchestration/knowledge-acquisition/types.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/llm-adapter.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/observability/index.ts": [],
+    "src/orchestration/observability/manager.ts": [],
+    "src/orchestration/orchestrator.ts": [
+      "src/generation/skill-integrator.ts",
+      "src/orchestration/agent-registry.ts",
+      "src/orchestration/artifact-store.ts",
+      "src/orchestration/bos-loader.ts",
+      "src/orchestration/business-intelligence/engine.ts",
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/context-budget.ts",
+      "src/orchestration/context-manager.ts",
+      "src/orchestration/execution-tracker.ts",
+      "src/orchestration/intent-router.ts",
+      "src/orchestration/llm-adapter.ts",
+      "src/orchestration/production-acceptance-gate/stage.ts",
+      "src/orchestration/prompt-fulfillment/stage.ts",
+      "src/orchestration/quality-gates.ts",
+      "src/orchestration/requirement-aware-self-healing/stage.ts",
+      "src/orchestration/requirement-extraction/stage.ts",
+      "src/orchestration/runtime/runtime-engine.ts",
+      "src/orchestration/stages/api-design.ts",
+      "src/orchestration/stages/architecture.ts",
+      "src/orchestration/stages/build.ts",
+      "src/orchestration/stages/business-analysis.ts",
+      "src/orchestration/stages/code-writer.ts",
+      "src/orchestration/stages/database-design.ts",
+      "src/orchestration/stages/deployment.ts",
+      "src/orchestration/stages/documentation.ts",
+      "src/orchestration/stages/frontend-design.ts",
+      "src/orchestration/stages/integration.ts",
+      "src/orchestration/stages/project-intake.ts",
+      "src/orchestration/stages/quality-assurance.ts",
+      "src/orchestration/stages/research.ts",
+      "src/orchestration/stages/review-board.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/pipeline-inspector/index.ts": [
+      "src/orchestration/runtime-trace/types.ts"
+    ],
+    "src/orchestration/pipeline-inspector/types.ts": [],
+    "src/orchestration/pipeline-orchestrator/index.ts": [],
+    "src/orchestration/pipeline-orchestrator/orchestrator.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/pipeline-orchestrator/types.ts"
+    ],
+    "src/orchestration/pipeline-orchestrator/types.ts": [
+      "src/orchestration/application-blueprint/types.ts",
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/content-intelligence/types.ts",
+      "src/orchestration/execution-blueprint/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/knowledge-acquisition/types.ts",
+      "src/orchestration/renderer-engine/types.ts",
+      "src/orchestration/technology-planner/types.ts"
+    ],
+    "src/orchestration/pipeline-orchestrator/wired.ts": [
+      "src/orchestration/application-blueprint/engine.ts",
+      "src/orchestration/business-intelligence/engine.ts",
+      "src/orchestration/content-intelligence/engine.ts",
+      "src/orchestration/design-intelligence/engine.ts",
+      "src/orchestration/execution-blueprint/engine.ts",
+      "src/orchestration/experience-intelligence/experience-engine.ts",
+      "src/orchestration/knowledge-acquisition/engine.ts",
+      "src/orchestration/pipeline-orchestrator/orchestrator.ts",
+      "src/orchestration/pipeline-orchestrator/types.ts",
+      "src/orchestration/technology-planner/engine.ts"
+    ],
+    "src/orchestration/planner.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/production-acceptance-gate/engine.ts": [
+      "src/bos/capabilities/index.ts",
+      "src/orchestration/production-acceptance-gate/types.ts"
+    ],
+    "src/orchestration/production-acceptance-gate/index.ts": [],
+    "src/orchestration/production-acceptance-gate/stage.ts": [
+      "src/orchestration/production-acceptance-gate/engine.ts",
+      "src/orchestration/production-acceptance-gate/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/production-acceptance-gate/types.ts": [],
+    "src/orchestration/progress-reporter.ts": [
+      "src/orchestration/event-bus.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/prompt-decomposer.ts": [],
+    "src/orchestration/prompt-fulfillment/engine.ts": [
+      "src/orchestration/prompt-fulfillment/types.ts",
+      "src/orchestration/requirement-extraction/types.ts"
+    ],
+    "src/orchestration/prompt-fulfillment/index.ts": [],
+    "src/orchestration/prompt-fulfillment/stage.ts": [
+      "src/orchestration/prompt-fulfillment/engine.ts",
+      "src/orchestration/prompt-fulfillment/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/prompt-fulfillment/types.ts": [],
+    "src/orchestration/quality-gates.ts": [
+      "src/orchestration/artifact-store.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/renderer-engine/engine.ts": [
+      "src/orchestration/execution-blueprint/types.ts",
+      "src/orchestration/renderer-engine/types.ts"
+    ],
+    "src/orchestration/renderer-engine/index.ts": [],
+    "src/orchestration/renderer-engine/types.ts": [
+      "src/orchestration/execution-blueprint/types.ts",
+      "src/orchestration/experience-intelligence/types.ts"
+    ],
+    "src/orchestration/requirement-aware-self-healing/engine.ts": [
+      "src/orchestration/prompt-fulfillment/types.ts",
+      "src/orchestration/requirement-aware-self-healing/types.ts",
+      "src/orchestration/requirement-extraction/types.ts"
+    ],
+    "src/orchestration/requirement-aware-self-healing/index.ts": [],
+    "src/orchestration/requirement-aware-self-healing/stage.ts": [
+      "src/orchestration/requirement-aware-self-healing/engine.ts",
+      "src/orchestration/requirement-aware-self-healing/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/requirement-aware-self-healing/types.ts": [
+      "src/orchestration/prompt-fulfillment/types.ts"
+    ],
+    "src/orchestration/requirement-extraction/engine.ts": [
+      "src/orchestration/requirement-extraction/types.ts"
+    ],
+    "src/orchestration/requirement-extraction/index.ts": [],
+    "src/orchestration/requirement-extraction/stage.ts": [
+      "src/orchestration/requirement-extraction/engine.ts",
+      "src/orchestration/requirement-extraction/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/requirement-extraction/types.ts": [],
+    "src/orchestration/runtime-trace/types.ts": [
+      "src/orchestration/application-blueprint/types.ts",
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/content-intelligence/types.ts",
+      "src/orchestration/design-intelligence/types.ts",
+      "src/orchestration/execution-blueprint/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/knowledge-acquisition/types.ts",
+      "src/orchestration/renderer-engine/types.ts",
+      "src/orchestration/technology-planner/types.ts"
+    ],
+    "src/orchestration/runtime-validation/index.ts": [],
+    "src/orchestration/runtime/log-capture.ts": [
+      "src/orchestration/runtime/types.ts"
+    ],
+    "src/orchestration/runtime/preview-server.ts": [
+      "src/orchestration/runtime/process-manager.ts",
+      "src/orchestration/runtime/types.ts"
+    ],
+    "src/orchestration/runtime/process-manager.ts": [
+      "src/orchestration/runtime/types.ts"
+    ],
+    "src/orchestration/runtime/retry-engine.ts": [
+      "src/orchestration/runtime/log-capture.ts",
+      "src/orchestration/runtime/process-manager.ts",
+      "src/orchestration/runtime/types.ts"
+    ],
+    "src/orchestration/runtime/runtime-engine.ts": [
+      "src/orchestration/runtime/log-capture.ts",
+      "src/orchestration/runtime/preview-server.ts",
+      "src/orchestration/runtime/process-manager.ts",
+      "src/orchestration/runtime/retry-engine.ts",
+      "src/orchestration/runtime/types.ts",
+      "src/orchestration/runtime/visual-regression.ts"
+    ],
+    "src/orchestration/runtime/types.ts": [],
+    "src/orchestration/runtime/visual-regression.ts": [
+      "src/orchestration/runtime/types.ts"
+    ],
+    "src/orchestration/shared/index.ts": [],
+    "src/orchestration/shared/types.ts": [],
+    "src/orchestration/skill-orchestrator.ts": [
+      "src/orchestration/prompt-decomposer.ts"
+    ],
+    "src/orchestration/stage-context-enrichment.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/api-design.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/architecture.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/base-stage.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/build.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/business-analysis.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/code-writer.ts": [
+      "src/bos/industry-copy-schema.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/renderers/react-renderer.ts",
+      "src/generation/renderers/renderer.ts",
+      "src/generation/scaffold-generators.ts",
+      "src/generation/skill-integrator.ts",
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/database-design.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/deployment.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/documentation.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/frontend-design.ts": [
+      "src/generation/skill-integrator.ts",
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/integration.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/project-intake.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/quality-assurance.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/research.ts": [
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/stages/review-board.ts": [
+      "src/orchestration/runtime/runtime-engine.ts",
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "src/orchestration/technology-planner/engine.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/content-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/technology-planner/types.ts"
+    ],
+    "src/orchestration/technology-planner/index.ts": [],
+    "src/orchestration/technology-planner/types.ts": [
+      "src/orchestration/business-intelligence/types.ts",
+      "src/orchestration/content-intelligence/types.ts",
+      "src/orchestration/experience-intelligence/types.ts",
+      "src/orchestration/shared/types.ts"
+    ],
+    "src/orchestration/types.ts": [],
+    "src/orchestration/validation-pipeline.ts": [
+      "src/orchestration/types.ts"
+    ],
+    "src/pipeline/agent-mode.ts": [
+      "skills/_adapter/index.js"
+    ],
+    "src/pipeline/agent-prompt.ts": [
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/design-dna.ts"
+    ],
+    "src/sandbox/engine.ts": [
+      "src/types/index.ts"
+    ],
+    "src/server.ts": [
+      "src/cloning/clone-orchestrator-v2.ts",
+      "src/core/debug-logger.ts",
+      "src/core/persistence.ts",
+      "src/engine/build-queue.ts",
+      "src/mcp/server.ts"
+    ],
+    "src/taxonomy/default-taxonomy.ts": [
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/dynamic-resolution.ts": [
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/index.ts": [],
+    "src/taxonomy/learning.ts": [
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/pack-bridge.ts": [
+      "src/taxonomy/pack-registry.ts",
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/pack-registry.ts": [
+      "src/taxonomy/packs/retail-footwear.ts",
+      "src/taxonomy/packs/services-healthcare-veterinary.ts",
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/packs/retail-footwear.ts": [
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/packs/services-healthcare-veterinary.ts": [
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/resolver.ts": [
+      "src/bos/capabilities/index.ts",
+      "src/taxonomy/default-taxonomy.ts",
+      "src/taxonomy/dynamic-resolution.ts",
+      "src/taxonomy/pack-registry.ts",
+      "src/taxonomy/types.ts"
+    ],
+    "src/taxonomy/types.ts": [],
+    "src/test-harness.ts": [
+      "src/agents/deterministic-orchestrator-v4.ts",
+      "src/types/index.ts"
+    ],
+    "src/testing/claude-enricher.ts": [],
+    "src/testing/claude-evaluator.ts": [],
+    "src/testing/e2e-tester.ts": [
+      "src/engine/browser-verifier.ts",
+      "src/engine/build-runner.ts",
+      "src/engine/runtime-manager.ts",
+      "src/engine/screenshot-runner.ts"
+    ],
+    "src/testing/local-test-runner.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts",
+      "src/sandbox/engine.ts",
+      "src/testing/claude-enricher.ts",
+      "src/testing/claude-evaluator.ts"
+    ],
+    "src/types/index.ts": [],
+    "src/validation/ast-patch-validator.ts": [
+      "src/types/index.ts"
+    ],
+    "src/validation/patch-simulator.ts": [
+      "src/types/index.ts"
+    ],
+    "SUMMARY.md": [],
+    "supplement-store-preview/app/about/page.tsx": [],
+    "supplement-store-preview/app/account/orders/[id]/page.tsx": [],
+    "supplement-store-preview/app/account/page.tsx": [],
+    "supplement-store-preview/app/api/categories/[id]/route.ts": [],
+    "supplement-store-preview/app/api/categories/route.ts": [],
+    "supplement-store-preview/app/api/orders/[id]/route.ts": [],
+    "supplement-store-preview/app/api/orders/route.ts": [],
+    "supplement-store-preview/app/api/products/[id]/route.ts": [],
+    "supplement-store-preview/app/api/products/route.ts": [],
+    "supplement-store-preview/app/api/users/[id]/route.ts": [],
+    "supplement-store-preview/app/api/users/route.ts": [],
+    "supplement-store-preview/app/cart/page.tsx": [],
+    "supplement-store-preview/app/checkout/page.tsx": [],
+    "supplement-store-preview/app/contact/page.tsx": [],
+    "supplement-store-preview/app/globals.css": [],
+    "supplement-store-preview/app/layout.tsx": [
+      "supplement-store-preview/app/globals.css"
+    ],
+    "supplement-store-preview/app/login/page.tsx": [],
+    "supplement-store-preview/app/nav-data.ts": [],
+    "supplement-store-preview/app/orders/page.tsx": [],
+    "supplement-store-preview/app/page.tsx": [],
+    "supplement-store-preview/app/product/[handle]/page.tsx": [],
+    "supplement-store-preview/app/product/[id]/page.tsx": [],
+    "supplement-store-preview/app/profile/page.tsx": [],
+    "supplement-store-preview/app/register/page.tsx": [],
+    "supplement-store-preview/app/shop/page.tsx": [],
+    "supplement-store-preview/components/AboutSection.tsx": [],
+    "supplement-store-preview/components/AddressBook.tsx": [],
+    "supplement-store-preview/components/AuthForm.tsx": [],
+    "supplement-store-preview/components/CartItems.tsx": [],
+    "supplement-store-preview/components/CategoryGrid.tsx": [],
+    "supplement-store-preview/components/CheckoutForm.tsx": [],
+    "supplement-store-preview/components/ContactForm.tsx": [],
+    "supplement-store-preview/components/CTASection.tsx": [],
+    "supplement-store-preview/components/DataTable.tsx": [],
+    "supplement-store-preview/components/FeatureGrid.tsx": [
+      "supplement-store-preview/components/Icon.tsx"
+    ],
+    "supplement-store-preview/components/FilterSidebar.tsx": [],
+    "supplement-store-preview/components/GlobalFooter.tsx": [],
+    "supplement-store-preview/components/HeroBanner.tsx": [],
+    "supplement-store-preview/components/Icon.tsx": [],
+    "supplement-store-preview/components/MissionSection.tsx": [],
+    "supplement-store-preview/components/Navbar.tsx": [],
+    "supplement-store-preview/components/OrderHistory.tsx": [],
+    "supplement-store-preview/components/OrderReview.tsx": [],
+    "supplement-store-preview/components/OrderStatus.tsx": [],
+    "supplement-store-preview/components/OrderSummary.tsx": [],
+    "supplement-store-preview/components/OrderTracking.tsx": [],
+    "supplement-store-preview/components/PaymentForm.tsx": [],
+    "supplement-store-preview/components/ProductGallery.tsx": [],
+    "supplement-store-preview/components/ProductGrid.tsx": [],
+    "supplement-store-preview/components/ProductInfo.tsx": [],
+    "supplement-store-preview/components/ProfileSection.tsx": [],
+    "supplement-store-preview/components/RecommendedProducts.tsx": [],
+    "supplement-store-preview/components/TeamSection.tsx": [],
+    "supplement-store-preview/components/Testimonials.tsx": [],
+    "supplement-store-preview/components/Wishlist.tsx": [],
+    "supplement-store-preview/design-lineage.json": [],
+    "supplement-store-preview/lib/db.ts": [],
+    "supplement-store-preview/prisma/schema.prisma": [],
+    "supplement-store-preview/prisma/seed.ts": [],
+    "tailwind.config.ts": [],
+    "templates/tier-fullstack/docker-compose.yml": [],
+    "templates/tier-fullstack/next-env.d.ts": [],
+    "templates/tier-fullstack/next.config.ts": [],
+    "templates/tier-fullstack/package.json": [],
+    "templates/tier-fullstack/postcss.config.mjs": [],
+    "templates/tier-fullstack/prisma/schema.prisma": [],
+    "templates/tier-fullstack/src/app/globals.css": [],
+    "templates/tier-fullstack/src/app/layout.tsx": [
+      "templates/tier-fullstack/src/app/globals.css"
+    ],
+    "templates/tier-fullstack/src/app/page.tsx": [],
+    "templates/tier-fullstack/src/lib/prisma.ts": [],
+    "templates/tier-fullstack/tsconfig.json": [],
+    "templates/tier-standard/docker-compose.yml": [],
+    "templates/tier-standard/Dockerfile": [],
+    "templates/tier-standard/next-env.d.ts": [],
+    "templates/tier-standard/next.config.js": [],
+    "templates/tier-standard/next.config.ts": [],
+    "templates/tier-standard/package.json": [],
+    "templates/tier-standard/postcss.config.mjs": [],
+    "templates/tier-standard/src/app/globals.css": [],
+    "templates/tier-standard/src/app/layout.tsx": [],
+    "templates/tier-standard/src/app/page.tsx": [],
+    "templates/tier-standard/tsconfig.json": [],
+    "templates/tier-static/.astro/content-assets.mjs": [],
+    "templates/tier-static/.astro/content-modules.mjs": [],
+    "templates/tier-static/.astro/content.d.ts": [],
+    "templates/tier-static/.astro/types.d.ts": [],
+    "templates/tier-static/astro.config.mjs": [],
+    "templates/tier-static/index.html": [],
+    "templates/tier-static/package.json": [],
+    "templates/tier-static/scripts/main.js": [],
+    "templates/tier-static/src/layouts/Base.astro": [],
+    "templates/tier-static/src/pages/index.astro": [],
+    "templates/tier-static/src/styles/global.css": [],
+    "templates/tier-static/styles/main.css": [],
+    "templates/tier-static/tailwind.config.mjs": [],
+    "templates/tier-static/tsconfig.json": [],
+    "test-bre.mts": [],
+    "test-build.mts": [],
+    "test-coffee-build.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "test-command.mts": [],
+    "test-full-build.mts": [],
+    "test-scrape.ts": [
+      "src/generation/content-scraper.ts"
+    ],
+    "test-workspace/competitor-output/.env.example": [],
+    "test-workspace/competitor-output/index.html": [],
+    "test-workspace/competitor-output/metadata.json": [],
+    "test-workspace/competitor-output/package.json": [],
+    "test-workspace/competitor-output/README.md": [],
+    "test-workspace/competitor-output/src/App.tsx": [
+      "test-workspace/competitor-output/src/components/CheckoutModal.tsx",
+      "test-workspace/competitor-output/src/components/ProductCard.tsx",
+      "test-workspace/competitor-output/src/components/ProductDetailModal.tsx",
+      "test-workspace/competitor-output/src/components/ProfileOrders.tsx",
+      "test-workspace/competitor-output/src/components/VerificationHub.tsx",
+      "test-workspace/competitor-output/src/data.ts",
+      "test-workspace/competitor-output/src/types.ts"
+    ],
+    "test-workspace/competitor-output/src/components/CheckoutModal.tsx": [
+      "test-workspace/competitor-output/src/types.ts"
+    ],
+    "test-workspace/competitor-output/src/components/ProductCard.tsx": [
+      "test-workspace/competitor-output/src/types.ts"
+    ],
+    "test-workspace/competitor-output/src/components/ProductDetailModal.tsx": [
+      "test-workspace/competitor-output/src/data.ts",
+      "test-workspace/competitor-output/src/types.ts"
+    ],
+    "test-workspace/competitor-output/src/components/ProfileOrders.tsx": [
+      "test-workspace/competitor-output/src/types.ts"
+    ],
+    "test-workspace/competitor-output/src/components/VerificationHub.tsx": [],
+    "test-workspace/competitor-output/src/data.ts": [
+      "test-workspace/competitor-output/src/types.ts"
+    ],
+    "test-workspace/competitor-output/src/index.css": [],
+    "test-workspace/competitor-output/src/main.tsx": [
+      "test-workspace/competitor-output/src/App.tsx",
+      "test-workspace/competitor-output/src/index.css"
+    ],
+    "test-workspace/competitor-output/src/types.ts": [],
+    "test-workspace/competitor-output/tsconfig.json": [],
+    "test-workspace/competitor-output/vite.config.ts": [],
+    "test-workspace/supplement-store/.component-spec-manifest.json": [],
+    "test-workspace/supplement-store/agent-spec.json": [],
+    "test-workspace/supplement-store/agent-task.md": [],
+    "test-workspace/supplement-store/app/about/page.tsx": [
+      "test-workspace/supplement-store/components/AboutSection.tsx",
+      "test-workspace/supplement-store/components/MissionSection.tsx",
+      "test-workspace/supplement-store/components/TeamSection.tsx"
+    ],
+    "test-workspace/supplement-store/app/account/orders/[id]/page.tsx": [
+      "test-workspace/supplement-store/components/CartItems.tsx",
+      "test-workspace/supplement-store/components/OrderStatus.tsx",
+      "test-workspace/supplement-store/components/OrderTracking.tsx"
+    ],
+    "test-workspace/supplement-store/app/account/page.tsx": [
+      "test-workspace/supplement-store/components/AddressBook.tsx",
+      "test-workspace/supplement-store/components/OrderHistory.tsx",
+      "test-workspace/supplement-store/components/Wishlist.tsx"
+    ],
+    "test-workspace/supplement-store/app/api/categories/[id]/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/api/categories/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/api/orders/[id]/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/api/orders/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/api/products/[id]/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/api/products/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/api/users/[id]/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/api/users/route.ts": [
+      "test-workspace/supplement-store/lib/db.ts"
+    ],
+    "test-workspace/supplement-store/app/cart/page.tsx": [
+      "test-workspace/supplement-store/components/CartItems.tsx",
+      "test-workspace/supplement-store/components/CheckoutForm.tsx",
+      "test-workspace/supplement-store/components/OrderSummary.tsx"
+    ],
+    "test-workspace/supplement-store/app/checkout/page.tsx": [
+      "test-workspace/supplement-store/components/CheckoutForm.tsx",
+      "test-workspace/supplement-store/components/OrderReview.tsx",
+      "test-workspace/supplement-store/components/PaymentForm.tsx"
+    ],
+    "test-workspace/supplement-store/app/contact/page.tsx": [
+      "test-workspace/supplement-store/components/ContactForm.tsx"
+    ],
+    "test-workspace/supplement-store/app/globals.css": [],
+    "test-workspace/supplement-store/app/layout.tsx": [
+      "test-workspace/supplement-store/app/globals.css",
+      "test-workspace/supplement-store/components/GlobalFooter.tsx",
+      "test-workspace/supplement-store/components/Navbar.tsx"
+    ],
+    "test-workspace/supplement-store/app/login/page.tsx": [
+      "test-workspace/supplement-store/components/AuthForm.tsx"
+    ],
+    "test-workspace/supplement-store/app/nav-data.ts": [],
+    "test-workspace/supplement-store/app/orders/page.tsx": [
+      "test-workspace/supplement-store/components/DataTable.tsx",
+      "test-workspace/supplement-store/components/FilterSidebar.tsx",
+      "test-workspace/supplement-store/components/OrderStatus.tsx"
+    ],
+    "test-workspace/supplement-store/app/page.tsx": [
+      "test-workspace/supplement-store/components/CTASection.tsx",
+      "test-workspace/supplement-store/components/FeatureGrid.tsx",
+      "test-workspace/supplement-store/components/HeroBanner.tsx",
+      "test-workspace/supplement-store/components/ProductGrid.tsx",
+      "test-workspace/supplement-store/components/Testimonials.tsx"
+    ],
+    "test-workspace/supplement-store/app/product/[handle]/page.tsx": [
+      "test-workspace/supplement-store/components/ProductGallery.tsx",
+      "test-workspace/supplement-store/components/ProductInfo.tsx",
+      "test-workspace/supplement-store/components/RecommendedProducts.tsx"
+    ],
+    "test-workspace/supplement-store/app/profile/page.tsx": [
+      "test-workspace/supplement-store/components/OrderHistory.tsx",
+      "test-workspace/supplement-store/components/ProfileSection.tsx",
+      "test-workspace/supplement-store/components/Wishlist.tsx"
+    ],
+    "test-workspace/supplement-store/app/register/page.tsx": [
+      "test-workspace/supplement-store/components/AuthForm.tsx"
+    ],
+    "test-workspace/supplement-store/app/shop/page.tsx": [
+      "test-workspace/supplement-store/components/CategoryGrid.tsx",
+      "test-workspace/supplement-store/components/FilterSidebar.tsx",
+      "test-workspace/supplement-store/components/ProductGrid.tsx"
+    ],
+    "test-workspace/supplement-store/components/AboutSection.tsx": [],
+    "test-workspace/supplement-store/components/AddressBook.tsx": [],
+    "test-workspace/supplement-store/components/AuthForm.tsx": [],
+    "test-workspace/supplement-store/components/CartItems.tsx": [],
+    "test-workspace/supplement-store/components/CategoryGrid.tsx": [],
+    "test-workspace/supplement-store/components/CheckoutForm.tsx": [],
+    "test-workspace/supplement-store/components/ContactForm.tsx": [],
+    "test-workspace/supplement-store/components/CTASection.tsx": [],
+    "test-workspace/supplement-store/components/DataTable.tsx": [],
+    "test-workspace/supplement-store/components/FeatureGrid.tsx": [],
+    "test-workspace/supplement-store/components/FilterSidebar.tsx": [],
+    "test-workspace/supplement-store/components/GlobalFooter.tsx": [],
+    "test-workspace/supplement-store/components/HeroBanner.tsx": [],
+    "test-workspace/supplement-store/components/Icon.tsx": [],
+    "test-workspace/supplement-store/components/MissionSection.tsx": [],
+    "test-workspace/supplement-store/components/Navbar.tsx": [],
+    "test-workspace/supplement-store/components/OrderHistory.tsx": [],
+    "test-workspace/supplement-store/components/OrderReview.tsx": [],
+    "test-workspace/supplement-store/components/OrderStatus.tsx": [],
+    "test-workspace/supplement-store/components/OrderSummary.tsx": [],
+    "test-workspace/supplement-store/components/OrderTracking.tsx": [],
+    "test-workspace/supplement-store/components/PaymentForm.tsx": [],
+    "test-workspace/supplement-store/components/ProductGallery.tsx": [],
+    "test-workspace/supplement-store/components/ProductGrid.tsx": [],
+    "test-workspace/supplement-store/components/ProductInfo.tsx": [],
+    "test-workspace/supplement-store/components/ProfileSection.tsx": [],
+    "test-workspace/supplement-store/components/RecommendedProducts.tsx": [],
+    "test-workspace/supplement-store/components/TeamSection.tsx": [],
+    "test-workspace/supplement-store/components/Testimonials.tsx": [],
+    "test-workspace/supplement-store/components/Wishlist.tsx": [],
+    "test-workspace/supplement-store/design-lineage.json": [],
+    "test-workspace/supplement-store/lib/db.ts": [],
+    "test-workspace/supplement-store/next-env.d.ts": [],
+    "test-workspace/supplement-store/next.config.mjs": [],
+    "test-workspace/supplement-store/package.json": [],
+    "test-workspace/supplement-store/postcss.config.mjs": [],
+    "test-workspace/supplement-store/prisma/schema.prisma": [],
+    "test-workspace/supplement-store/prisma/seed.ts": [],
+    "test-workspace/supplement-store/screenshot-test.cjs": [],
+    "test-workspace/supplement-store/src/.assembly/assembly-result.json": [],
+    "test-workspace/supplement-store/tailwind.config.ts": [],
+    "test-workspace/supplement-store/tsconfig.json": [],
+    "tests/application-family-classifier.test.ts": [
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/reasoning/rules-engine.ts"
+    ],
+    "tests/artifact-graph-v4-adapter.test.ts": [
+      "src/agents/runtime-trace.ts",
+      "src/orchestration/artifact-graph/v4-adapter.ts",
+      "src/orchestration/artifact-graph/validation.ts"
+    ],
+    "tests/artifact-graph.test.ts": [
+      "src/orchestration/artifact-graph/artifact-graph.ts",
+      "src/orchestration/artifact-graph/executor.ts",
+      "src/orchestration/artifact-graph/legacy-adapters.ts",
+      "src/orchestration/artifact-graph/types.ts"
+    ],
+    "tests/assembly-gate.test.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/assembly-gate.ts",
+      "src/generation/component-spec-writer.ts"
+    ],
+    "tests/benchmark-suite.test.ts": [
+      "src/orchestration/benchmark/benchmark-suite.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/blueprint-compiler-v2.test.ts": [
+      "src/bos/reasoning/blueprint-compiler-v2.ts",
+      "src/bos/reasoning/constraint-solver.ts",
+      "src/bos/reasoning/rules-engine.ts"
+    ],
+    "tests/blueprint-compiler.test.ts": [
+      "src/bos/reasoning/blueprint-compiler.ts"
+    ],
+    "tests/bos-registry.test.ts": [
+      "src/bos/registry.ts",
+      "src/bos/types.ts"
+    ],
+    "tests/bre-v2-pipeline.test.ts": [
+      "src/bos/blueprint-mapper.ts",
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/intake-parser.ts"
+    ],
+    "tests/business-intelligence.test.ts": [
+      "src/orchestration/business-intelligence/dimensions.ts",
+      "src/orchestration/business-intelligence/index.ts"
+    ],
+    "tests/candidate-knowledge.test.ts": [
+      "src/bos/candidate/index.ts",
+      "src/bos/candidate/types.ts",
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/governor.ts"
+    ],
+    "tests/capability-registry.test.ts": [
+      "src/bos/capabilities/index.ts",
+      "src/bos/capabilities/types.ts"
+    ],
+    "tests/command-router-integration.test.ts": [
+      "src/orchestration/command-router.ts"
+    ],
+    "tests/command-router.test.ts": [
+      "src/orchestration/command-router.ts"
+    ],
+    "tests/component-library.test.ts": [
+      "src/bos/components/index.ts"
+    ],
+    "tests/component-spec-writer.test.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/component-spec-writer.ts"
+    ],
+    "tests/constraint-solver.test.ts": [
+      "src/bos/reasoning/constraint-solver.ts",
+      "src/bos/reasoning/rules-engine.ts"
+    ],
+    "tests/content-quality-gate.test.ts": [],
+    "tests/decision-engine.test.ts": [
+      "src/orchestration/decision-engine.ts",
+      "src/orchestration/event-bus.ts",
+      "src/orchestration/experience-engine.ts"
+    ],
+    "tests/definitive-3-tests.test.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "tests/design-dna.test.ts": [
+      "src/generation/design-dna.ts"
+    ],
+    "tests/design-intelligence.test.ts": [
+      "src/orchestration/design-intelligence/engine.ts",
+      "src/orchestration/design-intelligence/engines/component-engine.ts",
+      "src/orchestration/design-intelligence/engines/design-system-engine.ts",
+      "src/orchestration/design-intelligence/engines/motion-engine.ts",
+      "src/orchestration/design-intelligence/engines/polish-engine.ts",
+      "src/orchestration/design-intelligence/engines/ux-engine.ts",
+      "src/orchestration/design-intelligence/engines/visual-engine.ts",
+      "src/orchestration/design-intelligence/types.ts"
+    ],
+    "tests/domain-detector.test.ts": [
+      "src/generation/domain-detector.ts",
+      "src/orchestration/business-intelligence/types.ts"
+    ],
+    "tests/e2e-10-builds.test.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "tests/e2e-supplement-store.test.ts": [
+      "src/bos/blueprint-mapper.ts",
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/content-resolver.ts",
+      "src/bos/execution-planner.ts",
+      "src/bos/intake-parser.ts",
+      "src/bos/knowledge/registry.ts"
+    ],
+    "tests/e2e-worktree-pipeline.test.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/assembly-gate.ts",
+      "src/generation/component-spec-writer.ts",
+      "src/generation/worktree-manager.ts"
+    ],
+    "tests/event-bus.test.ts": [
+      "src/orchestration/event-bus.ts"
+    ],
+    "tests/evidence-store.test.ts": [
+      "src/bos/evidence/types.ts"
+    ],
+    "tests/execution-intelligence.test.ts": [
+      "src/orchestration/execution-intelligence.ts"
+    ],
+    "tests/execution-pipeline.test.ts": [
+      "src/bos/bre-v2-pipeline.ts",
+      "src/bos/content-resolver.ts",
+      "src/bos/execution-planner.ts",
+      "src/bos/intake-parser.ts",
+      "src/bos/schemas/blueprint/application-blueprint.schema.ts",
+      "src/bos/section-mapper.ts",
+      "src/generation/renderers/react-renderer.ts",
+      "src/generation/renderers/renderer.ts"
+    ],
+    "tests/execution-report.test.ts": [
+      "src/orchestration/execution-report.ts",
+      "src/orchestration/progress-reporter.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/experience-benchmark.test.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "tests/experience-capability.test.ts": [
+      "src/orchestration/experience-intelligence/experience-profiles.ts"
+    ],
+    "tests/experience-engine.test.ts": [
+      "src/orchestration/event-bus.ts",
+      "src/orchestration/experience-engine.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/experience-intelligence-e2e.test.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "tests/experience-intelligence.test.ts": [
+      "src/orchestration/design-intelligence/experience-engine.ts",
+      "src/orchestration/design-intelligence/experience-profiles.ts",
+      "src/orchestration/design-intelligence/hover-intelligence.ts",
+      "src/orchestration/design-intelligence/motion-language.ts",
+      "src/orchestration/design-intelligence/scene-planner.ts",
+      "src/orchestration/design-intelligence/scroll-narrative.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/experience-os-capabilities.test.ts": [
+      "src/orchestration/design-intelligence/engines/motion-engine.ts",
+      "src/orchestration/experience-os/index.ts",
+      "src/orchestration/experience-os/types.ts"
+    ],
+    "tests/experience-os-v2.test.ts": [
+      "src/orchestration/experience-os/index.ts",
+      "src/orchestration/experience-os/types.ts"
+    ],
+    "tests/fingerprint.test.ts": [
+      "src/bos/evidence/fingerprint.ts"
+    ],
+    "tests/image-resolver.test.ts": [
+      "src/generation/image-resolver.ts"
+    ],
+    "tests/input-adapters.test.ts": [
+      "src/orchestration/input-adapters/api-adapter.ts",
+      "src/orchestration/input-adapters/codebase-adapter.ts",
+      "src/orchestration/input-adapters/database-adapter.ts",
+      "src/orchestration/input-adapters/figma-adapter.ts",
+      "src/orchestration/input-adapters/index.ts",
+      "src/orchestration/input-adapters/prd-adapter.ts",
+      "src/orchestration/input-adapters/website-adapter.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/knowledge-graph-enhancement.test.ts": [
+      "src/bos/graph/engine.ts",
+      "src/bos/graph/seeds/decision-seeds.ts",
+      "src/bos/graph/types.ts"
+    ],
+    "tests/learning-promotion.test.ts": [
+      "src/bos/candidate/types.ts",
+      "src/bos/learning/index.ts"
+    ],
+    "tests/merge-scraped-into-research.test.ts": [
+      "src/bos/intake-parser.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/types.ts"
+    ],
+    "tests/motion-architecture.test.ts": [
+      "src/motion/accessibility.ts",
+      "src/motion/budget.ts",
+      "src/motion/compiler.ts",
+      "src/motion/directors/motion-director.ts",
+      "src/motion/tokens.ts",
+      "src/motion/types.ts"
+    ],
+    "tests/motion-capabilities.test.ts": [
+      "src/motion/capabilities/index.ts"
+    ],
+    "tests/no-pattern-blueprint.test.ts": [
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/reasoning/scorer.ts"
+    ],
+    "tests/orchestrator-e2e.test.ts": [
+      "src/orchestration/orchestrator.ts",
+      "src/orchestration/stages/base-stage.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/pipeline-smoke.test.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "tests/planner.test.ts": [
+      "src/orchestration/planner.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/primitive-pack-composer.test.ts": [
+      "src/bos/knowledge/primitive-packs/capability-graph.ts",
+      "src/bos/knowledge/primitive-packs/composer.ts",
+      "src/bos/knowledge/primitive-packs/industry.ts",
+      "src/bos/knowledge/primitive-packs/registry-wrappers.ts",
+      "src/bos/knowledge/primitive-packs/types.ts"
+    ],
+    "tests/primitives.test.ts": [
+      "src/generation/primitives.ts"
+    ],
+    "tests/production-acceptance-gate.test.ts": [
+      "src/bos/capabilities/index.ts",
+      "src/orchestration/production-acceptance-gate/engine.ts"
+    ],
+    "tests/progress-reporter.test.ts": [
+      "src/orchestration/progress-reporter.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/rules-engine.test.ts": [
+      "src/bos/reasoning/rules-engine.ts"
+    ],
+    "tests/runtime-engine.test.ts": [
+      "src/orchestration/runtime/log-capture.ts",
+      "src/orchestration/runtime/preview-server.ts",
+      "src/orchestration/runtime/process-manager.ts",
+      "src/orchestration/runtime/retry-engine.ts",
+      "src/orchestration/runtime/runtime-engine.ts",
+      "src/orchestration/runtime/types.ts"
+    ],
+    "tests/runtime-graph-validation.test.ts": [
+      "src/orchestration/artifact-graph/artifact-graph.ts",
+      "src/orchestration/artifact-graph/types.ts",
+      "src/orchestration/artifact-graph/validation.ts"
+    ],
+    "tests/runtime-influence-audit.test.ts": [
+      "src/bos/schemas/blueprint/execution-blueprint.schema.ts",
+      "src/generation/design-dna.ts",
+      "src/generation/renderers/react-renderer.ts",
+      "src/generation/renderers/renderer.ts",
+      "src/generation/skill-integrator.ts",
+      "src/orchestration/design-intelligence/engine.ts"
+    ],
+    "tests/runtime-mode.test.ts": [
+      "src/engine/runtime-mode.ts"
+    ],
+    "tests/runtime-trace.test.ts": [
+      "src/agents/runtime-trace.ts"
+    ],
+    "tests/runtime-verification-9-industries.test.ts": [
+      "src/agents/runtime-trace.ts",
+      "src/bos/capabilities/index.ts",
+      "src/orchestration/artifact-graph/v4-adapter.ts",
+      "src/orchestration/artifact-graph/validation.ts"
+    ],
+    "tests/scale-capabilities.test.ts": [
+      "src/bos/capabilities/index.ts"
+    ],
+    "tests/scorer.test.ts": [
+      "src/bos/reasoning/scorer.ts",
+      "src/bos/schemas/knowledge/design-profile.schema.ts",
+      "src/bos/schemas/knowledge/pattern.schema.ts"
+    ],
+    "tests/stage-context-enrichment.test.ts": [
+      "src/orchestration/stage-context-enrichment.ts",
+      "src/orchestration/types.ts"
+    ],
+    "tests/taxonomy-capability-bridge.test.ts": [
+      "src/taxonomy/resolver.ts"
+    ],
+    "tests/taxonomy.test.ts": [
+      "src/taxonomy/default-taxonomy.ts",
+      "src/taxonomy/learning.ts",
+      "src/taxonomy/pack-bridge.ts",
+      "src/taxonomy/pack-registry.ts",
+      "src/taxonomy/packs/retail-footwear.ts",
+      "src/taxonomy/packs/services-healthcare-veterinary.ts",
+      "src/taxonomy/resolver.ts",
+      "src/taxonomy/types.ts"
+    ],
+    "tests/tools-content-validator.test.ts": [],
+    "tests/tools-dependency-checker.test.ts": [],
+    "tests/tools-quality-gate.test.ts": [],
+    "tests/validation-pipeline.test.ts": [
+      "src/orchestration/types.ts",
+      "src/orchestration/validation-pipeline.ts"
+    ],
+    "tests/verification-prompts.test.ts": [
+      "src/bos/intake-parser.ts",
+      "src/bos/knowledge/registry.ts",
+      "src/bos/reasoning/application-family-classifier.ts",
+      "src/bos/reasoning/rules-engine.ts",
+      "src/bos/reasoning/scorer.ts"
+    ],
+    "tests/worktree-manager.test.ts": [
+      "src/generation/worktree-manager.ts"
+    ],
+    "todo.md": [],
+    "tools/asset-downloader/index.cjs": [],
+    "tools/audit-log/check.cjs": [],
+    "tools/content-quality-gate/index.js": [],
+    "tools/content-validator/index.cjs": [],
+    "tools/crawler/index.cjs": [],
+    "tools/dependency-checker/index.cjs": [],
+    "tools/deploy-codegen/index.cjs": [],
+    "tools/quality-gate/index.cjs": [],
+    "tools/schema-codegen/index.cjs": [],
+    "tools/screenshot-diff/index.cjs": [],
+    "tools/token-extractor/index.cjs": [],
+    "tsconfig.json": [],
+    "TUNNEL_SETUP.md": [],
+    "update-vercel-env.bat": [],
+    "update-vercel-env.ps1": [],
+    "vercel.json": [],
+    "verify-build.ts": [
+      "src/bos/intake-parser.ts",
+      "src/generation/build-pipeline.ts"
+    ],
+    "vitest.config.ts": [],
+    "web/AGENTS.md": [],
+    "web/CLAUDE.md": [],
+    "web/eslint.config.mjs": [],
+    "web/next.config.ts": [],
+    "web/package.json": [],
+    "web/postcss.config.mjs": [],
+    "web/README.md": [],
+    "web/src/app/api/business-intelligence/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/clone/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/create/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/workspace/[id]/download/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/workspace/[id]/events/route.ts": [
+      "web/src/lib/config.ts"
+    ],
+    "web/src/app/api/workspace/[id]/file/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/workspace/[id]/files/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/workspace/[id]/inspect/route.ts": [
+      "web/src/lib/config.ts"
+    ],
+    "web/src/app/api/workspace/[id]/meta/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/workspace/[id]/preview/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/workspace/[id]/progress/route.ts": [
+      "web/src/lib/engine.ts"
+    ],
+    "web/src/app/api/workspaces/route.ts": [
+      "web/src/lib/config.ts"
+    ],
+    "web/src/app/business-intelligence/page.tsx": [],
+    "web/src/app/globals.css": [],
+    "web/src/app/layout.tsx": [
+      "web/src/app/globals.css"
+    ],
+    "web/src/app/page.tsx": [],
+    "web/src/app/workspace/[id]/page.tsx": [
+      "web/src/components/ArchitectureGraph.tsx",
+      "web/src/components/PipelineTimeline.tsx",
+      "web/src/lib/use-build-events.ts",
+      "web/src/lib/use-build-report.ts",
+      "web/src/lib/use-plan-inspect.ts"
+    ],
+    "web/src/components/ArchitectureGraph.tsx": [],
+    "web/src/components/PipelineTimeline.tsx": [],
+    "web/src/lib/config.ts": [],
+    "web/src/lib/engine-url.ts": [],
+    "web/src/lib/engine.ts": [
+      "web/src/lib/config.ts"
+    ],
+    "web/src/lib/use-build-events.ts": [],
+    "web/src/lib/use-build-replay.ts": [],
+    "web/src/lib/use-build-report.ts": [
+      "web/src/lib/engine-url.ts"
+    ],
+    "web/src/lib/use-file-stream.ts": [
+      "web/src/lib/engine-url.ts"
+    ],
+    "web/src/lib/use-plan-inspect.ts": [],
+    "web/tsconfig.json": [],
+    "web/vercel.json": []
+  }
+}

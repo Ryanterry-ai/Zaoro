@@ -348,6 +348,61 @@ const DOMAIN_DATA: Record<string, DomainMockData> = {
     footer: { tagline: 'Quality products, exceptional service.', links: [{ label: 'Shop', href: '/shop' }, { label: 'About', href: '/about' }, { label: 'FAQ', href: '/faq' }, { label: 'Contact', href: '/contact' }] },
     imageKeywords: ['product photography', 'online store', 'shopping', 'ecommerce'],
   },
+  'ecommerce-supplement': {
+    hero: {
+      badge: 'Trusted by 50,000+ Athletes',
+      headline: 'Fuel Your Performance',
+      subtitle: 'Premium sports nutrition and health supplements trusted by fitness professionals across India. FSSAI certified, lab-tested, genuine products.',
+      cta: 'Shop Supplements',
+      ctaSecondary: 'View Lab Reports',
+    },
+    stats: [
+      { value: '500+', label: 'Products' },
+      { value: '50K+', label: 'Happy Customers' },
+      { value: '4.9★', label: 'Average Rating' },
+      { value: 'FSSAI', label: 'Certified' },
+    ],
+    items: [
+      { name: 'MuscleBlaze Biozyme Performance Whey', description: 'India\'s highest-rated whey protein with 25g protein per serving. Lab-tested for purity. Chocolate Supreme flavor.', price: 2499, tag: 'Bestseller', rating: 4.8, reviews: 12450, emoji: '💪', details: ['25g Protein', '1kg', 'Lab Tested', 'FSSAI Certified'] },
+      { name: 'Optimum Nutrition Gold Standard Whey', description: 'The world\'s best-selling whey protein. 24g protein, low sugar, instantized for easy mixing.', price: 3299, tag: 'Premium', rating: 4.9, reviews: 8920, emoji: '🥇', details: ['24g Protein', '2kg', 'Global Brand', 'Informed Sport'] },
+      { name: 'HealthKart HK Vitals Multivitamin', description: 'Complete daily multivitamin with 23 essential nutrients. Supports immunity, energy, and overall health.', price: 599, tag: 'Value', rating: 4.6, reviews: 5670, emoji: '💊', details: ['60 Tablets', '30-Day Supply', 'Multivitamin', 'Immunity'] },
+      { name: 'BSN Nitro-Tech Whey Gold', description: 'Advanced whey protein isolate with creatine and BCAAs. For serious athletes seeking maximum muscle growth.', price: 2899, tag: 'Performance', rating: 4.7, reviews: 3450, emoji: '⚡', details: ['30g Protein', '1.8kg', 'Creatine Added', 'BCAAs'] },
+      { name: 'TrueBasics Omega 3 Fish Oil', description: 'Triple-strength fish oil with 600mg EPA+DHA. Supports heart, brain, and joint health.', price: 449, tag: 'Essential', rating: 4.5, reviews: 7890, emoji: '🐟', details: ['90 Softgels', '600mg EPA+DHA', 'Heart Health', 'Joint Support'] },
+      { name: 'BigMuscles Nutrition Crude Creatine', description: 'Pure creatine monohydrate for strength and endurance. Unflavored, mix with any beverage.', price: 399, tag: 'Strength', rating: 4.6, reviews: 4560, emoji: '🏋️', details: ['200g', 'Creatine Mono', 'Unflavored', '5g per serving'] },
+      { name: 'GNC Pro Performance Slimvance', description: 'Clinically studied weight management formula. Supports metabolism and calorie burning.', price: 1299, tag: 'Weight Loss', rating: 4.4, reviews: 2340, emoji: '🔥', details: ['60 Capsules', 'Metabolism', 'Clinically Studied', 'Fat Burn'] },
+      { name: 'Dymatize ISO100 Hydrolyzed', description: '100% hydrolyzed whey protein isolate. Zero sugar, zero fat, fast-absorbing for post-workout recovery.', price: 3599, tag: 'Isolate', rating: 4.9, reviews: 6780, emoji: '🔬', details: ['25g Protein', '1.4kg', 'Hydrolyzed', 'Zero Sugar'] },
+    ],
+    testimonials: [
+      { name: 'Rahul Sharma', role: 'Fitness Coach, Mumbai', text: 'I\'ve been recommending MuscleBlaze to my clients for 3 years. The quality is consistent and the lab reports give real confidence. Best supplement store in India.', rating: 5 },
+      { name: 'Priya Patel', role: 'Marathon Runner', text: 'The ON Gold Standard whey I ordered was genuine and fresh. Delivery was super fast — got it in 2 days. Now my go-to for all supplements.', rating: 5 },
+      { name: 'Amit Singh', role: 'Gym Owner, Delhi', text: 'Bulk orders for my gym members are always handled professionally. Great prices on BSN and Dymatize. Highly recommend for gym owners.', rating: 5 },
+      { name: 'Neha Gupta', role: 'Yoga Instructor', text: 'Love the range of organic and plant-based supplements. The HealthKart multivitamin has become part of my daily routine. Trusted products.', rating: 5 },
+    ],
+    features: [
+      { icon: '🔬', title: 'Lab Tested', description: 'Every product is third-party lab tested for purity and potency. Reports available on request.', iconKeyword: 'microscope' },
+      { icon: '🚚', title: 'Free Delivery', description: 'Free shipping on orders above ₹999. Express delivery in metro cities.', iconKeyword: 'truck' },
+      { icon: '↩️', title: 'Easy Returns', description: '7-day return policy on unopened products. No questions asked.', iconKeyword: 'rotate-ccw' },
+      { icon: '🔒', title: '100% Genuine', description: 'Direct imports from authorized distributors. No grey market products.', iconKeyword: 'shield' },
+      { icon: '💬', title: 'Expert Guidance', description: 'Chat with certified nutritionists. Get personalized supplement stacks.', iconKeyword: 'message-circle' },
+      { icon: '📱', title: 'Track Orders', description: 'Real-time GPS tracking from warehouse to your doorstep.', iconKeyword: 'map-pin' },
+    ],
+    services: [
+      { name: 'Protein Supplements', description: 'Whey, casein, plant-based, and blended proteins for every goal.', icon: '💪' },
+      { name: 'Pre-Workouts', description: 'Energy and focus formulas for intense training sessions.', icon: '⚡' },
+      { name: 'Vitamins & Minerals', description: 'Essential micronutrients for overall health and immunity.', icon: '💊' },
+      { name: 'Weight Management', description: 'Fat burners, meal replacements, and appetite controllers.', icon: '🔥' },
+      { name: 'Joint & Recovery', description: 'Glucosamine, BCAAs, and recovery formulas for active lifestyles.', icon: '🦴' },
+      { name: 'Sports Nutrition', description: 'Creatine, amino acids, and performance enhancers for athletes.', icon: '🏆' },
+    ],
+    team: [
+      { name: 'Vikram Mehta', role: 'Founder & CEO', bio: 'Former national-level bodybuilder. Started NutriMart to make genuine supplements accessible to every Indian fitness enthusiast.', emoji: '👤' },
+      { name: 'Dr. Ananya Roy', role: 'Head of Quality', bio: 'PhD in Nutrition Science. Ensures every product meets FSSAI standards and passes rigorous lab testing.', emoji: '🔬' },
+      { name: 'Rajesh Kumar', role: 'Supply Chain Lead', bio: '15 years in pharma logistics. Manages direct partnerships with 50+ global supplement brands.', emoji: '📦' },
+    ],
+    cta: { headline: 'Start Your Fitness Journey', subtitle: 'Join 50,000+ athletes who trust NutriMart for genuine, lab-tested supplements.', button: 'Shop Now' },
+    footer: { tagline: 'Genuine supplements, trusted by athletes.', links: [{ label: 'Shop', href: '/shop' }, { label: 'Lab Reports', href: '/lab-reports' }, { label: 'Nutrition Guide', href: '/guides' }, { label: 'Contact', href: '/contact' }] },
+    imageKeywords: ['whey protein', 'supplement stack', 'fitness nutrition', 'gym supplements', 'health products'],
+  },
   'education': {
     hero: {
       badge: 'Enroll Now',
@@ -778,6 +833,208 @@ const DOMAIN_DATA: Record<string, DomainMockData> = {
     footer: { tagline: 'Timeless craftsmanship since 1887.', links: [{ label: 'Collections', href: '/collections' }, { label: 'Heritage', href: '/heritage' }, { label: 'Atelier', href: '/atelier' }, { label: 'Contact', href: '/contact' }] },
     imageKeywords: ['luxury watch', 'swiss movement', 'watch dial', 'premium timepiece', 'artisan workshop'],
   },
+  'perfume': {
+    hero: {
+      badge: 'Artisan Parfum',
+      headline: 'Fragrance Beyond Imagination',
+      subtitle: 'Scroll to unveil. Each layer reveals a new dimension of scent — from the first whisper of top notes to the deep embrace of base.',
+      cta: 'Begin the Journey',
+      ctaSecondary: 'Explore Collection',
+    },
+    stats: [
+      { value: '120+', label: 'Unique Fragrances' },
+      { value: '50K+', label: 'Happy Clients' },
+      { value: '4.9★', label: 'Average Rating' },
+      { value: '15+', label: 'Years of Craft' },
+    ],
+    items: [
+      { name: 'Noir Absolu', description: 'Deep oud and smoky vetiver layered over a heart of midnight jasmine. A fragrance that lingers in memory.', price: 285, tag: 'Signature', rating: 4.9, reviews: 342, emoji: '🖤', details: ['50ml Eau de Parfum', 'Oud · Jasmine · Vetiver', 'Night Collection', 'Hand-blended'] },
+      { name: 'Lumière Dorée', description: 'Sun-kissed bergamot and golden amber with a whisper of vanilla absolute. Radiance in every drop.', price: 245, tag: 'Bestseller', rating: 4.8, reviews: 567, emoji: '✨', details: ['50ml Eau de Parfum', 'Bergamot · Amber · Vanilla', 'Day Collection', 'French crafted'] },
+      { name: 'Éther Végétal', description: 'Wild fern and crushed green tea with earthy patchouli. Nature distilled into pure essence.', price: 265, tag: 'Limited', rating: 4.7, reviews: 189, emoji: '🌿', details: ['50ml Eau de Parfum', 'Fern · Green Tea · Patchouli', 'Botanical Collection', 'Organic'] },
+      { name: 'Velvet Rose', description: 'Damascena rose petals velvet-wrapped in warm sandalwood and a trace of pink pepper.', price: 275, tag: 'New', rating: 4.9, reviews: 98, emoji: '🌹', details: ['50ml Eau de Parfum', 'Rose · Sandalwood · Pink Pepper', 'Floral Collection', 'Artisan'] },
+      { name: 'Cuir Sauvage', description: 'Raw leather and smoky birch tempered by cardamom and dark amber. Untamed elegance.', price: 295, tag: 'Exclusive', rating: 4.8, reviews: 156, emoji: '🪶', details: ['50ml Eau de Parfum', 'Leather · Birch · Cardamom', 'Leather Collection', 'Niche'] },
+      { name: 'Mousse Marine', description: 'Oceanic driftwood and sea salt kissed by white musk. The scent of an infinite horizon.', price: 235, tag: 'Fresh', rating: 4.7, reviews: 234, emoji: '🌊', details: ['50ml Eau de Parfum', 'Driftwood · Sea Salt · Musk', 'Aquatic Collection', 'Summer'] },
+    ],
+    testimonials: [
+      { name: 'Isabelle Laurent', role: 'Fragrance Connoisseur', text: 'Noir Absolu is the most captivating scent I have ever worn. People stop me to ask what I am wearing — every single day.', rating: 5 },
+      { name: 'Marcus Chen', role: 'Collector', text: 'I own over 200 fragrances. Lumière Dorée is the one I reach for when I want to feel truly radiant. Exceptional quality.', rating: 5 },
+      { name: 'Amara Osei', role: 'Loyal Client', text: 'The discovery set changed everything. I found my signature scent in Éther Végétal — it feels like it was made for me.', rating: 5 },
+    ],
+    features: [
+      { icon: '🌿', title: 'Natural Ingredients', description: 'Sourced from Grasse, Kyoto, and the Arabian Peninsula. Never synthetic.', iconKeyword: 'refresh' },
+      { icon: '🎨', title: 'Bespoke Blending', description: 'Work with our master perfumer to create your one-of-a-kind signature scent.', iconKeyword: 'design' },
+      { icon: '📦', title: 'Discovery Sets', description: 'Sample six fragrances before committing. Free worldwide shipping.', iconKeyword: 'delivery' },
+      { icon: '🌍', title: 'Sustainable Craft', description: 'Refillable bottles, ethically sourced, carbon-neutral delivery.', iconKeyword: 'globe' },
+      { icon: '🎁', title: 'Luxury Gifting', description: 'Hand-wrapped in our signature gold-embossed packaging.', iconKeyword: 'award' },
+      { icon: '🔬', title: 'Scent Profiling', description: 'AI-assisted matching to find the fragrance that resonates with your chemistry.', iconKeyword: 'ai' },
+    ],
+    services: [
+      { name: 'Bespoke Creation', description: 'Private consultation to craft your personal signature fragrance.', icon: '🎨' },
+      { name: 'Discovery Sets', description: 'Curated samples of our finest creations, delivered to your door.', icon: '📦' },
+      { name: 'Refill Service', description: 'Return your bottle and refill at a fraction of the original price.', icon: '♻️' },
+      { name: 'Gift Wrapping', description: 'Luxury packaging with handwritten notes for every occasion.', icon: '🎁' },
+    ],
+    team: [
+      { name: 'Éloise Marchand', role: 'Master Perfumer', bio: 'Third-generation parfumeur from Grasse. 20 years blending for the world\'s most discerning noses.', emoji: '👩‍🔬' },
+      { name: 'Kenji Takahashi', role: 'Creative Director', bio: 'Former luxury brand director. Shapes the visual and sensory identity of every collection.', emoji: '🎨' },
+      { name: 'Aisha Khalil', role: 'Head of Sourcing', bio: 'Travels the globe to find the rarest ingredients — from Omani oud to Bulgarian rose.', emoji: '🌍' },
+    ],
+    cta: { headline: 'Find Your Signature Scent', subtitle: 'Book a private consultation or explore our discovery sets today.', button: 'Begin Your Journey' },
+    footer: { tagline: 'Crafted with intention. Worn with confidence.', links: [{ label: 'Collections', href: '/collections' }, { label: 'Our Craft', href: '/craftsmanship' }, { label: 'Bespoke', href: '/bespoke' }, { label: 'Contact', href: '/contact' }] },
+    imageKeywords: ['perfume bottle', 'fragrance luxury', 'dark glass gold', 'artisan parfum', 'scent bottle elegant'],
+  },
+  'fragrance': {
+    hero: {
+      badge: 'Artisan Parfum',
+      headline: 'Fragrance Beyond Imagination',
+      subtitle: 'Scroll to unveil. Each layer reveals a new dimension of scent — from the first whisper of top notes to the deep embrace of base.',
+      cta: 'Begin the Journey',
+      ctaSecondary: 'Explore Collection',
+    },
+    stats: [
+      { value: '120+', label: 'Unique Fragrances' },
+      { value: '50K+', label: 'Happy Clients' },
+      { value: '4.9★', label: 'Average Rating' },
+      { value: '15+', label: 'Years of Craft' },
+    ],
+    items: [
+      { name: 'Noir Absolu', description: 'Deep oud and smoky vetiver layered over a heart of midnight jasmine. A fragrance that lingers in memory.', price: 285, tag: 'Signature', rating: 4.9, reviews: 342, emoji: '🖤', details: ['50ml Eau de Parfum', 'Oud · Jasmine · Vetiver', 'Night Collection', 'Hand-blended'] },
+      { name: 'Lumière Dorée', description: 'Sun-kissed bergamot and golden amber with a whisper of vanilla absolute. Radiance in every drop.', price: 245, tag: 'Bestseller', rating: 4.8, reviews: 567, emoji: '✨', details: ['50ml Eau de Parfum', 'Bergamot · Amber · Vanilla', 'Day Collection', 'French crafted'] },
+      { name: 'Éther Végétal', description: 'Wild fern and crushed green tea with earthy patchouli. Nature distilled into pure essence.', price: 265, tag: 'Limited', rating: 4.7, reviews: 189, emoji: '🌿', details: ['50ml Eau de Parfum', 'Fern · Green Tea · Patchouli', 'Botanical Collection', 'Organic'] },
+      { name: 'Velvet Rose', description: 'Damascena rose petals velvet-wrapped in warm sandalwood and a trace of pink pepper.', price: 275, tag: 'New', rating: 4.9, reviews: 98, emoji: '🌹', details: ['50ml Eau de Parfum', 'Rose · Sandalwood · Pink Pepper', 'Floral Collection', 'Artisan'] },
+      { name: 'Cuir Sauvage', description: 'Raw leather and smoky birch tempered by cardamom and dark amber. Untamed elegance.', price: 295, tag: 'Exclusive', rating: 4.8, reviews: 156, emoji: '🪶', details: ['50ml Eau de Parfum', 'Leather · Birch · Cardamom', 'Leather Collection', 'Niche'] },
+      { name: 'Mousse Marine', description: 'Oceanic driftwood and sea salt kissed by white musk. The scent of an infinite horizon.', price: 235, tag: 'Fresh', rating: 4.7, reviews: 234, emoji: '🌊', details: ['50ml Eau de Parfum', 'Driftwood · Sea Salt · Musk', 'Aquatic Collection', 'Summer'] },
+    ],
+    testimonials: [
+      { name: 'Isabelle Laurent', role: 'Fragrance Connoisseur', text: 'Noir Absolu is the most captivating scent I have ever worn. People stop me to ask what I am wearing — every single day.', rating: 5 },
+      { name: 'Marcus Chen', role: 'Collector', text: 'I own over 200 fragrances. Lumière Dorée is the one I reach for when I want to feel truly radiant. Exceptional quality.', rating: 5 },
+      { name: 'Amara Osei', role: 'Loyal Client', text: 'The discovery set changed everything. I found my signature scent in Éther Végétal — it feels like it was made for me.', rating: 5 },
+    ],
+    features: [
+      { icon: '🌿', title: 'Natural Ingredients', description: 'Sourced from Grasse, Kyoto, and the Arabian Peninsula. Never synthetic.', iconKeyword: 'refresh' },
+      { icon: '🎨', title: 'Bespoke Blending', description: 'Work with our master perfumer to create your one-of-a-kind signature scent.', iconKeyword: 'design' },
+      { icon: '📦', title: 'Discovery Sets', description: 'Sample six fragrances before committing. Free worldwide shipping.', iconKeyword: 'delivery' },
+      { icon: '🌍', title: 'Sustainable Craft', description: 'Refillable bottles, ethically sourced, carbon-neutral delivery.', iconKeyword: 'globe' },
+      { icon: '🎁', title: 'Luxury Gifting', description: 'Hand-wrapped in our signature gold-embossed packaging.', iconKeyword: 'award' },
+      { icon: '🔬', title: 'Scent Profiling', description: 'AI-assisted matching to find the fragrance that resonates with your chemistry.', iconKeyword: 'ai' },
+    ],
+    services: [
+      { name: 'Bespoke Creation', description: 'Private consultation to craft your personal signature fragrance.', icon: '🎨' },
+      { name: 'Discovery Sets', description: 'Curated samples of our finest creations, delivered to your door.', icon: '📦' },
+      { name: 'Refill Service', description: 'Return your bottle and refill at a fraction of the original price.', icon: '♻️' },
+      { name: 'Gift Wrapping', description: 'Luxury packaging with handwritten notes for every occasion.', icon: '🎁' },
+    ],
+    team: [
+      { name: 'Éloise Marchand', role: 'Master Perfumer', bio: 'Third-generation parfumeur from Grasse. 20 years blending for the world\'s most discerning noses.', emoji: '👩‍🔬' },
+      { name: 'Kenji Takahashi', role: 'Creative Director', bio: 'Former luxury brand director. Shapes the visual and sensory identity of every collection.', emoji: '🎨' },
+      { name: 'Aisha Khalil', role: 'Head of Sourcing', bio: 'Travels the globe to find the rarest ingredients — from Omani oud to Bulgarian rose.', emoji: '🌍' },
+    ],
+    cta: { headline: 'Find Your Signature Scent', subtitle: 'Book a private consultation or explore our discovery sets today.', button: 'Begin Your Journey' },
+    footer: { tagline: 'Crafted with intention. Worn with confidence.', links: [{ label: 'Collections', href: '/collections' }, { label: 'Our Craft', href: '/craftsmanship' }, { label: 'Bespoke', href: '/bespoke' }, { label: 'Contact', href: '/contact' }] },
+    imageKeywords: ['perfume bottle', 'fragrance luxury', 'dark glass gold', 'artisan parfum', 'scent bottle elegant'],
+  },
+  'footwear': {
+    hero: {
+      badge: 'New Drop',
+      headline: 'Engineered for Movement',
+      subtitle: 'Bold footwear that refuses to compromise. Premium materials, innovative design, and a shopping experience that moves as fast as you do.',
+      cta: 'Shop the Collection',
+      ctaSecondary: 'Explore Our Story',
+    },
+    stats: [
+      { value: '50+', label: 'Unique Styles' },
+      { value: '25K+', label: 'Happy Customers' },
+      { value: '4.9★', label: 'Average Rating' },
+      { value: 'Free', label: 'Shipping 100+' },
+    ],
+    items: [
+      { name: 'Stride Phantom', description: 'Ultra-lightweight performance runner with adaptive cushioning and breathable mesh upper. Built for speed.', price: 189, tag: 'Bestseller', rating: 4.9, reviews: 1234, emoji: '👟', details: ['Adaptive Cushion', 'Breathable Mesh', 'Carbon Plate', '8.2 oz'] },
+      { name: 'Apex Heritage', description: 'Retro-inspired low-top with premium suede overlays and vulcanized rubber sole. Timeless meets modern.', price: 149, tag: 'Classic', rating: 4.8, reviews: 892, emoji: '👞', details: ['Premium Suede', 'Vulcanized Sole', 'Ortholite Insole', 'Retro Design'] },
+      { name: 'Velocity Trainer', description: 'Cross-training shoe with reinforced heel and flexible forefoot. From gym to street without missing a beat.', price: 169, tag: 'Versatile', rating: 4.7, reviews: 567, emoji: '🏋️', details: ['Reinforced Heel', 'Flexible Forefoot', 'Grip Outsole', 'Training Ready'] },
+      { name: 'Urban Drift', description: 'Minimalist everyday sneaker with full-grain leather and memory foam footbed. Effortless style, all-day comfort.', price: 159, tag: 'Everyday', rating: 4.9, reviews: 1456, emoji: '🖤', details: ['Full-Grain Leather', 'Memory Foam', 'Minimalist', 'All-Day Comfort'] },
+      { name: 'Trail Dominator', description: 'Waterproof hiking boot with Vibram outsole and Gore-Tex lining. Conquer any terrain in any weather.', price: 219, tag: 'Outdoor', rating: 4.8, reviews: 345, emoji: '🥾', details: ['Waterproof', 'Vibram Outsole', 'Gore-Tex', 'Ankle Support'] },
+      { name: 'Cloud Walker', description: 'Max-cushion lifestyle shoe with nitrogen-infused midsole. Walking on clouds, literally.', price: 139, tag: 'Comfort', rating: 4.9, reviews: 2100, emoji: '☁️', details: ['Nitrogen Cushion', 'Ultra Light', 'Slip-On', 'Recovery Shoe'] },
+    ],
+    testimonials: [
+      { name: 'Jordan Mitchell', role: 'Marathon Runner', text: 'The Stride Phantom shaved 3 minutes off my half-marathon time. The carbon plate technology is legit. Best running shoe I have ever owned.', rating: 5 },
+      { name: 'Aisha Thompson', role: 'Sneakerhead', text: 'The Apex Heritage is the cleanest sneaker I have seen this year. The suede quality is insane and they get better with age.', rating: 5 },
+      { name: 'Marcus Lee', role: 'Gym Owner', text: 'I recommend the Velocity Trainer to all my members. They handle everything from deadlifts to box jumps. Incredibly durable.', rating: 5 },
+      { name: 'Sophie Chen', role: 'Daily Wearer', text: 'The Urban Drift is my go-to every single day. So comfortable I forget I am wearing shoes. Bought three pairs already.', rating: 5 },
+    ],
+    features: [
+      { icon: '🔬', title: 'Innovation Lab', description: 'Every shoe engineered with biomechanical data and athlete feedback for peak performance.', iconKeyword: 'science' },
+      { icon: '♻️', title: 'Sustainable Materials', description: 'Recycled uppers, plant-based foams, and water-based adhesives. Performance meets responsibility.', iconKeyword: 'refresh' },
+      { icon: '⚡', title: 'Free Express Shipping', description: 'Free 2-day shipping on orders over $100. Get moving faster.', iconKeyword: 'truck' },
+      { icon: '🔄', title: '30-Day Returns', description: 'Try them risk-free. Not satisfied? Free returns, no questions asked.', iconKeyword: 'rotate-ccw' },
+      { icon: '🎯', title: 'Perfect Fit Guarantee', description: 'AI-powered size recommendations based on your foot measurements.', iconKeyword: 'target' },
+      { icon: '🛡️', title: '2-Year Warranty', description: 'Every pair backed by our quality guarantee. Defects replaced free.', iconKeyword: 'shield' },
+    ],
+    services: [
+      { name: 'Running Collection', description: 'Performance runners engineered for speed and endurance.', icon: '🏃' },
+      { name: 'Lifestyle Collection', description: 'Everyday sneakers that blend comfort with street-ready style.', icon: '👟' },
+      { name: 'Training Collection', description: 'Cross-training shoes built for any workout, any surface.', icon: '🏋️' },
+      { name: 'Outdoor Collection', description: 'Hiking boots and trail shoes for the adventurous spirit.', icon: '🥾' },
+    ],
+    team: [
+      { name: 'Alex Rivera', role: 'Founder & Head of Design', bio: 'Former Nike designer. Left to build a brand that puts athletes first, not shareholders.', emoji: '👤' },
+      { name: 'Dr. Sarah Kim', role: 'Head of Biomechanics', bio: 'PhD in Sports Science. Designs cushioning systems that reduce injury by 40%.', emoji: '🔬' },
+      { name: 'Marcus Thompson', role: 'Sustainability Director', bio: 'Leading the charge to make performance footwear 100% sustainable by 2027.', emoji: '🌍' },
+    ],
+    cta: { headline: 'Your Next Move Starts Here', subtitle: 'Shop the collection and feel the difference from the first step.', button: 'Shop Now' },
+    footer: { tagline: 'Engineered for those who move.', links: [{ label: 'Shop', href: '/shop' }, { label: 'Our Story', href: '/story' }, { label: 'Sustainability', href: '/sustainability' }, { label: 'Contact', href: '/contact' }] },
+    imageKeywords: ['running shoes', 'sneaker collection', 'athletic footwear', 'premium sneakers', 'shoe design'],
+  },
+  'ecommerce-footwear': {
+    hero: {
+      badge: 'New Drop',
+      headline: 'Engineered for Movement',
+      subtitle: 'Bold footwear that refuses to compromise. Premium materials, innovative design, and a shopping experience that moves as fast as you do.',
+      cta: 'Shop the Collection',
+      ctaSecondary: 'Explore Our Story',
+    },
+    stats: [
+      { value: '50+', label: 'Unique Styles' },
+      { value: '25K+', label: 'Happy Customers' },
+      { value: '4.9★', label: 'Average Rating' },
+      { value: 'Free', label: 'Shipping 100+' },
+    ],
+    items: [
+      { name: 'Stride Phantom', description: 'Ultra-lightweight performance runner with adaptive cushioning and breathable mesh upper. Built for speed.', price: 189, tag: 'Bestseller', rating: 4.9, reviews: 1234, emoji: '👟', details: ['Adaptive Cushion', 'Breathable Mesh', 'Carbon Plate', '8.2 oz'] },
+      { name: 'Apex Heritage', description: 'Retro-inspired low-top with premium suede overlays and vulcanized rubber sole. Timeless meets modern.', price: 149, tag: 'Classic', rating: 4.8, reviews: 892, emoji: '👞', details: ['Premium Suede', 'Vulcanized Sole', 'Ortholite Insole', 'Retro Design'] },
+      { name: 'Velocity Trainer', description: 'Cross-training shoe with reinforced heel and flexible forefoot. From gym to street without missing a beat.', price: 169, tag: 'Versatile', rating: 4.7, reviews: 567, emoji: '🏋️', details: ['Reinforced Heel', 'Flexible Forefoot', 'Grip Outsole', 'Training Ready'] },
+      { name: 'Urban Drift', description: 'Minimalist everyday sneaker with full-grain leather and memory foam footbed. Effortless style, all-day comfort.', price: 159, tag: 'Everyday', rating: 4.9, reviews: 1456, emoji: '🖤', details: ['Full-Grain Leather', 'Memory Foam', 'Minimalist', 'All-Day Comfort'] },
+      { name: 'Trail Dominator', description: 'Waterproof hiking boot with Vibram outsole and Gore-Tex lining. Conquer any terrain in any weather.', price: 219, tag: 'Outdoor', rating: 4.8, reviews: 345, emoji: '🥾', details: ['Waterproof', 'Vibram Outsole', 'Gore-Tex', 'Ankle Support'] },
+      { name: 'Cloud Walker', description: 'Max-cushion lifestyle shoe with nitrogen-infused midsole. Walking on clouds, literally.', price: 139, tag: 'Comfort', rating: 4.9, reviews: 2100, emoji: '☁️', details: ['Nitrogen Cushion', 'Ultra Light', 'Slip-On', 'Recovery Shoe'] },
+    ],
+    testimonials: [
+      { name: 'Jordan Mitchell', role: 'Marathon Runner', text: 'The Stride Phantom shaved 3 minutes off my half-marathon time. The carbon plate technology is legit. Best running shoe I have ever owned.', rating: 5 },
+      { name: 'Aisha Thompson', role: 'Sneakerhead', text: 'The Apex Heritage is the cleanest sneaker I have seen this year. The suede quality is insane and they get better with age.', rating: 5 },
+      { name: 'Marcus Lee', role: 'Gym Owner', text: 'I recommend the Velocity Trainer to all my members. They handle everything from deadlifts to box jumps. Incredibly durable.', rating: 5 },
+      { name: 'Sophie Chen', role: 'Daily Wearer', text: 'The Urban Drift is my go-to every single day. So comfortable I forget I am wearing shoes. Bought three pairs already.', rating: 5 },
+    ],
+    features: [
+      { icon: '🔬', title: 'Innovation Lab', description: 'Every shoe engineered with biomechanical data and athlete feedback for peak performance.', iconKeyword: 'science' },
+      { icon: '♻️', title: 'Sustainable Materials', description: 'Recycled uppers, plant-based foams, and water-based adhesives. Performance meets responsibility.', iconKeyword: 'refresh' },
+      { icon: '⚡', title: 'Free Express Shipping', description: 'Free 2-day shipping on orders over $100. Get moving faster.', iconKeyword: 'truck' },
+      { icon: '🔄', title: '30-Day Returns', description: 'Try them risk-free. Not satisfied? Free returns, no questions asked.', iconKeyword: 'rotate-ccw' },
+      { icon: '🎯', title: 'Perfect Fit Guarantee', description: 'AI-powered size recommendations based on your foot measurements.', iconKeyword: 'target' },
+      { icon: '🛡️', title: '2-Year Warranty', description: 'Every pair backed by our quality guarantee. Defects replaced free.', iconKeyword: 'shield' },
+    ],
+    services: [
+      { name: 'Running Collection', description: 'Performance runners engineered for speed and endurance.', icon: '🏃' },
+      { name: 'Lifestyle Collection', description: 'Everyday sneakers that blend comfort with street-ready style.', icon: '👟' },
+      { name: 'Training Collection', description: 'Cross-training shoes built for any workout, any surface.', icon: '🏋️' },
+      { name: 'Outdoor Collection', description: 'Hiking boots and trail shoes for the adventurous spirit.', icon: '🥾' },
+    ],
+    team: [
+      { name: 'Alex Rivera', role: 'Founder & Head of Design', bio: 'Former Nike designer. Left to build a brand that puts athletes first, not shareholders.', emoji: '👤' },
+      { name: 'Dr. Sarah Kim', role: 'Head of Biomechanics', bio: 'PhD in Sports Science. Designs cushioning systems that reduce injury by 40%.', emoji: '🔬' },
+      { name: 'Marcus Thompson', role: 'Sustainability Director', bio: 'Leading the charge to make performance footwear 100% sustainable by 2027.', emoji: '🌍' },
+    ],
+    cta: { headline: 'Your Next Move Starts Here', subtitle: 'Shop the collection and feel the difference from the first step.', button: 'Shop Now' },
+    footer: { tagline: 'Engineered for those who move.', links: [{ label: 'Shop', href: '/shop' }, { label: 'Our Story', href: '/story' }, { label: 'Sustainability', href: '/sustainability' }, { label: 'Contact', href: '/contact' }] },
+    imageKeywords: ['running shoes', 'sneaker collection', 'athletic footwear', 'premium sneakers', 'shoe design'],
+  },
 };
 
 const GENERAL_DATA: DomainMockData = {
@@ -797,11 +1054,9 @@ const GENERAL_DATA: DomainMockData = {
   items: [
     { name: 'Essential Plan', description: 'Everything you need to get started at a great price.', price: 49, tag: 'Popular', rating: 4.7, reviews: 234, emoji: '📦' },
     { name: 'Professional Plan', description: 'Advanced features for power users and growing teams.', price: 99, tag: 'Best Value', rating: 4.8, reviews: 189, emoji: '⚡' },
-    { name: 'Enterprise Plan', description: 'Custom solutions for large organizations.', price: 249, tag: 'Premium', rating: 4.9, reviews: 98, emoji: '🏢' },
-    { name: 'Starter Plan', description: 'Perfect for individuals and small projects.', price: 29, rating: 4.6, reviews: 567, emoji: '🚀' },
   ],
   testimonials: [
-    { name: 'Alex Johnson', role: 'CEO', text: 'Outstanding service. They delivered exactly what we needed on time and within budget.', rating: 5 },
+    { name: 'Alex Rivera', role: 'Startup Founder', text: 'This platform transformed how we work. Incredible results from day one.', rating: 5 },
     { name: 'Maria Garcia', role: 'Director', text: 'Professional, responsive, and incredibly skilled. Highly recommend to any business.', rating: 5 },
     { name: 'Chris Williams', role: 'Manager', text: 'The best investment we made this year. ROI was evident within the first month.', rating: 5 },
   ],
@@ -830,11 +1085,27 @@ const GENERAL_DATA: DomainMockData = {
 };
 
 export function getDomainData(industry: string, subIndustry?: string): DomainMockData {
+  // Check sub-industry specific data first (e.g., "ecommerce-supplement")
+  if (subIndustry) {
+    const subKey = `${industry}-${subIndustry}`;
+    const subData = DOMAIN_DATA[subKey];
+    if (subData) return subData;
+
+    // Also check normalized versions
+    const normalisedSub = subKey.toLowerCase().replace(/-/g, '');
+    for (const [key, val] of Object.entries(DOMAIN_DATA)) {
+      const normKey = key.replace(/-/g, '');
+      if (normalisedSub.includes(normKey) || normKey.includes(normalisedSub)) return val;
+    }
+  }
+
   const data = DOMAIN_DATA[industry];
   if (data) return data;
 
+  const normalised = industry.toLowerCase().replace(/-/g, '');
   for (const [key, val] of Object.entries(DOMAIN_DATA)) {
-    if (industry.includes(key) || key.includes(industry)) return val;
+    const normKey = key.replace(/-/g, '');
+    if (normalised.includes(normKey) || normKey.includes(normalised)) return val;
   }
 
   return GENERAL_DATA;

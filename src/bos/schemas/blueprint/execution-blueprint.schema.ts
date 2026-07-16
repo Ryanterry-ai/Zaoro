@@ -43,7 +43,7 @@ export const ExecutionBlueprintSchema = z.object({
   industry: z.string(),
   themeId: z.string(),
   pages: z.array(PageExecutionPlanSchema).default([]),
-  metadata: z.record(z.string()).default({}),
+  metadata: z.record(z.string(), z.string()).default({}),
 });
 export type ExecutionBlueprint = z.infer<typeof ExecutionBlueprintSchema>;
 
@@ -76,7 +76,7 @@ export const ItemSpecSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   icon: z.string().optional(),
-  metadata: z.record(z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 }).passthrough();
 export type ItemSpec = z.infer<typeof ItemSpecSchema> & Record<string, unknown>;
 
@@ -137,7 +137,7 @@ export type FormFieldSpec = z.infer<typeof FormFieldSpecSchema>;
  */
 export const ComponentSpecSchema = z.object({
   type: z.string(),
-  content: z.record(ContentValueSchema).optional(),
+  content: z.record(z.string(), ContentValueSchema).optional(),
   items: z.array(ItemSpecSchema).optional(),
   tiers: z.array(TierSpecSchema).optional(),
   stats: z.array(StatSpecSchema).optional(),
@@ -159,7 +159,7 @@ export const ComponentSpecSchema = z.object({
     maxWidth: z.string().optional(),
     padding: z.string().optional(),
   }).optional(),
-  metadata: z.record(z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 });
 export type ComponentSpec = z.infer<typeof ComponentSpecSchema>;
 
@@ -193,6 +193,6 @@ export const ApplicationSpecSchema = z.object({
   industry: z.string(),
   themeId: z.string(),
   pages: z.array(PageSpecSchema).default([]),
-  metadata: z.record(z.string()).default({}),
+  metadata: z.record(z.string(), z.string()).default({}),
 });
 export type ApplicationSpec = z.infer<typeof ApplicationSpecSchema>;

@@ -1,0 +1,7 @@
+{
+  "skill": "Design Intelligence",
+  "test": "CSS var --primary",
+  "diPrimary": "#2563EB",
+  "hasCssVar": true,
+  "verdict": "PASS"
+}

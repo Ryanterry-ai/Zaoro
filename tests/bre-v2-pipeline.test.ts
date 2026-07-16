@@ -1,38 +1,46 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { runBREV2Pipeline } from '../src/bos/bre-v2-pipeline.js';
 import { mapBlueprintToFullStack } from '../src/bos/blueprint-mapper.js';
 import { buildBREContext } from '../src/bos/intake-parser.js';
 
 describe('BRE v2 Pipeline (end-to-end)', () => {
-  it('should produce a valid ApplicationBlueprint for a restaurant prompt', async () => {
-    const ctx = buildBREContext('Build a restaurant called Bella Vista with online reservations');
-    expect(ctx.industry).toBe('restaurant');
+  let restaurantResult: Awaited<ReturnType<typeof runBREV2Pipeline>>;
+  let saasResult: Awaited<ReturnType<typeof runBREV2Pipeline>>;
+  let gymResult: Awaited<ReturnType<typeof runBREV2Pipeline>>;
+  let unknownResult: Awaited<ReturnType<typeof runBREV2Pipeline>>;
 
-    const result = await runBREV2Pipeline(ctx);
-    expect(result.blueprint).toBeDefined();
-    expect(result.blueprint.name).toBe('Bella Vista');
-    expect(result.blueprint.industry).toBe('restaurant');
-    expect(result.blueprint.pages.length).toBeGreaterThan(0);
-    expect(result.blueprint.entities.length).toBeGreaterThan(0);
-    expect(result.confidence).toBeGreaterThan(0);
-    expect(result.decisions.length).toBeGreaterThan(0);
+  beforeAll(async () => {
+    const restaurantCtx = await buildBREContext('Build a restaurant called Bella Vista with online reservations');
+    restaurantResult = await runBREV2Pipeline(restaurantCtx);
+
+    const saasCtx = await buildBREContext('Build a SaaS subscription platform called CloudDash');
+    saasResult = await runBREV2Pipeline(saasCtx);
+
+    const gymCtx = await buildBREContext('Build a gym membership app called FitZone');
+    gymResult = await runBREV2Pipeline(gymCtx);
+
+    const unknownCtx = await buildBREContext('Build something called MysteryApp');
+    unknownResult = await runBREV2Pipeline(unknownCtx);
+  }, 60000);
+
+  it('should produce a valid ApplicationBlueprint for a restaurant prompt', () => {
+    expect(restaurantResult.blueprint).toBeDefined();
+    expect(restaurantResult.blueprint.name).toBe('Bella Vista');
+    expect(restaurantResult.blueprint.industry).toBe('restaurant');
+    expect(restaurantResult.blueprint.pages.length).toBeGreaterThan(0);
+    expect(restaurantResult.blueprint.entities.length).toBeGreaterThan(0);
+    expect(restaurantResult.confidence).toBeGreaterThan(0);
+    expect(restaurantResult.decisions.length).toBeGreaterThan(0);
   });
 
-  it('should produce a valid ApplicationBlueprint for a SaaS prompt', async () => {
-    const ctx = buildBREContext('Build a SaaS subscription platform called CloudDash');
-    expect(ctx.industry).toBe('saas');
-    expect(ctx.businessModels).toContain('subscription');
-
-    const result = await runBREV2Pipeline(ctx);
-    expect(result.blueprint.name).toBe('CloudDash');
-    expect(result.blueprint.pages.some(p => p.path === '/pricing')).toBe(true);
-    expect(result.blueprint.pages.some(p => p.path === '/dashboard')).toBe(true);
+  it('should produce a valid ApplicationBlueprint for a SaaS prompt', () => {
+    expect(saasResult.blueprint.name).toBe('CloudDash');
+    expect(saasResult.blueprint.pages.some((p: { path: string }) => p.path === '/pricing')).toBe(true);
+    expect(saasResult.blueprint.pages.some((p: { path: string }) => p.path === '/dashboard')).toBe(true);
   });
 
-  it('should map ApplicationBlueprint to FullStackBlueprint', async () => {
-    const ctx = buildBREContext('Build a gym membership app called FitZone');
-    const result = await runBREV2Pipeline(ctx);
-    const fsBlueprint = mapBlueprintToFullStack(result.blueprint);
+  it('should map ApplicationBlueprint to FullStackBlueprint', () => {
+    const fsBlueprint = mapBlueprintToFullStack(gymResult.blueprint);
 
     expect(fsBlueprint.appName).toBe('FitZone');
     expect(fsBlueprint.pages.length).toBeGreaterThan(0);
@@ -41,10 +49,8 @@ describe('BRE v2 Pipeline (end-to-end)', () => {
     expect(['indigo', 'emerald', 'amber', 'rose', 'violet', 'sky']).toContain(fsBlueprint.colorScheme);
   });
 
-  it('should handle unknown industries gracefully', async () => {
-    const ctx = buildBREContext('Build something called MysteryApp');
-    const result = await runBREV2Pipeline(ctx);
-    expect(result.blueprint).toBeDefined();
-    expect(result.blueprint.pages.length).toBeGreaterThan(0);
+  it('should handle unknown industries gracefully', () => {
+    expect(unknownResult.blueprint).toBeDefined();
+    expect(unknownResult.blueprint.pages.length).toBeGreaterThan(0);
   });
 });

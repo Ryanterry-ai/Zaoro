@@ -45,13 +45,17 @@ export class FlutterRenderer implements Renderer {
     const pageName = spec.path === '/' ? 'Home' : this.toPascalCase(spec.path);
 
     // Unique widget imports
-    const uniqueComponents = Array.from(new Map(spec.components.map(c => [c.type, c])).values());
+    const componentMap = new Map<string, { type: string }>();
+    for (const c of spec.components) {
+      componentMap.set(c.type, c);
+    }
+    const uniqueComponents = [...componentMap.values()];
     const widgetImports = uniqueComponents
       .map(c => `import '../widgets/${c.type}.dart';`)
       .join('\n');
 
     const widgetCreations = spec.components
-      .map(c => `          ${c.type}(),`)
+      .map((c: { type: string }) => `          ${c.type}(),`)
       .join('\n');
 
     const pageCode = `import 'package:flutter/material.dart';
@@ -132,8 +136,8 @@ ${widgetCreations}
 
     // Page routes for named navigation
     const pageRoutes = spec.pages
-      .filter(p => p.type !== 'auth')
-      .map(p => {
+      .filter((p: { type: string }) => p.type !== 'auth')
+      .map((p: { path: string }) => {
         const routeName = p.path === '/' ? '/' : p.path;
         const pageClass = (p.path === '/' ? 'Home' : this.toPascalCase(p.path)) + 'Page';
         return `    '${routeName}': (context) => const ${pageClass}(),`;
@@ -142,8 +146,8 @@ ${widgetCreations}
 
     // Nav items for drawer/bottom nav
     const navItems = spec.pages
-      .filter(p => p.type !== 'auth' && p.type !== 'detail')
-      .map(p => {
+      .filter((p: { type: string }) => p.type !== 'auth' && p.type !== 'detail')
+      .map((p: { path: string; name: string }) => {
         const pageName = p.path === '/' ? 'Home' : this.toPascalCase(p.path);
         return `    NavigationDestination(
       icon: Icon(Icons.${this.getNavIcon(p.path)}),
@@ -154,8 +158,8 @@ ${widgetCreations}
 
     // Page list for indexed navigation
     const navPages = spec.pages
-      .filter(p => p.type !== 'auth' && p.type !== 'detail')
-      .map(p => {
+      .filter((p: { type: string }) => p.type !== 'auth' && p.type !== 'detail')
+      .map((p: { path: string }) => {
         const pageClass = (p.path === '/' ? 'Home' : this.toPascalCase(p.path)) + 'Page';
         return `      const ${pageClass}`;
       })
@@ -163,7 +167,7 @@ ${widgetCreations}
 
     // Main app file
     const mainCode = `import 'package:flutter/material.dart';
-${spec.pages.map(p => {
+${spec.pages.map((p: { path: string }) => {
       const pageClass = (p.path === '/' ? 'Home' : this.toPascalCase(p.path)) + 'Page';
       return `import 'pages/${this.toSnakeCase(pageClass.replace('Page', ''))}_page.dart';`;
     }).join('\n')}

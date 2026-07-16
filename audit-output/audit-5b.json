@@ -1,0 +1,11 @@
+{
+  "skill": "Taste",
+  "test": "Generic AI pattern check",
+  "genericPatterns": [
+    "font-family: Inter",
+    "font-family: Roboto",
+    "font-family: Arial"
+  ],
+  "foundViolations": [],
+  "verdict": "PASS"
+}

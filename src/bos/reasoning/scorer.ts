@@ -73,18 +73,20 @@ export class Scorer {
       const breakdown: Record<string, number> = {};
       let total = 0;
 
-      const industryMatch = pattern.compatibleIndustries.some(i =>
-        ctx.industry.toLowerCase().includes(i),
+      const industryLower = (ctx.industry ?? '').toLowerCase().replace(/-/g, '');
+      const industryMatch = industryLower.length > 0 && pattern.compatibleIndustries.some(i =>
+        industryLower.includes(i.replace(/-/g, '')),
       );
       breakdown.industryFit = industryMatch ? 30 : 5;
       total += breakdown.industryFit;
 
       // Sub-industry match: more specific than top-level industry
       if (ctx.subIndustry) {
-        const si = ctx.subIndustry.toLowerCase();
-        const subMatch = pattern.compatibleIndustries.some(i =>
-          si === i || si.includes(i) || i.includes(si),
-        );
+        const si = ctx.subIndustry.toLowerCase().replace(/-/g, '');
+        const subMatch = pattern.compatibleIndustries.some(i => {
+          const norm = i.replace(/-/g, '');
+          return si === norm || si.includes(norm) || norm.includes(si);
+        });
         if (subMatch) {
           breakdown.subIndustryFit = 15;
           total += breakdown.subIndustryFit;
@@ -107,8 +109,8 @@ export class Scorer {
         }
       }
 
-      const modelMatch = pattern.compatibleBusinessModels.some(m =>
-        ctx.businessModels.some(bm => bm.toLowerCase() === m.toLowerCase()),
+      const modelMatch = (pattern.compatibleBusinessModels ?? []).some(m =>
+        (ctx.businessModels ?? []).some(bm => bm.toLowerCase() === m.toLowerCase()),
       );
       breakdown.modelFit = modelMatch ? 25 : 10;
       total += breakdown.modelFit;
@@ -134,8 +136,8 @@ export class Scorer {
       // and the pattern doesn't support it, apply severe penalty.
       // This prevents B2C patterns from winning B2B wholesale businesses
       // just because they share a secondary model like 'direct-sales'.
-      const hasWholesale = ctx.businessModels.some(bm => bm.toLowerCase() === 'wholesale');
-      const patternSupportsWholesale = pattern.compatibleBusinessModels.some(m =>
+      const hasWholesale = (ctx.businessModels ?? []).some(bm => bm.toLowerCase() === 'wholesale');
+      const patternSupportsWholesale = (pattern.compatibleBusinessModels ?? []).some(m =>
         m.toLowerCase() === 'wholesale',
       );
       if (hasWholesale && !patternSupportsWholesale) {
@@ -165,12 +167,34 @@ export class Scorer {
 export function shouldUseNoPattern(
   topScore: ScoredOption | undefined,
   appFamily: AppFamilyResult,
+  _industryFit?: number,
 ): boolean {
   if (appFamily.family === 'industry-specific') return false;
   if (!topScore) return true;
 
   const industryFit = topScore.breakdown['industryFit'] ?? 0;
   if (industryFit >= 20) return false;
+
+  // For data-organiser: no matching pattern exists, use NoPattern
+  if (appFamily.family === 'data-organiser') return true;
+
+  // For productivity-tool and developer-tool: a matching pattern may exist
+  // (e.g., "Task & Project Management" for task tracker). Only use NoPattern
+  // if the top pattern's name clearly doesn't match the detected family.
+  if (
+    (appFamily.family === 'productivity-tool' || appFamily.family === 'developer-tool') &&
+    appFamily.confidence >= 0.7
+  ) {
+    // Check if top pattern's name contains family-relevant keywords
+    const topPatternName = topScore.name.toLowerCase();
+    const familyKeywords = appFamily.family === 'productivity-tool'
+      ? ['task', 'project', 'productivity', 'todo', 'kanban', 'habit', 'note', 'tracker']
+      : ['bug', 'issue', 'developer', 'code', 'repository', 'devops'];
+    const hasKeywordMatch = familyKeywords.some(kw => topPatternName.includes(kw));
+    if (hasKeywordMatch) return false;
+    // No keyword match — use NoPattern for this family
+    return true;
+  }
 
   if (appFamily.confidence >= 0.7 && industryFit < 20) return true;
 

@@ -34,6 +34,7 @@ import { runLLMPlanning } from './llm-planning-agent.js';
 import type { LLMConfig } from '../types/index.js';
 import { stageLogger } from '../core/debug-logger.js';
 import { ContentScraper } from '../generation/content-scraper.js';
+import { mergeScrapedIntoResearch } from './intake-parser.js';
 import type { ProgressEmitter } from '../core/progress-emitter.js';
 
 const log = stageLogger('bre');
@@ -74,8 +75,9 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
       const scraper = new ContentScraper(workspaceRoot);
       const scraped = await scraper.scrapePromptData(ctx.appName, ctx.industry, ctx.country, ctx.description);
       if (scraped && (scraped.heroHeadline || scraped.aboutText || scraped.prices.length > 0)) {
-        const profile = scraper.scrapedToBusinessProfile(scraped, ctx.industry, ctx.appName);
+        const profile = scraper.scrapedToBusinessProfile(scraped, ctx.industry, ctx.appName, ctx.businessResearch);
         ctx = { ...ctx, revenueIntelligence: profile as BusinessIntelligenceProfile, scrapedContent: scraped };
+        mergeScrapedIntoResearch(ctx, scraped);
         log.info('Web intelligence gathered', {
           source: scraped.sourceUrl,
           headline: scraped.heroHeadline?.substring(0, 60),
@@ -144,7 +146,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   // Step 3b: Check if we should bypass pattern selection and use NoPatternBlueprint
   // This fires when family classifier identified a specific app type (task-tracker, etc.)
   // with high confidence AND the best pattern won on size, not domain relevance.
-  const useNoPattern = shouldUseNoPattern(selectedPattern, appFamilyResult);
+  const useNoPattern = shouldUseNoPattern(selectedPattern, appFamilyResult, industryScore);
   if (useNoPattern) {
     console.log(`[bre-v2] NoPattern path: family=${appFamilyResult.family}, type=${appFamilyResult.appType}`);
   }
@@ -249,6 +251,7 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     selectedPattern,
     confidence: blueprint.confidence,
     usedLLMPlanning,
+    ...(ctx.businessResearch ? { businessResearch: ctx.businessResearch } : {}),
     ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
     ...(ctx.scrapedContent ? { scrapedContent: ctx.scrapedContent } : {}),
   };

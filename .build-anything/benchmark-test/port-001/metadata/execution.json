@@ -6,12 +6,26 @@
     "project-intake": {
       "stageId": "project-intake",
       "status": "failed",
-      "startedAt": "2026-07-08T13:24:45.848Z",
-      "completedAt": "2026-07-08T13:24:45.850Z",
+      "startedAt": "2026-07-15T18:00:46.038Z",
+      "completedAt": "2026-07-15T18:00:46.040Z",
       "durationMs": 2,
-      "attempt": 34,
+      "attempt": 275,
       "maxAttempts": 2,
       "error": "Validation failed: Stage failed: No project description provided",
+      "warnings": [],
+      "artifactKeys": [],
+      "llmCalls": 0,
+      "tokensUsed": 0
+    },
+    "prompt-fulfillment": {
+      "stageId": "prompt-fulfillment",
+      "status": "failed",
+      "startedAt": "2026-07-15T18:00:48.089Z",
+      "completedAt": "2026-07-15T18:00:48.091Z",
+      "durationMs": 2,
+      "attempt": 39,
+      "maxAttempts": 3,
+      "error": "Validation failed: promptFulfillment artifact missing",
       "warnings": [],
       "artifactKeys": [],
       "llmCalls": 0,
@@ -19,7 +33,7 @@
     }
   },
   "startedAt": "2026-07-06T15:12:38.717Z",
-  "updatedAt": "2026-07-08T13:24:45.850Z",
+  "updatedAt": "2026-07-15T18:00:48.091Z",
   "totalDurationMs": 0,
   "checkpoints": {}
 }

@@ -1,0 +1,8 @@
+{
+  "skill": "Framer Motion",
+  "test": "Motion components in TSX",
+  "hasMotion": true,
+  "hasInitial": true,
+  "hasWhileInView": true,
+  "verdict": "PASS"
+}

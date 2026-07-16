@@ -326,3 +326,239 @@ export type {
   ReviewResult,
   ReviewBoardResult,
 } from './stages/review-board.js';
+
+// ─── Intelligence Layers (Deterministic Pipeline) ─────────────────────────
+//
+// Each layer has exactly one responsibility.
+// Each layer owns one canonical output object.
+// No downstream layer may infer, recreate or override knowledge owned by upstream.
+// Every decision has provenance.
+
+// Business Intelligence (owns BusinessKnowledge)
+// Re-export everything except 'Integration' which conflicts with technology-planner
+export {
+  type BusinessKnowledge,
+  type KnowledgeSource,
+  type BusinessDiscovery,
+  type CustomerPersona,
+  type BusinessPersona,
+  type UserRole,
+  type CustomerJourney,
+  type JourneyStage,
+  type JourneyStageName,
+  type BusinessWorkflow,
+  type RevenueFlow,
+  type PricingModel,
+  type PaymentFlow,
+  type AcquisitionChannel,
+  type RetentionModel,
+  type ComplianceRequirement,
+  type Kpi,
+  type BusinessEntity,
+  type EntityRelationship,
+  type RequiredPage,
+  type RequiredDashboard,
+  type Automation,
+  type BusinessVocabulary,
+  type ContentStrategy,
+  type DesignStrategy,
+  type ExperienceGoals,
+  type BusinessIntelligenceInput,
+} from './business-intelligence/types.js';
+export * from './business-intelligence/engine.js';
+export * from './business-intelligence/dimensions.js';
+export * from './business-intelligence/archetypes.js';
+export * from './business-intelligence/adapters.js';
+
+// Knowledge Acquisition (owns Evidence and Sources)
+export * from './knowledge-acquisition/index.js';
+
+// Experience Intelligence (owns ExperienceBlueprint)
+export * from './experience-intelligence/index.js';
+
+// Content Intelligence (owns ContentBlueprint)
+export * from './content-intelligence/index.js';
+
+// Technology Planner (owns SolutionArchitecture)
+export * from './technology-planner/index.js';
+
+// Application Blueprint (owns ApplicationBlueprint)
+export * from './application-blueprint/index.js';
+
+// Execution Blueprint (owns ExecutionBlueprint)
+export * from './execution-blueprint/index.js';
+
+// Renderer Engine (owns code generation ONLY)
+export * from './renderer-engine/index.js';
+
+// Pipeline Orchestrator (ties all layers together)
+export * from './pipeline-orchestrator/index.js';
+
+// Observability (debug artifact export)
+export * from './observability/index.js';
+
+// Shared Types (used across multiple layers)
+export * from './shared/index.js';
+
+// ─── Command Router (user-facing entry point) ───────────────────────────────
+
+export {
+  parseCommand,
+  executeFindSkills,
+  executeBuildAnything,
+} from './command-router.js';
+export type {
+  CommandType,
+  CommandInput,
+  CommandResult,
+} from './command-router.js';
+
+// ─── Prompt Decomposer (breaks complex prompts into task atoms) ─────────────
+
+export {
+  decomposePrompt,
+} from './prompt-decomposer.js';
+export type {
+  TaskAtomType,
+  TaskAtom,
+  DecompositionResult,
+} from './prompt-decomposer.js';
+
+// ─── Skill Orchestrator (matches atoms to skills) ───────────────────────────
+
+export {
+  findSkillsForCapability,
+  findBestSkill,
+  createOrchestrationPlan,
+  getInstalledSkills,
+  isSkillInstalled,
+  installSkill,
+  installSkills,
+} from './skill-orchestrator.js';
+export type {
+  SkillManifest,
+  SkillMatch,
+  OrchestrationPlan,
+} from './skill-orchestrator.js';
+
+// ─── Agentic Loop (executes tasks with quality evaluation) ──────────────────
+
+export {
+  runAgenticLoop,
+} from './agentic-loop.js';
+export type {
+  AgentStatus,
+  AgentTask,
+  AgentOutput,
+  GeneratedArtifact,
+  AttemptRecord,
+  LoopResult,
+  AgentQualityGate,
+  QualityCheck,
+  QualityCheckResult,
+} from './agentic-loop.js';
+
+// ─── Motion Architecture ───────────────────────────────────────────────────
+
+export {
+  MotionCompiler,
+  compileMotion,
+  compilePageMotion,
+  createRevealBlueprint,
+} from '../motion/compiler.js';
+
+export {
+  useReducedMotion,
+  useHasHydrated,
+  useShouldAnimate,
+  useMotionProps,
+  getMotionSectionProps,
+  getMotionCardProps,
+} from '../motion/hooks.js';
+
+export {
+  applyReducedMotion,
+  getReducedMotionOverrides,
+  generateReducedMotionCss,
+  generateHydrationCss,
+} from '../motion/accessibility.js';
+
+export {
+  AnimationBudgetTracker,
+  filterByBudget,
+} from '../motion/budget.js';
+
+export {
+  MotionDirector,
+  createMotionDirector,
+} from '../motion/directors/motion-director.js';
+
+export {
+  VisualValidator,
+  createVisualValidator,
+} from '../motion/directors/visual-validation.js';
+
+export {
+  AnimationTestSuite,
+  createAnimationTestSuite,
+} from '../motion/directors/animation-test-suite.js';
+
+export {
+  MOTION_TOKEN_REGISTRY,
+  REVEAL_TOKENS,
+  INTERACTION_TOKENS,
+  CINEMATIC_TOKENS,
+  DEFAULT_ANIMATION_BUDGET,
+} from '../motion/tokens.js';
+
+// ─── Motion Capabilities (composable, deterministic — no industry templates) ─
+
+export type {
+  MotionCapability,
+  MotionCapabilityCategory,
+  CapabilitySignals,
+  SelectionInput,
+} from '../motion/capabilities/index.js';
+
+export {
+  CAPABILITIES,
+  CAPABILITY_BY_ID,
+  CapabilityRegistry,
+  capabilityRegistry,
+  selectCapabilities,
+  performanceTierFromBudget,
+} from '../motion/capabilities/index.js';
+
+// ─── Experience OS v2 ───────────────────────────────────────────────────────
+
+export {
+  ExperienceOS,
+  createExperienceOS,
+  ExperienceStrategyEngine,
+  createExperienceStrategyEngine,
+  ExperienceGraphBuilder,
+  createExperienceGraphBuilder,
+  ExperienceKnowledgeBase,
+  createExperienceKnowledgeBase,
+  getAllScenes,
+  getScene,
+  getScenesByCategory,
+  getScenesByRole,
+  getScenesForIndustry,
+  buildSceneSequence,
+  canScenesCompose,
+  getCompatibleNextScenes,
+  getCompatiblePrevScenes,
+} from './experience-os/index.js';
+
+export type {
+  ExperienceStrategy,
+  ExperienceGraph,
+  ExperienceBlueprintV2,
+  SelectedScene,
+  PageExperience,
+  GlobalExperienceSettings,
+  KnowledgeReference,
+  ExperienceValidation,
+  ExperienceStyle,
+} from './experience-os/index.js';

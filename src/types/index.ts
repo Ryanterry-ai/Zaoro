@@ -96,7 +96,9 @@ export type GenerationIntentType =
   | 'pipeline'
   | 'analyze-domain'
   | 'extract-components'
-  | 'extract-design-system';
+  | 'extract-design-system'
+  | 'refine'
+  | 'deploy';
 
 export interface GenerationIntent {
   type: GenerationIntentType;
@@ -105,6 +107,12 @@ export interface GenerationIntent {
   domain?: string;
   businessType?: string;
   strategy?: 'full-clone' | 'structure-clone' | 'style-clone';
+  /** For 'refine' intent: the modification prompt */
+  refinementPrompt?: string;
+  /** For 'deploy' intent: deployment target */
+  deployTarget?: 'vercel' | 'cloudflare' | 'docker' | 'netlify' | 'manual';
+  /** For 'deploy' intent: environment variables */
+  deployEnv?: Record<string, string>;
 }
 
 export interface PageBuildResult {

@@ -216,6 +216,10 @@ import { DeploymentStage } from './stages/deployment.js';
 import { DocumentationStage } from './stages/documentation.js';
 import { BuildStage } from './stages/build.js';
 import { ReviewBoardStage } from './stages/review-board.js';
+import { RequirementExtractionStage } from './requirement-extraction/stage.js';
+import { PromptFulfillmentStage } from './prompt-fulfillment/stage.js';
+import { RequirementAwareSelfHealingStage } from './requirement-aware-self-healing/stage.js';
+import { ProductionAcceptanceGateStage } from './production-acceptance-gate/stage.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -352,15 +356,19 @@ export class Orchestrator extends EventEmitter {
       new ProjectIntakeStage(),
       new ResearchStage(),
       new BusinessAnalysisStage(),
+      new RequirementExtractionStage(),
       new ArchitectureStage(),
       new DatabaseDesignStage(),
       new ApiDesignStage(),
       new FrontendDesignStage(),
       new IntegrationStage(),
-      new CodeWriterStage(),  // NEW: writes all JSON artifacts to real files
+      new CodeWriterStage(),
       new QualityAssuranceStage(),
       new BuildStage(),
+      PromptFulfillmentStage,
+      RequirementAwareSelfHealingStage,
       new ReviewBoardStage(),
+      ProductionAcceptanceGateStage,
       new DeploymentStage(),
       new DocumentationStage(),
     ];
@@ -893,14 +901,14 @@ export class Orchestrator extends EventEmitter {
       } else {
         // No external API keys - this is expected in Claude Desktop mode
         // The build will use deterministic generation only
-        this.log('warn', 'No LLM providers configured. Using deterministic generation only.');
+        this.log('info', 'Running in agent-driven mode — the AI agent (Claude/OpenCode/Codex/Gemini) IS the LLM. No external API calls needed.');
         // Create a no-op adapter that returns mock valid JSON
         this.llmAdapter = {
           call: async (params) => ({
-            content: this.generateMockLLMResponse(params.taskType, params.prompt),
+            content: this.generateAgentDrivenResponse(params.taskType, params.prompt),
             usage: { input: 0, output: 0, total: 0 },
             provider: 'none',
-            model: 'deterministic-mock',
+            model: 'claude-desktop|opencode|codex|gemini',
             durationMs: 0,
           }),
           getTotalUsage: () => ({ calls: 0, totalTokens: 0, byProvider: {} }),
@@ -1257,7 +1265,7 @@ export class Orchestrator extends EventEmitter {
     else console.log(prefix, message);
   }
 
-  private generateMockLLMResponse(taskType: string, prompt: string): string {
+  private generateAgentDrivenResponse(taskType: string, prompt: string): string {
     // Extract project name from prompt if possible
     const nameMatch = prompt.match(/Build a (.+?)(?:\s|$)/i);
     const projectName = nameMatch?.[1] ?? 'My App';
@@ -1271,6 +1279,11 @@ export class Orchestrator extends EventEmitter {
     const isSaaS = /saas|dashboard|analytics|crm|erp|software|app/.test(lower);
     const isHealthcare = /hospital|clinic|doctor|patient|medical|healthcare|pharmacy/.test(lower);
     const isRealEstate = /real estate|property|listing|agent|home/.test(lower);
+    const isEducation = /course|bootcamp|school|learn|academy|student|tutor|training|education/.test(lower);
+    const isTravel = /hotel|travel|tour|resort|booking|vacation|flight|destination|trip/.test(lower);
+    const isEvent = /event|conference|wedding|concert|festival|ticket|venue|gala/.test(lower);
+    const isLuxury = /luxury|premium|exclusive|boutique|high-end|vip/.test(lower);
+    const isB2B = /wholesale|b2b|distributor|supply|procurement|bulk|net-30|quote/i.test(lower);
 
     // Determine industry category
     let industry = 'saas';
@@ -1278,7 +1291,12 @@ export class Orchestrator extends EventEmitter {
     else if (isEcommerce) industry = 'ecommerce';
     else if (isFitness) industry = 'fitness';
     else if (isHealthcare) industry = 'healthcare';
+    else if (isEducation) industry = 'education';
+    else if (isTravel) industry = 'travel';
+    else if (isEvent) industry = 'event';
+    else if (isLuxury) industry = 'luxury';
     else if (isRealEstate) industry = 'realestate';
+    else if (isB2B) industry = 'wholesale';
 
     // Generate industry-appropriate pages
     const getPages = (): string[] => {
@@ -1293,6 +1311,16 @@ export class Orchestrator extends EventEmitter {
           return ['Home', 'Services', 'Doctors', 'Appointments', 'Patient Portal', 'Contact'];
         case 'realestate':
           return ['Home', 'Listings', 'Property Detail', 'Agents', 'About', 'Contact'];
+        case 'education':
+          return ['Home', 'Courses', 'Course Detail', 'Enrollment', 'Student Dashboard', 'Contact'];
+        case 'travel':
+          return ['Home', 'Destinations', 'Destination Detail', 'Booking', 'About', 'Contact'];
+        case 'event':
+          return ['Home', 'Events', 'Event Detail', 'Tickets', 'Speakers', 'Contact'];
+        case 'luxury':
+          return ['Home', 'Collection', 'Product Detail', 'About', 'Concierge', 'Contact'];
+        case 'wholesale':
+          return ['Home', 'Catalog', 'Product Detail', 'Quote Request', 'Account', 'Orders', 'Contact'];
         default:
           return ['Home', 'Dashboard', 'Settings', 'Profile', 'Analytics'];
       }
@@ -1310,6 +1338,16 @@ export class Orchestrator extends EventEmitter {
           return ['Patient Records', 'Appointment Booking', 'Prescription Management', 'Telehealth', 'Billing'];
         case 'realestate':
           return ['Property Listings', 'Virtual Tours', 'Agent Profiles', 'Mortgage Calculator', 'Saved Searches'];
+        case 'education':
+          return ['Course Catalog', 'Live Mentorship', 'Student Dashboard', 'Certificate Generation', 'Community Forum'];
+        case 'travel':
+          return ['Destination Guides', 'Trip Planner', 'Booking System', 'Travel Reviews', 'Itinerary Builder'];
+        case 'event':
+          return ['Event Discovery', 'Ticketing System', 'Venue Marketplace', 'Attendee Management', 'Event Analytics'];
+        case 'luxury':
+          return ['Exclusive Collections', 'Personal Concierge', 'Private Viewings', 'Bespoke Creations', 'Global Delivery'];
+        case 'wholesale':
+          return ['Product Catalog', 'Quote Requests', 'NET-30 Terms', 'Volume Discounts', 'Account Management'];
         default:
           return ['User Authentication', 'Dashboard', 'Data Management', 'Reporting', 'Settings'];
       }
@@ -1385,6 +1423,7 @@ export class Orchestrator extends EventEmitter {
         if (prompt.toLowerCase().includes('schema') || prompt.toLowerCase().includes('database') || prompt.toLowerCase().includes('design')) {
           // Check if this is API design
           if (prompt.toLowerCase().includes('api') || prompt.toLowerCase().includes('endpoint')) {
+            const apiEndpoints = this.getIndustryEndpoints(industry, projectName);
             return JSON.stringify({
               style: 'REST',
               baseUrl: '/api/v1',
@@ -1393,17 +1432,7 @@ export class Orchestrator extends EventEmitter {
                 header: 'Authorization',
                 expiry: '24h',
               },
-              endpoints: [
-                { method: 'POST', path: '/auth/register', description: 'Register new user', auth: false, requestBody: { email: 'string', password: 'string', name: 'string' } },
-                { method: 'POST', path: '/auth/login', description: 'Login user', auth: false, requestBody: { email: 'string', password: 'string' } },
-                { method: 'GET', path: '/users/me', description: 'Get current user profile', auth: true },
-                { method: 'PUT', path: '/users/me', description: 'Update current user', auth: true },
-                { method: 'GET', path: '/memberships', description: 'List all memberships', auth: true },
-                { method: 'POST', path: '/memberships', description: 'Create membership', auth: true, requestBody: { plan: 'string', userId: 'string' } },
-                { method: 'GET', path: '/workouts', description: 'List workouts', auth: true },
-                { method: 'POST', path: '/workouts', description: 'Log workout', auth: true, requestBody: { name: 'string', duration: 'number', calories: 'number' } },
-                { method: 'GET', path: '/analytics/overview', description: 'Get analytics overview', auth: true },
-              ],
+              endpoints: apiEndpoints,
               middleware: [
                 { name: 'rateLimit', config: '100 requests per minute' },
                 { name: 'cors', config: 'allow specific origins' },
@@ -1412,48 +1441,8 @@ export class Orchestrator extends EventEmitter {
             });
           }
           // Database schema
-          return JSON.stringify({
-            tables: [
-              {
-                name: 'users',
-                columns: [
-                  { name: 'id', type: 'uuid', primaryKey: true },
-                  { name: 'email', type: 'string', unique: true },
-                  { name: 'name', type: 'string' },
-                  { name: 'role', type: 'enum', values: ['admin', 'user'] },
-                  { name: 'createdAt', type: 'datetime' },
-                ],
-                indexes: [{ columns: ['email'], unique: true }],
-              },
-              {
-                name: 'memberships',
-                columns: [
-                  { name: 'id', type: 'uuid', primaryKey: true },
-                  { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
-                  { name: 'plan', type: 'enum', values: ['basic', 'premium', 'enterprise'] },
-                  { name: 'status', type: 'enum', values: ['active', 'inactive', 'cancelled'] },
-                  { name: 'startDate', type: 'datetime' },
-                  { name: 'endDate', type: 'datetime' },
-                ],
-              },
-              {
-                name: 'workouts',
-                columns: [
-                  { name: 'id', type: 'uuid', primaryKey: true },
-                  { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
-                  { name: 'name', type: 'string' },
-                  { name: 'date', type: 'datetime' },
-                  { name: 'duration', type: 'integer' },
-                  { name: 'calories', type: 'integer' },
-                ],
-              },
-            ],
-            enums: [
-              { name: 'UserRole', values: ['admin', 'user'] },
-              { name: 'PlanType', values: ['basic', 'premium', 'enterprise'] },
-              { name: 'MembershipStatus', values: ['active', 'inactive', 'cancelled'] },
-            ],
-          });
+          const dbSchema = this.getIndustryDBSchema(industry);
+          return JSON.stringify(dbSchema);
         }
         return '// Generated code placeholder';
       case 'creative': {
@@ -1480,18 +1469,33 @@ export class Orchestrator extends EventEmitter {
               : p === 'Appointments' ? 'calendar'
               : p === 'Listings' ? 'home'
               : p === 'Agents' ? 'users'
+              : p === 'Courses' ? 'book-open'
+              : p === 'Enrollment' ? 'graduation-cap'
+              : p === 'Destinations' ? 'map-pin'
+              : p === 'Events' ? 'calendar'
+              : p === 'Tickets' ? 'ticket'
+              : p === 'Speakers' ? 'mic'
+              : p === 'Collection' ? 'gem'
+              : p === 'Concierge' ? 'headphones'
               : p === 'Analytics' ? 'bar-chart'
               : p === 'Settings' ? 'settings'
               : 'circle',
           }));
 
         // Industry-specific design tokens
-        const designTokens = {
+        const designTokens: Record<string, { primary: string; secondary: string; background: string; text: string; border: string }> = {
           restaurant:    { primary: '#D97706', secondary: '#92400E', background: '#1C1917', text: '#FAFAF9', border: '#44403C' },
           ecommerce:     { primary: '#7C3AED', secondary: '#5B21B6', background: '#FAFAFA', text: '#18181B', border: '#E4E4E7' },
           fitness:       { primary: '#DC2626', secondary: '#991B1B', background: '#09090B', text: '#FAFAFA', border: '#27272A' },
           healthcare:    { primary: '#0891B2', secondary: '#0E7490', background: '#FFFFFF', text: '#18181B', border: '#E4E4E7' },
           realestate:    { primary: '#16A34A', secondary: '#15803D', background: '#FFFFFF', text: '#18181B', border: '#E4E4E7' },
+          education:     { primary: '#7C3AED', secondary: '#6D28D9', background: '#FAFAFA', text: '#18181B', border: '#E4E4E7' },
+          travel:        { primary: '#0EA5E9', secondary: '#0284C7', background: '#F0F9FF', text: '#18181B', border: '#BAE6FD' },
+          event:         { primary: '#F59E0B', secondary: '#D97706', background: '#FFFBEB', text: '#18181B', border: '#FDE68A' },
+          luxury:        { primary: '#C9A96E', secondary: '#D4AF37', background: '#0a0a0a', text: '#f5f5f5', border: '#2a2a2a' },
+          perfume:       { primary: '#C9A96E', secondary: '#D4AF37', background: '#0a0a0a', text: '#f5f5f5', border: '#2a2a2a' },
+          fragrance:     { primary: '#C9A96E', secondary: '#D4AF37', background: '#0a0a0a', text: '#f5f5f5', border: '#2a2a2a' },
+          beauty:        { primary: '#C9A96E', secondary: '#D4AF37', background: '#0a0a0a', text: '#f5f5f5', border: '#2a2a2a' },
           saas:          { primary: '#6366F1', secondary: '#4F46E5', background: '#09090B', text: '#FAFAFA', border: '#27272A' },
         };
         const colors = designTokens[industry as keyof typeof designTokens] ?? designTokens.saas;
@@ -1513,6 +1517,14 @@ export class Orchestrator extends EventEmitter {
                 : p === 'Listings' ? ['property-grid', 'map-view']
                 : p === 'Classes' ? ['class-schedule', 'instructor-grid']
                 : p === 'Appointments' ? ['booking-calendar', 'doctor-list']
+                : p === 'Courses' ? ['course-grid', 'filters', 'search']
+                : p === 'Enrollment' ? ['enrollment-form', 'payment', 'course-overview']
+                : p === 'Destinations' ? ['destination-grid', 'map-view', 'filters']
+                : p === 'Events' ? ['event-grid', 'category-nav', 'search']
+                : p === 'Tickets' ? ['ticket-tiers', 'seating', 'checkout']
+                : p === 'Speakers' ? ['speaker-grid', 'bio-cards']
+                : p === 'Collection' ? ['product-grid', 'category-nav', 'gallery']
+                : p === 'Concierge' ? ['concierge-form', 'service-list']
                 : p === 'About' ? ['about', 'team', 'mission']
                 : p === 'Contact' ? ['contact-form', 'map']
                 : ['content', 'cta'],
@@ -1535,7 +1547,7 @@ export class Orchestrator extends EventEmitter {
           designTokens: {
             colors,
             typography: {
-              fontFamily: industry === 'restaurant' || industry === 'realestate'
+              fontFamily: ['restaurant', 'realestate', 'luxury', 'perfume', 'fragrance', 'beauty'].includes(industry)
                 ? 'Playfair Display, Georgia, serif'
                 : 'Inter, system-ui, sans-serif',
               scale: ['12px', '14px', '16px', '20px', '24px', '32px', '48px'],
@@ -1544,7 +1556,7 @@ export class Orchestrator extends EventEmitter {
             borderRadius: { sm: '4px', md: '8px', lg: '16px', full: '9999px' },
           },
           navigation: {
-            type: ['restaurant', 'ecommerce', 'fitness', 'healthcare', 'realestate'].includes(industry) ? 'horizontal' : 'sidebar',
+            type: ['restaurant', 'ecommerce', 'fitness', 'healthcare', 'realestate', 'education', 'travel', 'event', 'luxury', 'perfume', 'fragrance', 'beauty'].includes(industry) ? 'horizontal' : 'sidebar',
             items: navItems,
           },
           industry,
@@ -1580,6 +1592,225 @@ export class Orchestrator extends EventEmitter {
         // For any unknown task type, return valid JSON
         return JSON.stringify({ result: 'completed', taskType, data: {} });
     }
+  }
+
+  private getIndustryEndpoints(industry: string, projectName: string): Array<Record<string, unknown>> {
+    const authEndpoints = [
+      { method: 'POST', path: '/auth/register', description: 'Register new user', auth: false, requestBody: { email: 'string', password: 'string', name: 'string' } },
+      { method: 'POST', path: '/auth/login', description: 'Login user', auth: false, requestBody: { email: 'string', password: 'string' } },
+      { method: 'GET', path: '/users/me', description: 'Get current user profile', auth: true },
+      { method: 'PUT', path: '/users/me', description: 'Update current user', auth: true },
+    ];
+
+    const industryEndpoints: Record<string, Array<Record<string, unknown>>> = {
+      restaurant: [
+        { method: 'GET', path: '/menuitems', description: 'List menu items', auth: false },
+        { method: 'POST', path: '/menuitems', description: 'Create menu item', auth: true, requestBody: { name: 'string', price: 'number', description: 'string' } },
+        { method: 'GET', path: '/reservations', description: 'List reservations', auth: true },
+        { method: 'POST', path: '/reservations', description: 'Create reservation', auth: true, requestBody: { date: 'string', time: 'string', partySize: 'number' } },
+        { method: 'GET', path: '/orders', description: 'List orders', auth: true },
+        { method: 'POST', path: '/orders', description: 'Place order', auth: true, requestBody: { items: 'array', tableNumber: 'number' } },
+      ],
+      ecommerce: [
+        { method: 'GET', path: '/products', description: 'List products', auth: false },
+        { method: 'GET', path: '/products/:id', description: 'Get product detail', auth: false },
+        { method: 'POST', path: '/cart', description: 'Add to cart', auth: true, requestBody: { productId: 'string', quantity: 'number' } },
+        { method: 'GET', path: '/cart', description: 'Get cart', auth: true },
+        { method: 'POST', path: '/checkout', description: 'Checkout order', auth: true, requestBody: { address: 'object', paymentMethod: 'string' } },
+        { method: 'GET', path: '/orders', description: 'List orders', auth: true },
+      ],
+      fitness: [
+        { method: 'GET', path: '/classes', description: 'List fitness classes', auth: false },
+        { method: 'POST', path: '/classes', description: 'Create class', auth: true, requestBody: { name: 'string', instructor: 'string', time: 'string', capacity: 'number' } },
+        { method: 'GET', path: '/memberships', description: 'List membership plans', auth: false },
+        { method: 'POST', path: '/memberships', description: 'Purchase membership', auth: true, requestBody: { plan: 'string', userId: 'string' } },
+        { method: 'GET', path: '/trainers', description: 'List trainers', auth: false },
+        { method: 'POST', path: '/bookings', description: 'Book a class', auth: true, requestBody: { classId: 'string', userId: 'string' } },
+      ],
+      healthcare: [
+        { method: 'GET', path: '/doctors', description: 'List doctors', auth: false },
+        { method: 'GET', path: '/services', description: 'List medical services', auth: false },
+        { method: 'GET', path: '/appointments', description: 'List appointments', auth: true },
+        { method: 'POST', path: '/appointments', description: 'Book appointment', auth: true, requestBody: { doctorId: 'string', date: 'string', reason: 'string' } },
+        { method: 'GET', path: '/patients/:id', description: 'Get patient record', auth: true },
+        { method: 'PUT', path: '/patients/:id', description: 'Update patient record', auth: true, requestBody: { medicalHistory: 'string' } },
+      ],
+      realestate: [
+        { method: 'GET', path: '/listings', description: 'List properties', auth: false },
+        { method: 'GET', path: '/listings/:id', description: 'Get property detail', auth: false },
+        { method: 'GET', path: '/agents', description: 'List agents', auth: false },
+        { method: 'POST', path: '/inquiries', description: 'Submit property inquiry', auth: true, requestBody: { listingId: 'string', message: 'string' } },
+        { method: 'GET', path: '/saved', description: 'List saved properties', auth: true },
+        { method: 'POST', path: '/saved', description: 'Save property', auth: true, requestBody: { listingId: 'string' } },
+      ],
+      saas: [
+        { method: 'GET', path: '/projects', description: 'List projects', auth: true },
+        { method: 'POST', path: '/projects', description: 'Create project', auth: true, requestBody: { name: 'string', description: 'string' } },
+        { method: 'GET', path: '/analytics/overview', description: 'Get analytics overview', auth: true },
+        { method: 'GET', path: '/team', description: 'List team members', auth: true },
+        { method: 'POST', path: '/team/invite', description: 'Invite team member', auth: true, requestBody: { email: 'string', role: 'string' } },
+        { method: 'GET', path: '/settings', description: 'Get workspace settings', auth: true },
+      ],
+    };
+
+    return [...authEndpoints, ...(industryEndpoints[industry] ?? industryEndpoints.saas)];
+  }
+
+  private getIndustryDBSchema(industry: string): Record<string, unknown> {
+    const baseUsers = {
+      name: 'users',
+      columns: [
+        { name: 'id', type: 'uuid', primaryKey: true },
+        { name: 'email', type: 'string', unique: true },
+        { name: 'name', type: 'string' },
+        { name: 'role', type: 'enum', values: ['admin', 'user'] },
+        { name: 'createdAt', type: 'datetime' },
+      ],
+      indexes: [{ columns: ['email'], unique: true }],
+    };
+
+    const industryTables: Record<string, Array<Record<string, unknown>>> = {
+      restaurant: [
+        { name: 'menuitems', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'name', type: 'string' },
+          { name: 'description', type: 'text' },
+          { name: 'price', type: 'decimal' },
+          { name: 'category', type: 'string' },
+          { name: 'available', type: 'boolean', defaultValue: true },
+        ]},
+        { name: 'reservations', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'date', type: 'datetime' },
+          { name: 'partySize', type: 'integer' },
+          { name: 'status', type: 'enum', values: ['pending', 'confirmed', 'cancelled'] },
+        ]},
+        { name: 'orders', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'total', type: 'decimal' },
+          { name: 'status', type: 'enum', values: ['pending', 'preparing', 'delivered', 'cancelled'] },
+        ]},
+      ],
+      ecommerce: [
+        { name: 'products', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'name', type: 'string' },
+          { name: 'description', type: 'text' },
+          { name: 'price', type: 'decimal' },
+          { name: 'stock', type: 'integer' },
+          { name: 'category', type: 'string' },
+        ]},
+        { name: 'orders', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'total', type: 'decimal' },
+          { name: 'status', type: 'enum', values: ['pending', 'shipped', 'delivered', 'cancelled'] },
+        ]},
+        { name: 'cart_items', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'productId', type: 'uuid', foreignKey: 'products.id' },
+          { name: 'quantity', type: 'integer' },
+        ]},
+      ],
+      fitness: [
+        { name: 'classes', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'name', type: 'string' },
+          { name: 'instructor', type: 'string' },
+          { name: 'scheduledAt', type: 'datetime' },
+          { name: 'capacity', type: 'integer' },
+          { name: 'duration', type: 'integer' },
+        ]},
+        { name: 'memberships', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'plan', type: 'enum', values: ['basic', 'premium', 'elite'] },
+          { name: 'status', type: 'enum', values: ['active', 'inactive', 'cancelled'] },
+          { name: 'startDate', type: 'datetime' },
+          { name: 'endDate', type: 'datetime' },
+        ]},
+        { name: 'bookings', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'classId', type: 'uuid', foreignKey: 'classes.id' },
+          { name: 'status', type: 'enum', values: ['confirmed', 'cancelled'] },
+        ]},
+      ],
+      healthcare: [
+        { name: 'doctors', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'name', type: 'string' },
+          { name: 'specialty', type: 'string' },
+          { name: 'bio', type: 'text' },
+          { name: 'available', type: 'boolean', defaultValue: true },
+        ]},
+        { name: 'appointments', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'patientId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'doctorId', type: 'uuid', foreignKey: 'doctors.id' },
+          { name: 'date', type: 'datetime' },
+          { name: 'reason', type: 'text' },
+          { name: 'status', type: 'enum', values: ['scheduled', 'completed', 'cancelled'] },
+        ]},
+        { name: 'medical_records', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'patientId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'diagnosis', type: 'text' },
+          { name: 'treatment', type: 'text' },
+          { name: 'date', type: 'datetime' },
+        ]},
+      ],
+      realestate: [
+        { name: 'listings', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'title', type: 'string' },
+          { name: 'description', type: 'text' },
+          { name: 'price', type: 'decimal' },
+          { name: 'bedrooms', type: 'integer' },
+          { name: 'bathrooms', type: 'integer' },
+          { name: 'address', type: 'string' },
+          { name: 'agentId', type: 'uuid', foreignKey: 'agents.id' },
+        ]},
+        { name: 'agents', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'specialization', type: 'string' },
+          { name: 'phone', type: 'string' },
+        ]},
+        { name: 'inquiries', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'listingId', type: 'uuid', foreignKey: 'listings.id' },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'message', type: 'text' },
+          { name: 'createdAt', type: 'datetime' },
+        ]},
+      ],
+      saas: [
+        { name: 'projects', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'name', type: 'string' },
+          { name: 'description', type: 'text' },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'createdAt', type: 'datetime' },
+        ]},
+        { name: 'team_members', columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'userId', type: 'uuid', foreignKey: 'users.id' },
+          { name: 'role', type: 'enum', values: ['owner', 'admin', 'member'] },
+          { name: 'joinedAt', type: 'datetime' },
+        ]},
+      ],
+    };
+
+    return {
+      tables: [baseUsers, ...(industryTables[industry] ?? industryTables.saas)],
+      enums: [
+        { name: 'UserRole', values: ['admin', 'user'] },
+      ],
+    };
   }
 }
 

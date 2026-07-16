@@ -1,0 +1,19 @@
+{
+  "id": "health-001",
+  "industry": "healthcare",
+  "prompt": "a telemedicine clinic booking platform with doctor profiles and video visits",
+  "checks": {
+    "blueprintProduced": true,
+    "scenesPresent": true,
+    "narrativePresent": true,
+    "hoverBehaviorsPresent": true,
+    "motionDrivenCode": true,
+    "motionAnchorPresent": true,
+    "lineageProvenance": true
+  },
+  "passed": 7,
+  "total": 7,
+  "verdict": "PASS",
+  "sceneCount": 2,
+  "hoverCount": 4
+}

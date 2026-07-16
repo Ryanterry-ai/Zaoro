@@ -1,0 +1,11 @@
+{
+  "skill": "Framer Motion",
+  "test": "Animation props",
+  "props": {
+    "initial": true,
+    "whileInView": true,
+    "viewport": true,
+    "transition": true
+  },
+  "verdict": "PASS"
+}

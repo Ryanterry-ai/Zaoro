@@ -28,14 +28,14 @@ interface HeroProps {
 
 export default function Hero({ title, subtitle, badge, actions, image }: HeroProps) {
   return (
-    <section className="relative min-h-[80vh] flex items-center bg-neutral-900 text-white overflow-hidden">
+    <section className="relative min-h-[80vh] flex items-center bg-card text-white overflow-hidden">
       {image && <div className="absolute inset-0"><img src={image} alt="" className="w-full h-full object-cover opacity-40" /></div>}
       <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900/80 to-transparent" />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
           {badge && <span className="inline-block bg-indigo-600/20 text-indigo-400 px-4 py-2 rounded-full text-sm font-bold mb-6">{badge}</span>}
           <h1 className="font-display font-bold text-4xl md:text-6xl mb-6 max-w-3xl">{title}</h1>
-          <p className="text-lg text-neutral-300 mb-8 max-w-2xl">{subtitle}</p>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl">{subtitle}</p>
           <div className="flex flex-wrap gap-4">
             {actions?.map((action, i) => (
               <a key={i} href={action.action} className={\`px-6 py-3 rounded-xl font-bold transition-colors \${
@@ -78,8 +78,8 @@ export default function BlogCard({ title, excerpt, image, date, readTime, catego
       <div className="p-6">
         {category && <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{category}</span>}
         <h3 className="font-display font-bold text-xl mt-2 mb-3 line-clamp-2 hover:text-indigo-600 cursor-pointer transition-colors">{title}</h3>
-        <p className="text-neutral-600 text-sm line-clamp-3 mb-4">{excerpt}</p>
-        <div className="flex items-center gap-4 text-xs text-neutral-400">
+        <p className="text-muted-foreground text-sm line-clamp-3 mb-4">{excerpt}</p>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1"><Calendar size={12} /> {date}</span>
           <span className="flex items-center gap-1"><Clock size={12} /> {readTime}</span>
         </div>
@@ -111,7 +111,7 @@ export default function Testimonial({ name, role, content, rating, avatar }: Tes
   return (
     <motion.div whileHover={{ y: -4 }} className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm">
       <Quote size={24} className="text-indigo-600/30 mb-4" />
-      <p className="text-neutral-600 mb-4 italic">"{content}"</p>
+      <p className="text-muted-foreground mb-4 italic">"{content}"</p>
       <div className="flex items-center gap-1 mb-3">
         {Array.from({ length: 5 }).map((_, i) => (
           <Star key={i} size={14} className={i < rating ? 'fill-amber-500 text-amber-500' : 'text-neutral-200'} />
@@ -121,7 +121,7 @@ export default function Testimonial({ name, role, content, rating, avatar }: Tes
         {avatar ? <img src={avatar} alt={name} className="w-10 h-10 rounded-full object-cover" /> : <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">{name[0]}</div>}
         <div>
           <p className="font-bold text-sm">{name}</p>
-          <p className="text-xs text-neutral-500">{role}</p>
+          <p className="text-xs text-muted-foreground">{role}</p>
         </div>
       </div>
     </motion.div>
@@ -150,7 +150,7 @@ interface CTASectionProps {
 
 export default function CTASection({ title, subtitle, actions, background = 'dark' }: CTASectionProps) {
   const bgClasses = {
-    dark: 'bg-neutral-900 text-white',
+    dark: 'bg-card text-white',
     gradient: 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white',
     light: 'bg-neutral-50 text-neutral-900'
   };
@@ -160,7 +160,7 @@ export default function CTASection({ title, subtitle, actions, background = 'dar
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           <h2 className="font-display font-bold text-3xl md:text-4xl mb-4">{title}</h2>
-          <p className={\`text-lg mb-8 \${background === 'light' ? 'text-neutral-600' : 'opacity-90'}\`}>{subtitle}</p>
+          <p className={\`text-lg mb-8 \${background === 'light' ? 'text-muted-foreground' : 'opacity-90'}\`}>{subtitle}</p>
           <div className="flex flex-wrap justify-center gap-4">
             {actions?.map((action, i) => (
               <a key={i} href={action.action} className={\`px-6 py-3 rounded-xl font-bold transition-colors \${
@@ -205,17 +205,17 @@ export default function FAQ({ title, subtitle, items }: FAQProps) {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="font-display font-bold text-3xl md:text-4xl mb-4">{title}</h2>
-          {subtitle && <p className="text-neutral-600">{subtitle}</p>}
+          {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
         </div>
         <div className="space-y-4">
           {items.map((item, i) => (
-            <div key={i} className="border border-neutral-200 rounded-xl overflow-hidden">
+            <div key={i} className="border border-border rounded-xl overflow-hidden">
               <button onClick={() => setOpenIndex(openIndex === i ? null : i)} className="w-full flex items-center justify-between p-4 text-left hover:bg-neutral-50 transition-colors">
                 <span className="font-medium">{item.question}</span>
                 <ChevronDown size={18} className={\`transition-transform \${openIndex === i ? 'rotate-180' : ''}\`} />
               </button>
               {openIndex === i && (
-                <div className="p-4 pt-0 text-neutral-600 text-sm">
+                <div className="p-4 pt-0 text-muted-foreground text-sm">
                   {item.answer}
                 </div>
               )}

@@ -20,6 +20,7 @@ import type {
   BOSContext,
   RuntimeContext,
 } from './types.js';
+import type { BusinessKnowledge } from './business-intelligence/types.js';
 import type { ArtifactStore } from './artifact-store.js';
 import type { ExecutionTracker } from './execution-tracker.js';
 
@@ -58,7 +59,10 @@ export function createStageContext(
     pack: undefined,
     industry: undefined,
     detectionConfidence: 0,
+    businessKnowledge: undefined,
   };
+
+  const bk: BusinessKnowledge | undefined = bos.businessKnowledge ?? undefined;
 
   return {
     executionId,
@@ -118,6 +122,8 @@ export function createStageContext(
     log,
 
     bos,
+
+    bk,
 
     runtime,
   };

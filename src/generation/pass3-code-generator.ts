@@ -513,7 +513,7 @@ function getSourceItems(kind: EntityKind, data: DomainMockData): DomainMockData[
     case 'service': return data.services.map(s => ({ name: s.name, description: s.description, emoji: s.icon }));
     case 'pricing': return data.items.filter(i => i.price !== undefined);
     case 'category': return data.features.map(f => ({ name: f.title, description: f.description, emoji: f.icon }));
-    case 'user': return data.team.map(t => ({ name: t.name, description: t.email ?? '', emoji: t.emoji, tag: t.role }));
+    case 'user': return data.team.map(t => ({ name: t.name, description: t.bio, emoji: t.emoji, tag: t.role }));
     case 'order': return []; // synthetic — generateColumnValue handles these per-field
     default: return data.items;
   }
@@ -602,7 +602,7 @@ function generateColumnValue(
 
   // Phone fields
   if (lower.includes('phone') || lower.includes('mobile') || lower.includes('telephone')) {
-    return `+1-512-${555 + index * 11}`;
+    return `+1-512-555-0${100 + index * 11}`;
   }
 
   // Notes/special instructions

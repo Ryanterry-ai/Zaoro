@@ -89,7 +89,7 @@ export class LeadAgent {
     log.info('Orchestration started', { prompt: prompt.slice(0, 80) });
 
     // Step 0: Parse prompt → BREContext (deterministic, instant)
-    const breContext = buildBREContext(prompt);
+    const breContext = await buildBREContext(prompt);
     const industryScore = (breContext as any).__industryScore ?? 0;
     log.info('BRE context parsed', { industry: breContext.industry, appName: breContext.appName, industryScore });
 

@@ -45,6 +45,10 @@ import { initializeKnowledgeGraph, enrichFromKnowledgeGraph } from '../bos/knowl
 // Design DNA — per-industry design system
 import { generateDesignDNA, type DesignDNA } from './design-dna.js';
 
+// Experience Intelligence — scene orchestration, scroll narrative, motion, hover
+import { generateExperienceBlueprint, validateExperienceBlueprint } from '../orchestration/design-intelligence/experience-engine.js';
+import type { ExperienceBlueprint } from '../orchestration/design-intelligence/types-experience.js';
+
 // Application Family Classifier — app classification
 import type { AppFamilyResult } from '../bos/reasoning/application-family-classifier.js';
 
@@ -58,7 +62,7 @@ import { WorktreeManager } from './worktree-manager.js';
 import { assembleRenderResults, writeAssemblyResult } from './assembly-gate.js';
 
 // Agent-mode detection — bypasses LLM adapter when running inside Claude Code / OpenCode
-import { IS_AGENT_MODE, getAgentModeStatus } from '../pipeline/agent-mode.js';
+import { IS_AGENT_MODE, getAgentModeStatus, waitForAgentComponents } from '../pipeline/agent-mode.js';
 import { generateAgentSpec, writeAgentSpec } from '../pipeline/agent-prompt.js';
 
 const log = stageLogger('pipeline');
@@ -122,6 +126,14 @@ export interface PipelineResult {
 
   /** Path to the agent spec file (agent mode only) */
   agentSpecPath?: string;
+
+  /** Experience Intelligence Blueprint — scene orchestration, scroll narrative, motion, hover */
+  experienceBlueprint?: ExperienceBlueprint;
+
+  /** Business Intelligence Engine output — the single source of truth for
+   *  business understanding (Layer 1). Passed through to the renderer context
+   *  and surfaced here for downstream/lineage consumption. */
+  businessKnowledge?: import('../orchestration/business-intelligence/types.js').BusinessKnowledge;
 }
 
 // ─── Pipeline Execution ──────────────────────────────────────────────────────
@@ -160,7 +172,7 @@ export async function runBuildPipeline(
     log.info('AGENT MODE ACTIVE — LLM adapter bypassed, agent generates directly from specs', {
       detectionMethod: agentStatus.detectionMethod,
     });
-    console.log(`[pipeline] AGENT MODE: ${agentStatus.detectionMethod} — agent IS the LLM`);
+    console.log(`[pipeline] AGENT MODE: running in desktop agent environment — agent IS the LLM`);
   } else {
     log.info('STANDALONE MODE — using LLM adapter for content generation', {
       detectionMethod: agentStatus.detectionMethod,
@@ -232,7 +244,7 @@ export async function runBuildPipeline(
         constraintReport: breResult.constraintReport,
         selectedDesignProfile: breResult.selectedDesignProfile ?? undefined,
         selectedPattern: breResult.selectedPattern ?? undefined,
-        vocabulary: breResult.blueprint.vocabulary ?? {},
+    vocabulary: (breResult.blueprint.vocabulary ?? {}) as Record<string, string>,
         knowledgeRefs: [],
       } as import('../bos/pipeline-v2/stages.js').StageInput;
       const pipelineV2Result = await runNormalizedPipeline(stageInput);
@@ -261,7 +273,7 @@ export async function runBuildPipeline(
       if (pipelineV2Result.output.entityGraph) {
         for (const pv2Entity of pipelineV2Result.output.entityGraph.entities) {
           const existing = breResult.blueprint.entities.find(
-            e => e.name.toLowerCase() === pv2Entity.name.toLowerCase(),
+            (e: { name: string }) => e.name.toLowerCase() === pv2Entity.name.toLowerCase(),
           );
           if (existing && pv2Entity.fields.length > (existing.fields?.length ?? 0)) {
             existing.fields = pv2Entity.fields.map(f => ({
@@ -294,7 +306,7 @@ export async function runBuildPipeline(
 
       // Enrich blueprint with API endpoints
       if (pipelineV2Result.output.apiGraph) {
-        const existingEndpointPaths = new Set(breResult.blueprint.apis.map(a => a.path));
+        const existingEndpointPaths = new Set(breResult.blueprint.apis.map((a: { path: string }) => a.path));
         for (const ep of pipelineV2Result.output.apiGraph.endpoints) {
           if (!existingEndpointPaths.has(ep.path)) {
             breResult.blueprint.apis.push({
@@ -351,10 +363,10 @@ export async function runBuildPipeline(
   progress?.emit('architect', 'info', 'Building execution blueprint...');
   const t2 = Date.now();
   const executionBlueprint = buildExecutionBlueprint(breResult.blueprint);
-  progress?.emit('architect', 'info', `Execution blueprint: ${executionBlueprint.pages.length} pages, ${executionBlueprint.pages.reduce((s, p) => s + p.slots.length, 0)} slots`, { duration: Date.now() - t2 });
+  progress?.emit('architect', 'info', `Execution blueprint: ${executionBlueprint.pages.length} pages, ${executionBlueprint.pages.reduce((s: number, p: { slots: unknown[] }) => s + p.slots.length, 0)} slots`, { duration: Date.now() - t2 });
   log.info('Layer 2: Execution Blueprint complete', {
     pages: executionBlueprint.pages.length,
-    totalSlots: executionBlueprint.pages.reduce((s, p) => s + p.slots.length, 0),
+    totalSlots: executionBlueprint.pages.reduce((s: number, p: { slots: unknown[] }) => s + p.slots.length, 0),
     duration: Date.now() - t2,
   });
 
@@ -442,6 +454,32 @@ export async function runBuildPipeline(
     log.warn('Layer 2a: DesignIntelligenceEngine failed (continuing without)', { error: (e as Error).message });
   }
 
+  // Extract 21st.dev component recommendations from design intelligence
+  let componentSourcesFromEngine: ComponentSourceRec[] = [];
+  if (designDecision?.recommendations) {
+    const componentRecs = designDecision.recommendations
+      .filter(r => r.domain === 'component' && r.components)
+      .flatMap(r => r.components ?? []);
+    
+    // Map 21st.dev suggestions to ComponentSourceRec format
+    const seen = new Set<string>();
+    for (const comp of componentRecs) {
+      if (comp.source === '21st.dev' && !seen.has(comp.name)) {
+        seen.add(comp.name);
+        componentSourcesFromEngine.push({
+          type: comp.name,
+          source: '21st',
+          packageName: `@21st-dev/${comp.name.toLowerCase()}`,
+          exportName: comp.name,
+        });
+      }
+    }
+    log.info('Layer 2a: Extracted 21st.dev component sources', {
+      count: componentSourcesFromEngine.length,
+      components: componentSourcesFromEngine.map(c => c.type).join(', '),
+    });
+  }
+
   // Layer 2b: Design DNA — per-industry design system from intent
   let designDNA: DesignDNA | undefined;
   try {
@@ -462,6 +500,15 @@ export async function runBuildPipeline(
   // Layer 2c: App Classification — from BRE context (set during BRE v2)
   const appClassification: AppFamilyResult | undefined = context.appFamilyResult;
 
+  // Forward-declare experienceBlueprint (set in Layer 3b)
+  let experienceBlueprint: ExperienceBlueprint | undefined;
+
+  // Business Intelligence Engine output (Layer 1) — the single source of truth
+  // for business understanding. Already computed in buildBREContext; surfaced
+  // to the renderer context and PipelineResult so downstream layers can consume
+  // it without re-inferring business logic.
+  const businessKnowledge = context.businessKnowledge;
+
   // Build design-lineage provenance — records which engine produced each design class
   const designLineage: DesignLineage = {
     colors: designDecision ? 'design-intelligence' : designDNA ? 'design-dna' : 'hardcoded-fallback',
@@ -469,6 +516,7 @@ export async function runBuildPipeline(
     layout: 'skill-integrator',
     motion: designDecision ? 'design-intelligence-motion-engine' : 'hardcoded-fallback',
     components: 'react-renderer',
+    experience: 'none',
     polish: 'pending',
     knowledgeGraph: knowledgeCapabilities.length > 0 ? 'knowledge-graph' : 'none',
     classification: appClassification ? 'application-family-classifier' : 'none',
@@ -524,10 +572,11 @@ export async function runBuildPipeline(
     ...(breResult.revenueIntelligence ? { revenueIntelligence: breResult.revenueIntelligence } : {}),
     ...(breResult.scrapedContent ? { scrapedContent: breResult.scrapedContent } : {}),
     ...(context.businessResearch ? { businessResearch: context.businessResearch } : {}),
+    ...(context.businessKnowledge ? { businessKnowledge: context.businessKnowledge } : {}),
     ...(skillRecommendations ? { skillRecommendations } : {}),
     ...(designDecision ? { designDecision } : {}),
   });
-  progress?.emit('compile', 'completed', `Content resolved: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s, p) => s + p.components.length, 0)} components`, { duration: Date.now() - t3 });
+  progress?.emit('compile', 'completed', `Content resolved: ${applicationSpec.pages.length} pages, ${applicationSpec.pages.reduce((s: number, p: { components: unknown[] }) => s + p.components.length, 0)} components`, { duration: Date.now() - t3 });
 
   // ─── Structural quality gate (Phase 1) ─────────────────────────────────────
   // Block structurally-empty builds before any rendering happens. A runnable app
@@ -535,7 +584,7 @@ export async function runBuildPipeline(
   // are warned (not fatal) so minimal NoPattern apps can still ship, but full
   // apps are expected to model real domain data and business processes.
   {
-    const totalComponents = applicationSpec.pages.reduce((s, p) => s + p.components.length, 0);
+    const totalComponents = applicationSpec.pages.reduce((s: number, p: { components: unknown[] }) => s + p.components.length, 0);
     if (applicationSpec.pages.length === 0) {
       throw new Error('STRUCTURAL_GATE_FAILED: resolved ApplicationSpec has zero pages — nothing to render.');
     }
@@ -551,9 +600,60 @@ export async function runBuildPipeline(
   }
   log.info('Layer 3: Content Resolution complete', {
     pages: applicationSpec.pages.length,
-    totalComponents: applicationSpec.pages.reduce((s, p) => s + p.components.length, 0),
+    totalComponents: applicationSpec.pages.reduce((s: number, p: { components: unknown[] }) => s + p.components.length, 0),
     duration: Date.now() - t3,
   });
+
+  // Layer 3b: Experience Intelligence — scene orchestration, scroll narrative, motion, hover
+  try {
+    const t3b = Date.now();
+    const firstPage = applicationSpec.pages[0];
+    const sections = firstPage?.components?.map((c: { type: string; content?: Record<string, unknown> }) => ({
+      type: c.type,
+      content: c.content ?? {},
+    })) ?? [];
+
+    const bp = generateExperienceBlueprint({
+      industry: (context.industry ?? breResult.blueprint.industry ?? 'other') as import('../orchestration/types.js').Industry,
+      subIndustry: context.subIndustry,
+      sections,
+      pageType: firstPage?.type ?? 'landing',
+      designDNA,
+      designDecision,
+      personality: designDecision?.context?.personality,
+    });
+
+    // Validate the blueprint
+    const validation = validateExperienceBlueprint(bp);
+    if (!validation.valid) {
+      log.warn('Layer 3b: Experience blueprint validation failed', { errors: validation.errors });
+      experienceBlueprint = undefined;
+    } else {
+      experienceBlueprint = bp;
+      if (validation.warnings.length > 0) {
+        log.info('Layer 3b: Experience blueprint warnings', { warnings: validation.warnings });
+      }
+    }
+
+    if (experienceBlueprint) {
+      designLineage.experience = 'experience-intelligence';
+      const sectionCount = Array.isArray(experienceBlueprint.sectionOrder) ? experienceBlueprint.sectionOrder.length : (experienceBlueprint.sectionOrder?.value?.length ?? 0);
+      progress?.emit('compile', 'info', `Experience intelligence: ${sectionCount} sections`);
+      log.info('Layer 3b: Experience Intelligence complete', {
+        sections: sectionCount,
+        duration: Date.now() - t3b,
+      });
+    }
+
+    // Debug: snapshot hero subtitle AFTER Experience Intelligence
+    {
+      const hp = applicationSpec.pages.find((p: { path: string }) => p.path === '/');
+      const hc = hp?.components?.find((c: { type: string }) => c.type === 'HeroBanner');
+      console.log(`[pipeline-debug] hero.subtitle AFTER Experience Intelligence: ${((hc as any)?.content?.subtitle?.value as string)?.substring(0, 80)}`);
+    }
+  } catch (e: unknown) {
+    log.warn('Layer 3b: Experience Intelligence failed (continuing without)', { error: (e as Error).message });
+  }
 
   // Layer 4: Spec-lock + worktree parallel build
   progress?.emit('compile', 'info', 'Writing component specs and running parallel build...');
@@ -563,8 +663,8 @@ export async function runBuildPipeline(
   const industry = context.industry
     ?? breResult.blueprint.industry
     ?? 'saas';
-  const allComponentTypes = [...new Set(
-    applicationSpec.pages.flatMap(p => p.components.map(c => c.type)),
+  const allComponentTypes = [...new Set<string>(
+    applicationSpec.pages.flatMap((p: { components: Array<{ type: string }> }) => p.components.map((c: { type: string }) => c.type)),
   )];
   const pageLayout = skillIntegrator.resolvePageLayout(industry, allComponentTypes);
   log.info('Layout resolved', {
@@ -586,7 +686,7 @@ export async function runBuildPipeline(
     log.info('Layer 4a: Writing component spec manifest', {
       workspaceDir,
       pages: applicationSpec.pages.length,
-      components: applicationSpec.pages.reduce((s, p) => s + p.components.length, 0),
+      components: applicationSpec.pages.reduce((s: number, p: { components: unknown[] }) => s + p.components.length, 0),
     });
     console.log(`[spec-writer] Writing component spec manifest to ${workspaceDir}`);
     componentSpecManifest = writeComponentSpecManifest(applicationSpec, workspaceDir);
@@ -618,25 +718,31 @@ export async function runBuildPipeline(
     const groupEntries = Array.from(groups.entries());
     const assemblyInputs: import('./assembly-gate.js').AssemblyInput[] = [];
 
+    // Debug: check applicationSpec hero subtitle before rendering
+    const homePage = applicationSpec.pages.find((p: { path: string }) => p.path === '/');
+    const heroComponent = homePage?.components?.find((c: { type: string }) => c.type === 'HeroBanner');
+    const heroSubtitle = (heroComponent as any)?.content?.subtitle?.value;
+    console.log(`[pipeline-debug] applicationSpec hero.subtitle BEFORE renderWith: ${heroSubtitle?.substring(0, 80)}`);
+
     for (let gi = 0; gi < groupEntries.length; gi++) {
       const entry = groupEntries[gi];
       if (!entry) continue;
       const [groupName, _specs] = entry;
       const wtSpec = wtManager.getWorktree(groupName);
       if (!wtSpec) continue;
-      const wtPages = applicationSpec.pages.filter(p =>
+      const wtPages = applicationSpec.pages.filter((p: { path: string }) =>
         _specs.some((s: string) => s.includes(p.path.replace(/[\\/:*?"<>|]/g, '_'))),
       );
       const wtAppSpec = { ...applicationSpec, pages: wtPages };
 
       try {
         const wtResult = renderWith(wtAppSpec, platform, {
-          theme: { ...(breResult.blueprint.designTokens as Record<string, unknown> ?? {}), ...profileTheme },
+          theme: { ...profileTheme, ...(breResult.blueprint.designTokens as Record<string, unknown> ?? {}) },
           includeComments,
           agentMode: IS_AGENT_MODE,
           includeTests,
           outputDir: path.join(wtSpec.path, 'src'),
-          componentSources: [],
+          componentSources: componentSourcesFromEngine,
           pageLayout,
           ...(designDecision ? { designDecision } : {}),
           ...(designDNA ? { designDNA } : {}),
@@ -651,6 +757,8 @@ export async function runBuildPipeline(
           ...(designLineage ? { designLineage } : {}),
           ...(context.designBrief ? { designBrief: context.designBrief } : {}),
           ...(context.solutionArchitecture ? { solutionArchitecture: context.solutionArchitecture } : {}),
+          ...(experienceBlueprint ? { experienceBlueprint } : {}),
+      ...(businessKnowledge ? { businessKnowledge } : {}),
           skipSingletons: gi > 0,
         });
         wtManager.markReady(groupName);
@@ -687,14 +795,14 @@ export async function runBuildPipeline(
     console.log(`[assembly] Worktrees cleaned up`);
   } else {
     // Fallback: original single-thread render
-    componentSources = [];
+    componentSources = componentSourcesFromEngine;
     renderResult = renderWith(applicationSpec, platform, {
       theme: { ...(breResult.blueprint.designTokens as Record<string, unknown> ?? {}), ...profileTheme },
       includeComments,
       agentMode: IS_AGENT_MODE,
       includeTests,
       outputDir,
-      componentSources: [],
+      componentSources: componentSourcesFromEngine,
       pageLayout,
       ...(designDecision ? { designDecision } : {}),
       ...(designDNA ? { designDNA } : {}),
@@ -709,6 +817,8 @@ export async function runBuildPipeline(
       ...(designLineage ? { designLineage } : {}),
       ...(context.designBrief ? { designBrief: context.designBrief } : {}),
       ...(context.solutionArchitecture ? { solutionArchitecture: context.solutionArchitecture } : {}),
+      ...(experienceBlueprint ? { experienceBlueprint } : {}),
+      ...(businessKnowledge ? { businessKnowledge } : {}),
     });
   }
 
@@ -733,6 +843,26 @@ export async function runBuildPipeline(
     );
     agentSpecPath = writeAgentSpec(agentSpec, taskMd, workspaceDir);
     log.info('Agent spec written', { path: agentSpecPath });
+
+    // Wait for agent to write component files before continuing
+    const expectedPaths = agentSpec.pages.flatMap(p =>
+      p.components.map(c => `src/app${p.path}/${c.type}.tsx`)
+    );
+    const agentFiles = await waitForAgentComponents(workspaceDir, expectedPaths, 30_000);
+    if (agentFiles.length > 0) {
+      log.info('Agent wrote component files', { count: agentFiles.length });
+      // Merge agent-written files into renderResult
+      for (const af of agentFiles) {
+        const existingIdx = renderResult.files.findIndex(f => f.path === af.path);
+        if (existingIdx >= 0) {
+          renderResult.files[existingIdx] = { ...renderResult.files[existingIdx], content: af.content };
+        } else {
+          renderResult.files.push({ path: af.path, content: af.content, type: 'component' });
+        }
+      }
+    } else {
+      log.info('No agent files written within timeout, using ReactRenderer output');
+    }
   }
 
   // Layer 5: Pass 3 code generation from the canonical ApplicationGraph
@@ -790,6 +920,8 @@ export async function runBuildPipeline(
     ...(assemblyResult ? { assemblyResult } : {}),
     ...(usedWorktrees ? { usedWorktrees } : {}),
     ...(agentSpecPath ? { agentSpecPath } : {}),
+    ...(experienceBlueprint ? { experienceBlueprint } : {}),
+    ...(businessKnowledge ? { businessKnowledge } : {}),
   };
 }
 

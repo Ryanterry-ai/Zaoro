@@ -1,0 +1,7 @@
+{
+  "skill": "Design Intelligence",
+  "test": "DI primary color in CSS",
+  "diPrimary": "#2563EB",
+  "found": true,
+  "verdict": "PASS"
+}

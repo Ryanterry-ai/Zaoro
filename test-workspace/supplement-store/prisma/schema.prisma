@@ -1,0 +1,69 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Products {
+  id String @id @default(uuid())
+  name String?
+  price Float?
+  description String?
+  image String?
+  stock Int?
+  sku String? @unique
+  category String?
+  userId String?
+  users Users? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Orders {
+  id String @id @default(uuid())
+  items String?
+  total Float?
+  status String?
+  customerId String?
+  shippingAddress String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String?
+  users Users? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Categories {
+  id String @id @default(uuid())
+  name String?
+  slug String? @unique
+  image String?
+  parent String?
+  userId String?
+  users Users? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Users {
+  id String @id @default(uuid())
+  email String @unique
+  name String
+  role String @default("user")
+  password String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  products Products[]
+  orders Orders[]
+  categories Categories[]
+
+  @@index([email])
+}

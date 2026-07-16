@@ -18,7 +18,7 @@ const E2E_PROMPTS = [
 describe('E2E Pipeline: 10 Industry Builds', () => {
   for (const { prompt, industries, label } of E2E_PROMPTS) {
     it(`${label} — full pipeline produces valid output`, { timeout: 180_000 }, async () => {
-      const ctx = buildBREContext(prompt);
+      const ctx = await buildBREContext(prompt);
       const result = await runBuildPipeline(ctx, {
         platform: 'react',
         outputDir: './test-output',

@@ -39,7 +39,7 @@ export default function MenuItem({ name, description, price, image, spicyLevel, 
           )}
         </div>
         <h4 className="font-bold text-neutral-800">{name}</h4>
-        <p className="text-sm text-neutral-500 line-clamp-2 mb-2">{description}</p>
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{description}</p>
         <div className="flex items-center justify-between">
           <span className="font-bold text-lg">₹{price}</span>
           <button onClick={onAddToCart} className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1">
@@ -81,7 +81,7 @@ export default function TableReservation({ onSubmit }: TableReservationProps) {
       <div className="text-center py-12">
         <CheckCircle size={48} className="mx-auto text-emerald-500 mb-4" />
         <h3 className="font-display font-bold text-xl mb-2">Reservation Confirmed!</h3>
-        <p className="text-neutral-600">We'll send you a confirmation shortly.</p>
+        <p className="text-muted-foreground">We'll send you a confirmation shortly.</p>
       </div>
     );
   }
@@ -91,11 +91,11 @@ export default function TableReservation({ onSubmit }: TableReservationProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1"><Calendar size={14} className="inline mr-1" /> Date</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1"><Clock size={14} className="inline mr-1" /> Time</label>
-          <select value={time} onChange={(e) => setTime(e.target.value)} className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+          <select value={time} onChange={(e) => setTime(e.target.value)} className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
             <option value="">Select time</option>
             <option value="12:00">12:00 PM</option>
             <option value="12:30">12:30 PM</option>
@@ -110,16 +110,16 @@ export default function TableReservation({ onSubmit }: TableReservationProps) {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1"><Users size={14} className="inline mr-1" /> Guests</label>
-          <select value={guests} onChange={(e) => setGuests(Number(e.target.value))} className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+          <select value={guests} onChange={(e) => setGuests(Number(e.target.value))} className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
             {[1,2,3,4,5,6,7,8].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'Guest' : 'Guests'}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Phone</label>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
         </div>
       </div>
-      <input placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
+      <input placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20" />
       <button onClick={handleSubmit} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-colors">Reserve Table</button>
     </div>
   );
@@ -153,7 +153,7 @@ export default function MenuCategory({ name, description, items, renderItem }: M
     <section className="mb-12">
       <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
         <h3 className="font-display font-bold text-2xl mb-2">{name}</h3>
-        {description && <p className="text-neutral-500 text-sm mb-6">{description}</p>}
+        {description && <p className="text-muted-foreground text-sm mb-6">{description}</p>}
         <div className="space-y-4">
           {items.map((item, i) => (
             <div key={i}>{renderItem(item)}</div>
@@ -196,11 +196,11 @@ export default function OrderStatus({ status }: OrderStatusProps) {
         return (
           <div key={step.key} className="flex flex-col items-center">
             <div className={\`w-10 h-10 rounded-full flex items-center justify-center \${
-              isCompleted ? 'bg-amber-600 text-white' : 'bg-neutral-200 text-neutral-400'
+              isCompleted ? 'bg-amber-600 text-white' : 'bg-neutral-200 text-muted-foreground'
             } \${isCurrent ? 'ring-2 ring-amber-600 ring-offset-2' : ''}\`}>
               <Icon size={18} />
             </div>
-            <span className={\`text-xs mt-2 \${isCompleted ? 'text-amber-600 font-medium' : 'text-neutral-400'}\`}>{step.label}</span>
+            <span className={\`text-xs mt-2 \${isCompleted ? 'text-amber-600 font-medium' : 'text-muted-foreground'}\`}>{step.label}</span>
           </div>
         );
       })}

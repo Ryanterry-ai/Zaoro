@@ -85,17 +85,17 @@ export default function ProductCard({
             <span>{rating}</span>
             <Star size={12} className="fill-amber-600 stroke-amber-600" />
           </div>
-          <span className="text-[11px] text-neutral-400 font-medium">({reviews.toLocaleString()} reviews)</span>
+          <span className="text-[11px] text-muted-foreground font-medium">({reviews.toLocaleString()} reviews)</span>
         </div>
         <div className="mt-auto pt-3 border-t border-neutral-100">
           <div className="flex items-baseline gap-1.5">
             <span className="text-lg md:text-xl font-bold font-display text-neutral-900">₹{price.toLocaleString('en-IN')}</span>
-            <span className="text-xs text-neutral-400 line-through">₹{originalPrice.toLocaleString('en-IN')}</span>
+            <span className="text-xs text-muted-foreground line-through">₹{originalPrice.toLocaleString('en-IN')}</span>
           </div>
           <span className="text-[11px] font-semibold text-emerald-600">Save ₹{(originalPrice - price).toLocaleString('en-IN')} ({discountPercent}% OFF)</span>
         </div>
         <div className="grid grid-cols-2 gap-2 mt-4">
-          <button onClick={() => onViewDetails?.(id)} className="border border-neutral-200 text-neutral-700 hover:border-neutral-800 font-medium text-xs py-2 rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1">
+          <button onClick={() => onViewDetails?.(id)} className="border border-border text-neutral-700 hover:border-border font-medium text-xs py-2 rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1">
             <Eye size={14} /> Details
           </button>
           <button onClick={() => onAddToCart?.(id)} className="bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs py-2 rounded-xl transition-colors shadow-sm cursor-pointer text-center flex items-center justify-center gap-1">
@@ -140,7 +140,7 @@ export default function CartDrawer({ isOpen, items, onClose, onUpdateQuantity, o
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs z-50" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-card/60 backdrop-blur-xs z-50" />
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 350 }} className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-neutral-100">
               <h2 className="font-display font-bold text-lg">Your Cart ({items.length})</h2>
@@ -148,7 +148,7 @@ export default function CartDrawer({ isOpen, items, onClose, onUpdateQuantity, o
             </div>
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
               {items.length === 0 ? (
-                <div className="text-center py-12 text-neutral-400">
+                <div className="text-center py-12 text-muted-foreground">
                   <ShoppingBag size={48} className="mx-auto mb-4 opacity-50" />
                   <p>Your cart is empty</p>
                 </div>
@@ -158,12 +158,12 @@ export default function CartDrawer({ isOpen, items, onClose, onUpdateQuantity, o
                     <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-lg" referrerPolicy="no-referrer" />
                     <div className="flex-grow">
                       <h4 className="font-medium text-sm line-clamp-1">{item.name}</h4>
-                      <p className="text-xs text-neutral-500">{item.brand}</p>
+                      <p className="text-xs text-muted-foreground">{item.brand}</p>
                       <p className="font-bold text-sm mt-1">₹{item.price.toLocaleString('en-IN')}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="w-6 h-6 rounded-full border border-neutral-200 flex items-center justify-center hover:bg-neutral-100"><Minus size={12} /></button>
+                        <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="w-6 h-6 rounded-full border border-border flex items-center justify-center hover:bg-neutral-100"><Minus size={12} /></button>
                         <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
-                        <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="w-6 h-6 rounded-full border border-neutral-200 flex items-center justify-center hover:bg-neutral-100"><Plus size={12} /></button>
+                        <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="w-6 h-6 rounded-full border border-border flex items-center justify-center hover:bg-neutral-100"><Plus size={12} /></button>
                         <button onClick={() => onRemoveItem(item.id)} className="ml-auto text-red-500 hover:text-red-600"><Trash2 size={14} /></button>
                       </div>
                     </div>
@@ -222,21 +222,21 @@ export default function CheckoutModal({ isOpen, items, onClose, onOrderSuccess }
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-card/60 backdrop-blur-xs" />
           <motion.div initial={{ opacity: 0, scale: 0.95, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 30 }} transition={{ type: 'spring', damping: 25, stiffness: 350 }} className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative z-10">
-            <button onClick={onClose} className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 p-2 rounded-full transition-all z-20"><X size={20} /></button>
+            <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-neutral-700 hover:bg-neutral-100 p-2 rounded-full transition-all z-20"><X size={20} /></button>
             <div className="p-6">
               <h2 className="font-display font-bold text-2xl mb-6">Checkout</h2>
               {step === 1 ? (
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin size={18} /> Shipping Address</h3>
-                  <input placeholder="Full Name" value={address.fullName} onChange={(e) => setAddress({...address, fullName: e.target.value})} className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
-                  <input placeholder="Phone Number" value={address.phone} onChange={(e) => setAddress({...address, phone: e.target.value})} className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
-                  <input placeholder="Address Line 1" value={address.addressLine1} onChange={(e) => setAddress({...address, addressLine1: e.target.value})} className="w-full border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
+                  <input placeholder="Full Name" value={address.fullName} onChange={(e) => setAddress({...address, fullName: e.target.value})} className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
+                  <input placeholder="Phone Number" value={address.phone} onChange={(e) => setAddress({...address, phone: e.target.value})} className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
+                  <input placeholder="Address Line 1" value={address.addressLine1} onChange={(e) => setAddress({...address, addressLine1: e.target.value})} className="w-full border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
                   <div className="grid grid-cols-3 gap-4">
-                    <input placeholder="City" value={address.city} onChange={(e) => setAddress({...address, city: e.target.value})} className="border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
-                    <input placeholder="State" value={address.state} onChange={(e) => setAddress({...address, state: e.target.value})} className="border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
-                    <input placeholder="PIN Code" value={address.pinCode} onChange={(e) => setAddress({...address, pinCode: e.target.value})} className="border border-neutral-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
+                    <input placeholder="City" value={address.city} onChange={(e) => setAddress({...address, city: e.target.value})} className="border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
+                    <input placeholder="State" value={address.state} onChange={(e) => setAddress({...address, state: e.target.value})} className="border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
+                    <input placeholder="PIN Code" value={address.pinCode} onChange={(e) => setAddress({...address, pinCode: e.target.value})} className="border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600" />
                   </div>
                   <button onClick={() => setStep(2)} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-colors">Continue to Payment</button>
                 </div>
@@ -245,7 +245,7 @@ export default function CheckoutModal({ isOpen, items, onClose, onOrderSuccess }
                   <h3 className="font-semibold text-lg flex items-center gap-2"><CreditCard size={18} /> Payment Method</h3>
                   <div className="space-y-2">
                     {['upi', 'card', 'cod'].map((method) => (
-                      <label key={method} className="flex items-center gap-3 p-3 border border-neutral-200 rounded-xl cursor-pointer hover:border-amber-600 transition-colors">
+                      <label key={method} className="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:border-amber-600 transition-colors">
                         <input type="radio" name="payment" value={method} checked={paymentMethod === method} onChange={(e) => setPaymentMethod(e.target.value)} className="accent-amber-600" />
                         <span className="capitalize font-medium">{method === 'upi' ? 'UPI (GPay/PhonePe)' : method === 'card' ? 'Credit/Debit Card' : 'Cash on Delivery'}</span>
                       </label>
@@ -255,7 +255,7 @@ export default function CheckoutModal({ isOpen, items, onClose, onOrderSuccess }
                     <div className="flex justify-between text-sm"><span>Subtotal</span><span>₹{subtotal.toLocaleString('en-IN')}</span></div>
                     <div className="flex justify-between text-sm"><span>GST (18%)</span><span>₹{Math.round(gst).toLocaleString('en-IN')}</span></div>
                     <div className="flex justify-between text-sm"><span>Shipping</span><span>{shipping === 0 ? 'FREE' : \`₹\${shipping}\`}</span></div>
-                    <div className="flex justify-between font-bold text-lg border-t border-neutral-200 pt-2"><span>Total</span><span>₹{total.toLocaleString('en-IN')}</span></div>
+                    <div className="flex justify-between font-bold text-lg border-t border-border pt-2"><span>Total</span><span>₹{total.toLocaleString('en-IN')}</span></div>
                   </div>
                   <button onClick={handleSubmit} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"><CheckCircle size={18} /> Place Order</button>
                 </div>
@@ -307,14 +307,14 @@ export default function ProductFilter({
             className={\`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors \${
               selectedCategory === cat
                 ? 'bg-amber-600 text-white'
-                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                : 'bg-neutral-100 text-muted-foreground hover:bg-neutral-200'
             }\`}
           >
             {cat}
           </button>
         ))}
       </div>
-      <select value={sortBy} onChange={(e) => onSortChange(e.target.value)} className="px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+      <select value={sortBy} onChange={(e) => onSortChange(e.target.value)} className="px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20">
         <option value="bestseller">Bestseller</option>
         <option value="price-asc">Price: Low to High</option>
         <option value="price-desc">Price: High to Low</option>
@@ -418,9 +418,9 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }: Pr
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs" />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-card/60 backdrop-blur-xs" />
         <motion.div initial={{ opacity: 0, scale: 0.95, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 30 }} transition={{ type: 'spring', damping: 25, stiffness: 350 }} className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative z-10 grid grid-cols-1 md:grid-cols-12">
-          <button onClick={onClose} className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 p-2 rounded-full transition-all z-20"><X size={20} /></button>
+          <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-neutral-700 hover:bg-neutral-100 p-2 rounded-full transition-all z-20"><X size={20} /></button>
           <div className="md:col-span-5 bg-neutral-50 p-4 rounded-t-3xl md:rounded-l-3xl md:rounded-tr-none">
             <img src={product.image} alt={product.name} className="w-full h-64 md:h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
           </div>
@@ -432,20 +432,20 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }: Pr
                 <span>{product.rating}</span>
                 <Star size={14} className="fill-amber-600 stroke-amber-600" />
               </div>
-              <span className="text-sm text-neutral-400">({product.reviews.toLocaleString()} reviews)</span>
+              <span className="text-sm text-muted-foreground">({product.reviews.toLocaleString()} reviews)</span>
             </div>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-3xl font-bold font-display text-neutral-900">₹{product.price.toLocaleString('en-IN')}</span>
-              <span className="text-sm text-neutral-400 line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+              <span className="text-sm text-muted-foreground line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
               <span className="text-sm font-semibold text-emerald-600">{discountPercent}% OFF</span>
             </div>
-            <p className="text-neutral-600 text-sm mb-4">{product.description}</p>
+            <p className="text-muted-foreground text-sm mb-4">{product.description}</p>
             {product.flavors && product.flavors.length > 0 && (
               <div className="mb-4">
                 <span className="text-sm font-medium mb-2 block">Flavor:</span>
                 <div className="flex flex-wrap gap-2">
                   {product.flavors.map((flavor) => (
-                    <button key={flavor} onClick={() => setSelectedFlavor(flavor)} className={\`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors \${selectedFlavor === flavor ? 'bg-amber-600 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}\`}>
+                    <button key={flavor} onClick={() => setSelectedFlavor(flavor)} className={\`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors \${selectedFlavor === flavor ? 'bg-amber-600 text-white' : 'bg-neutral-100 text-muted-foreground hover:bg-neutral-200'}\`}>
                       {flavor}
                     </button>
                   ))}
@@ -457,7 +457,7 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }: Pr
                 <span className="text-sm font-medium mb-2 block">Benefits:</span>
                 <ul className="space-y-1">
                   {product.benefits.map((benefit, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-neutral-600">
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <ShieldCheck size={14} className="text-emerald-500 mt-0.5 shrink-0" />
                       {benefit}
                     </li>
@@ -478,7 +478,7 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }: Pr
               <button className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2" onClick={() => onAddToCart(product.id, selectedFlavor)}>
                 <ShoppingCart size={18} /> Add to Cart
               </button>
-              <button className="p-3 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+              <button className="p-3 border border-border rounded-xl hover:bg-neutral-50 transition-colors">
                 <Heart size={18} />
               </button>
             </div>

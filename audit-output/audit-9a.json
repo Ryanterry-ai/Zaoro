@@ -1,0 +1,10 @@
+{
+  "skill": "Find-Skills",
+  "projectType": "ecommerce",
+  "requiredSkills": [
+    "frontend-design",
+    "ui-ux-pro-max",
+    "shopify-expert"
+  ],
+  "verdict": "PASS"
+}

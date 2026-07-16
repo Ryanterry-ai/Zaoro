@@ -12,8 +12,9 @@
  * and passes the result through quality gates before rendering.
  */
 
-import type { ItemSpec, TierSpec, StatSpec } from '../schemas/blueprint/execution-blueprint.schema.js';
+import type { BusinessKnowledge } from '../../orchestration/business-intelligence/types.js';
 import type { ApplicationBlueprint } from '../schemas/blueprint/application-blueprint.schema.js';
+import type { ItemSpec, TierSpec, StatSpec } from '../schemas/blueprint/execution-blueprint.schema.js';
 
 // ─── Content Types ───────────────────────────────────────────────────────────
 
@@ -77,10 +78,26 @@ export interface ContentBag {
   pricing?: PricingContent;
   stats?: StatsContent;
   cta?: CTAContent;
+  /** Products/items from domain data */
+  products?: ProductContent;
   /** Raw vocabulary overrides (e.g., "product" → "dish") */
   vocabulary?: Record<string, string>;
   /** Additional metadata from the provider */
   metadata?: Record<string, unknown>;
+}
+
+export interface ProductContent {
+  items: Array<{
+    name: string;
+    description?: string;
+    price?: number;
+    tag?: string;
+    rating?: number;
+    reviews?: number;
+    emoji?: string;
+    details?: string[];
+    image?: string;
+  }>;
 }
 
 // ─── Provider Interface ──────────────────────────────────────────────────────
@@ -125,6 +142,8 @@ export interface ProviderContext {
   revenueIntelligence?: import('../schemas/knowledge/business-intelligence.schema.js').BusinessIntelligenceProfile;
   /** Raw scraped content from web intelligence */
   scrapedContent?: import('../types.js').ScrapedContent;
+  /** Business research — the FOUNDATION for dynamic content generation */
+  businessResearch?: import('../types.js').BusinessResearch;
   /** Design DNA from classification engine */
   designDNA?: import('../../generation/design-dna.js').DesignDNA;
   /** App family classification */
@@ -156,7 +175,7 @@ export class ContentProviderRegistry {
       if (!provider.canProvide(ctx)) continue;
       const contribution = provider.provide(ctx);
       mergeContentBag(merged, contribution);
-    }
+}
 
     return merged;
   }
@@ -202,6 +221,9 @@ function mergeContentBag(target: ContentBag, contribution: ContentBag): void {
   }
   if (contribution.cta) {
     target.cta = mergeCTA(target.cta, contribution.cta);
+  }
+  if (contribution.products) {
+    target.products = target.products ?? contribution.products;
   }
   if (contribution.vocabulary) {
     target.vocabulary = { ...target.vocabulary, ...contribution.vocabulary };

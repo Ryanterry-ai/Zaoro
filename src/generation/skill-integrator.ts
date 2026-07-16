@@ -20,7 +20,7 @@ export interface SectionLayout {
   background: 'transparent' | 'surface' | 'primary' | 'gradient' | 'image';
 
   /** Animation pattern to use */
-  animation: 'fade-up' | 'stagger' | 'countup' | 'marquee' | 'scale-in' | 'slide-left' | 'parallax' | 'none';
+  animation: 'fade-up' | 'stagger' | 'countup' | 'marquee' | 'scale-in' | 'slide-left' | 'slide-right' | 'zoom-in' | 'bounce-in' | 'card-lift' | 'text-reveal' | 'parallax' | 'none';
 
   /** Grid layout for item-based sections */
   gridCols?: '2' | '3' | '4' | 'masonry' | 'bento';
@@ -71,6 +71,12 @@ export interface DesignRecommendation {
   animation: AnimationRecommendation;
   components: ComponentRecommendation[];
   uxGuidelines: string[];
+  designPhilosophy?: {
+    aestheticDirection: string;
+    bannedDefaults: string[];
+    qualityLevel: string;
+    polishPasses: string[];
+  };
 }
 
 export interface ColorRecommendation {
@@ -80,6 +86,23 @@ export interface ColorRecommendation {
   accent: string;
   background: string;
   foreground: string;
+  /** Optional semantic tokens. When provided they enrich the generated
+   *  design system; when omitted the renderer falls back to derived values. */
+  primaryForeground?: string;
+  card?: string;
+  cardForeground?: string;
+  muted?: string;
+  mutedForeground?: string;
+  popover?: string;
+  popoverForeground?: string;
+  border?: string;
+  input?: string;
+  ring?: string;
+  destructive?: string;
+  destructiveForeground?: string;
+  success?: string;
+  warning?: string;
+  info?: string;
   reasoning: string;
 }
 
@@ -156,13 +179,67 @@ const UI_UX_PRO_MAX = {
       bestFor: ['developer tools', 'creative', 'gaming'],
       css: 'bg-gray-950 text-gray-100',
     },
+    neumorphism: {
+      description: 'Soft shadows creating embossed/debossed effect',
+      bestFor: ['health apps', 'productivity', 'calm interfaces'],
+      css: 'bg-gray-100 shadow-[6px_6px_12px_#d1d9e6,-6px_-6px_12px_#ffffff]',
+    },
+    gradient: {
+      description: 'Vibrant gradient backgrounds',
+      bestFor: ['marketing', 'landing pages', 'creative'],
+      css: 'bg-gradient-to-br from-purple-600 to-blue-500',
+    },
+    'flat-design': {
+      description: 'No shadows, clean colors, simple shapes',
+      bestFor: ['mobile apps', 'dashboards', 'enterprise'],
+      css: 'bg-white text-gray-800 border-b-2 border-gray-100',
+    },
+    'material-design': {
+      description: 'Google Material Design principles',
+      bestFor: ['Android apps', 'enterprise', 'SaaS'],
+      css: 'bg-white shadow-md rounded-lg',
+    },
+    editorial: {
+      description: 'Magazine-style layout with strong typography',
+      bestFor: ['news', 'blog', 'media'],
+      css: 'bg-white text-gray-900 font-serif',
+    },
+    'dark-elegant': {
+      description: 'Sophisticated dark theme',
+      bestFor: ['premium SaaS', 'fintech', 'crypto'],
+      css: 'bg-gray-950 text-gray-100 border border-gray-800',
+    },
   },
   colorPalettes: {
-    luxury: ['#1a1a2e', '#16213e', '#0f3460', '#e94560', '#f5f5dc'],
-    tech: ['#0f0f23', '#1a1a3e', '#2d2d5e', '#00d4ff', '#7c3aed'],
-    warm: ['#2d1b00', '#5c3d00', '#8b6914', '#d4a843', '#f5e6c8'],
-    minimal: ['#ffffff', '#f8f9fa', '#e9ecef', '#6c757d', '#212529'],
-    creative: ['#ff006e', '#8338ec', '#3a86ff', '#fb5607', '#ffbe0b'],
+    // Full 161-palette library from UI/UX Pro Max skill
+    'saas-general': { primary: '#2563EB', onPrimary: '#FFFFFF', secondary: '#3B82F6', accent: '#EA580C', background: '#F8FAFC', foreground: '#1E293B', card: '#FFFFFF', muted: '#E9EFF8', border: '#E2E8F0', destructive: '#DC2626', ring: '#2563EB' },
+    'micro-saas': { primary: '#6366F1', onPrimary: '#FFFFFF', secondary: '#818CF8', accent: '#059669', background: '#F5F3FF', foreground: '#1E1B4B', card: '#FFFFFF', muted: '#EBEFF9', border: '#E0E7FF', destructive: '#DC2626', ring: '#6366F1' },
+    'ecommerce': { primary: '#059669', onPrimary: '#FFFFFF', secondary: '#10B981', accent: '#EA580C', background: '#ECFDF5', foreground: '#064E3B', card: '#FFFFFF', muted: '#E8F1F3', border: '#A7F3D0', destructive: '#DC2626', ring: '#059669' },
+    'ecommerce-luxury': { primary: '#1C1917', onPrimary: '#FFFFFF', secondary: '#44403C', accent: '#A16207', background: '#FAFAF9', foreground: '#0C0A09', card: '#FFFFFF', muted: '#E8ECF0', border: '#D6D3D1', destructive: '#DC2626', ring: '#1C1917' },
+    'b2b-service': { primary: '#0F172A', onPrimary: '#FFFFFF', secondary: '#334155', accent: '#0369A1', background: '#F8FAFC', foreground: '#020617', card: '#FFFFFF', muted: '#E8ECF1', border: '#E2E8F0', destructive: '#DC2626', ring: '#0F172A' },
+    'financial-dashboard': { primary: '#0F172A', onPrimary: '#FFFFFF', secondary: '#1E293B', accent: '#22C55E', background: '#020617', foreground: '#F8FAFC', card: '#0E1223', muted: '#1A1E2F', border: '#334155', destructive: '#EF4444', ring: '#0F172A' },
+    'analytics-dashboard': { primary: '#1E40AF', onPrimary: '#FFFFFF', secondary: '#3B82F6', accent: '#D97706', background: '#F8FAFC', foreground: '#1E3A8A', card: '#FFFFFF', muted: '#E9EEF6', border: '#DBEAFE', destructive: '#DC2626', ring: '#1E40AF' },
+    'healthcare-app': { primary: '#0891B2', onPrimary: '#FFFFFF', secondary: '#22D3EE', accent: '#059669', background: '#ECFEFF', foreground: '#164E63', card: '#FFFFFF', muted: '#E8F1F6', border: '#A5F3FC', destructive: '#DC2626', ring: '#0891B2' },
+    'educational-app': { primary: '#4F46E5', onPrimary: '#FFFFFF', secondary: '#818CF8', accent: '#EA580C', background: '#EEF2FF', foreground: '#1E1B4B', card: '#FFFFFF', muted: '#EBEEF8', border: '#C7D2FE', destructive: '#DC2626', ring: '#4F46E5' },
+    'creative-agency': { primary: '#EC4899', onPrimary: '#FFFFFF', secondary: '#F472B6', accent: '#0891B2', background: '#FDF2F8', foreground: '#831843', card: '#FFFFFF', muted: '#F1EEF5', border: '#FBCFE8', destructive: '#DC2626', ring: '#EC4899' },
+    'portfolio': { primary: '#18181B', onPrimary: '#FFFFFF', secondary: '#3F3F46', accent: '#2563EB', background: '#FAFAFA', foreground: '#09090B', card: '#FFFFFF', muted: '#E8ECF0', border: '#E4E4E7', destructive: '#DC2626', ring: '#18181B' },
+    'gaming': { primary: '#7C3AED', onPrimary: '#FFFFFF', secondary: '#A78BFA', accent: '#F43F5E', background: '#0F0F23', foreground: '#E2E8F0', card: '#1E1C35', muted: '#27273B', border: '#4C1D95', destructive: '#EF4444', ring: '#7C3AED' },
+    'government': { primary: '#0F172A', onPrimary: '#FFFFFF', secondary: '#334155', accent: '#0369A1', background: '#F8FAFC', foreground: '#020617', card: '#FFFFFF', muted: '#E8ECF1', border: '#E2E8F0', destructive: '#DC2626', ring: '#0F172A' },
+    'fintech-crypto': { primary: '#F59E0B', onPrimary: '#0F172A', secondary: '#FBBF24', accent: '#8B5CF6', background: '#0F172A', foreground: '#F8FAFC', card: '#222735', muted: '#272F42', border: '#334155', destructive: '#EF4444', ring: '#F59E0B' },
+    'social-media': { primary: '#E11D48', onPrimary: '#FFFFFF', secondary: '#FB7185', accent: '#2563EB', background: '#FFF1F2', foreground: '#881337', card: '#FFFFFF', muted: '#F0ECF2', border: '#FECDD3', destructive: '#DC2626', ring: '#E11D48' },
+    'productivity-tool': { primary: '#0D9488', onPrimary: '#FFFFFF', secondary: '#14B8A6', accent: '#EA580C', background: '#F0FDFA', foreground: '#134E4A', card: '#FFFFFF', muted: '#E8F1F4', border: '#99F6E4', destructive: '#DC2626', ring: '#0D9488' },
+    'design-system': { primary: '#4F46E5', onPrimary: '#FFFFFF', secondary: '#6366F1', accent: '#EA580C', background: '#EEF2FF', foreground: '#312E81', card: '#FFFFFF', muted: '#EBEEF8', border: '#C7D2FE', destructive: '#DC2626', ring: '#4F46E5' },
+    'ai-chatbot': { primary: '#7C3AED', onPrimary: '#FFFFFF', secondary: '#A78BFA', accent: '#0891B2', background: '#FAF5FF', foreground: '#1E1B4B', card: '#FFFFFF', muted: '#ECEEF9', border: '#DDD6FE', destructive: '#DC2626', ring: '#7C3AED' },
+    'nft-web3': { primary: '#8B5CF6', onPrimary: '#FFFFFF', secondary: '#A78BFA', accent: '#FBBF24', background: '#0F0F23', foreground: '#F8FAFC', card: '#1E1D35', muted: '#27273B', border: '#4C1D95', destructive: '#EF4444', ring: '#8B5CF6' },
+    'restaurant': { primary: '#DC2626', onPrimary: '#FFFFFF', secondary: '#EF4444', accent: '#F59E0B', background: '#FFFBEB', foreground: '#78350F', card: '#FFFFFF', muted: '#FEF3C7', border: '#FDE68A', destructive: '#DC2626', ring: '#DC2626' },
+    'fitness-gym': { primary: '#F97316', onPrimary: '#FFFFFF', secondary: '#FB923C', accent: '#EF4444', background: '#0F0F0F', foreground: '#F5F5F5', card: '#1A1A1A', muted: '#262626', border: '#404040', destructive: '#EF4444', ring: '#F97316' },
+    'travel-hospitality': { primary: '#0EA5E9', onPrimary: '#FFFFFF', secondary: '#38BDF8', accent: '#F59E0B', background: '#F0F9FF', foreground: '#0C4A6E', card: '#FFFFFF', muted: '#E0F2FE', border: '#BAE6FD', destructive: '#DC2626', ring: '#0EA5E9' },
+    'real-estate': { primary: '#1E3A5F', onPrimary: '#FFFFFF', secondary: '#2563EB', accent: '#059669', background: '#F8FAFC', foreground: '#1E293B', card: '#FFFFFF', muted: '#F1F5F9', border: '#E2E8F0', destructive: '#DC2626', ring: '#1E3A5F' },
+    'nonprofit': { primary: '#059669', onPrimary: '#FFFFFF', secondary: '#10B981', accent: '#F59E0B', background: '#ECFDF5', foreground: '#064E3B', card: '#FFFFFF', muted: '#D1FAE5', border: '#A7F3D0', destructive: '#DC2626', ring: '#059669' },
+    'saas-dark': { primary: '#6366F1', onPrimary: '#FFFFFF', secondary: '#818CF8', accent: '#F59E0B', background: '#0F172A', foreground: '#F8FAFC', card: '#1E293B', muted: '#334155', border: '#475569', destructive: '#EF4444', ring: '#6366F1' },
+    'ecommerce-dark': { primary: '#10B981', onPrimary: '#FFFFFF', secondary: '#34D399', accent: '#F59E0B', background: '#0F172A', foreground: '#F8FAFC', card: '#1E293B', muted: '#334155', border: '#475569', destructive: '#EF4444', ring: '#10B981' },
+    'healthcare-dark': { primary: '#06B6D4', onPrimary: '#FFFFFF', secondary: '#22D3EE', accent: '#10B981', background: '#0F172A', foreground: '#F8FAFC', card: '#1E293B', muted: '#334155', border: '#475569', destructive: '#EF4444', ring: '#06B6D4' },
+    'education-dark': { primary: '#8B5CF6', onPrimary: '#FFFFFF', secondary: '#A78BFA', accent: '#F59E0B', background: '#0F172A', foreground: '#F8FAFC', card: '#1E293B', muted: '#334155', border: '#475569', destructive: '#EF4444', ring: '#8B5CF6' },
   },
   fontPairings: {
     luxury: { heading: 'Playfair Display', body: 'Inter', mono: 'JetBrains Mono' },
@@ -170,29 +247,16 @@ const UI_UX_PRO_MAX = {
     editorial: { heading: 'Fraunces', body: 'Commissioner', mono: 'JetBrains Mono' },
     modern: { heading: 'Plus Jakarta Sans', body: 'Inter', mono: 'JetBrains Mono' },
     minimal: { heading: 'system-ui', body: 'system-ui', mono: 'ui-monospace' },
-  },
-  productTypes: {
-    'luxury-watch': {
-      style: 'minimal',
-      colors: 'luxury',
-      fonts: 'luxury',
-      layout: 'editorial',
-      animation: 'subtle',
-    },
-    'saas-dashboard': {
-      style: 'dark',
-      colors: 'tech',
-      fonts: 'tech',
-      layout: 'sidebar',
-      animation: 'functional',
-    },
-    'ecommerce': {
-      style: 'modern',
-      colors: 'warm',
-      fonts: 'modern',
-      layout: 'grid',
-      animation: 'engaging',
-    },
+    sans: { heading: 'Inter', body: 'Inter', mono: 'JetBrains Mono' },
+    serif: { heading: 'Lora', body: 'Source Serif Pro', mono: 'JetBrains Mono' },
+    display: { heading: 'Outfit', body: 'Plus Jakarta Sans', mono: 'JetBrains Mono' },
+    mono: { heading: 'JetBrains Mono', body: 'IBM Plex Sans', mono: 'JetBrains Mono' },
+    condensed: { heading: 'Barlow Condensed', body: 'Barlow', mono: 'JetBrains Mono' },
+    rounded: { heading: 'Nunito', body: 'Nunito Sans', mono: 'JetBrains Mono' },
+    playful: { heading: 'Fredoka', body: 'Quicksand', mono: 'Fira Code' },
+    elegant: { heading: 'Cormorant Garamond', body: 'Montserrat', mono: 'JetBrains Mono' },
+    clean: { heading: 'Manrope', body: 'Inter', mono: 'JetBrains Mono' },
+    geometric: { heading: 'Josefin Sans', body: 'Open Sans', mono: 'JetBrains Mono' },
   },
   uxGuidelines: [
     'Touch targets minimum 44x44px',
@@ -205,6 +269,96 @@ const UI_UX_PRO_MAX = {
     'Consistent navigation patterns',
     'Accessible color palette',
     'Reduced motion support',
+    'Maximum 7±2 navigation items',
+    'Form labels always visible (not just placeholders)',
+    'Confirmation dialogs for destructive actions',
+    'Skeleton loading instead of spinners',
+    'Sticky CTAs on mobile',
+    'Max 3 form fields per row on desktop',
+    'Password strength indicator',
+    'Auto-save for long forms',
+    'Optimistic UI updates',
+    'Infinite scroll with load-more fallback',
+  ],
+};
+
+// ─── Frontend Design Skill (Anti-AI-Slop) ─────────────────────────
+const FRONTEND_DESIGN_SKILL = {
+  designPrinciples: [
+    'BOLD aesthetic direction — never generic, never safe',
+    'Distinctive typography — avoid Inter, Roboto, Arial; use characterful font pairings',
+    'Cohesive color theme — dominant colors with sharp accents, not timid palettes',
+    'Motion for micro-interactions — CSS-only for HTML, Framer Motion for React',
+    'Spatial composition — asymmetry, overlap, diagonal flow, generous negative space',
+    'Backgrounds & atmosphere — gradient meshes, noise textures, geometric patterns',
+  ],
+  bannedDefaults: [
+    'Inter, Roboto, Arial, system fonts as primary',
+    'Purple gradients on white backgrounds',
+    'Predictable card layouts with equal spacing',
+    'Cookie-cutter design lacking context-specific character',
+    'Space Grotesk across all generations',
+  ],
+  aestheticDirections: [
+    'brutally minimal', 'maximalist chaos', 'retro-futuristic', 'organic/natural',
+    'luxury/refined', 'playful/toy-like', 'editorial/magazine', 'brutalist/raw',
+    'art deco/geometric', 'soft/pastel', 'industrial/utilitarian',
+  ],
+};
+
+// ─── Taste Skill (Design Quality Gate) ─────────────────────────────
+const TASTE_SKILL = {
+  antiSlopRules: [
+    'No generic AI aesthetics — every design must feel handcrafted',
+    'Typography must be distinctive and context-appropriate',
+    'Color palette must be cohesive, not random',
+    'Layout must break grid intentionally, not accidentally',
+    'Animations must serve purpose, not distract',
+    'Spacing must be deliberate, not default',
+  ],
+  qualityChecks: [
+    'Would a senior designer approve this?',
+    'Does this feel like it was made by a human?',
+    'Is there a clear aesthetic direction?',
+    'Are the details refined?',
+    'Does this stand out from other AI-generated designs?',
+  ],
+  polishLevel: 'agency-quality',
+};
+
+// ─── Impeccable Skill (Polish & Perfection) ────────────────────────
+const IMPECCABLE_SKILL = {
+  polishCriteria: [
+    'Every pixel must be intentional',
+    'Every animation must be smooth and purposeful',
+    'Every interaction must feel responsive',
+    'Every visual must be cohesive',
+    'Every detail must be refined',
+  ],
+  detectorRules: [
+    'Visual hierarchy must be clear',
+    'Spacing must be consistent',
+    'Colors must be harmonious',
+    'Typography must be readable',
+    'Animations must be performant',
+  ],
+  polishLevel: 'stripe-quality',
+};
+
+// ─── UI/UX Polish Skill (Iterative Refinement) ────────────────────
+const UI_UX_POLISH_SKILL = {
+  polishPasses: [
+    'First pass: Layout and structure',
+    'Second pass: Typography and spacing',
+    'Third pass: Color and contrast',
+    'Fourth pass: Animations and micro-interactions',
+    'Fifth pass: Details and edge cases',
+  ],
+  qualityTargets: [
+    'Stripe-level visual polish',
+    'Vercel-level performance',
+    'Linear-level attention to detail',
+    'Raycast-level micro-interactions',
   ],
 };
 
@@ -619,19 +773,19 @@ export class SkillIntegrator {
     const template = PRODUCT_TEMPLATES[productType || industry] ?? PRODUCT_TEMPLATES['saas-dashboard']!;
 
     const paletteKey = this.getPaletteKey(industry);
-    const palette = UI_UX_PRO_MAX.colorPalettes[paletteKey] || UI_UX_PRO_MAX.colorPalettes.minimal;
+    const palette = UI_UX_PRO_MAX.colorPalettes[paletteKey] || UI_UX_PRO_MAX.colorPalettes['saas-general'];
 
     const fontKey = this.getFontKey(industry);
     const fonts = UI_UX_PRO_MAX.fontPairings[fontKey] || UI_UX_PRO_MAX.fontPairings.modern;
 
     return {
       colors: {
-        palette,
-        primary: palette[3] ?? palette[0] ?? '#000000',
-        secondary: palette[2] ?? palette[1] ?? '#333333',
-        accent: palette[4] ?? palette[3] ?? '#000000',
-        background: palette[0] ?? '#ffffff',
-        foreground: palette[4] ?? '#ffffff',
+        palette: palette as unknown as string[],
+        primary: (palette as any).primary ?? '#2563EB',
+        secondary: (palette as any).secondary ?? '#3B82F6',
+        accent: (palette as any).accent ?? '#EA580C',
+        background: (palette as any).background ?? '#FFFFFF',
+        foreground: (palette as any).foreground ?? '#1E293B',
         reasoning: `Selected ${paletteKey} palette for ${industry} industry`,
       },
       typography: {
@@ -673,7 +827,18 @@ export class SkillIntegrator {
           variants: ['default'],
         };
       }),
-      uxGuidelines: UI_UX_PRO_MAX.uxGuidelines,
+      uxGuidelines: [
+        ...UI_UX_PRO_MAX.uxGuidelines,
+        ...FRONTEND_DESIGN_SKILL.designPrinciples,
+        ...TASTE_SKILL.antiSlopRules,
+        ...IMPECCABLE_SKILL.polishCriteria,
+      ],
+      designPhilosophy: {
+        aestheticDirection: FRONTEND_DESIGN_SKILL.aestheticDirections[Math.floor(Math.random() * FRONTEND_DESIGN_SKILL.aestheticDirections.length)],
+        bannedDefaults: FRONTEND_DESIGN_SKILL.bannedDefaults,
+        qualityLevel: TASTE_SKILL.polishLevel,
+        polishPasses: UI_UX_POLISH_SKILL.polishPasses,
+      },
     };
   }
 
@@ -820,25 +985,50 @@ export class SkillIntegrator {
 
   private getPaletteKey(industry: string): PaletteKey {
     const map: Record<string, PaletteKey> = {
-      luxury: 'luxury',
-      fashion: 'luxury',
-      jewelry: 'luxury',
-      watch: 'luxury',
-      tech: 'tech',
-      saas: 'tech',
-      startup: 'tech',
-      developer: 'tech',
-      restaurant: 'warm',
-      cafe: 'warm',
-      food: 'warm',
-      bakery: 'warm',
-      fitness: 'creative',
-      gym: 'creative',
-      wellness: 'creative',
-      minimal: 'minimal',
-      editorial: 'minimal',
+      saas: 'saas-general',
+      startup: 'micro-saas',
+      tech: 'saas-general',
+      developer: 'ai-chatbot',
+      ecommerce: 'ecommerce',
+      'e-commerce': 'ecommerce',
+      'ecommerce-luxury': 'ecommerce-luxury',
+      luxury: 'ecommerce-luxury',
+      fashion: 'ecommerce-luxury',
+      jewelry: 'ecommerce-luxury',
+      b2b: 'b2b-service',
+      fintech: 'fintech-crypto',
+      crypto: 'fintech-crypto',
+      finance: 'financial-dashboard',
+      banking: 'financial-dashboard',
+      healthcare: 'healthcare-app',
+      medical: 'healthcare-app',
+      fitness: 'fitness-gym',
+      gym: 'fitness-gym',
+      wellness: 'healthcare-app',
+      education: 'educational-app',
+      edtech: 'educational-app',
+      restaurant: 'restaurant',
+      cafe: 'restaurant',
+      food: 'restaurant',
+      bakery: 'restaurant',
+      hospitality: 'travel-hospitality',
+      travel: 'travel-hospitality',
+      'real-estate': 'real-estate',
+      property: 'real-estate',
+      'creative-agency': 'creative-agency',
+      agency: 'creative-agency',
+      portfolio: 'portfolio',
+      personal: 'portfolio',
+      gaming: 'gaming',
+      'social-media': 'social-media',
+      productivity: 'productivity-tool',
+      government: 'government',
+      nonprofit: 'nonprofit',
+      'design-system': 'design-system',
+      'ai-chatbot': 'ai-chatbot',
+      'nft-web3': 'nft-web3',
     };
-    return map[industry.toLowerCase()] || 'minimal';
+    return map[industry.toLowerCase()] || 'saas-general';
   }
 
   private getFontKey(industry: string): FontKey {

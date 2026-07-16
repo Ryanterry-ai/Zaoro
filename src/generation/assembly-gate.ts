@@ -56,7 +56,7 @@ export function assembleRenderResults(inputs: AssemblyInput[]): AssemblyResult {
 
     for (const file of input.files) {
       /* Skip spec/auxiliary files — only merge actual source code */
-      if (file.path.startsWith('.') || file.path.endsWith('.spec.json')) {
+      if ((file.path.startsWith('.') && !file.path.startsWith('../')) || file.path.endsWith('.spec.json')) {
         specFilesProcessed++;
         continue;
       }

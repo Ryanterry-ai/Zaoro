@@ -605,40 +605,87 @@ export function getPrimitiveByName(name: string): AtomicPrimitive | undefined {
   return ATOMIC_PRIMITIVES.find(p => p.name === name);
 }
 
-export function getPrimitivesForCapabilities(capabilities: string[]): AtomicPrimitive[] {
-  const capabilityCategoryMap: Record<string, AtomicPrimitive['category'][]> = {
-    commerce: ['ecommerce'],
-    booking: ['booking'],
-    crm: ['crm'],
-    subscriptions: ['subscription'],
-    inventory: ['data-display'],
-    orders: ['data-display'],
-    'customer-management': ['data-display', 'dashboard'],
-    analytics: ['dashboard'],
-    content: ['content'],
-    payments: ['data-display'],
-    scheduling: ['booking'],
-    'property-management': ['data-display', 'ecommerce'],
-    marketplace: ['ecommerce'],
-    education: ['content', 'data-display'],
-    'case-management': ['crm', 'kanban'],
-    'franchise-management': ['dashboard', 'data-display'],
-    'membership-platform': ['crm', 'content'],
-    'food-beverage': ['ecommerce', 'booking'],
-    'fitness-wellness': ['booking', 'subscription'],
-    'healthcare-clinic': ['booking', 'dashboard'],
-    catalog: ['ecommerce'],
-    'team-collaboration': ['dashboard'],
-    'project-management': ['kanban', 'dashboard'],
-    notifications: ['feedback'],
-    'user-generated-content': ['content'],
-  };
+// ── Phase R2: capability → primitive-category mapping ─────────────────
+// Keyed by CANONICAL capability ids (see src/bos/capabilities). Every input is
+// first normalized through the registry so legacy tags (`commerce`, `crm`,
+// `booking`...) resolve to their canonical id before lookup.
+const CAPABILITY_CATEGORY_MAP: Record<string, AtomicPrimitive['category'][]> = {
+  'commerce.catalog': ['ecommerce'],
+  'commerce.cart': ['ecommerce'],
+  'commerce.checkout': ['ecommerce'],
+  'commerce.orders': ['ecommerce'],
+  payments: ['data-display'],
+  pricing: ['ecommerce'],
+  tax: ['data-display'],
+  discounts: ['data-display'],
+  shipping: ['data-display'],
+  fulfillment: ['data-display'],
+  'inventory.management': ['data-display'],
+  marketplace: ['ecommerce'],
+  'food.menu': ['ecommerce'],
+  'food.ordering': ['ecommerce'],
+  'food.delivery': ['booking'],
+  scheduling: ['booking'],
+  'booking.reservation': ['booking'],
+  'booking.appointment': ['booking'],
+  'crm.contacts': ['crm'],
+  'crm.deals': ['crm'],
+  'crm.support': ['crm'],
+  'erp.inventory': ['data-display'],
+  'erp.procurement': ['data-display'],
+  'erp.manufacturing': ['data-display'],
+  'healthcare.records': ['data-display'],
+  'healthcare.appointments': ['booking'],
+  'healthcare.telemedicine': ['booking'],
+  'notifications.email': ['feedback'],
+  'notifications.sms': ['feedback'],
+  'notifications.push': ['feedback'],
+  'content.management': ['content'],
+  'content.marketing': ['content'],
+  auth: ['input', 'navigation'],
+  membership: ['crm'],
+  subscriptions: ['subscription'],
+  'analytics.dashboard': ['dashboard'],
+  'analytics.reporting': ['dashboard'],
+  'social.ugc': ['content'],
+};
 
+// Retained only for callers/tests that still pass raw legacy ids that have no
+// canonical alias. New code should pass canonical ids (or any known alias).
+const LEGACY_CAPABILITY_CATEGORY_MAP: Record<string, AtomicPrimitive['category'][]> = {
+  inventory: ['data-display'],
+  orders: ['data-display'],
+  'customer-management': ['data-display', 'dashboard'],
+  analytics: ['dashboard'],
+  content: ['content'],
+  payments: ['data-display'],
+  scheduling: ['booking'],
+  'property-management': ['data-display', 'ecommerce'],
+  marketplace: ['ecommerce'],
+  education: ['content', 'data-display'],
+  'case-management': ['crm', 'kanban'],
+  'franchise-management': ['dashboard', 'data-display'],
+  'membership-platform': ['crm', 'content'],
+  'food-beverage': ['ecommerce', 'booking'],
+  'fitness-wellness': ['booking', 'subscription'],
+  'healthcare-clinic': ['booking', 'dashboard'],
+  catalog: ['ecommerce'],
+  'team-collaboration': ['dashboard'],
+  'project-management': ['kanban', 'dashboard'],
+  notifications: ['feedback'],
+  'user-generated-content': ['content'],
+};
+
+import { capabilityRegistry } from '../bos/capabilities/index.js';
+
+export function getPrimitivesForCapabilities(capabilities: string[]): AtomicPrimitive[] {
   const baseCategories: AtomicPrimitive['category'][] = ['layout', 'ui', 'input', 'navigation', 'content', 'data-display', 'media', 'feedback'];
   const matchedCategories = new Set<AtomicPrimitive['category']>(baseCategories);
 
   for (const cap of capabilities) {
-    const cats = capabilityCategoryMap[cap] || [];
+    // Normalize through the canonical registry first (folds legacy vocab → id).
+    const canonical = capabilityRegistry.normalize(cap);
+    const cats = (canonical && CAPABILITY_CATEGORY_MAP[canonical]) || LEGACY_CAPABILITY_CATEGORY_MAP[cap] || [];
     for (const c of cats) {
       matchedCategories.add(c);
     }

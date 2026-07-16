@@ -56,7 +56,7 @@ export type VersionedObject = z.infer<typeof VersionedObject>;
 export const RuleRef = z.object({
   id: z.string(),
   version: z.string().optional(),
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
 });
 export type RuleRef = z.infer<typeof RuleRef>;
 
@@ -64,7 +64,7 @@ export const InfluenceRule = z.object({
   condition: z.string(),
   action: z.string(),
   priority: z.number().default(0),
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
 });
 export type InfluenceRule = z.infer<typeof InfluenceRule>;
 

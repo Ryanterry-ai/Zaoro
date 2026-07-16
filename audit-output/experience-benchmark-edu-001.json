@@ -1,0 +1,19 @@
+{
+  "id": "edu-001",
+  "industry": "education",
+  "prompt": "an online course platform with video lessons and student progress tracking",
+  "checks": {
+    "blueprintProduced": true,
+    "scenesPresent": true,
+    "narrativePresent": true,
+    "hoverBehaviorsPresent": true,
+    "motionDrivenCode": true,
+    "motionAnchorPresent": true,
+    "lineageProvenance": true
+  },
+  "passed": 7,
+  "total": 7,
+  "verdict": "PASS",
+  "sceneCount": 3,
+  "hoverCount": 4
+}

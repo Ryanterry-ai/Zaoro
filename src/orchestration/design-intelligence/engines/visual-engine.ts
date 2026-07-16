@@ -51,7 +51,21 @@ export class VisualEngine implements DesignSubEngine {
   readonly domain = 'visual' as const;
 
   recommend(ctx: DesignContext): DesignRecommendation[] {
-    const personality = ctx.preferences?.typographyStyle ?? ctx.personality ?? 'modern';
+    const rawPersonality = ctx.preferences?.typographyStyle ?? ctx.personality ?? 'modern';
+    // Map personality to typography preset
+    const personalityMap: Record<string, string> = {
+      'premium': 'clean',
+      'luxury': 'warm',
+      'professional': 'professional',
+      'creative': 'creative',
+      'friendly': 'friendly',
+      'calm': 'calm',
+      'energetic': 'energetic',
+      'editorial': 'editorial',
+      'vibrant': 'vibrant',
+      'compassionate': 'compassionate',
+    };
+    const personality = personalityMap[rawPersonality] ?? rawPersonality;
     const recs: DesignRecommendation[] = [];
 
     // Color palette

@@ -232,7 +232,8 @@ const server = http.createServer(async (req, res) => {
       const { provider, apiKey } = (await import('./core/resolve-llm-config.js')).resolveLLMConfig();
       if (!apiKey) return json(res, { error: 'LLM_API_KEY not configured' }, 500);
 
-      // DEPRECATED: BusinessIntelligencePipeline removed. Use /api/create instead.
+      // @deprecated (Phase R1, 2026-07-15): BusinessIntelligencePipeline removed.
+      // Canonical runtime is DeterministicOrchestratorV4 via /api/command. Use /api/create instead.
       return json(res, { error: 'Deprecated — use POST /api/create with a prompt instead' }, 410);
     } catch (err: any) {
       console.error('[bi] Error:', err.message);
@@ -255,7 +256,12 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // POST /api/build-anything — Build.Anything orchestrator endpoint
+  // @deprecated (Phase R1, 2026-07-15): Reconciled onto the canonical runtime.
+  // R1 Step 2: /api/build-anything now routes through DeterministicOrchestratorV4
+  // (the single canonical executor) instead of the legacy Build.Anything
+  // Orchestrator. Falls back to the legacy Orchestrator only on failure, for
+  // rollback. Prefer POST /api/command (with "/build-anything <prompt>").
+  // POST /api/build-anything — canonical runtime (V4) endpoint
   if (method === 'POST' && url.pathname === '/api/build-anything') {
     try {
       const body = JSON.parse(await readBody(req));
@@ -263,39 +269,98 @@ const server = http.createServer(async (req, res) => {
         return json(res, { error: 'prompt is required' }, 400);
       }
 
-      const { Orchestrator } = await import('./orchestration/orchestrator.js');
+      // Canonical runtime: V4.
+      const { DeterministicOrchestratorV4 } = await import('./agents/deterministic-orchestrator-v4.js');
+      const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      fs.mkdirSync(path.join(WORKSPACE_BASE, id), { recursive: true });
 
-      const workingDir = body.workingDirectory ?? '.build-anything';
+      const orch = new DeterministicOrchestratorV4(WORKSPACE_BASE);
+      const result = await orch.processInput(id, body.prompt, body.llmConfig);
 
-      // Orchestrator auto-creates LLMAdapter from env vars if needed
-      const orchestrator = new Orchestrator({
-        workingDirectory: workingDir,
-      });
-
-      const result = await orchestrator.run(body.prompt);
+      const artifactsDir = path.join(WORKSPACE_BASE, id, '.build-artifacts');
+      let manifest: Record<string, unknown> | undefined;
+      if (fs.existsSync(path.join(artifactsDir, 'capability-manifest.json'))) {
+        manifest = JSON.parse(fs.readFileSync(path.join(artifactsDir, 'capability-manifest.json'), 'utf-8'));
+      }
 
       return json(res, {
         success: result.success,
-        result: {
-          success: result.success,
-          artifacts: Object.keys(result.artifacts),
-          stageCount: result.stageResults.size,
-          failedStages: [...result.stageResults.entries()]
-            .filter(([, sr]) => !sr.success)
-            .map(([id, sr]) => ({ id, error: sr.error })),
-          gateResults: result.gateResults.map(g => ({
-            gate: g.gateId,
-            passed: g.passed,
-            errors: g.errors,
-            warnings: g.warnings,
-          })),
-          durationMs: result.durationMs,
-          totalLlmCalls: result.totalLlmCalls,
-          totalTokens: result.totalTokens,
-        },
+        workspaceId: id,
+        command: 'build-anything',
+        error: result.error,
+        warnings: result.warnings,
+        duration: result.duration,
+        capabilityManifest: manifest,
       });
     } catch (err: any) {
-      console.error('[build-anything] Error:', err.message);
+      // Rollback: legacy Orchestrator (kept @deprecated for this purpose only).
+      console.warn('[build-anything] V4 failed, rolling back to legacy Orchestrator:', err.message);
+      try {
+        const body = JSON.parse(await readBody(req).catch(() => '{}'));
+        const { Orchestrator } = await import('./orchestration/orchestrator.js');
+        const workingDir = body.workingDirectory ?? '.build-anything';
+        const orchestrator = new Orchestrator({ workingDirectory: workingDir });
+        const result = await orchestrator.run(body.prompt);
+        return json(res, {
+          success: result.success,
+          runtime: 'legacy-fallback',
+          result: {
+            success: result.success,
+            artifacts: Object.keys(result.artifacts),
+            stageCount: result.stageResults.size,
+            durationMs: result.durationMs,
+          },
+        });
+      } catch (fallbackErr: any) {
+        console.error('[build-anything] Both runtimes failed:', fallbackErr.message);
+        return json(res, { error: fallbackErr.message }, 500);
+      }
+    }
+  }
+
+  // POST /api/command — Process slash commands (/build-anything, /clone-website, etc.)
+  if (method === 'POST' && url.pathname === '/api/command') {
+    try {
+      const body = JSON.parse(await readBody(req));
+      if (!body.input || typeof body.input !== 'string') {
+        return json(res, { error: 'input is required (e.g., /build-anything "prompt")' }, 400);
+      }
+
+      const { DeterministicOrchestratorV4 } = await import('./agents/deterministic-orchestrator-v4.js');
+      const { parseCommand, isCommand } = await import('./agents/command-parser.js');
+
+      // Parse the command
+      const command = parseCommand(body.input);
+
+      if (!command.valid) {
+        return json(res, { error: command.error, command: command.command }, 400);
+      }
+
+      if (command.command === 'help') {
+        const { getHelpText } = await import('./agents/command-parser.js');
+        return json(res, { success: true, help: getHelpText() });
+      }
+
+      // Create workspace
+      const id = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const workspaceDir = path.join(WORKSPACE_BASE, id);
+      fs.mkdirSync(workspaceDir, { recursive: true });
+
+      // Process via orchestrator
+      const orch = new DeterministicOrchestratorV4(WORKSPACE_BASE);
+      const result = await orch.processInput(id, body.input, body.llmConfig);
+
+      return json(res, {
+        success: result.success,
+        workspaceId: id,
+        command: command.command,
+        argument: command.argument,
+        error: result.error,
+        warnings: result.warnings,
+        duration: result.duration,
+      });
+    } catch (err: any) {
+      console.error('[command] Error:', err.message);
       return json(res, { error: err.message }, 500);
     }
   }

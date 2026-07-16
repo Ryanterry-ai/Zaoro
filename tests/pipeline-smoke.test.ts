@@ -1,12 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { runBuildPipeline } from '../src/generation/build-pipeline.js';
 import { buildBREContext } from '../src/bos/intake-parser.js';
 
 describe('Pipeline Smoke: Supplement Store', () => {
-  it('produces valid output with all layers', async () => {
-    const ctx = buildBREContext('Build a fully functional, interactive, responsive multi brands e commerce supplement store for Indian customers');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  const prompt = 'Build a fully functional, interactive, responsive multi brands e commerce supplement store for Indian customers';
+  let result: Awaited<ReturnType<typeof runBuildPipeline>>;
 
+  beforeAll(async () => {
+    const ctx = await buildBREContext(prompt);
+    result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  }, 60000);
+
+  it('produces valid output with all layers', () => {
     expect(result.breResult).toBeDefined();
     expect(result.executionBlueprint).toBeDefined();
     expect(result.applicationSpec).toBeDefined();
@@ -24,10 +29,7 @@ describe('Pipeline Smoke: Supplement Store', () => {
     expect(result.graphStats.nodes).toBeGreaterThan(0);
   });
 
-  it('rendered TSX files have no placeholder content or invalid imports', async () => {
-    const ctx = buildBREContext('Build a fully functional, interactive, responsive multi brands e commerce supplement store for Indian customers');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
-
+  it('rendered TSX files have no placeholder content or invalid imports', () => {
     const content = result.renderResult.files.map(f => f.content).join('\n');
 
     expect(content).not.toContain('@21st-dev');
@@ -46,10 +48,7 @@ describe('Pipeline Smoke: Supplement Store', () => {
     expect(subtitle.length).toBeGreaterThan(10);
   });
 
-  it('rendered TSX files reference real SVG icon names', async () => {
-    const ctx = buildBREContext('Build a supplement store for Indian customers');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
-
+  it('rendered TSX files reference real SVG icon names', () => {
     const appSpec = result.applicationSpec;
     for (const page of appSpec.pages) {
       for (const comp of page.components) {
@@ -66,21 +65,7 @@ describe('Pipeline Smoke: Supplement Store', () => {
     }
   });
 
-  it('app name is a compound word, not a single adjective', async () => {
-    const adjectives = ['indian', 'local', 'modern', 'best', 'top', 'great', 'new'];
-    for (const adj of adjectives) {
-      const ctx = buildBREContext(`Build a ${adj} supplement store`);
-      const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
-      expect(result.breResult.blueprint.name.toLowerCase()).not.toBe(adj + ' store');
-      expect(result.breResult.blueprint.name.toLowerCase()).not.toBe(adj);
-      expect(result.breResult.blueprint.name.length).toBeGreaterThan(2);
-    }
-  }, 60_000);
-
-  it('generates all expected page types', async () => {
-    const ctx = buildBREContext('Build a multi brand supplement store for Indian customers');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
-
+  it('generates all expected page types', () => {
     const pagePaths = result.breResult.blueprint.pages.map(p => p.path);
     expect(pagePaths).toContain('/');
     expect(pagePaths).toContain('/shop');
@@ -90,10 +75,65 @@ describe('Pipeline Smoke: Supplement Store', () => {
     expect(pagePaths).toContain('/contact');
   });
 
-  it('rendered code exports default function components', async () => {
-    const ctx = buildBREContext('Build a supplement store');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  it('rendered code exports default function components', () => {
+    for (const file of result.renderResult.files) {
+      if (file.path.endsWith('.tsx')) {
+        expect(file.content).toContain('export default function');
+      }
+    }
+  });
+});
 
+describe('Pipeline Smoke: Supplement Store Name Generation', () => {
+  const adjectives = ['indian', 'local', 'modern', 'best', 'top', 'great', 'new'];
+  let results: Map<string, Awaited<ReturnType<typeof runBuildPipeline>>> = new Map();
+
+beforeAll(async () => {
+      for (const adj of adjectives) {
+        const ctx = await buildBREContext(`Build a ${adj} supplement store`);
+        const r = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+        results.set(adj, r);
+      }
+    }, 120_000);
+
+  it('app name is a compound word, not a single adjective', () => {
+    for (const adj of adjectives) {
+      const r = results.get(adj)!;
+      expect(r.breResult.blueprint.name.toLowerCase()).not.toBe(adj + ' store');
+      expect(r.breResult.blueprint.name.toLowerCase()).not.toBe(adj);
+      expect(r.breResult.blueprint.name.length).toBeGreaterThan(2);
+    }
+  });
+});
+
+describe('Pipeline Smoke: Multi Brand Supplement Store', () => {
+  let result: Awaited<ReturnType<typeof runBuildPipeline>>;
+
+  beforeAll(async () => {
+    const ctx = await buildBREContext('Build a multi brand supplement store for Indian customers');
+    result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  }, 60000);
+
+  it('generates all expected page types', () => {
+    const pagePaths = result.breResult.blueprint.pages.map(p => p.path);
+    expect(pagePaths).toContain('/');
+    expect(pagePaths).toContain('/shop');
+    expect(pagePaths).toContain('/cart');
+    expect(pagePaths.some(p => p.includes('product'))).toBe(true);
+    expect(pagePaths).toContain('/about');
+    expect(pagePaths).toContain('/contact');
+  });
+});
+
+describe('Pipeline Smoke: Supplement Store Short Prompt', () => {
+  let result: Awaited<ReturnType<typeof runBuildPipeline>>;
+
+  beforeAll(async () => {
+    const ctx = await buildBREContext('Build a supplement store');
+    result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  }, 60000);
+
+  it('rendered code exports default function components', () => {
     for (const file of result.renderResult.files) {
       if (file.path.endsWith('.tsx')) {
         expect(file.content).toContain('export default function');
@@ -103,10 +143,14 @@ describe('Pipeline Smoke: Supplement Store', () => {
 });
 
 describe('Pipeline Smoke: Restaurant', () => {
-  it('produces valid output for restaurant domain', async () => {
-    const ctx = buildBREContext('Build a restaurant called Bella Vista');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  let result: Awaited<ReturnType<typeof runBuildPipeline>>;
 
+  beforeAll(async () => {
+    const ctx = await buildBREContext('Build a restaurant called Bella Vista');
+    result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  }, 60000);
+
+  it('produces valid output for restaurant domain', () => {
     expect(result.renderResult.files.length).toBeGreaterThan(0);
     expect(result.breResult.blueprint.pages.length).toBeGreaterThan(3);
 
@@ -117,10 +161,14 @@ describe('Pipeline Smoke: Restaurant', () => {
 });
 
 describe('Pipeline Smoke: SaaS', () => {
-  it('produces valid output for SaaS domain', async () => {
-    const ctx = buildBREContext('Build a SaaS analytics platform called CloudDash');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  let result: Awaited<ReturnType<typeof runBuildPipeline>>;
 
+  beforeAll(async () => {
+    const ctx = await buildBREContext('Build a SaaS analytics platform called CloudDash');
+    result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  }, 60000);
+
+  it('produces valid output for SaaS domain', () => {
     expect(result.renderResult.files.length).toBeGreaterThan(0);
     expect(result.breResult.blueprint.pages.length).toBeGreaterThan(3);
 
@@ -131,10 +179,14 @@ describe('Pipeline Smoke: SaaS', () => {
 });
 
 describe('Pipeline Smoke: Fitness Gym', () => {
-  it('produces valid output for fitness/gym domain', async () => {
-    const ctx = buildBREContext('Build a gym membership app called FitZone');
-    const result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  let result: Awaited<ReturnType<typeof runBuildPipeline>>;
 
+  beforeAll(async () => {
+    const ctx = await buildBREContext('Build a gym membership app called FitZone');
+    result = await runBuildPipeline(ctx, { platform: 'react', outputDir: './test-output' });
+  }, 60000);
+
+  it('produces valid output for fitness/gym domain', () => {
     expect(result.renderResult.files.length).toBeGreaterThan(0);
     expect(result.breResult.blueprint.pages.length).toBeGreaterThan(3);
 

@@ -12,3 +12,4 @@ export type { Renderer, RenderContext, RenderedFile, RenderResult, ComponentSour
 export { registerRenderer, getRenderer, getRegisteredPlatforms, renderWith } from './renderer.js';
 export { ReactRenderer } from './react-renderer.js';
 export { FlutterRenderer } from './flutter-renderer.js';
+export { FastAPIRenderer } from './fastapi-renderer.js';

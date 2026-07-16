@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Industry } from '../types.js';
+import type { ExperienceStrategy } from '../experience-os/types.js';
 
 // ─── Design Context ─────────────────────────────────────────────────────────
 
@@ -26,6 +27,13 @@ export interface DesignContext {
   bosIndustry?: string | undefined;
   /** User preferences or overrides */
   preferences?: DesignPreferences | undefined;
+  /**
+   * When present, the Motion Engine derives its capability-selection signals
+   * from the ExperienceStrategy (style + pacing + conversion goal + budget)
+   * instead of only the personality/animationLevel preference. This is the
+   * M2 wiring that lets the strategy layer drive deterministic motion selection.
+   */
+  experienceStrategy?: ExperienceStrategy | undefined;
 }
 
 export interface DesignPreferences {

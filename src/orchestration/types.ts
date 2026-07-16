@@ -174,6 +174,12 @@ export interface StageContext {
   log: StageLogger;
   /** BOS knowledge context (industry-specific data and prompts) */
   bos: BOSContext;
+  /**
+   * Direct access to BusinessKnowledge — the single source of truth.
+   * Equivalent to ctx.bos.businessKnowledge but shorter and explicit.
+   * All new stage code should use this instead of ctx.bos.pack.
+   */
+  bk: import('./business-intelligence/types.js').BusinessKnowledge | undefined;
   /** Runtime engine for build/test/preview (available after build stage) */
   runtime?: RuntimeContext | undefined;
 }
@@ -381,10 +387,20 @@ export interface IntentResult {
   extractedMetadata?: Record<string, unknown> | undefined;
 }
 
+// ─── Business Knowledge (Layer 1 single source of truth) ─────────────────────
+
+/**
+ * Import BusinessKnowledge from the Business Intelligence Engine.
+ * This is the single authority for all business understanding.
+ */
+export type { BusinessKnowledge } from './business-intelligence/types.js';
+
 // ─── BOS (Business Operating System) ─────────────────────────────────────────
 
 /**
  * Industry identifiers for BOS knowledge packs.
+ * @deprecated Use BusinessKnowledge.discovery.industry (string) instead of this enum.
+ * Kept for backward compatibility with existing BOS packs.
  */
 export type Industry =
   | 'ecommerce'
@@ -399,6 +415,10 @@ export type Industry =
   | 'portfolio'
   | 'marketplace'
   | 'nonprofit'
+  | 'perfume'
+  | 'fragrance'
+  | 'luxury'
+  | 'beauty'
   | 'other';
 
 /**
@@ -600,14 +620,20 @@ export interface DualOutput {
 
 /**
  * BOS-enriched context available to stages.
+ * Contains both legacy BOSPack (backward compat) and new BusinessKnowledge.
  */
 export interface BOSContext {
-  /** The loaded BOS pack (if any) */
+  /** The loaded BOS pack (if any) — @deprecated use businessKnowledge instead */
   pack: BOSPack | undefined;
-  /** Detected industry */
+  /** Detected industry — @deprecated use businessKnowledge.discovery.industry */
   industry: Industry | undefined;
-  /** Confidence of industry detection */
+  /** Confidence of industry detection — @deprecated use businessKnowledge.sources */
   detectionConfidence: number;
+  /**
+   * BusinessKnowledge: the SINGLE SOURCE OF TRUTH for all business understanding.
+   * Every downstream layer reads this. No stage should read pack.* for business logic.
+   */
+  businessKnowledge: import('./business-intelligence/types.js').BusinessKnowledge | undefined;
 }
 
 // ─── Enhanced Orchestrator Config ─────────────────────────────────────────────

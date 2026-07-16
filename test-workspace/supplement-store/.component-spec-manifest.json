@@ -1,0 +1,2013 @@
+{
+  "id": "spec-exec-blueprint-1783575271581-8b7ty3",
+  "createdAt": "2026-07-09T05:34:31.599Z",
+  "totalComponents": 38,
+  "totalPages": 14,
+  "records": [
+    {
+      "pagePath": "/shop",
+      "pageName": "Shop",
+      "componentType": "ProductGrid",
+      "componentIndex": 0,
+      "spec": {
+        "type": "ProductGrid",
+        "content": {
+          "title": {
+            "value": "All Products",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Browse our collection",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "columns": [
+          {
+            "key": "name",
+            "label": "Name",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "description",
+            "label": "Description",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "image",
+            "label": "Image",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "stock",
+            "label": "Stock",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "sku",
+            "label": "Sku",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "category",
+            "label": "Category",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "userId",
+            "label": "UserId",
+            "type": "text",
+            "sortable": true,
+            "filterable": true
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "01dc0f738ac89a1380f7dbe5b6a4f769bf33b13308c60002d533026911d4b6af"
+    },
+    {
+      "pagePath": "/shop",
+      "pageName": "Shop",
+      "componentType": "FilterSidebar",
+      "componentIndex": 1,
+      "spec": {
+        "type": "FilterSidebar",
+        "content": {
+          "title": {
+            "value": "Filters",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Category",
+            "icon": "grid",
+            "metadata": {
+              "type": "select"
+            }
+          },
+          {
+            "title": "Price Range",
+            "icon": "dollar-sign",
+            "metadata": {
+              "type": "range"
+            }
+          },
+          {
+            "title": "Rating",
+            "icon": "star",
+            "metadata": {
+              "type": "select"
+            }
+          },
+          {
+            "title": "Availability",
+            "icon": "package",
+            "metadata": {
+              "type": "checkbox"
+            }
+          }
+        ],
+        "layout": {
+          "maxWidth": "xs"
+        }
+      },
+      "contentHash": "206df1878d1719428cbeaa35a8e7c78528c7300a3fddaafe430f5d2cd81145d1"
+    },
+    {
+      "pagePath": "/shop",
+      "pageName": "Shop",
+      "componentType": "CategoryGrid",
+      "componentIndex": 2,
+      "spec": {
+        "type": "CategoryGrid",
+        "content": {
+          "title": {
+            "value": "Categories",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Browse by category",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "All",
+            "icon": "grid",
+            "metadata": {
+              "href": "/shop"
+            }
+          },
+          {
+            "title": "Featured",
+            "icon": "star",
+            "metadata": {
+              "href": "/shop?featured=true"
+            }
+          },
+          {
+            "title": "New Arrivals",
+            "icon": "sparkles",
+            "metadata": {
+              "href": "/shop?new=true"
+            }
+          },
+          {
+            "title": "Sale",
+            "icon": "tag",
+            "metadata": {
+              "href": "/shop?sale=true"
+            }
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "0402ae00c5c3042f4a5a1f2112c962e0251ad9cce9e2b29e42759fc2a68abc97"
+    },
+    {
+      "pagePath": "/cart",
+      "pageName": "Cart",
+      "componentType": "CartItems",
+      "componentIndex": 0,
+      "spec": {
+        "type": "CartItems",
+        "content": {
+          "title": {
+            "value": "Shopping Cart",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "columns": [
+          {
+            "key": "name",
+            "label": "Product",
+            "type": "text",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "quantity",
+            "label": "Qty",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "total",
+            "label": "Total",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          }
+        ],
+        "actions": [
+          {
+            "label": "Continue Shopping",
+            "action": "/shop",
+            "style": "ghost"
+          },
+          {
+            "label": "Checkout",
+            "action": "/checkout",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "maxWidth": "4xl"
+        }
+      },
+      "contentHash": "7c77eb648a172d45eeffe9b311144ab38cef22905da8193a36ef1a630d56536e"
+    },
+    {
+      "pagePath": "/cart",
+      "pageName": "Cart",
+      "componentType": "OrderSummary",
+      "componentIndex": 1,
+      "spec": {
+        "type": "OrderSummary",
+        "content": {
+          "title": {
+            "value": "Order Summary",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Subtotal",
+            "metadata": {
+              "value": "₹0"
+            }
+          },
+          {
+            "title": "Shipping",
+            "metadata": {
+              "value": "Free delivery"
+            }
+          },
+          {
+            "title": "Tax",
+            "metadata": {
+              "value": "₹0"
+            }
+          },
+          {
+            "title": "Total",
+            "metadata": {
+              "value": "₹0",
+              "bold": "true"
+            }
+          }
+        ],
+        "layout": {
+          "maxWidth": "md"
+        }
+      },
+      "contentHash": "ad9a16bb882db19e35615fd7dd5cc5d31e0c79fbcf9e6996f0671f187a3e78e8"
+    },
+    {
+      "pagePath": "/cart",
+      "pageName": "Cart",
+      "componentType": "CheckoutForm",
+      "componentIndex": 2,
+      "spec": {
+        "type": "CheckoutForm",
+        "content": {
+          "title": {
+            "value": "Checkout",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Complete your order",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "required": true,
+            "placeholder": "you@example.com"
+          },
+          {
+            "name": "fullName",
+            "label": "Full Name",
+            "type": "text",
+            "required": true,
+            "placeholder": "John Doe"
+          },
+          {
+            "name": "address",
+            "label": "Address",
+            "type": "text",
+            "required": true,
+            "placeholder": "123 Main St"
+          },
+          {
+            "name": "city",
+            "label": "City",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "state",
+            "label": "State",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "zip",
+            "label": "ZIP Code",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "country",
+            "label": "Country",
+            "type": "select",
+            "required": true,
+            "options": [
+              {
+                "label": "India",
+                "value": "IN"
+              },
+              {
+                "label": "United States",
+                "value": "US"
+              },
+              {
+                "label": "United Kingdom",
+                "value": "GB"
+              }
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "label": "Place Order",
+            "action": "/api/checkout",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "72357161f5c0a3f63ca4a079d5ea07a05bc70baa495934ce2bb9864d9cacc357"
+    },
+    {
+      "pagePath": "/product/:handle",
+      "pageName": "Product Detail",
+      "componentType": "ProductInfo",
+      "componentIndex": 0,
+      "spec": {
+        "type": "ProductInfo",
+        "content": {
+          "title": {
+            "value": "Product Details",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "price",
+            "label": "Price",
+            "type": "number",
+            "required": true
+          },
+          {
+            "name": "description",
+            "label": "Description",
+            "type": "textarea",
+            "required": false
+          },
+          {
+            "name": "sku",
+            "label": "SKU",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "stock",
+            "label": "Stock",
+            "type": "number",
+            "required": false
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "d47be7821b90214c1a333826ddd4be929553323e627da69ecd51a15241234450"
+    },
+    {
+      "pagePath": "/product/:handle",
+      "pageName": "Product Detail",
+      "componentType": "ProductGallery",
+      "componentIndex": 1,
+      "spec": {
+        "type": "ProductGallery",
+        "content": {
+          "title": {
+            "value": "Product Gallery",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "2a55881fb43ec14cd3a669772aaba6dcc98271237791ac1043ba09ddec5d535c"
+    },
+    {
+      "pagePath": "/product/:handle",
+      "pageName": "Product Detail",
+      "componentType": "RecommendedProducts",
+      "componentIndex": 2,
+      "spec": {
+        "type": "RecommendedProducts",
+        "content": {
+          "title": {
+            "value": "You May Also Like",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Featured Item",
+            "description": "Top rated product",
+            "icon": "star"
+          },
+          {
+            "title": "Popular Choice",
+            "description": "Best seller in category",
+            "icon": "trending-up"
+          },
+          {
+            "title": "New Arrival",
+            "description": "Just added to collection",
+            "icon": "sparkles"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "0535a1c929832213aff59e263f710c7e5cae75a14a6876208de3195a189f55c4"
+    },
+    {
+      "pagePath": "/login",
+      "pageName": "Login",
+      "componentType": "AuthForm",
+      "componentIndex": 0,
+      "spec": {
+        "type": "AuthForm",
+        "content": {
+          "title": {
+            "value": "Welcome Back",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Sign in to your account",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "required": true,
+            "placeholder": "you@example.com"
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "required": true,
+            "placeholder": "••••••••"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Sign In",
+            "action": "/api/auth",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "sm"
+        }
+      },
+      "contentHash": "cadd225f0990969a40448a1798b4aca9f6a821e5e53a00c758825bd9b27098ea"
+    },
+    {
+      "pagePath": "/register",
+      "pageName": "Register",
+      "componentType": "AuthForm",
+      "componentIndex": 0,
+      "spec": {
+        "type": "AuthForm",
+        "content": {
+          "title": {
+            "value": "Create Account",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Get started with your free trial",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "required": true,
+            "placeholder": "you@example.com"
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "required": true,
+            "placeholder": "••••••••"
+          },
+          {
+            "name": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true,
+            "placeholder": "Your name"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Create Account",
+            "action": "/api/auth",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "sm"
+        }
+      },
+      "contentHash": "dd2b9c5b05548fb4e26316776d76fec0450a05576acec35fda9f1b8328790fd7"
+    },
+    {
+      "pagePath": "/profile",
+      "pageName": "Profile",
+      "componentType": "ProfileSection",
+      "componentIndex": 0,
+      "spec": {
+        "type": "ProfileSection",
+        "content": {
+          "title": {
+            "value": "My Profile",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Manage your account details",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "name",
+            "label": "Full Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "required": true
+          },
+          {
+            "name": "company",
+            "label": "Company",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "address",
+            "label": "Shipping Address",
+            "type": "textarea",
+            "required": false
+          }
+        ],
+        "actions": [
+          {
+            "label": "Save Changes",
+            "action": "/api/profile",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "faf1e433cc4bde83f536e66fc346a75c4f73b48bfc70e09f74518f92a82f645a"
+    },
+    {
+      "pagePath": "/profile",
+      "pageName": "Profile",
+      "componentType": "OrderHistory",
+      "componentIndex": 1,
+      "spec": {
+        "type": "OrderHistory",
+        "content": {
+          "title": {
+            "value": "Order History",
+            "type": "text"
+          }
+        },
+        "columns": [
+          {
+            "key": "orderId",
+            "label": "Order ID",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "date",
+            "label": "Date",
+            "type": "date",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "status",
+            "label": "Status",
+            "type": "status",
+            "sortable": true,
+            "filterable": true
+          },
+          {
+            "key": "total",
+            "label": "Total",
+            "type": "number",
+            "sortable": true,
+            "filterable": false
+          }
+        ],
+        "layout": {
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "5f0ce3f489d106f781b5aa4d8b763415fbf8e6e3c770d887ab9630ad7ee5886d"
+    },
+    {
+      "pagePath": "/profile",
+      "pageName": "Profile",
+      "componentType": "Wishlist",
+      "componentIndex": 2,
+      "spec": {
+        "type": "Wishlist",
+        "content": {
+          "title": {
+            "value": "My Wishlist",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Saved Item",
+            "description": "Added to wishlist",
+            "icon": "heart"
+          }
+        ],
+        "layout": {
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "25884150f31586d66dfe267be0b68b97f6f7405a9961d25f73f08c8509b57e2f"
+    },
+    {
+      "pagePath": "/",
+      "pageName": "Home",
+      "componentType": "HeroBanner",
+      "componentIndex": 0,
+      "spec": {
+        "type": "HeroBanner",
+        "content": {
+          "title": {
+            "value": "NutriMart",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Premium sports nutrition and health supplements trusted by fitness professionals across India. FSSAI certified, lab-tested, genuine products.",
+            "type": "text"
+          },
+          "badge": {
+            "value": "me multi brands e-commerce supplement — ecommerce",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Add to Cart",
+            "description": "Add to Cart workflow",
+            "icon": "zap"
+          },
+          {
+            "title": "Checkout",
+            "description": "Checkout workflow",
+            "icon": "zap"
+          },
+          {
+            "title": "Return Request",
+            "description": "Return Request workflow",
+            "icon": "zap"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Shop Supplements",
+            "action": "#features",
+            "style": "primary"
+          },
+          {
+            "label": "View Lab Reports",
+            "action": "#contact",
+            "style": "ghost"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "4xl",
+          "padding": "lg"
+        }
+      },
+      "contentHash": "6677090447c4b3adf4bea79f47e40e19060598e1129b20a578b9e1217d625a20"
+    },
+    {
+      "pagePath": "/",
+      "pageName": "Home",
+      "componentType": "FeatureGrid",
+      "componentIndex": 1,
+      "spec": {
+        "type": "FeatureGrid",
+        "content": {
+          "title": {
+            "value": "NutriMart Capabilities",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "What makes NutriMart different",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Lab Tested",
+            "description": "Every product is third-party lab tested for purity and potency. Reports available on request.",
+            "icon": "🔬"
+          },
+          {
+            "title": "Free Delivery",
+            "description": "Free shipping on orders above ₹999. Express delivery in metro cities.",
+            "icon": "🚚"
+          },
+          {
+            "title": "Easy Returns",
+            "description": "7-day return policy on unopened products. No questions asked.",
+            "icon": "↩️"
+          },
+          {
+            "title": "100% Genuine",
+            "description": "Direct imports from authorized distributors. No grey market products.",
+            "icon": "🔒"
+          },
+          {
+            "title": "Expert Guidance",
+            "description": "Chat with certified nutritionists. Get personalized supplement stacks.",
+            "icon": "💬"
+          },
+          {
+            "title": "Track Orders",
+            "description": "Real-time GPS tracking from warehouse to your doorstep.",
+            "icon": "📱"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "00a8ff95c7181576394b1ff6f404dd2072d67ea3d45699e272ee00eaf6cb2af2"
+    },
+    {
+      "pagePath": "/",
+      "pageName": "Home",
+      "componentType": "Testimonials",
+      "componentIndex": 2,
+      "spec": {
+        "type": "Testimonials",
+        "content": {
+          "title": {
+            "value": "What Our Users Say",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Trusted by thousands",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Alex Rivera",
+            "description": "Brand loyalist",
+            "metadata": {
+              "quote": "NutriMart transformed how we handle direct sales — measurable improvement from day one."
+            }
+          },
+          {
+            "title": "Jordan Lee",
+            "description": "Fitness enthusiast",
+            "metadata": {
+              "quote": "The solution is exactly what we needed. Our customers love the experience."
+            }
+          },
+          {
+            "title": "Sam Patel",
+            "description": "Athlete",
+            "metadata": {
+              "quote": "Fast, reliable, and built for brand loyalist. Best decision we made."
+            }
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "1662977ffd13a1074ccd62aab2a0ff1ddb4127d56bab6b15d8ccb9583f01ad76"
+    },
+    {
+      "pagePath": "/",
+      "pageName": "Home",
+      "componentType": "CTASection",
+      "componentIndex": 3,
+      "spec": {
+        "type": "CTASection",
+        "content": {
+          "title": {
+            "value": "Get Started with NutriMart",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Trusted by brand loyalist and fitness enthusiast — direct sales made simple",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "No credit card required",
+            "description": "Start free and upgrade anytime",
+            "icon": "credit-card"
+          },
+          {
+            "title": "Instant setup",
+            "description": "Get up and running in minutes",
+            "icon": "zap"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Get Started",
+            "action": "/register",
+            "style": "primary"
+          },
+          {
+            "label": "Learn More",
+            "action": "/about",
+            "style": "ghost"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "4xl",
+          "padding": "lg"
+        }
+      },
+      "contentHash": "82e87611d0984c80ad241ac1308a472be488075266f78ffb233fc7ec593062ca"
+    },
+    {
+      "pagePath": "/about",
+      "pageName": "About",
+      "componentType": "AboutSection",
+      "componentIndex": 0,
+      "spec": {
+        "type": "AboutSection",
+        "content": {
+          "title": {
+            "value": "About NutriMart",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "NutriMart — a me multi brands e-commerce supplement serving brand loyalist and fitness enthusiast through direct sales",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Our Domain",
+            "description": "Product, Order, Category, User",
+            "icon": "layers"
+          },
+          {
+            "title": "Our Process",
+            "description": "Add to Cart → Checkout → Return Request",
+            "icon": "workflow"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "4xl"
+        }
+      },
+      "contentHash": "fa345d0df19d06624feae8135f23d65435fb169adab87739207d861180c5aab8"
+    },
+    {
+      "pagePath": "/about",
+      "pageName": "About",
+      "componentType": "TeamSection",
+      "componentIndex": 1,
+      "spec": {
+        "type": "TeamSection",
+        "content": {
+          "title": {
+            "value": "Meet Our Team",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "The people behind the product",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Operations",
+            "description": "Managing core business workflows",
+            "icon": "settings"
+          },
+          {
+            "title": "Technology",
+            "description": "Building and maintaining systems",
+            "icon": "code"
+          },
+          {
+            "title": "Customer Success",
+            "description": "Ensuring client satisfaction",
+            "icon": "heart"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "6xl"
+        }
+      },
+      "contentHash": "2014bfdf2491e0fe5d46a56b1ddb71cf79bb8205f070be6d2337bdf786542009"
+    },
+    {
+      "pagePath": "/about",
+      "pageName": "About",
+      "componentType": "MissionSection",
+      "componentIndex": 2,
+      "spec": {
+        "type": "MissionSection",
+        "content": {
+          "title": {
+            "value": "Our Mission",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "What drives us every day",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Inventory",
+            "description": "Expert inventory for ecommerce",
+            "icon": "target"
+          },
+          {
+            "title": "Order Processing",
+            "description": "Expert order processing for ecommerce",
+            "icon": "refresh-cw"
+          },
+          {
+            "title": "Marketing",
+            "description": "Expert marketing for ecommerce",
+            "icon": "heart"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "4xl"
+        }
+      },
+      "contentHash": "a21fd07733166443087b17e3f5ff1d939eed05e9965350e13d2201a60b951e1a"
+    },
+    {
+      "pagePath": "/contact",
+      "pageName": "Contact",
+      "componentType": "ContactForm",
+      "componentIndex": 0,
+      "spec": {
+        "type": "ContactForm",
+        "content": {
+          "title": {
+            "value": "Contact Us",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Get in touch with NutriMart",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "required": true
+          },
+          {
+            "name": "subject",
+            "label": "Subject",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "message",
+            "label": "Message",
+            "type": "textarea",
+            "required": true
+          }
+        ],
+        "actions": [
+          {
+            "label": "Send Message",
+            "action": "/api/contact",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "e310318131a7501314c44a327126a3d4c9068156c8270ece62892ddefce2c002"
+    },
+    {
+      "pagePath": "/product/:id",
+      "pageName": "Product Detail",
+      "componentType": "ProductGallery",
+      "componentIndex": 0,
+      "spec": {
+        "type": "ProductGallery",
+        "content": {
+          "title": {
+            "value": "Product Gallery",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "2a55881fb43ec14cd3a669772aaba6dcc98271237791ac1043ba09ddec5d535c"
+    },
+    {
+      "pagePath": "/product/:id",
+      "pageName": "Product Detail",
+      "componentType": "ProductInfo",
+      "componentIndex": 1,
+      "spec": {
+        "type": "ProductInfo",
+        "content": {
+          "title": {
+            "value": "Product Details",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "price",
+            "label": "Price",
+            "type": "number",
+            "required": true
+          },
+          {
+            "name": "description",
+            "label": "Description",
+            "type": "textarea",
+            "required": false
+          },
+          {
+            "name": "sku",
+            "label": "SKU",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "stock",
+            "label": "Stock",
+            "type": "number",
+            "required": false
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "d47be7821b90214c1a333826ddd4be929553323e627da69ecd51a15241234450"
+    },
+    {
+      "pagePath": "/product/:id",
+      "pageName": "Product Detail",
+      "componentType": "Testimonials",
+      "componentIndex": 2,
+      "spec": {
+        "type": "Testimonials",
+        "content": {
+          "title": {
+            "value": "What Our Users Say",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Trusted by thousands",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Alex Rivera",
+            "description": "Brand loyalist",
+            "metadata": {
+              "quote": "NutriMart transformed how we handle direct sales — measurable improvement from day one."
+            }
+          },
+          {
+            "title": "Jordan Lee",
+            "description": "Fitness enthusiast",
+            "metadata": {
+              "quote": "The solution is exactly what we needed. Our customers love the experience."
+            }
+          },
+          {
+            "title": "Sam Patel",
+            "description": "Athlete",
+            "metadata": {
+              "quote": "Fast, reliable, and built for brand loyalist. Best decision we made."
+            }
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "1662977ffd13a1074ccd62aab2a0ff1ddb4127d56bab6b15d8ccb9583f01ad76"
+    },
+    {
+      "pagePath": "/product/:id",
+      "pageName": "Product Detail",
+      "componentType": "RecommendedProducts",
+      "componentIndex": 3,
+      "spec": {
+        "type": "RecommendedProducts",
+        "content": {
+          "title": {
+            "value": "You May Also Like",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Featured Item",
+            "description": "Top rated product",
+            "icon": "star"
+          },
+          {
+            "title": "Popular Choice",
+            "description": "Best seller in category",
+            "icon": "trending-up"
+          },
+          {
+            "title": "New Arrival",
+            "description": "Just added to collection",
+            "icon": "sparkles"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "0535a1c929832213aff59e263f710c7e5cae75a14a6876208de3195a189f55c4"
+    },
+    {
+      "pagePath": "/checkout",
+      "pageName": "Checkout",
+      "componentType": "CheckoutForm",
+      "componentIndex": 0,
+      "spec": {
+        "type": "CheckoutForm",
+        "content": {
+          "title": {
+            "value": "Checkout",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Complete your order",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "required": true,
+            "placeholder": "you@example.com"
+          },
+          {
+            "name": "fullName",
+            "label": "Full Name",
+            "type": "text",
+            "required": true,
+            "placeholder": "John Doe"
+          },
+          {
+            "name": "address",
+            "label": "Address",
+            "type": "text",
+            "required": true,
+            "placeholder": "123 Main St"
+          },
+          {
+            "name": "city",
+            "label": "City",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "state",
+            "label": "State",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "zip",
+            "label": "ZIP Code",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "country",
+            "label": "Country",
+            "type": "select",
+            "required": true,
+            "options": [
+              {
+                "label": "India",
+                "value": "IN"
+              },
+              {
+                "label": "United States",
+                "value": "US"
+              },
+              {
+                "label": "United Kingdom",
+                "value": "GB"
+              }
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "label": "Place Order",
+            "action": "/api/checkout",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "72357161f5c0a3f63ca4a079d5ea07a05bc70baa495934ce2bb9864d9cacc357"
+    },
+    {
+      "pagePath": "/checkout",
+      "pageName": "Checkout",
+      "componentType": "PaymentForm",
+      "componentIndex": 1,
+      "spec": {
+        "type": "PaymentForm",
+        "content": {
+          "title": {
+            "value": "Payment Details",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "UPI, Card, Net Banking, or COD",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "method",
+            "label": "Payment Method",
+            "type": "select",
+            "required": true,
+            "options": [
+              {
+                "label": "UPI (GPay / PhonePe / Paytm)",
+                "value": "upi"
+              },
+              {
+                "label": "Credit / Debit Card",
+                "value": "card"
+              },
+              {
+                "label": "Net Banking",
+                "value": "netbanking"
+              },
+              {
+                "label": "Cash on Delivery",
+                "value": "cod"
+              }
+            ]
+          },
+          {
+            "name": "upiId",
+            "label": "UPI ID",
+            "type": "text",
+            "required": false,
+            "placeholder": "user@paytm"
+          },
+          {
+            "name": "cardNumber",
+            "label": "Card Number",
+            "type": "text",
+            "required": false,
+            "placeholder": "1234 5678 9012 3456"
+          },
+          {
+            "name": "cardName",
+            "label": "Name on Card",
+            "type": "text",
+            "required": false
+          },
+          {
+            "name": "expiry",
+            "label": "Expiry Date",
+            "type": "text",
+            "required": false,
+            "placeholder": "MM/YY"
+          },
+          {
+            "name": "cvv",
+            "label": "CVV",
+            "type": "text",
+            "required": false,
+            "placeholder": "123"
+          }
+        ],
+        "layout": {
+          "alignment": "left",
+          "maxWidth": "sm"
+        }
+      },
+      "contentHash": "2f6e7f7509b268d8052d24f96c5218d85c3d6068da41f0909e0a16fee716f2eb"
+    },
+    {
+      "pagePath": "/checkout",
+      "pageName": "Checkout",
+      "componentType": "OrderReview",
+      "componentIndex": 2,
+      "spec": {
+        "type": "OrderReview",
+        "content": {
+          "title": {
+            "value": "Review Your Order",
+            "type": "text"
+          }
+        },
+        "columns": [
+          {
+            "key": "name",
+            "label": "Product",
+            "type": "text",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "quantity",
+            "label": "Qty",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          }
+        ],
+        "actions": [
+          {
+            "label": "Confirm Order",
+            "action": "/api/orders",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "maxWidth": "3xl"
+        }
+      },
+      "contentHash": "3fab16d2153f9a410f6bbddbc853414d3e339ec22176e58502757d452f474ba5"
+    },
+    {
+      "pagePath": "/orders",
+      "pageName": "Orders",
+      "componentType": "FilterSidebar",
+      "componentIndex": 0,
+      "spec": {
+        "type": "FilterSidebar",
+        "content": {
+          "title": {
+            "value": "Filters",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Category",
+            "icon": "grid",
+            "metadata": {
+              "type": "select"
+            }
+          },
+          {
+            "title": "Price Range",
+            "icon": "dollar-sign",
+            "metadata": {
+              "type": "range"
+            }
+          },
+          {
+            "title": "Rating",
+            "icon": "star",
+            "metadata": {
+              "type": "select"
+            }
+          },
+          {
+            "title": "Availability",
+            "icon": "package",
+            "metadata": {
+              "type": "checkbox"
+            }
+          }
+        ],
+        "layout": {
+          "maxWidth": "xs"
+        }
+      },
+      "contentHash": "206df1878d1719428cbeaa35a8e7c78528c7300a3fddaafe430f5d2cd81145d1"
+    },
+    {
+      "pagePath": "/orders",
+      "pageName": "Orders",
+      "componentType": "DataTable",
+      "componentIndex": 1,
+      "spec": {
+        "type": "DataTable",
+        "content": {
+          "title": {
+            "value": "Record Management",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Record",
+            "type": "text"
+          }
+        },
+        "columns": [
+          {
+            "key": "id",
+            "label": "ID",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "name",
+            "label": "Name",
+            "type": "text",
+            "sortable": true,
+            "filterable": true
+          },
+          {
+            "key": "status",
+            "label": "Status",
+            "type": "text",
+            "sortable": true,
+            "filterable": true
+          },
+          {
+            "key": "created",
+            "label": "Created",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          }
+        ],
+        "items": [
+          {
+            "id": "1",
+            "title": "Record #001",
+            "status": "Active",
+            "created": "2024-01-15",
+            "metadata": {
+              "id": "1",
+              "status": "Active"
+            }
+          },
+          {
+            "id": "2",
+            "title": "Record #002",
+            "status": "Pending",
+            "created": "2024-01-20",
+            "metadata": {
+              "id": "2",
+              "status": "Pending"
+            }
+          },
+          {
+            "id": "3",
+            "title": "Record #003",
+            "status": "Active",
+            "created": "2024-02-01",
+            "metadata": {
+              "id": "3",
+              "status": "Active"
+            }
+          }
+        ],
+        "actions": [
+          {
+            "label": "Add",
+            "action": "#",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "6c623fdcc1f29d664debc1a68e7891a85f146c43f4bf831930c54b54c3e1474a"
+    },
+    {
+      "pagePath": "/orders",
+      "pageName": "Orders",
+      "componentType": "OrderStatus",
+      "componentIndex": 2,
+      "spec": {
+        "type": "OrderStatus",
+        "content": {
+          "title": {
+            "value": "Order Status",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Track your order",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Order Placed",
+            "description": "Your order has been confirmed",
+            "icon": "check-circle",
+            "metadata": {
+              "status": "complete"
+            }
+          },
+          {
+            "title": "Processing",
+            "description": "We are preparing your order",
+            "icon": "clock",
+            "metadata": {
+              "status": "active"
+            }
+          },
+          {
+            "title": "Shipped",
+            "description": "Your order is on the way",
+            "icon": "truck",
+            "metadata": {
+              "status": "pending"
+            }
+          },
+          {
+            "title": "Delivered",
+            "description": "Package delivered",
+            "icon": "package",
+            "metadata": {
+              "status": "pending"
+            }
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "57e927e2494ba74e46a3c220ba51db043326b07b03bbb31145ed8192525488b6"
+    },
+    {
+      "pagePath": "/account",
+      "pageName": "My Account",
+      "componentType": "OrderHistory",
+      "componentIndex": 0,
+      "spec": {
+        "type": "OrderHistory",
+        "content": {
+          "title": {
+            "value": "Order History",
+            "type": "text"
+          }
+        },
+        "columns": [
+          {
+            "key": "orderId",
+            "label": "Order ID",
+            "type": "text",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "date",
+            "label": "Date",
+            "type": "date",
+            "sortable": true,
+            "filterable": false
+          },
+          {
+            "key": "status",
+            "label": "Status",
+            "type": "status",
+            "sortable": true,
+            "filterable": true
+          },
+          {
+            "key": "total",
+            "label": "Total",
+            "type": "number",
+            "sortable": true,
+            "filterable": false
+          }
+        ],
+        "layout": {
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "5f0ce3f489d106f781b5aa4d8b763415fbf8e6e3c770d887ab9630ad7ee5886d"
+    },
+    {
+      "pagePath": "/account",
+      "pageName": "My Account",
+      "componentType": "AddressBook",
+      "componentIndex": 1,
+      "spec": {
+        "type": "AddressBook",
+        "content": {
+          "title": {
+            "value": "Address Book",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Home",
+            "description": "123, MG Road, Mumbai, Maharashtra 400001",
+            "icon": "home",
+            "metadata": {
+              "default": "true"
+            }
+          }
+        ],
+        "actions": [
+          {
+            "label": "Add Address",
+            "action": "/account/addresses/add",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "553faa345c3f3208d23a5a5b83c7413d64aa0b6b4917349f947b1199d2b27609"
+    },
+    {
+      "pagePath": "/account",
+      "pageName": "My Account",
+      "componentType": "Wishlist",
+      "componentIndex": 2,
+      "spec": {
+        "type": "Wishlist",
+        "content": {
+          "title": {
+            "value": "My Wishlist",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Saved Item",
+            "description": "Added to wishlist",
+            "icon": "heart"
+          }
+        ],
+        "layout": {
+          "maxWidth": "7xl"
+        }
+      },
+      "contentHash": "25884150f31586d66dfe267be0b68b97f6f7405a9961d25f73f08c8509b57e2f"
+    },
+    {
+      "pagePath": "/account/orders/:id",
+      "pageName": "Order Detail",
+      "componentType": "OrderStatus",
+      "componentIndex": 0,
+      "spec": {
+        "type": "OrderStatus",
+        "content": {
+          "title": {
+            "value": "Order Status",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Track your order",
+            "type": "text"
+          }
+        },
+        "items": [
+          {
+            "title": "Order Placed",
+            "description": "Your order has been confirmed",
+            "icon": "check-circle",
+            "metadata": {
+              "status": "complete"
+            }
+          },
+          {
+            "title": "Processing",
+            "description": "We are preparing your order",
+            "icon": "clock",
+            "metadata": {
+              "status": "active"
+            }
+          },
+          {
+            "title": "Shipped",
+            "description": "Your order is on the way",
+            "icon": "truck",
+            "metadata": {
+              "status": "pending"
+            }
+          },
+          {
+            "title": "Delivered",
+            "description": "Package delivered",
+            "icon": "package",
+            "metadata": {
+              "status": "pending"
+            }
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "2xl"
+        }
+      },
+      "contentHash": "57e927e2494ba74e46a3c220ba51db043326b07b03bbb31145ed8192525488b6"
+    },
+    {
+      "pagePath": "/account/orders/:id",
+      "pageName": "Order Detail",
+      "componentType": "CartItems",
+      "componentIndex": 1,
+      "spec": {
+        "type": "CartItems",
+        "content": {
+          "title": {
+            "value": "Shopping Cart",
+            "type": "text"
+          },
+          "entity": {
+            "value": "Product",
+            "type": "text"
+          }
+        },
+        "columns": [
+          {
+            "key": "name",
+            "label": "Product",
+            "type": "text",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "quantity",
+            "label": "Qty",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          },
+          {
+            "key": "total",
+            "label": "Total",
+            "type": "number",
+            "sortable": false,
+            "filterable": false
+          }
+        ],
+        "actions": [
+          {
+            "label": "Continue Shopping",
+            "action": "/shop",
+            "style": "ghost"
+          },
+          {
+            "label": "Checkout",
+            "action": "/checkout",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "maxWidth": "4xl"
+        }
+      },
+      "contentHash": "7c77eb648a172d45eeffe9b311144ab38cef22905da8193a36ef1a630d56536e"
+    },
+    {
+      "pagePath": "/account/orders/:id",
+      "pageName": "Order Detail",
+      "componentType": "OrderTracking",
+      "componentIndex": 2,
+      "spec": {
+        "type": "OrderTracking",
+        "content": {
+          "title": {
+            "value": "Track Order",
+            "type": "text"
+          },
+          "subtitle": {
+            "value": "Enter your order number",
+            "type": "text"
+          }
+        },
+        "fields": [
+          {
+            "name": "orderNumber",
+            "label": "Order Number",
+            "type": "text",
+            "required": true,
+            "placeholder": "ORD-12345"
+          }
+        ],
+        "actions": [
+          {
+            "label": "Track",
+            "action": "/api/track",
+            "style": "primary"
+          }
+        ],
+        "layout": {
+          "alignment": "center",
+          "maxWidth": "sm"
+        }
+      },
+      "contentHash": "324193fcba5a74f2db2fe938572be7779b3c589346a84d582f179b96dbf54746"
+    }
+  ]
+}

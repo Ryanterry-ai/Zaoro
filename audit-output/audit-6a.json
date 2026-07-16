@@ -1,0 +1,11 @@
+{
+  "skill": "Impeccable",
+  "test": "Polish patterns",
+  "patterns": {
+    "rounded": true,
+    "transition": true,
+    "hover": true,
+    "shadow": false
+  },
+  "verdict": "PASS"
+}

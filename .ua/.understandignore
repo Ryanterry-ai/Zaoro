@@ -1,0 +1,101 @@
+# .understandignore — patterns for files/dirs to exclude from analysis
+# Syntax: same as .gitignore (globs, # comments, ! negation, trailing / for dirs)
+# Lines below are suggestions — uncomment to activate.
+# Use ! prefix to force-include something excluded by defaults.
+#
+# Built-in defaults (always excluded unless negated):
+#   node_modules/, .git/, dist/, build/, obj/, *.lock, *.min.js, etc.
+#
+
+# --- From .gitignore (uncomment to exclude) ---
+
+# sandbox_workspaces/
+# *.tsbuildinfo
+# .env
+# .env.local
+# .DS_Store
+# .prompts/
+# .build-config-*.json
+# .build-prompt-*.json
+# .build-temp-*.mts
+# .build-temp-*.ts
+# .clone-temp-*.mts
+# .clone-temp-*.ts
+# ngrok.exe
+# ngrok.zip
+# ngrok.log
+# ngrok_output.log
+# server.log
+# server.err.log
+# fix-backticks.cjs
+# .docker/
+# tmp/
+# .vercel
+# cloudflared.exe
+# start-tunnel.bat
+# nutrabay-clone.zip
+# .build-memory/
+# .clone-output/
+# .blueprint.json
+# **/.next/
+# logs/
+# engine.log
+# engine-err.log
+# test-*.png
+# screenshots-*/
+# tunnel-url.txt
+# .build-anything-test/
+# .build-anything/artifacts/
+# .build-anything/metadata/
+# .build-anything/projects/
+# .build-anything/e2e-test/
+# validation-output/
+# .build-anything-test/
+# .build-anything/artifacts/
+# .build-anything/metadata/
+# .build-anything/projects/
+# .build-anything/e2e-test/
+# validation-output/
+# knowledge-candidates/
+
+# --- Detected directories (uncomment to exclude) ---
+
+# benchmarks/
+# docs/
+# scripts/
+# tests/
+
+# --- Test file patterns (uncomment to exclude) ---
+
+# JS / TS
+# *.test.*
+# *.spec.*
+# *.snap
+# C# / .NET
+# **/*Tests.cs
+# **/*Test.cs
+# **/*Fixture.cs
+# **/*.Tests.csproj
+# Java / Kotlin
+# **/src/test/**
+# **/*Test.java
+# **/*IT.java
+# **/*Spec.kt
+# Go
+# **/*_test.go
+# C++
+# **/*_test.cc
+# **/*_test.cpp
+# **/*_test.cxx
+# **/*Test.cc
+# **/*Test.cpp
+# **/*_unittest.cc
+# **/*_unittest.cpp
+# **/*_browsertest.cc
+# **/*_benchmark.cc
+# **/*Benchmark.cpp
+# Python
+# **/test_*.py
+# **/*_test.py
+# **/tests.py
+# **/conftest.py

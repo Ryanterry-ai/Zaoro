@@ -1,0 +1,7 @@
+{
+  "skill": "Design Intelligence",
+  "test": "Motion tokens in TSX",
+  "normalDuration": "250ms",
+  "hasMotionProps": true,
+  "verdict": "PASS"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "media-001",
+  "industry": "media",
+  "prompt": "a news portal with article categories and newsletter signup",
+  "checks": {
+    "blueprintProduced": true,
+    "scenesPresent": true,
+    "narrativePresent": true,
+    "hoverBehaviorsPresent": true,
+    "motionDrivenCode": true,
+    "motionAnchorPresent": true,
+    "lineageProvenance": true
+  },
+  "passed": 7,
+  "total": 7,
+  "verdict": "PASS",
+  "sceneCount": 3,
+  "hoverCount": 5
+}

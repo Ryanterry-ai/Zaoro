@@ -324,7 +324,7 @@ function buildColors(industry: string, personality: BrandPersonality): ColorDNA 
     slate:'zinc', gray:'slate', zinc:'slate', neutral:'gray', stone:'neutral',
   };
   const s = sec[pn] || 'slate', a = ac[pn] || 'indigo';
-  const dark = personality === 'tech' || personality === 'bold';
+  const dark = personality === 'tech' || personality === 'bold' || personality === 'luxury' || personality === 'premium';
   const bg = dark ? '222.2 84% 4.9%' : '0 0% 100%';
   const fg = dark ? '210 40% 98%' : '222.2 84% 4.9%';
   const cd = dark ? '222.2 84% 6.9%' : '0 0% 100%';
