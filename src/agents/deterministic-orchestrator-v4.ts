@@ -419,7 +419,14 @@ export class DeterministicOrchestratorV4 {
       maxRetries: 3,
       qualityGateStrict: false, // Warn but don't block on quality gates
     });
-    const orchestratorResult = await orchestrator.execute(prompt);
+    // The canonical build is the SINGLE business-authority path. Inject its
+    // BusinessKnowledge into the (single) BREContext so the 4-layer pipeline
+    // consumes the canonical, vertical-agnostic understanding instead of
+    // re-deriving the business context in parallel.
+    if (canonical?.businessKnowledge) {
+      (breContext as any).businessKnowledge = canonical.businessKnowledge;
+    }
+    const orchestratorResult = await orchestrator.execute(prompt, breContext, canonical ?? undefined);
 
     // Map orchestrator output to the format expected by downstream code
     const breResult = orchestratorResult.phaseContext.breResult!;

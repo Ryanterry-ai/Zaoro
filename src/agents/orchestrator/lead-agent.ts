@@ -32,7 +32,8 @@ import type { RenderedFile } from '../../generation/renderers/renderer.js';
 import type { ApplicationGraph } from '../../bos/graph/application-graph.js';
 import type { ApplicationSpec } from '../../bos/schemas/blueprint/execution-blueprint.schema.js';
 import type { SolutionArchitectureDecision } from '../../bos/types-solution-architecture.js';
-import { buildBREContext } from '../../bos/intake-parser.js';
+import type { BusinessKnowledge } from '../../orchestration/business-intelligence/types.js';
+import type { CanonicalBuildReport } from '../../orchestration/pipeline/canonical-build.js';
 
 // Subagents
 import { ResearchAgent } from './subagents/research-agent.js';
@@ -78,25 +79,51 @@ export class LeadAgent {
    * Execute the full build pipeline.
    *
    * Flow:
-   *   1. Parse prompt → BREContext
+   *   1. Use the injected BREContext (the SINGLE business-authority entry point,
+   *      produced by runCanonicalBuild + a single buildBREContext call in the
+   *      owning orchestrator). The lead agent MUST NOT re-derive the business
+   *      context — that would create a second parallel BRE derivation.
    *   2. Phase 1: Research Agent (sequential)
    *   3. Phase 2: Blueprint + Content Agents (parallel)
    *   4. Phase 3: Build Agent (sequential)
    *   5. Phase 4: Quality gates + retry loop
+   *
+   * @param prompt           original user prompt
+   * @param breContext       authoritative BREContext (caller builds exactly once)
+   * @param canonical        optional canonical build report; its BusinessKnowledge
+   *                         is injected into the BREContext so the renderer consumes
+   *                         the canonical, vertical-agnostic understanding.
    */
-  async execute(prompt: string): Promise<OrchestratorResult> {
+  async execute(
+    prompt: string,
+    breContext?: BREContext,
+    canonical?: CanonicalBuildReport,
+  ): Promise<OrchestratorResult> {
     const totalStart = Date.now();
     log.info('Orchestration started', { prompt: prompt.slice(0, 80) });
 
-    // Step 0: Parse prompt → BREContext (deterministic, instant)
-    const breContext = await buildBREContext(prompt);
-    const industryScore = (breContext as any).__industryScore ?? 0;
-    log.info('BRE context parsed', { industry: breContext.industry, appName: breContext.appName, industryScore });
+    // Step 0: Use the injected BREContext (never re-parse — single source of truth).
+    // If the caller did not inject one (legacy/test path), fall back to a single
+    // deterministic parse so the agent remains independently runnable.
+    const ctx0 = breContext ?? await (async () => {
+      const { buildBREContext } = await import('../../bos/intake-parser.js');
+      return buildBREContext(prompt);
+    })();
+
+    // Consume the canonical BusinessKnowledge as the authoritative business
+    // source. The canonical build already ran the vertical-agnostic BI engine;
+    // surface it on the BREContext so runBREV2Pipeline / runBuildPipeline read it.
+    if (canonical?.businessKnowledge) {
+      ctx0.businessKnowledge = canonical.businessKnowledge;
+    }
+
+    const industryScore = (ctx0 as any).__industryScore ?? 0;
+    log.info('BRE context received', { industry: ctx0.industry, appName: ctx0.appName, industryScore, canonical: !!canonical });
 
     // Initialize phase context
     const phaseContext: PhaseContext = {
       prompt,
-      breContext,
+      breContext: ctx0,
       config: {
         platform: this.config.platform,
         workspaceDir: this.config.workspaceDir,
