@@ -422,6 +422,14 @@ export interface BusinessKnowledge {
    * merged into BusinessKnowledge without bias.
    */
   references?: ReferenceInputs;
+
+  /**
+   * Structured deep-understanding of the user's requirements (prompt + docs +
+   * screenshots), produced by the Requirements Understanding layer. AUGMENTS
+   * signal extraction; never replaces it. Present only after the understand
+   * step runs (it is skipped when there is no prompt/references).
+   */
+  requirementsUnderstanding?: import('../../requirements/understand.js').RequirementsUnderstanding;
 }
 
 /**

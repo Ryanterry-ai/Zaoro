@@ -143,3 +143,14 @@
 - **design.md** now lists reference sites / attached image count / requirement docs, alongside discovered real assets.
 - **Verified:** probe shows usinessKnowledge.references carried, attached image ? rand asset (user-attachment), image+doc ? market opportunities.
 - **Status:** typecheck clean; full suite GREEN 1057 (the lone full-run orchestrator-e2e timeout is the known transient — 15/15 in isolation).
+
+## Deep Requirements Understanding (prompt + docs + screenshots)
+- **User mandate:** the platform must DEEPLY understand the user's requirements — whether free-text prompt, attached documents, or screenshots/images — and not guess what was already provided.
+- **New module:** src/requirements/understand.ts — understandRequirements(input) + 	oRequirementsBriefJSON(). Produces RequirementsUnderstanding { summary, features, constraints, positioning, visualReferences, openQuestions, agentNotes?, sources, agentEnriched }.
+- **LLM model = the desktop agent itself** (Claude / Codex / OpenCode / …), NOT a hosted API key. So the deep pass is AGENT-DRIVEN, not an API call:
+  - Deterministic extraction always runs (cheerio text extraction from .txt/.md/.html docs; keyword signal mining for positioning/features/constraints).
+  - Screenshots/images are registered as isualReferences the agent can OPEN and reason about; openQuestions flag when an image needs agent eyes.
+  - A machine-readable equirements-brief.json is available (via 	oRequirementsBriefJSON) for the agent to read + enrich gentNotes. This honors AGENTS.md hard rule #1 (no silent hosted-LLM call; the agent acts deliberately).
+- **Wiring:** unCanonicalBuild calls understandRequirements and stores the result on usinessKnowledge.requirementsUnderstanding (new optional field). design.md now has a "Requirements Understanding" section listing summary, explicit features, constraints, positioning signals, visual references, and open questions.
+- **Verified:** brief.md with "calm/luxury/booking" + "Must not use stock photos" ? understanding extracts constraint + 3 positioning signals + 2 visual references; design.md renders the section.
+- **Status:** typecheck clean; full suite GREEN 1057.

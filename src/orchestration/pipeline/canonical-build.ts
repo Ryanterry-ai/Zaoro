@@ -24,6 +24,7 @@
 import { BusinessIntelligenceEngine, understandBusiness } from '../business-intelligence/engine.js';
 import type { BusinessKnowledge } from '../business-intelligence/types.js';
 import { KnowledgeAcquisitionEngine } from '../knowledge-acquisition/engine.js';
+import { understandRequirements, toRequirementsBriefJSON } from '../../requirements/understand.js';
 import type { EvidenceCollection } from '../knowledge-acquisition/types.js';
 import { generateExperienceBlueprint } from '../experience-intelligence/experience-engine.js';
 import type { ExperienceBlueprint } from '../experience-intelligence/types.js';
@@ -118,6 +119,20 @@ export async function runCanonicalBuild(opts: CanonicalBuildOptions): Promise<Ca
   // Carry user-supplied reference material (URLs, images, documents) so the
   // Knowledge Acquisition layer can learn real tokens/assets from it.
   businessKnowledge.references = opts.references;
+
+  // Deeply understand the user's requirements (prompt + docs + screenshots).
+  // Deterministic extraction runs always; the desktop agent (the LLM) reads the
+  // emitted requirements-brief.json to enrich understanding. Never throws.
+  try {
+    businessKnowledge.requirementsUnderstanding = understandRequirements({
+      prompt: opts.prompt,
+      referenceUrls: opts.references?.referenceUrls,
+      images: opts.references?.images,
+      documents: opts.references?.documents,
+    });
+  } catch (e: unknown) {
+    console.warn('[requirements] understanding failed (continuing without):', (e as Error).message);
+  }
 
   // Observe any industry label the BI engine attached (it is allowed as a
   // coarse inference label, but must never drive branching — flag if it does).

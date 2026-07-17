@@ -64,6 +64,7 @@ export function generateDesignBrief(input: DesignBriefInput): string {
   const trends = evidence?.market?.value?.trends ?? [];
   const assets = evidence?.assets?.value ?? [];
   const references = businessKnowledge?.references;
+  const req = businessKnowledge?.requirementsUnderstanding;
 
   const components21st = (designDecision?.recommendations ?? [])
     .filter((r) => r.domain === 'component' && r.components)
@@ -193,6 +194,36 @@ export function generateDesignBrief(input: DesignBriefInput): string {
     }
     if (references.documents?.length) {
       lines.push(`- Requirement docs: ${references.documents.map((d) => `\`${d}\``).join(', ')}`);
+    }
+    lines.push('');
+  }
+
+  if (req) {
+    lines.push(`## 9. Requirements Understanding (deep read of prompt + docs + screenshots)`);
+    lines.push('');
+    lines.push(`**Summary:** ${req.summary || '_n/a_'}`);
+    if (req.features.length) {
+      lines.push(`**Explicit features / sections:**`);
+      lines.push(bullet(req.features));
+    }
+    if (req.constraints.length) {
+      lines.push(`**Constraints:**`);
+      lines.push(bullet(req.constraints));
+    }
+    if (req.positioning.length) {
+      lines.push(`**Positioning signals:**`);
+      lines.push(bullet(req.positioning));
+    }
+    if (req.visualReferences.length) {
+      lines.push(`**Visual references to honor:**`);
+      lines.push(...req.visualReferences.slice(0, 10).map((v) => `  - [${v.kind}](${v.url}) — ${v.source}`));
+    }
+    if (req.agentNotes) {
+      lines.push(`**Agent notes (LLM deep-read):** ${req.agentNotes}`);
+    }
+    if (req.openQuestions.length) {
+      lines.push(`**Open questions:**`);
+      lines.push(bullet(req.openQuestions));
     }
     lines.push('');
   }
