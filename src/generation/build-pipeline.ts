@@ -416,12 +416,19 @@ export async function runBuildPipeline(
   }
 
   try {
-    // SkillIntegrator: provides color palettes, typography, layout, animation recommendations
+    // SkillIntegrator: provides color palettes, typography, layout, animation recommendations.
+    // Signal-driven path (canonical): derive palette/font/layout/animation from
+    // BusinessKnowledge.intents — NOT from the industry label. The industry
+    // overload is retained only as a backward-compatible fallback.
     const skillIntegrator = new SkillIntegrator();
-    skillRecommendations = skillIntegrator.getDesignRecommendations(
-      context.industry,
-      context.subIndustry,
-    );
+    if (context.businessKnowledge?.intents) {
+      skillRecommendations = skillIntegrator.getDesignRecommendationsFromIntents(context.businessKnowledge);
+    } else {
+      skillRecommendations = skillIntegrator.getDesignRecommendations(
+        context.industry,
+        context.subIndustry,
+      );
+    }
     progress?.emit('compile', 'info', `Skill recommendations: ${skillRecommendations.components.length} components, ${skillRecommendations.uxGuidelines.length} UX guidelines`);
     log.info('Layer 2a: SkillIntegrator complete', {
       industry: context.industry,
@@ -621,7 +628,6 @@ export async function runBuildPipeline(
       designDNA,
       designDecision,
       personality: designDecision?.context?.personality,
-      description: context.description ?? (breResult.blueprint as any)?.description,
     });
 
     // Validate the blueprint

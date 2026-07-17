@@ -17,9 +17,9 @@ import type {
   PaymentFlow, AcquisitionChannel, RetentionModel, ComplianceRequirement, Kpi,
   BusinessEntity, EntityRelationship, RequiredPage, RequiredDashboard, Automation,
   Integration, BusinessVocabulary, ContentStrategy, DesignStrategy, ExperienceGoals,
-  KnowledgeSource, DiscoveredSignal, BusinessIntelligenceInput,
+  BusinessIntents, KnowledgeSource, DiscoveredSignal, BusinessIntelligenceInput,
 } from './types.js';
-import { extractSignals, signalValues, hasSignal, extractDomainNouns } from './dimensions.js';
+import { extractSignals, signalValues, hasSignal, extractDomainNouns, extractIntents } from './dimensions.js';
 import { composeDiscovery } from './archetypes.js';
 
 const VERSION = '1.0.0';
@@ -36,6 +36,7 @@ export class BusinessIntelligenceEngine {
 
     const goals = inferGoals(signals);
     const locale = signalValues(signals, 'locale')[0] ?? 'IN';
+    const intents = extractIntents(signals);
 
     return {
       version: VERSION,
@@ -60,7 +61,8 @@ export class BusinessIntelligenceEngine {
       vocabulary: deriveVocabulary(signals, domainNouns),
       contentStrategy: deriveContentStrategy(signals, domainNouns),
       designStrategy: deriveDesignStrategy(signals, discovery),
-      experienceGoals: deriveExperienceGoals(signals, discovery),
+      experienceGoals: deriveExperienceGoals(signals, discovery, intents),
+      intents,
     };
   }
 }
@@ -381,16 +383,50 @@ function deriveDesignStrategy(s: DiscoveredSignal[], d: BusinessDiscovery): Desi
   return { direction, density: 'balanced', emphasis: ['hero clarity', 'primary action'] };
 }
 
-function deriveExperienceGoals(s: DiscoveredSignal[], d: BusinessDiscovery): ExperienceGoals {
-  const density = hasSignal(s, 'quality', 'luxury') ? 'calm' : hasSignal(s, 'goal', 'build-community') ? 'energetic' : 'moderate';
-  const arc = ['curiosity', 'trust', 'confidence', 'belonging'];
-  const perStage: Record<string, string> = {
-    awareness: 'intrigue', consideration: 'clarity', conversion: 'assurance', retention: 'delight',
+ function deriveExperienceGoals(s: DiscoveredSignal[], d: BusinessDiscovery, intents?: BusinessIntents): ExperienceGoals {
+  // Density from quality + motion signals (primitive-based, no industry).
+  const density = hasSignal(s, 'quality', 'luxury') || intents?.motion.includes('calm')
+    ? 'calm'
+    : intents?.motion.includes('energetic') || hasSignal(s, 'goal', 'build-community')
+      ? 'energetic'
+      : 'moderate';
+
+  // Emotional arc drives the section progression. Fall back to a neutral
+  // awareness→trust→confidence→belonging arc when no emotional intent is set.
+  const emotionalArc: Record<string, string[]> = {
+    'chaos-to-calm': ['chaos', 'tension', 'release', 'calm'],
+    excitement: ['curiosity', 'anticipation', 'thrill', 'delight'],
+    trust: ['awareness', 'clarity', 'confidence', 'assurance'],
+    serenity: ['breath', 'ease', 'flow', 'peace'],
+    luxury: ['intrigue', 'desire', 'exclusivity', 'belonging'],
   };
+  const arc = intents?.emotional?.length
+    ? (emotionalArc[intents.emotional[0]!] ?? ['curiosity', 'trust', 'confidence', 'belonging'])
+    : ['curiosity', 'trust', 'confidence', 'belonging'];
+
+  const perStage: Record<string, string> = {
+    awareness: intents?.emotional[0] ?? 'intrigue',
+    consideration: 'clarity',
+    conversion: 'assurance',
+    retention: 'delight',
+  };
+
+  // Motion language is composed from motion-intent primitives so the renderer
+  // (and the verification loop) can assert it was realised. No keyword→vertical.
+  const motionLanguage = intents?.motion?.length
+    ? intents.motion.map((m: string) => {
+        if (m === 'scroll-driven') return 'scroll-driven reveals';
+        if (m === 'cinematic') return 'cinematic transitions';
+        if (m === 'calm') return 'calm easing';
+        if (m === 'energetic') return 'punchy motion';
+        return `${m} motion`;
+      })
+    : ['whileInView reveals', 'hover lift', 'calm easing'];
+
   return {
     arc,
     interactionDensity: density,
-    motionLanguage: ['whileInView reveals', 'hover lift', 'calm easing'],
+    motionLanguage,
     perStage,
   };
 }

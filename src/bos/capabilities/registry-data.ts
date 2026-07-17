@@ -17,6 +17,14 @@ interface CapabilitySeed {
   dependencies?: string[];
   industries?: string[];
   primitivePackTags?: string[];
+  /** Universal component primitives this capability activates (no vertical). */
+  requiredComponents?: string[];
+  /** Experience/compiled-experience primitives this capability needs. */
+  requiredExperience?: string[];
+  /** Renderer/stack features: 'animation' | 'r3f' | 'scroll' | 'state' | 'charts' | 'form' | '3d' */
+  rendererSupport?: string[];
+  requiredEntities?: string[];
+  requiredWorkflows?: string[];
 }
 
 function cap(s: CapabilitySeed): Capability {
@@ -29,12 +37,12 @@ function cap(s: CapabilitySeed): Capability {
     parents: [],
     children: [],
     dependencies: s.dependencies ?? [],
-    requiredEntities: [],
-    requiredWorkflows: [],
-    requiredComponents: [],
+    requiredEntities: s.requiredEntities ?? [],
+    requiredWorkflows: s.requiredWorkflows ?? [],
+    requiredComponents: s.requiredComponents ?? [],
     requiredEvaluators: [],
-    requiredExperience: [],
-    rendererSupport: [],
+    requiredExperience: s.requiredExperience ?? [],
+    rendererSupport: s.rendererSupport ?? [],
     industries: s.industries ?? [],
     primitivePackTags: s.primitivePackTags,
   };
@@ -358,5 +366,97 @@ export const CANONICAL_CAPABILITIES: Capability[] = [
     dependencies: ['crm.contacts'],
     industries: ['marketplace', 'community', 'media'],
     primitivePackTags: ['ugc', 'reviews', 'community'],
+  }),
+
+  // ── Interaction primitives (reusable across EVERY domain) ─────────────
+  // These are NOT vertical features. A burger builder and a PC configurator
+  // both resolve to `interaction.builder` / `interaction.configurator`.
+  // Registering them here makes any prompt that signals the pattern
+  // automatically compose the right component + experience primitive.
+
+  cap({
+    id: 'interaction.scroll-narrative',
+    displayName: 'Scroll Narrative',
+    aliases: ['scroll', 'scroll-story', 'scrollytelling', 'noise-to-silence', 'chaos-to-calm', 'as-you-scroll'],
+    dependencies: [],
+    requiredComponents: ['ScrollNarrative', 'RevealOnScroll', 'StickyScene'],
+    requiredExperience: ['scroll-driven', 'emotional-arc'],
+    rendererSupport: ['scroll', 'animation', 'state'],
+    primitivePackTags: ['motion', 'scroll'],
+  }),
+  cap({
+    id: 'interaction.configurator',
+    displayName: 'Product Configurator',
+    aliases: ['configurator', 'customize', 'personalize', 'build-your-own', 'make-your-own', 'design-your'],
+    dependencies: [],
+    requiredComponents: ['Configurator', 'OptionGroup', 'LivePreview'],
+    requiredExperience: ['interactive-state'],
+    rendererSupport: ['state'],
+    primitivePackTags: ['interaction', 'configurator'],
+  }),
+  cap({
+    id: 'interaction.builder',
+    displayName: 'Composable Builder',
+    aliases: ['builder', 'burger builder', 'pizza builder', 'sandwich builder', 'compose-your', 'build-your'],
+    dependencies: ['interaction.configurator'],
+    requiredComponents: ['BuilderCanvas', 'IngredientPicker', 'Summary'],
+    requiredExperience: ['interactive-state'],
+    rendererSupport: ['state'],
+    primitivePackTags: ['interaction', 'builder'],
+  }),
+  cap({
+    id: 'interaction.booking',
+    displayName: 'Booking / Scheduling',
+    // NOTE: 'booking'/'reservation'/'appointment'/'schedule' are owned by the
+    // canonical booking.* capabilities. These interaction primitives register
+    // ONLY unique aliases so they never shadow an existing canonical id.
+    aliases: ['interaction-booking', 'booking-ui', 'scheduling-ui'],
+    dependencies: [],
+    requiredComponents: ['BookingCalendar', 'SlotPicker', 'Confirmation'],
+    requiredExperience: ['interactive-state'],
+    rendererSupport: ['state', 'form'],
+    primitivePackTags: ['interaction', 'booking'],
+  }),
+  cap({
+    id: 'interaction.calculator',
+    displayName: 'Calculator / Estimator',
+    aliases: ['calculator', 'estimator', 'quote calculator', 'roi', 'savings', 'estimate'],
+    dependencies: [],
+    requiredComponents: ['Calculator', 'InputField', 'ResultPanel'],
+    requiredExperience: ['interactive-state'],
+    rendererSupport: ['state', 'form'],
+    primitivePackTags: ['interaction', 'calculator'],
+  }),
+  cap({
+    id: 'interaction.quiz',
+    displayName: 'Quiz / Finder',
+    aliases: ['quiz', 'assessment', 'finder', 'recommender', 'match-you'],
+    dependencies: [],
+    requiredComponents: ['Quiz', 'QuestionStep', 'ResultCard'],
+    requiredExperience: ['interactive-state'],
+    rendererSupport: ['state', 'form'],
+    primitivePackTags: ['interaction', 'quiz'],
+  }),
+  cap({
+    id: 'interaction.dashboard',
+    displayName: 'Dashboard / Portal',
+    // 'dashboard'/'analytics'/'metrics'/'reporting' are owned by analytics.dashboard.
+    // Use only unique aliases to avoid shadowing the canonical id.
+    aliases: ['interaction-dashboard', 'dashboard-ui', 'portal-ui', 'admin-panel-ui'],
+    dependencies: ['analytics.dashboard'],
+    requiredComponents: ['Dashboard', 'Widget', 'DataTable'],
+    requiredExperience: ['data-dense'],
+    rendererSupport: ['charts', 'state'],
+    primitivePackTags: ['interaction', 'dashboard'],
+  }),
+  cap({
+    id: 'interaction.hud',
+    displayName: 'HUD / Live Overlay',
+    aliases: ['hud', 'overlay', 'live-overlay', 'real-time-panel', 'dashboard-overlay'],
+    dependencies: ['interaction.dashboard'],
+    requiredComponents: ['HudOverlay', 'LivePanel', 'MetricBadge'],
+    requiredExperience: ['real-time'],
+    rendererSupport: ['state', 'charts'],
+    primitivePackTags: ['interaction', 'hud'],
   }),
 ];

@@ -170,6 +170,7 @@ export function detectDomainFromPrompt(prompt: string): DomainContext {
     contentStrategy: { pillars: [], formats: [], cadence: '', voice: '' },
     designStrategy: { direction: 'modern', density: 'balanced', emphasis: [] },
     experienceGoals: { arc: [], interactionDensity: 'moderate', motionLanguage: [], perStage: {} },
+    intents: { experience: ['editorial'], interaction: [], motion: ['balanced'], conversion: ['lead-form'], emotional: ['trust'], content: ['storytelling'] },
   };
 
   return detectDomain(minimalBK, prompt);

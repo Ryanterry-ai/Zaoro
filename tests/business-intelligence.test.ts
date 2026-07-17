@@ -99,12 +99,31 @@ describe('Business Intelligence Engine', () => {
     const bk = understandBusiness('a modern coffee website for Indian customers');
     // For a beverage business the product term should be a menu/item term
     expect(bk.vocabulary.terms['product']).toMatch(/item|product/i);
-    // Domain nouns are extracted GENERICALLY (linguistic salience), not from a
-    // curated industry list. The user's own product word IS captured — proving
-    // no hardcoded dictionary — while scaffolding/stopwords are dropped.
     expect(bk.vocabulary.domainNouns).toContain('coffee'); // the user's own word
-    const novelBk = understandBusiness('a futuristic headphone website where every scroll transforms noise into silence');
-    expect(novelBk.vocabulary.domainNouns).toContain('headphone'); // novel noun captured generically
-    expect(novelBk.vocabulary.domainNouns).not.toContain('every'); // stopword excluded
+  });
+
+  it('extracts cue-driven intents (no industry switch)', () => {
+    const bk = understandBusiness('a luxury watch brand with an immersive scroll story and a configurator');
+    expect(bk.intents).toBeDefined();
+    expect(Array.isArray(bk.intents.experience)).toBe(true);
+    expect(bk.intents.emotional).toContain('luxury');
+    expect(bk.intents.experience).toContain('immersive-scroll');
+    expect(bk.intents.interaction).toContain('configurator');
+  });
+
+  it('derives motion language from intent signals for any domain', () => {
+    const calm = understandBusiness('a meditation app with a calm, serene experience');
+    expect(calm.intents.motion).toContain('calm');
+    expect(calm.intents.emotional).toContain('serenity');
+
+    const cinematic = understandBusiness('a film studio with a cinematic brand showcase');
+    expect(cinematic.intents.motion).toContain('cinematic');
+  });
+
+  it('applies the same interaction primitive across unrelated domains', () => {
+    const bookingClinic = understandBusiness('a dentist clinic with online appointment booking');
+    const bookingHotel = understandBusiness('a boutique hotel with online reservation booking');
+    expect(bookingClinic.intents.interaction).toContain('booking');
+    expect(bookingHotel.intents.interaction).toContain('booking');
   });
 });

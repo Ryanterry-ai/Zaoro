@@ -1,4 +1,5 @@
 import * as path from 'path';
+import type { BusinessKnowledge, BusinessIntents } from '../orchestration/business-intelligence/types.js';
 
 // ─── Layout Spec Types ─────────────────────────────────────────────────────
 
@@ -847,6 +848,127 @@ export class SkillIntegrator {
    */
   public getProductTemplate(productType: string): typeof PRODUCT_TEMPLATES[string] {
     return PRODUCT_TEMPLATES[productType] ?? PRODUCT_TEMPLATES['saas-dashboard']!;
+  }
+
+  /**
+   * Signal-driven design recommendations. Consumes BusinessKnowledge intents
+   * (emotional / motion / quality / experience) instead of an industry label,
+   * so the SAME UI/UX Pro Max palettes, Framer Motion animation library, and
+   * 21st.dev component guidance apply to ANY domain without vertical code.
+   *
+   * This is the canonical path the V4 runtime uses. The industry-based
+   * `getDesignRecommendations(industry,...)` overload is retained only as a
+   * backward-compatible fallback when no BusinessKnowledge is available.
+   */
+  public getDesignRecommendationsFromIntents(bk: BusinessKnowledge): DesignRecommendation {
+    const intents = bk.intents;
+    const quality = bk.discovery?.signals
+      ?.filter((s) => s.dimension === 'quality')
+      .map((s) => s.value) ?? [];
+
+    // Map emotional + motion + quality signals onto a UI/UX Pro Max palette key.
+    const paletteKey = this.paletteKeyFromIntents(intents, quality);
+    const fontKey = this.fontKeyFromIntents(intents, quality);
+    const palette = UI_UX_PRO_MAX.colorPalettes[paletteKey] || UI_UX_PRO_MAX.colorPalettes['saas-general'];
+    const fonts = UI_UX_PRO_MAX.fontPairings[fontKey] || UI_UX_PRO_MAX.fontPairings.modern;
+
+    // Motion: Framer Motion is the default orchestration layer; scroll-driven
+    // intents enable scroll reveals regardless of domain.
+    const scrollDriven = intents.motion.includes('scroll-driven') || intents.experience.includes('immersive-scroll');
+    const cinematic = intents.motion.includes('cinematic');
+    const calm = intents.motion.includes('calm') || intents.emotional.includes('serenity') || intents.emotional.includes('chaos-to-calm');
+
+    const template = this.getProductTemplate(this.productTypeFromIntents(intents));
+
+    return {
+      colors: {
+        palette: palette as unknown as string[],
+        primary: (palette as any).primary ?? '#2563EB',
+        secondary: (palette as any).secondary ?? '#3B82F6',
+        accent: (palette as any).accent ?? '#EA580C',
+        background: (palette as any).background ?? '#FFFFFF',
+        foreground: (palette as any).foreground ?? '#1E293B',
+        reasoning: `Palette "${paletteKey}" selected from signals (emotional=${intents.emotional.join(',')}, motion=${intents.motion.join(',')}) — not industry`,
+      },
+      typography: {
+        headingFont: fonts.heading,
+        bodyFont: fonts.body,
+        monoFont: fonts.mono,
+        scale: {
+          display: { size: '4.5rem', lineHeight: '1', weight: '800' },
+          h1: { size: '3.5rem', lineHeight: '1.1', weight: '700' },
+          h2: { size: '2.5rem', lineHeight: '1.2', weight: '600' },
+          h3: { size: '1.875rem', lineHeight: '1.3', weight: '600' },
+          h4: { size: '1.375rem', lineHeight: '1.4', weight: '500' },
+          body: { size: '1rem', lineHeight: '1.6', weight: '400' },
+          small: { size: '0.875rem', lineHeight: '1.5', weight: '400' },
+        },
+        reasoning: `Font pairing "${fontKey}" from signals (quality=${quality.join(',')})`,
+      },
+      layout: {
+        heroLayout: template.sections.includes('customizer') ? 'split' : (cinematic || scrollDriven ? 'full-width' : 'centered'),
+        sectionSpacing: calm ? 'py-32 sm:py-40' : 'py-24 sm:py-32',
+        containerMaxWidth: 'max-w-7xl',
+        gridColumns: { sm: 1, md: 2, lg: 3 },
+        reasoning: `Layout from experience intent (${intents.experience.join(',')})`,
+      },
+      animation: {
+        library: 'framer-motion',
+        scrollReveal: scrollDriven || true,
+        staggerAnimations: true,
+        hoverEffects: true,
+        pageTransitions: cinematic,
+        reasoning: `Framer Motion: scrollReveal=${scrollDriven}, cinematic=${cinematic}, calm=${calm}`,
+      },
+      components: template.sections.map((s) => {
+        const sectionName = s.charAt(0).toUpperCase() + s.slice(1);
+        return { name: sectionName, source: 'custom', props: [], variants: ['default'] };
+      }),
+      uxGuidelines: [
+        ...UI_UX_PRO_MAX.uxGuidelines,
+        ...FRONTEND_DESIGN_SKILL.designPrinciples,
+        ...TASTE_SKILL.antiSlopRules,
+        ...IMPECCABLE_SKILL.polishCriteria,
+      ],
+      designPhilosophy: {
+        aestheticDirection: calm || cinematic
+          ? 'restrained, cinematic, high-contrast editorial'
+          : FRONTEND_DESIGN_SKILL.aestheticDirections[Math.floor(Math.random() * FRONTEND_DESIGN_SKILL.aestheticDirections.length)],
+        bannedDefaults: FRONTEND_DESIGN_SKILL.bannedDefaults,
+        qualityLevel: TASTE_SKILL.polishLevel,
+        polishPasses: UI_UX_POLISH_SKILL.polishPasses,
+      },
+    };
+  }
+
+  private paletteKeyFromIntents(intents: BusinessIntents, quality: string[]): PaletteKey {
+    if (intents.emotional.includes('luxury') || quality.includes('luxury')) return 'ecommerce-luxury';
+    if (intents.emotional.includes('chaos-to-calm') || intents.emotional.includes('serenity') || intents.motion.includes('calm')) return 'creative-agency';
+    if (intents.emotional.includes('excitement') || intents.motion.includes('energetic')) return 'gaming';
+    if (intents.emotional.includes('trust')) return 'fintech-crypto';
+    if (intents.experience.includes('immersive-3d')) return 'ai-chatbot';
+    if (intents.experience.includes('editorial')) return 'creative-agency';
+    return 'saas-general';
+  }
+
+  private fontKeyFromIntents(intents: BusinessIntents, quality: string[]): FontKey {
+    if (intents.emotional.includes('luxury') || quality.includes('luxury')) return 'luxury';
+    if (intents.experience.includes('editorial')) return 'editorial';
+    if (intents.motion.includes('cinematic') || intents.emotional.includes('excitement')) return 'tech';
+    return 'modern';
+  }
+
+  private productTypeFromIntents(intents: BusinessIntents): string {
+    // Map signal intents onto EXISTING PRODUCT_TEMPLATES keys (the skills'
+    // curated section/animation sets). No new vertical code is added — these
+    // are reusable composition blueprints, not industry logic.
+    if (intents.interaction.includes('dashboard') || intents.interaction.includes('hud')) return 'saas-dashboard';
+    if (intents.interaction.includes('configurator') || intents.interaction.includes('builder')) return 'ecommerce';
+    if (intents.emotional.includes('luxury') || intents.motion.includes('cinematic')) return 'luxury-watch';
+    if (intents.experience.includes('immersive-scroll') || intents.experience.includes('editorial')) return 'agency';
+    if (intents.experience.includes('immersive-3d')) return 'media';
+    if (intents.motion.includes('energetic')) return 'fitness';
+    return 'saas-dashboard';
   }
 
   /**

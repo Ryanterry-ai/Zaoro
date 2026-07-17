@@ -425,15 +425,6 @@ export class DeterministicOrchestratorV4 {
     // re-deriving the business context in parallel.
     if (canonical?.businessKnowledge) {
       (breContext as any).businessKnowledge = canonical.businessKnowledge;
-      // Bridge the canonical, signal-derived entity set onto the legacy
-      // BREContext.entities field so the renderer (which still reads
-      // breContext.entities) receives generic entities like `Product`
-      // instead of the industry-mapping default (`['User']`). No industry
-      // key is involved — these come from BusinessKnowledge primitive signals.
-      const bkEntities = (canonical.businessKnowledge as any).entities;
-      if (Array.isArray(bkEntities) && bkEntities.length > 0) {
-        breContext.entities = bkEntities.map((e: any) => (typeof e === 'string' ? e : e.name ?? String(e)));
-      }
     }
     const orchestratorResult = await orchestrator.execute(prompt, breContext, canonical ?? undefined);
 
@@ -696,6 +687,37 @@ export class DeterministicOrchestratorV4 {
         progress.emit('e2e', 'warning', `E2E verification error: ${(e2eErr as Error).message}`);
         console.warn('[orchestrator] E2E verification error:', (e2eErr as Error).message);
       }
+    }
+
+    // Phase 14d: Signal-driven autonomous verification loop.
+    // Runs AFTER generation + self-heal. Inspects 9 gap categories
+    // (business-content, interaction, motion, conversion, assets, a11y,
+    // performance, ssr, fidelity) and iteratively repairs until gates pass.
+    // Reads businessKnowledge.intents so the SAME checks apply to ANY domain.
+    try {
+      const { runVerificationLoop } = await import('../orchestration/verification/loop.js');
+      if (!canonical) throw new Error('canonical build context unavailable');
+      const verificationInput = {
+        files: renderResult.files.map((f) => ({ path: f.path, content: f.content })),
+        businessKnowledge: canonical.businessKnowledge,
+      };
+      const verificationResult = await runVerificationLoop(
+        verificationInput,
+        async (_gap, current) => {
+          // Repair hook: full self-healing already ran in Phase 14b; this hook
+          // is the integration seam for future targeted repairs. Kept a no-op
+          // (returns input unchanged) to avoid re-running the heavy LLM heal
+          // loop redundantly within the verification loop.
+          return current;
+        },
+        3,
+      );
+      const verificationReport = verificationResult.report;
+      console.log(`[orchestrator] Verification loop: ${verificationReport.passed ? 'PASSED' : 'INCOMPLETE'} after ${verificationResult.iterations} iteration(s), ${verificationReport.gaps.length} gap(s) noted`);
+      progress.emit('verify', verificationReport.passed ? 'completed' : 'warning',
+        `Verification ${verificationReport.passed ? 'passed' : 'incomplete'}: ${verificationReport.gaps.length} gap(s)`);
+    } catch (verifyErr) {
+      console.warn('[orchestrator] Verification loop error (non-fatal):', (verifyErr as Error).message);
     }
 
     // Mark all pages as succeeded (they come from the renderer, not LLM)

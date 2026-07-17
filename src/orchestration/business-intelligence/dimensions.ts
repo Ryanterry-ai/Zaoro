@@ -29,7 +29,7 @@ const LEXICONS: Lexicon[] = [
   // product-nature — what is being exchanged
   { dimension: 'product-nature', value: 'beverage', words: ['coffee', 'tea', 'espresso', 'latte', 'brew', 'beverage', 'drink', 'juice', 'smoothie', 'cocktail', 'wine', 'beer'] },
   { dimension: 'product-nature', value: 'food', words: ['restaurant', 'food', 'meal', 'dish', 'bakery', 'pastry', 'pizza', 'cuisine', 'menu', 'snack', 'dessert', 'grocery'] },
-  { dimension: 'product-nature', value: 'physical-good', words: ['store', 'shop', 'product', 'apparel', 'clothing', 'furniture', 'gadget', 'device', 'gear', 'toy', 'jewelry', 'headphone', 'headphones', 'earbud', 'earbuds', 'speaker', 'speakers', 'audio', 'audio-device', 'wearable', 'accessory', 'watch', 'camera', 'drone'] },
+  { dimension: 'product-nature', value: 'physical-good', words: ['store', 'shop', 'product', 'apparel', 'clothing', 'furniture', 'gadget', 'device', 'gear', 'toy', 'jewelry'] },
   { dimension: 'product-nature', value: 'digital-good', words: ['ebook', 'course', 'template', 'download', 'software-license', 'plugin', 'asset', 'preset'] },
   { dimension: 'product-nature', value: 'service', words: ['salon', 'spa', 'clinic', 'consulting', 'agency', 'legal', 'accounting', 'coaching', 'training', 'repair', 'fitness', 'gym', 'dentist', 'doctor', 'therapy', 'tutoring'] },
   { dimension: 'product-nature', value: 'content', words: ['blog', 'news', 'magazine', 'portfolio', 'podcast', 'video', 'publication', 'media', 'showcase', 'gallery'] },
@@ -75,17 +75,55 @@ const LEXICONS: Lexicon[] = [
   { dimension: 'quality', value: 'luxury', words: ['luxury', 'high-end', 'exclusive', 'maison', 'couture', 'five-star'] },
   { dimension: 'quality', value: 'budget', words: ['budget', 'cheap', 'affordable', 'value', 'discount'] },
 
-  // locale — region (drives compliance + payment)
+   // locale — region (drives compliance + payment)
   { dimension: 'locale', value: 'IN', words: ['india', 'indian', 'bangalore', 'mumbai', 'delhi', 'hyderabad', 'chennai', 'pune', 'ahmedabad', 'kolkata'] },
   { dimension: 'locale', value: 'US', words: ['usa', 'united states', 'america', 'us ', 'new york', 'california', 'texas', 'austin', 'sf', 'los angeles'] },
   { dimension: 'locale', value: 'EU', words: ['europe', 'uk', 'germany', 'france', 'spain', 'italy', 'netherlands', 'eu ', 'london', 'berlin', 'paris'] },
-];
 
-/** Surface words already mapped by the lexicon — excluded from domain nouns
- *  so we don't duplicate what the archetype composer derives. */
-const LEXICON_SURFACE = new Set(
-  LEXICONS.flatMap((l) => l.words),
-);
+  // ── Intent dimensions (vertical-agnostic, cue-driven) ──
+  // These let ANY prompt express an experience without an industry template.
+
+  // experience-intent — the shape of the whole site
+  { dimension: 'experience-intent', value: 'immersive-scroll', words: ['scroll', 'as you scroll', 'on scroll', 'scrolling', 'parallax', 'storytelling', 'journey', 'experience'] },
+  { dimension: 'experience-intent', value: 'utility', words: ['tool', 'dashboard', 'portal', 'admin', 'calculator', 'configurator', 'builder', 'internal'] },
+  { dimension: 'experience-intent', value: 'editorial', words: ['blog', 'magazine', 'news', 'publication', 'article', 'portfolio', 'showcase'] },
+  { dimension: 'experience-intent', value: 'immersive-3d', words: ['3d', 'webgl', 'three.js', 'r3f', 'virtual', 'ar', 'vr', 'metaverse', 'holographic'] },
+
+  // interaction-intent — named interaction patterns (become reusable primitives)
+  { dimension: 'interaction-intent', value: 'configurator', words: ['configurator', 'customize', 'build your own', 'personalize', 'make your own', 'design your'] },
+  { dimension: 'interaction-intent', value: 'builder', words: ['builder', 'build your', 'burger builder', 'pizza builder', 'sandwich builder', 'compose your'] },
+  { dimension: 'interaction-intent', value: 'booking', words: ['book', 'booking', 'reserve', 'reservation', 'appointment', 'schedule'] },
+  { dimension: 'interaction-intent', value: 'quiz', words: ['quiz', 'assessment', 'finder', 'recommender', 'match you'] },
+  { dimension: 'interaction-intent', value: 'calculator', words: ['calculator', 'estimate', 'quote calculator', 'roi', 'savings'] },
+  { dimension: 'interaction-intent', value: 'hud', words: ['hud', 'overlay', 'dashboard overlay', 'live overlay', 'real-time panel'] },
+  { dimension: 'interaction-intent', value: 'dashboard', words: ['dashboard', 'analytics', 'metrics', 'reporting', 'portal', 'admin panel'] },
+
+  // motion-intent — how things move
+  { dimension: 'motion-intent', value: 'scroll-driven', words: ['scroll', 'as you scroll', 'on scroll', 'scrolling', 'reveal on scroll'] },
+  { dimension: 'motion-intent', value: 'cinematic', words: ['cinematic', 'film', 'movie', 'trailer', 'dramatic', 'epic', 'futuristic'] },
+  { dimension: 'motion-intent', value: 'calm', words: ['calm', 'calming', 'serene', 'peaceful', 'quiet', 'silence', 'stillness', 'minimal'] },
+  { dimension: 'motion-intent', value: 'energetic', words: ['energetic', 'punchy', 'bold', 'dynamic', 'lively', 'vibrant'] },
+
+  // conversion-intent — the revenue action
+  { dimension: 'conversion-intent', value: 'checkout', words: ['buy', 'purchase', 'shop', 'cart', 'order', 'checkout', 'add to cart'] },
+  { dimension: 'conversion-intent', value: 'lead-form', words: ['contact', 'get in touch', 'inquiry', 'quote', 'demo', 'consult', 'lead'] },
+  { dimension: 'conversion-intent', value: 'subscribe', words: ['subscribe', 'sign up', 'newsletter', 'membership', 'join'] },
+  { dimension: 'conversion-intent', value: 'book', words: ['book', 'booking', 'reserve', 'appointment', 'schedule'] },
+  { dimension: 'conversion-intent', value: 'donate', words: ['donate', 'donation', 'support', 'contribute'] },
+
+  // emotional-intent — the feeling arc (pairs / antonyms)
+  { dimension: 'emotional-intent', value: 'chaos-to-calm', words: ['noise into silence', 'chaos to calm', 'chaotic to calm', 'noise to silence', 'turmoil to peace', 'loud to quiet'] },
+  { dimension: 'emotional-intent', value: 'excitement', words: ['exciting', 'thrill', 'adrenaline', 'wow', 'unforgettable', 'epic'] },
+  { dimension: 'emotional-intent', value: 'trust', words: ['trust', 'reliable', 'secure', 'safe', 'dependable'] },
+  { dimension: 'emotional-intent', value: 'serenity', words: ['serene', 'peaceful', 'tranquil', 'zen', 'calm', 'silence'] },
+  { dimension: 'emotional-intent', value: 'luxury', words: ['luxury', 'premium', 'exclusive', 'sophisticated', 'elegant'] },
+
+  // content-intent — posture of the copy
+  { dimension: 'content-intent', value: 'storytelling', words: ['story', 'narrative', 'journey', 'tale', 'experience', 'chapter'] },
+  { dimension: 'content-intent', value: 'minimal', words: ['minimal', 'clean', 'simple', 'concise', 'essential'] },
+  { dimension: 'content-intent', value: 'educational', words: ['learn', 'educate', 'guide', 'how-to', 'explainer', 'tutorial'] },
+  { dimension: 'content-intent', value: 'bold', words: ['bold', 'striking', 'statement', 'loud', 'fearless'] },
+];
 
 /** Lightweight tokenisation — word + simple 2-gram phrases. */
 function tokenize(prompt: string): string[] {
@@ -136,69 +174,47 @@ export function hasSignal(signals: DiscoveredSignal[], dim: SignalDimension, val
   return signals.some((s) => s.dimension === dim && s.value === value);
 }
 
-/**
- * Extract the user's own domain nouns (their words) for vocabulary.
- *
- * This is GENERIC and vertical-agnostic: instead of a curated list of known
- * business types (which would require editing every time a new product
- * appears), it extracts salient singular nouns from the prompt using
- * linguistic heuristics, then EXCLUDES generic category words (saas, store,
- * blog, website, …) and product-nature surface synonyms already captured by
- * the lexicon. This means "headphone", "soundwave", "skincare", or any future
- * product noun is captured without hardcoding an industry table.
- */
-const GENERIC_CATEGORY_WORDS = new Set([
-  'saas', 'store', 'shop', 'blog', 'website', 'site', 'app', 'application', 'platform',
-  'system', 'tool', 'software', 'business', 'company', 'brand', 'product', 'products',
-  'service', 'services', 'website', 'web', 'online', 'digital', 'experience', 'experiences',
-  'customer', 'customers', 'client', 'user', 'users', 'people', 'audience', 'market',
-  'industry', 'type', 'kind', 'build', 'create', 'make', 'design', 'develop', 'futuristic',
-]);
-
-/**
- * Common English stopwords. Domain nouns are the user's distinctive content
- * words; we strip function/descriptor words so the vocabulary reflects the
- * actual product (headphone, coffee, silence) rather than scaffolding
- * (where, every, into). This keeps extraction generic — no curated business
- * list, just linguistic salience.
- */
-const STOPWORDS = new Set([
-  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'every', 'where', 'when',
-  'what', 'who', 'whom', 'which', 'will', 'would', 'could', 'should', 'have', 'has', 'had',
-  'are', 'was', 'were', 'been', 'being', 'they', 'them', 'their', 'there', 'here', 'than',
-  'then', 'once', 'only', 'more', 'most', 'some', 'such', 'very', 'just', 'like', 'than',
-  'but', 'not', 'all', 'any', 'can', 'may', 'our', 'your', 'his', 'her', 'its', 'our',
-  'these', 'those', 'how', 'why', 'out', 'off', 'over', 'under', 'between', 'about', 'around',
-  'through', 'before', 'after', 'during', 'without', 'within', 'across', 'along', 'onto',
-  'please', 'also', 'each', 'both', 'own', 'let', 'make', 'makes', 'made', 'get', 'gets',
-  'got', 'find', 'finding', 'show', 'showing', 'see', 'seen', 'look', 'looking', 'want',
-  'wants', 'need', 'needs', 'give', 'gives', 'take', 'takes', 'help', 'helps', 'use', 'uses',
-  'used', 'using', 'one', 'two', 'new', 'best', 'good', 'great', 'real', 'true', 'free',
-  'modern', 'easy', 'fast', 'simple', 'smart', 'clean', 'fresh', 'natural', 'based', 'powered',
-  'designed', 'built', 'made', 'sells', 'selling', 'sold', 'offer', 'offers', 'offering',
-  'provide', 'provides', 'providing', 'deliver', 'delivers', 'delivering', 'transform',
-  'transforms', 'transforming', 'turn', 'turns', 'turning', 'become', 'becomes', 'becoming',
-  'complete', 'completely', 'total', 'totally', 'full', 'fully', 'keep', 'keeps', 'won',
-  'wont', 't', 'isn', 'arent', 'don', 'doesn', 'didn', 'hasn', 'havent', 'hadn', 'wouldn',
-  'shouldn', 'couldn', 'cant', 'cant', 'you', 'we', 'me', 'us', 'he', 'she', 'it', 'i', 'a',
-  'an', 'of', 'to', 'in', 'on', 'at', 'by', 'as', 'be', 'do', 'so', 'if', 'or', 'no', 'yes',
-  'up', 'down', 'my', 'me', 'am', 'll', 're', 've', 's', 'd',
-]);
-
+/** Extract the user's own domain nouns (their words) for vocabulary.
+ *  Word-boundary matched (so "teams" does NOT match "tea") and limited to
+ *  SPECIFIC nouns — generic category words (saas, store, blog, …) are excluded
+ *  because they duplicate the shape the archetype composer already derives. */
 export function extractDomainNouns(prompt: string): string[] {
   const lower = ` ${prompt.toLowerCase().trim()} `;
-  const raw = lower.match(/[a-z][a-z'-]{2,}/g) ?? [];
-
-  // Plural → singular normalisation so "headphones" collapses to "headphone".
-  const singular = (t: string) => t.replace(/(?:ies|es|s)$/, (m) => (m === 'ies' ? 'y' : ''));
-
-  const found = new Set<string>();
-  for (const t of raw) {
-    const s = singular(t);
-    if (s.length < 4) continue;
-    if (STOPWORDS.has(s)) continue;
-    if (GENERIC_CATEGORY_WORDS.has(s)) continue;
-    found.add(s);
+  const nouns = [
+    'coffee', 'tea', 'cafe', 'restaurant', 'pizza', 'bakery', 'supplement', 'protein', 'gym',
+    'fitness', 'salon', 'spa', 'clinic', 'dentist', 'doctor', 'lawyer', 'agency', 'studio',
+    'school', 'academy', 'consulting', 'real estate', 'property', 'hotel', 'resort',
+  ];
+  const found: string[] = [];
+  for (const n of nouns) {
+    const re = new RegExp(`\\b${n.replace(/ /g, '\\s')}\\b`);
+    if (re.test(lower)) found.push(n);
   }
-  return [...found].slice(0, 8);
+  return [...new Set(found)];
+}
+
+import type { BusinessIntents } from './types.js';
+
+/**
+ * Compose the explicit, structured intents from the extracted signals.
+ * This is the Universal Signal Extraction output that every downstream layer
+ * consumes. No industry key is ever read — only orthogonal primitive signals.
+ */
+export function extractIntents(signals: DiscoveredSignal[]): BusinessIntents {
+  const dim = (d: DiscoveredSignal['dimension']) => signalValues(signals, d);
+  const experience = dim('experience-intent');
+  const interaction = dim('interaction-intent');
+  const motion = dim('motion-intent');
+  const conversion = dim('conversion-intent');
+  const emotional = dim('emotional-intent');
+  const content = dim('content-intent');
+
+  return {
+    experience: experience.length ? experience : ['editorial'],
+    interaction,
+    motion: motion.length ? motion : (emotional.includes('calm') || emotional.includes('serenity') ? ['calm'] : ['balanced']),
+    conversion: conversion.length ? conversion : (dim('monetization').includes('one-time') || dim('monetization').includes('wholesale') ? ['checkout'] : ['lead-form']),
+    emotional: emotional.length ? emotional : ['trust'],
+    content: content.length ? content : ['storytelling'],
+  };
 }

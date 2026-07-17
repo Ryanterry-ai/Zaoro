@@ -105,7 +105,37 @@ export type SignalDimension =
   | 'goal'
   | 'quality'
   | 'locale'
-  | 'experience-theme';
+  // ── Intent dimensions (signal-derived, vertical-agnostic) ──
+  // These capture WHAT the user wants the experience to DO / FEEL, derived
+  // purely from prompt cues. They replace any need for industry→experience
+  // templates. A headphone brand and a funeral home both express an emotional
+  // intent; only the signal values differ.
+  | 'experience-intent'
+  | 'interaction-intent'
+  | 'motion-intent'
+  | 'conversion-intent'
+  | 'emotional-intent'
+  | 'content-intent';
+
+/**
+ * Explicit, structured intents extracted from ANY prompt. Every downstream
+ * layer (Creative Strategy, Experience Compiler, Renderer, Verification Loop)
+ * reads these instead of inferring business logic from an industry label.
+ */
+export interface BusinessIntents {
+  /** High-level experience shape, e.g. "immersive-scroll" | "utility" | "editorial" */
+  experience: string[];
+  /** Interaction patterns requested, e.g. "configurator" | "builder" | "booking" | "quiz" | "calculator" | "hud" */
+  interaction: string[];
+  /** Motion language demanded, e.g. "scroll-driven" | "calm" | "energetic" | "cinematic" */
+  motion: string[];
+  /** Conversion mechanics, e.g. "checkout" | "lead-form" | "booking" | "subscribe" */
+  conversion: string[];
+  /** Emotional arc, e.g. "chaos-to-calm" | "trust" | "excitement" | "serenity" */
+  emotional: string[];
+  /** Content posture, e.g. "storytelling" | "minimal" | "educational" | "bold" */
+  content: string[];
+}
 
 // ─── People: personas, roles ────────────────────────────────────────────────
 
@@ -362,9 +392,12 @@ export interface BusinessKnowledge {
   designStrategy: DesignStrategy;
   experienceGoals: ExperienceGoals;
 
-  /** Experience themes detected from narrative/scroll cues (e.g. transformation,
-   *  scroll-journey, sound-to-silence). Drives experience-concept selection. */
-  experienceThemes?: string[];
+  /**
+   * Explicit signal-derived intents. The single contract the Experience
+   * Compiler, Renderer, and Verification Loop reason from. No industry label
+   * is ever read downstream — only these primitives.
+   */
+  intents: BusinessIntents;
 }
 
 /** Input to the engine. Minimal today (prompt); extensible tomorrow. */
