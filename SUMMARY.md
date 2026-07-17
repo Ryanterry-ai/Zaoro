@@ -162,3 +162,10 @@
 - Degrades silently if no workspace / files missing; never blocks the build.
 - **Verified:** attached shot.png copied to <workspace>/public/images/reference/shot.png and recorded in evidence.
 - **Status:** typecheck clean; full suite GREEN 1057.
+
+## Pipeline path now populates Requirements Understanding (bugfix)
+- unBuildPipeline previously skipped understandRequirements (only unCanonicalBuild called it), so design.md's "Requirements Understanding" section was empty on the normal handleBuildIntent path. Fixed: pipeline now calls understandRequirements({ prompt, referenceUrls }) after threading references, stores on usinessKnowledge.requirementsUnderstanding. Added prompt to PipelineConfig; handleBuildIntent passes prompt.
+- **E2E verified:** built "calm luxury landing page for focus headphones from my screenshot" -> 34s end-to-end (BRE intake -> knowledge graph 120 nodes/437 edges -> 5 git worktrees dispatched -> react renderer -> assembly 43 files -> agent spec). Attached screenshot copied to <ws>/public/images/reference/shot.png AND recorded in evidence. design.md section 9 present. Generated a **Next.js 14** app; 
+pm install + 
+ext dev served **HTTP 200** at http://localhost:3000 (title "Home Co", H1 "Home Co"); screenshot asset served at /images/reference/shot.png (200 image/png).
+- **Status:** typecheck clean; full suite GREEN 1057.

@@ -1307,6 +1307,7 @@ Rules:
       outputDir: path.join(workspace.rootPath, 'src'),
       workspaceDir: workspace.rootPath,
       references: intent.references,
+      prompt,
     }, llmConfig, (breContext as any).__industryScore, progress);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;

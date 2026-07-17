@@ -28,6 +28,7 @@ import { SkillIntegrator, type DesignRecommendation } from './skill-integrator.j
 import { DesignIntelligenceEngine } from '../orchestration/design-intelligence/engine.js';
 import type { DesignDecision } from '../orchestration/design-intelligence/types.js';
 import { generateDesignBrief } from './design-brief.js';
+import { understandRequirements } from '../requirements/understand.js';
 import { ProgressEmitter } from '../core/progress-emitter.js';
 import { getSkillDiscovery } from '../core/skill-discovery.js';
 
@@ -89,6 +90,9 @@ export interface PipelineConfig {
 
   /** Attached reference material (URLs, screenshots, documents) from the user */
   references?: import('../orchestration/business-intelligence/types.js').ReferenceInputs;
+
+  /** Original user prompt (used for requirements understanding) */
+  prompt?: string;
 }
 
 export interface PipelineResult {
@@ -164,6 +168,7 @@ export async function runBuildPipeline(
     outputDir = './workspace/src',
     workspaceDir,
     references,
+    prompt,
   } = config;
 
   log.info('Pipeline started', {
@@ -533,6 +538,20 @@ export async function runBuildPipeline(
       images: references.images ?? businessKnowledge.references?.images,
       documents: references.documents ?? businessKnowledge.references?.documents,
     };
+  }
+
+  // Deep requirements understanding (deterministic; agent enriches via brief).
+  // Mirrors runCanonicalBuild so design.md's Requirements Understanding section
+  // is populated on the pipeline path too.
+  try {
+    if (businessKnowledge) {
+      businessKnowledge.requirementsUnderstanding = understandRequirements({
+        prompt: prompt ?? '',
+        referenceUrls: businessKnowledge.references?.referenceUrls,
+      });
+    }
+  } catch (e) {
+    console.warn('[requirements] understanding failed (continuing without):', (e as Error).message);
   }
 
   // ── Reference screenshot/asset ingestion ──────────────────────────────────
