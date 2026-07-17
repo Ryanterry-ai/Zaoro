@@ -30,7 +30,12 @@ describe('Pipeline Smoke: Supplement Store', () => {
   });
 
   it('rendered TSX files have no placeholder content or invalid imports', () => {
-    const content = result.renderResult.files.map(f => f.content).join('\n');
+    // Scan only generated code/config — not the design.md brief doc, which
+    // legitimately names its skill sources.
+    const codeFiles = result.renderResult.files.filter(
+      (f) => f.path.endsWith('.tsx') || f.path.endsWith('.ts') || f.path.endsWith('.css')
+    );
+    const content = codeFiles.map((f) => f.content).join('\n');
 
     expect(content).not.toContain('@21st-dev');
     expect(content).not.toContain('21st.dev');

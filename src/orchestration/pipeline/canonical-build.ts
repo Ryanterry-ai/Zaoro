@@ -123,6 +123,9 @@ export async function runCanonicalBuild(opts: CanonicalBuildOptions): Promise<Ca
   // ── Stage 2: Knowledge Acquisition → EvidenceCollection ──
   const kaEngine = new KnowledgeAcquisitionEngine();
   const evidence: EvidenceCollection = await kaEngine.process(businessKnowledge);
+  // Stash live evidence on BusinessKnowledge so the generation layer can
+  // surface it in design.md and stay faithful to real market signals.
+  businessKnowledge.evidence = evidence;
   const kaRec = makeComplianceRecorder('knowledge-acquisition', violations);
   if ((evidence as any).industry || (evidence as any).industryEvidence) {
     kaRec.recordIndustryLookup('evidence.industry', 'EvidenceCollection carries industry-typed evidence', 'medium');
@@ -140,7 +143,6 @@ export async function runCanonicalBuild(opts: CanonicalBuildOptions): Promise<Ca
     designDNA: undefined,
     designDecision: undefined,
     personality: businessKnowledge.experienceGoals?.arc?.join(',') ?? 'balanced',
-    description: opts.prompt,
   };
   const experienceBlueprint: ExperienceBlueprint = generateExperienceBlueprint(expInput);
   const expRec = makeComplianceRecorder('experience-intelligence', violations);

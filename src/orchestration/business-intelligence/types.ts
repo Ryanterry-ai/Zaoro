@@ -398,6 +398,12 @@ export interface BusinessKnowledge {
    * is ever read downstream — only these primitives.
    */
   intents: BusinessIntents;
+
+  /**
+   * Live evidence collected by the Knowledge Acquisition layer (web research,
+   * competitor analysis). Optional — absent when acquisition is offline.
+   */
+  evidence?: import('../knowledge-acquisition/types.js').EvidenceCollection;
 }
 
 /** Input to the engine. Minimal today (prompt); extensible tomorrow. */

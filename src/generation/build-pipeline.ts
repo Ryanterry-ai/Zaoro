@@ -27,6 +27,7 @@ import { stageLogger, debugLog } from '../core/debug-logger.js';
 import { SkillIntegrator, type DesignRecommendation } from './skill-integrator.js';
 import { DesignIntelligenceEngine } from '../orchestration/design-intelligence/engine.js';
 import type { DesignDecision } from '../orchestration/design-intelligence/types.js';
+import { generateDesignBrief } from './design-brief.js';
 import { ProgressEmitter } from '../core/progress-emitter.js';
 import { getSkillDiscovery } from '../core/skill-discovery.js';
 
@@ -377,8 +378,11 @@ export async function runBuildPipeline(
   let designDecision: DesignDecision | undefined;
   let skillDiscoveryResult: import('../core/skill-discovery.js').DiscoveryResult | undefined;
 
-  // Discover and install required skills — only when explicitly enabled (not in tests/CI)
-  const enableSkillDiscovery = process.env.ENABLE_SKILL_DISCOVERY === 'true';
+  // Skill Discovery runs every build by default (Find-Skills / 21st.dev check),
+  // so the pipeline always verifies which required skills are present. It is a
+  // pure filesystem check — no network, no install — and degrades gracefully.
+  // Opt OUT with DISABLE_SKILL_DISCOVERY=true.
+  const enableSkillDiscovery = process.env.DISABLE_SKILL_DISCOVERY !== 'true';
   if (enableSkillDiscovery) {
     const requiredSkills = [
       'ui-ux-pro-max',
@@ -412,7 +416,7 @@ export async function runBuildPipeline(
       log.warn('Layer 2a: SkillDiscovery failed (continuing without)', { error: (e as Error).message });
     }
   } else {
-    log.info('Layer 2a: SkillDiscovery skipped (set ENABLE_SKILL_DISCOVERY=true to enable)');
+    log.info('Layer 2a: SkillDiscovery skipped (DISABLE_SKILL_DISCOVERY=true)');
   }
 
   try {
@@ -935,6 +939,28 @@ export async function runBuildPipeline(
     content: JSON.stringify(designLineage, null, 2),
     type: 'config',
   });
+
+  // Emit design.md — the single source-of-truth brief the build honors.
+  // Composed from extracted intents + skill recommendations + live evidence.
+  try {
+    const designMd = generateDesignBrief({
+      appName: context.appName ?? context.industry ?? 'app',
+      businessKnowledge,
+      intents: businessKnowledge?.intents,
+      skillRecommendations,
+      designDecision,
+      designDNA,
+      evidence: businessKnowledge?.evidence,
+    });
+    renderResult.files.push({
+      path: 'design.md',
+      content: designMd,
+      type: 'config',
+    });
+    log.info('Layer 5: design.md brief emitted');
+  } catch (e: unknown) {
+    log.warn('Layer 5: design.md generation failed (continuing without)', { error: (e as Error).message });
+  }
 
   // Flush debug logs to file
   debugLog.flush();

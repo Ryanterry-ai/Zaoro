@@ -30,6 +30,7 @@ import type {
   IKnowledgeAcquisitionLayer,
   ValidationResult,
 } from './types.js';
+import { WebResearchProvider } from './web-research-provider.js';
 
 // ─── Knowledge Source Provider Interface ─────────────────────────────────────
 
@@ -266,6 +267,7 @@ export class KnowledgeAcquisitionEngine implements IKnowledgeAcquisitionLayer {
   private providers: KnowledgeSourceProvider[] = [
     new PromptEvidenceProvider(),
     new DomainDataEvidenceProvider(),
+    new WebResearchProvider(),
   ];
 
   constructor(additionalProviders?: KnowledgeSourceProvider[]) {
