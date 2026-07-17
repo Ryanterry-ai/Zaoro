@@ -644,6 +644,35 @@ export async function runBuildPipeline(
 
     if (experienceBlueprint) {
       designLineage.experience = 'experience-intelligence';
+
+      // Signal-driven scroll narrative: derive scrollAccumulation from the
+      // UNIVERSAL intents (no industry branching). immersive-scroll /
+      // scroll-driven intents enable a continuous scroll-intensity meter that
+      // makes the user FEEL a quality (calm/silence) grow as they scroll.
+      const intents = businessKnowledge?.intents;
+      if (intents && (intents.experience.includes('immersive-scroll') || intents.motion.includes('scroll-driven'))) {
+        const isCalm = intents.emotional.includes('serenity') || intents.motion.includes('calm');
+        experienceBlueprint.scrollAccumulation = {
+          value: {
+            enabled: true,
+            // reverse: more scroll => LESS noise (calm), not more intensity
+            metric: isCalm ? 'silence' : 'engagement',
+            label: isCalm ? 'Silence' : 'Scroll',
+            accent: isCalm ? '#0891B2' : '#EC4899',
+            placement: 'fixed',
+            reverse: isCalm,
+          },
+          provenance: {
+            layer: 'experience-intelligence',
+            confidence: 0.85,
+            evidence: [`immersive-scroll intent derived from universal signals`],
+            timestamp: new Date(),
+            reasoning: 'Scroll-accumulation enabled from signal intents (immersive-scroll / scroll-driven), not industry',
+            source: 'business-knowledge',
+          },
+        };
+      }
+
       const sectionCount = Array.isArray(experienceBlueprint.sectionOrder) ? experienceBlueprint.sectionOrder.length : (experienceBlueprint.sectionOrder?.value?.length ?? 0);
       progress?.emit('compile', 'info', `Experience intelligence: ${sectionCount} sections`);
       log.info('Layer 3b: Experience Intelligence complete', {

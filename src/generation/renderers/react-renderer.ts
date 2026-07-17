@@ -114,6 +114,13 @@ export class ReactRenderer implements Renderer {
     const files: RenderedFile[] = [];
     const pageName = spec.path === '/' ? 'Home' : this.toPascalCase(spec.path);
 
+    // Immersive narrative: when the UNIVERSAL intents request immersive-scroll,
+    // the home page leads with the noise→silence scroll experience (signal-driven).
+    const wantsImmersive = spec.path === '/' &&
+      !!context?.businessKnowledge?.intents?.experience.includes('immersive-scroll');
+    const immersiveImport = wantsImmersive ? `import NoiseToSilence from '@/components/NoiseToSilence';` : '';
+    const immersiveSection = wantsImmersive ? `      <NoiseToSilence />\n` : '';
+
     // Deduplicate components by type (same component can appear multiple times in a page)
     const componentMap = new Map<string, { type: string }>();
     for (const c of spec.components) {
@@ -133,12 +140,12 @@ export class ReactRenderer implements Renderer {
     const pageCode = `'use client';
 
 import React from 'react';
-${componentImports}
+${componentImports}${immersiveImport ? '\n' + immersiveImport : ''}
 
 export default function ${pageName}Page() {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
-${componentRenders}
+${immersiveSection}${componentRenders}
     </div>
   );
 }
@@ -204,6 +211,10 @@ ${componentRenders}
     if (!skipSingletons) {
       const scrollIntensity = this.renderScrollIntensity(context);
       if (scrollIntensity) files.push(scrollIntensity);
+
+      // Immersive scroll narrative (signal-driven: immersive-scroll intent).
+      const immersive = this.renderImmersiveNarrative(context);
+      if (immersive) files.push(immersive);
     }
 
     // Agent mode: generate components from resolved content (agent can override later)
@@ -947,31 +958,6 @@ ${intensityEl}      </body>
     const name = acc.metric === 'scent' ? 'ScentIntensity' : 'ScrollIntensity';
     const label = acc.label;
     const accent = acc.accent;
-    const arc = (acc as any).transformArc as { from: string; to: string } | undefined;
-
-    // A scroll-transform narrative ("noise → silence") makes the whole page
-    // crossfade from the chaotic `from` state toward the calm `to` state as
-    // the user scrolls. Generic — any brand's arc works (chaos→calm, etc.).
-    const transformMarkup = arc
-      ? `
-  // Narrative crossfade: the experience resolves from "${arc.from}" to "${arc.to}"
-  // the deeper the user scrolls.
-  const chaosOpacity = useTransform(intensity, [0, 1], [0.55, 0]);
-  const calmOpacity = useTransform(intensity, [0, 1], [0, 1]);
-  const noiseBlur = useTransform(intensity, [0, 1], [6, 0]);`
-      : '';
-
-    const transformLayer = arc
-      ? `
-      {/* Ambient narrative layer — fades the chaotic state into the calm state */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{ opacity: chaosOpacity, filter: useTransform(intensity, [0, 1], ['blur(6px)', 'blur(0px)']) }}
-      >
-        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.08),transparent_60%)]" />
-      </motion.div>`
-      : '';
 
     const content = `'use client';
 
@@ -989,41 +975,162 @@ export default function ${name}() {
   const intensity = useSpring(scrollYProgress, { stiffness: 120, damping: 24 });
   const width = useTransform(intensity, [0, 1], [8, 100]);
   const glow = useTransform(intensity, [0, 1], [0.2, 1]);
-  const scale = useTransform(intensity, [0, 1], [0.9, 1.15]);${transformMarkup}
+  const scale = useTransform(intensity, [0, 1], [0.9, 1.15]);
 
   return (
-    <>
-${transformLayer}      <div
-        ref={ref}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-5 py-2.5 rounded-full bg-background/60 backdrop-blur-md border border-primary/20"
-        aria-hidden
-      >
-        <span className="text-[10px] tracking-[0.3em] uppercase text-primary/70">${label}</span>
-        <div className="relative w-36 h-1.5 rounded-full bg-border overflow-hidden">
-          <motion.div
-            className="absolute left-0 top-0 h-full rounded-full"
-            style={{
-              width,
-              background: 'linear-gradient(90deg, ${accent}40, ${accent})',
-              boxShadow: '0 0 16px ${accent}',
-              opacity: glow,
-            }}
-          />
-        </div>
-        <motion.span
-          className="text-[10px] tracking-[0.2em] uppercase text-foreground/50"
-          style={{ scale }}
-        >
-          ${label}
-        </motion.span>
+    <div
+      ref={ref}
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-5 py-2.5 rounded-full bg-background/60 backdrop-blur-md border border-primary/20"
+      aria-hidden
+    >
+      <span className="text-[10px] tracking-[0.3em] uppercase text-primary/70">${label}</span>
+      <div className="relative w-36 h-1.5 rounded-full bg-border overflow-hidden">
+        <motion.div
+          className="absolute left-0 top-0 h-full rounded-full"
+          style={{
+            width,
+            background: 'linear-gradient(90deg, ${accent}40, ${accent})',
+            boxShadow: '0 0 16px ${accent}',
+            opacity: glow,
+          }}
+        />
       </div>
-    </>
+      <motion.span
+        className="text-[10px] tracking-[0.2em] uppercase text-foreground/50"
+        style={{ scale }}
+      >
+        ${label}
+      </motion.span>
+    </div>
   );
 }
 `;
 
     return {
       path: `components/${name}.tsx`,
+      content,
+      type: 'component' as const,
+    };
+  }
+
+  /**
+   * Immersive scroll narrative — emitted ONLY when the UNIVERSAL intents
+   * request `immersive-scroll` (no industry branching). A field of chaotic
+   * soundwaves collapses into a single calm point as the user scrolls, with
+   * narrative beats cross-fading. Mirror of the proven `useScroll` mechanic.
+   */
+  private renderImmersiveNarrative(context?: RenderContext): RenderedFile | undefined {
+    const intents = context?.businessKnowledge?.intents;
+    if (!intents || !intents.experience.includes('immersive-scroll')) return undefined;
+
+    const isCalm = intents.emotional.includes('serenity') || intents.motion.includes('calm');
+    const accentA = isCalm ? '8,145,178' : '236,72,153'; // cyan : pink
+    const accentB = isCalm ? '236,72,153' : '8,145,178';
+    const calmLabel = isCalm ? 'silence' : 'focus';
+
+    const content = `'use client';
+
+import React, { useRef } from 'react';
+import { motion, useScroll, useSpring, useTransform, useMotionValueEvent } from 'framer-motion';
+
+/**
+ * Immersive scroll narrative — noise transforms into ${calmLabel}.
+ * Signal-driven: emitted for immersive-scroll intent. Continuous, not a one-shot reveal.
+ */
+export default function NoiseToSilence() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 26 });
+
+  const waveAmplitude = useTransform(progress, [0, 1], [60, 2]);
+  const waveOpacity = useTransform(progress, [0, 1], [1, 0.12]);
+  const calmScale = useTransform(progress, [0.6, 1], [0.6, 1.4]);
+  const calmOpacity = useTransform(progress, [0.55, 1], [0, 1]);
+  const bgLight = useTransform(progress, [0, 1], [0.02, 0.06]);
+  const noiseTextOpacity = useTransform(progress, [0, 0.4], [1, 0]);
+
+  const beats = [
+    { title: 'The world is loud.', body: 'A wall of overlapping signals. This is before.' },
+    { title: 'Then, a threshold.', body: 'Adaptive cancellation reads the room and begins to fold the noise back on itself.' },
+    { title: 'The static thins.', body: 'What was a roar becomes a whisper, then a tide pulling out to sea.' },
+    { title: 'Complete ${calmLabel}.', body: 'Nothing left but the low hum of your own pulse.' },
+  ];
+  const [active, setActive] = React.useState(0);
+  useMotionValueEvent(progress, 'change', (v) => {
+    setActive(Math.min(beats.length - 1, Math.floor(v * beats.length)));
+  });
+
+  return (
+    <section ref={ref} className="relative h-[420vh] bg-black" aria-label="Noise transforms into ${calmLabel}">
+      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
+        <motion.div
+          className="absolute inset-0"
+          style={{ background: useTransform(bgLight, (l: number) => \`radial-gradient(circle at 50% 50%, rgba(${accentA},\${l}) 0%, #000 70%)\`) }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center gap-[3px]" style={{ opacity: waveOpacity as any }}>
+          {Array.from({ length: 64 }).map((_, i) => (
+            <ChaosBar key={i} index={i} amplitude={waveAmplitude} />
+          ))}
+        </div>
+        <motion.div
+          className="absolute rounded-full"
+          style={{
+            scale: calmScale,
+            opacity: calmOpacity,
+            width: 220,
+            height: 220,
+            background: \`radial-gradient(circle, rgba(${accentB},0.35), transparent 70%)\`,
+            boxShadow: \`0 0 120px 40px rgba(${accentB},0.25)\`,
+          }}
+        />
+        <div className="relative z-10 max-w-2xl px-6 text-center">
+          {beats.map((beat, i) => (
+            <motion.div
+              key={beat.title}
+              className="absolute inset-x-6"
+              initial={false}
+              animate={{ opacity: i === active ? 1 : 0, y: i === active ? 0 : 12 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4">{beat.title}</h2>
+              <p className="text-lg text-white/70 max-w-xl mx-auto">{beat.body}</p>
+            </motion.div>
+          ))}
+        </div>
+        <motion.div
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] uppercase text-white/40"
+          animate={{ y: [0, 8, 0] }}
+          transition={{ repeat: Infinity, duration: 1.8 }}
+          style={{ opacity: noiseTextOpacity }}
+        >
+          scroll to ${calmLabel}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function ChaosBar({ index, amplitude }: { index: number; amplitude: ReturnType<typeof useTransform<number, number>> }) {
+  const phase = index * 0.5;
+  const delay = (index % 8) * 0.08;
+  return (
+    <motion.span
+      className="w-[3px] rounded-full"
+      style={{
+        background: \`linear-gradient(180deg, rgba(${accentA},0.9), rgba(${accentB},0.9))\`,
+        height: 4,
+        scaleY: useTransform(amplitude, (a: number) => a / 2),
+        y: useTransform(amplitude, (a: number) => Math.sin(index + phase) * (a / 32)),
+      }}
+      animate={{ opacity: [0.4, 1, 0.4] }}
+      transition={{ repeat: Infinity, duration: 0.6, delay }}
+    />
+  );
+}
+`;
+
+    return {
+      path: `components/NoiseToSilence.tsx`,
       content,
       type: 'component' as const,
     };
