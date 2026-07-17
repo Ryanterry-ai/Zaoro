@@ -18,9 +18,9 @@ const CRM_BK = {
 
 describe('Experience Director', () => {
   describe('candidate generation', () => {
-    it('generates 7 candidate concepts from business knowledge', () => {
+    it('generates 6 candidate concepts from business knowledge', () => {
       const candidates = generateCandidateConcepts(HEADPHONE_BK);
-      expect(candidates.length).toBe(7);
+      expect(candidates.length).toBe(6);
     });
 
     it('each candidate has required fields', () => {

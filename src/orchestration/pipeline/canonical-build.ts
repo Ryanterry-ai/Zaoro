@@ -37,7 +37,6 @@ import type { SolutionArchitecture } from '../technology-planner/types.js';
 import { compileExperience, reasonExperience, generateCandidateConcepts } from '../../bos/experience/reasoning-index.js';
 import { BRAND_PRIMITIVES, resolveConflicts, scoreConsistency } from '../../bos/primitives/index.js';
 import type { CompiledExperience } from '../../bos/experience/compiled.js';
-import { capabilitiesFromBusinessKnowledge } from '../../bos/bre-context-adapter.js';
 import type { PrimitiveSet } from '../../bos/primitives/types.js';
 import type { Industry } from '../types.js';
 
@@ -124,11 +123,10 @@ export async function runCanonicalBuild(opts: CanonicalBuildOptions): Promise<Ca
   // ── Stage 2: Knowledge Acquisition → EvidenceCollection ──
   const kaEngine = new KnowledgeAcquisitionEngine();
   const evidence: EvidenceCollection = await kaEngine.process(businessKnowledge);
-  // NOTE: EvidenceCollection.industry is provenance-only domain knowledge
-  // (standards/regulations keyed by a coarse label for a map lookup, with a
-  // safe `|| 'other'` fallback). It never drives a control-flow branch, so it
-  // is NOT a compliance violation. The instrumentation intentionally does not
-  // flag provenance evidence — only `if industry == X` branching is traced.
+  const kaRec = makeComplianceRecorder('knowledge-acquisition', violations);
+  if ((evidence as any).industry || (evidence as any).industryEvidence) {
+    kaRec.recordIndustryLookup('evidence.industry', 'EvidenceCollection carries industry-typed evidence', 'medium');
+  }
 
   // ── Stage 3: Experience Intelligence → ExperienceBlueprint ──
   // The canonical engine's input type still carries an `Industry` field.
@@ -142,6 +140,7 @@ export async function runCanonicalBuild(opts: CanonicalBuildOptions): Promise<Ca
     designDNA: undefined,
     designDecision: undefined,
     personality: businessKnowledge.experienceGoals?.arc?.join(',') ?? 'balanced',
+    description: opts.prompt,
   };
   const experienceBlueprint: ExperienceBlueprint = generateExperienceBlueprint(expInput);
   const expRec = makeComplianceRecorder('experience-intelligence', violations);
@@ -242,27 +241,15 @@ function compileExperienceSafe(
   const entityNames = (businessKnowledge.entities ?? []).map(e =>
     typeof e === 'string' ? e : (e as any).name ?? String(e),
   );
-  // Derive the real capability set from canonical workflows (no dummy mapping),
-  // so concept business-fit scoring reflects what the business actually needs.
-  const caps = capabilitiesFromBusinessKnowledge(businessKnowledge);
-  const experienceThemes = (businessKnowledge as any).experienceThemes as string[] | undefined;
+  const caps = entityNames.length > 0 ? entityNames.map(() => 'commerce.catalog' as const) : ['web.presence' as const];
 
-  const xreInput = {
-    primitiveSet,
-    capabilities: caps as string[],
-    entities: entityNames,
-    rendererTarget: 'react' as const,
-    experienceThemes,
-    maxPlans: 8,
-  };
-
-   try {
-    const xre = reasonExperience(xreInput);
-    if (process.env.XRE_DEBUG) {
-      const top = [...xre.plans].sort((a,b)=>b.overallScore-a.overallScore).slice(0,3)
-        .map(p=>`${p.conceptId}:${p.overallScore}`).join(', ');
-      console.error(`[compileExperienceSafe] themes=${JSON.stringify(experienceThemes)} caps=${JSON.stringify(caps)} top={${top}} SEL=${xre.selected?.conceptId} primitives=${(primitiveSet as any).primitives?.length}`);
-    }
+  try {
+    const xre = reasonExperience({
+      primitiveSet,
+      capabilities: caps,
+      entities: entityNames,
+      rendererTarget: 'react',
+    });
 
     const candidates = generateCandidateConcepts({
       industry: (businessKnowledge as any).discovery?.industry ?? '',
@@ -278,24 +265,28 @@ function compileExperienceSafe(
       const baseline = generateCandidateConcepts({ capabilities: caps, entities: entityNames, description: '' })[0];
       if (!baseline) {
         return compileExperience(
-          xreInput,
+          { primitiveSet, capabilities: caps, entities: entityNames, rendererTarget: 'react' },
           { conceptId: 'baseline', conceptName: 'Baseline Presence' } as any,
           [],
         );
       }
       return compileExperience(
-        xreInput,
+        { primitiveSet, capabilities: caps, entities: entityNames, rendererTarget: 'react' },
         { conceptId: baseline.id, conceptName: baseline.name } as any,
         [baseline],
       );
     }
 
-    return compileExperience(xreInput, selected, candidates);
+    return compileExperience(
+      { primitiveSet, capabilities: caps, entities: entityNames, rendererTarget: 'react' },
+      selected,
+      candidates,
+    );
   } catch {
     // Never let the experience stage break the canonical pipeline.
     const baseline = generateCandidateConcepts({ capabilities: caps, entities: entityNames, description: '' })[0];
     return compileExperience(
-      xreInput,
+      { primitiveSet, capabilities: caps, entities: entityNames, rendererTarget: 'react' },
       { conceptId: baseline?.id ?? 'baseline', conceptName: baseline?.name ?? 'Baseline Presence' } as any,
       baseline ? [baseline] : [],
     );

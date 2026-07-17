@@ -124,10 +124,13 @@ export function composeDiscovery(prompt: string, signals: DiscoveredSignal[]): B
   const quality = qualityPrefix(signals);
   const niche = nicheFromSignals(signals);
 
-  // Compose the business-type label from primitives + the user's own noun.
+  // Compose the business-type label from primitives ONLY. The user's own
+  // domain noun stays in vocabulary.domainNouns / intent (see composeIntent),
+  // but it is NOT injected into the type label — a generic word like "team"
+  // must never reshape the business classification. Differentiation comes from
+  // composing primitives, not from echoing a prompt word.
   const parts: string[] = [];
   if (quality) parts.push(quality);
-  if (domainNouns.length > 0) parts.push(domainNouns[0]!);
   parts.push(shape.base);
   const businessType = parts.join(' ').replace(/\s+/g, ' ').trim();
 

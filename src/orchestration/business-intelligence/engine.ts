@@ -61,7 +61,6 @@ export class BusinessIntelligenceEngine {
       contentStrategy: deriveContentStrategy(signals, domainNouns),
       designStrategy: deriveDesignStrategy(signals, discovery),
       experienceGoals: deriveExperienceGoals(signals, discovery),
-      experienceThemes: deriveExperienceThemes(signals),
     };
   }
 }
@@ -72,15 +71,6 @@ export class BusinessIntelligenceEngine {
  * channel primitives imply a selling business. This is primitive reasoning,
  * not vertical lookup.
  */
-/**
- * Derive experience themes from prompt narrative/scroll cues. These are
- * primitive signals (not vertical labels) that let the experience engine pick
- * a matching concept — e.g. a "soundwave → silence" transformation brief.
- */
-function deriveExperienceThemes(s: DiscoveredSignal[]): string[] {
-  return [...new Set(signalValues(s, 'experience-theme'))];
-}
-
 function inferGoals(s: DiscoveredSignal[]): string[] {
   const goals = new Set(signalValues(s, 'goal'));
   if (hasSignal(s, 'product-nature', 'beverage') || hasSignal(s, 'product-nature', 'food') || hasSignal(s, 'product-nature', 'physical-good') || hasSignal(s, 'product-nature', 'digital-good')) {

@@ -99,6 +99,12 @@ describe('Business Intelligence Engine', () => {
     const bk = understandBusiness('a modern coffee website for Indian customers');
     // For a beverage business the product term should be a menu/item term
     expect(bk.vocabulary.terms['product']).toMatch(/item|product/i);
+    // Domain nouns are extracted GENERICALLY (linguistic salience), not from a
+    // curated industry list. The user's own product word IS captured — proving
+    // no hardcoded dictionary — while scaffolding/stopwords are dropped.
     expect(bk.vocabulary.domainNouns).toContain('coffee'); // the user's own word
+    const novelBk = understandBusiness('a futuristic headphone website where every scroll transforms noise into silence');
+    expect(novelBk.vocabulary.domainNouns).toContain('headphone'); // novel noun captured generically
+    expect(novelBk.vocabulary.domainNouns).not.toContain('every'); // stopword excluded
   });
 });

@@ -51,8 +51,6 @@ import {
 import { primitiveRegistry, BRAND_PRIMITIVES, resolveConflicts, scoreConsistency } from '../bos/primitives/index.js';
 import type { BrandReference, PrimitiveSet } from '../bos/primitives/index.js';
 import { runCanonicalBuild, type CanonicalBuildReport } from '../orchestration/pipeline/canonical-build.js';
-import { breContextFromBusinessKnowledge } from '../bos/bre-context-adapter.js';
-import type { BREContext } from '../bos/reasoning/rules-engine.js';
 import { KnowledgeRegistry } from '../bos/knowledge/registry.js';
 import { BuildHistoryManager } from '../engine/build-history.js';
 import type { ApplicationBlueprint } from '../bos/schemas/blueprint/application-blueprint.schema.js';
@@ -256,36 +254,24 @@ export class DeterministicOrchestratorV4 {
     // RuntimeTrace (Phase R1, Step 1): every build emits a provenance trace.
     const tracer = new RuntimeTracer();
 
-    // BRE v2: deterministic business reasoning (zero LLM calls).
-    // NOTE: we no longer derive the renderer's context from the keyword-driven
-    // buildBREContext parser on the live path. buildBREContext remains exported
-    // as a compatibility adapter, but the AUTHORITATIVE breContext is produced
-    // from the canonical BusinessKnowledge (see below) once runCanonicalBuild
-    // completes. This removes the parallel, duplicate business-derivation path.
+    // BRE v2: deterministic business reasoning (zero LLM calls)
     tracer.beginSpan({ layer: 'bre-v2', owner: 'BREContextBuilder', inputs: ['prompt'], dependencies: [] });
     progress.emit('bre', 'started', 'Analyzing business intent...');
-    // Initial BREContext from the legacy parser is used only as a pre-canonical
-    // placeholder (e.g. for progress messaging). It is fully replaced below.
-    const preBreContext = await buildBREContext(prompt);
-    // Authoritative breContext: replaced by canonical-derived context after the
-    // canonical build runs; falls back to the legacy parser if it fails.
-    let breContext: BREContext = preBreContext;
-    progress.emit('bre', 'completed', `Business context (pre-canonical): ${preBreContext.industry}, ${preBreContext.entities.length} entities`);
+    const breContext = await buildBREContext(prompt);
+    progress.emit('bre', 'completed', `Business context: ${breContext.industry}, ${breContext.entities.length} entities`);
 
     // Phase R2: resolve the build's capabilities through the canonical registry
     // once, so candidate learning and the manifest share one identity set.
-    // Capabilities are taken from the legacy parser initially; they are
-    // re-derived from BusinessKnowledge after the canonical build runs.
-    const rawBuildCaps = Array.isArray((preBreContext as any).capabilities)
-      ? ((preBreContext as any).capabilities as string[])
+    const rawBuildCaps = Array.isArray((breContext as any).capabilities)
+      ? ((breContext as any).capabilities as string[])
       : [];
-    let buildCapabilities = capabilityRegistry.resolve(rawBuildCaps, { industry: preBreContext.industry });
+    const buildCapabilities = capabilityRegistry.resolve(rawBuildCaps, { industry: breContext.industry });
     tracer.endSpan('bre-v2', {
       outputs: ['bre-context'],
       artifactIds: [],
       confidence: 0.9,
-      evidence: [`industry=${preBreContext.industry}`, `entities=${preBreContext.entities.length}`],
-      hash: RuntimeTracer.hashContent(JSON.stringify(preBreContext)),
+      evidence: [`industry=${breContext.industry}`, `entities=${breContext.entities.length}`],
+      hash: RuntimeTracer.hashContent(JSON.stringify(breContext)),
     });
 
     // ═══ Canonical Build Pipeline (wiring milestone 1) ═══
@@ -298,18 +284,17 @@ export class DeterministicOrchestratorV4 {
     try {
       canonical = await runCanonicalBuild({ prompt });
       const bk = canonical.businessKnowledge;
-      // B4: route the renderer through the canonical BusinessKnowledge. The 4-layer
-      // pipeline (orchestrator.execute) and all downstream breContext.* reads now
-      // consume the vertical-agnostic canonical understanding — not the legacy
-      // keyword parser. breContextFromBusinessKnowledge is a pure field mapping.
-      breContext = breContextFromBusinessKnowledge(bk);
-      // Re-resolve capabilities from canonical workflows so the registry identity
-      // set matches what the canonical build resolved (no duplicate reasoning).
-      const rawCanonicalCaps = breContext.capabilities ?? [];
-      buildCapabilities = capabilityRegistry.resolve(rawCanonicalCaps, { industry: breContext.industry });
+      // Bridge: use BusinessKnowledge as the authoritative business source
+      // for the experience pipeline (replaces breContext.industry usage).
+      const businessAuthority = {
+        industry: (bk as any).discovery?.industry ?? breContext.industry,
+        capabilities: buildCapabilities.expanded,
+        entities: (bk.entities ?? []).map(e => typeof e === 'string' ? e : (e as any).name ?? String(e)),
+        description: (bk as any).discovery?.summary,
+      };
       // The canonical BusinessKnowledge is the authoritative business source;
       // the XRE span below consumes canonical.compiledExperience directly.
-      console.log(`[orchestrator] Canonical build: BK entities=${(bk.entities ?? []).length}, ` +
+      console.log(`[orchestrator] Canonical build: BK entities=${businessAuthority.entities.length}, ` +
         `evidence=${(canonical.evidence as any).id ? 'present' : 'none'}, ` +
         `content=${(canonical.contentBlueprint as any).id ? 'present' : 'none'}, ` +
         `design=${(canonical.designDecision as any).id ? 'present' : 'none'}, ` +
@@ -440,6 +425,15 @@ export class DeterministicOrchestratorV4 {
     // re-deriving the business context in parallel.
     if (canonical?.businessKnowledge) {
       (breContext as any).businessKnowledge = canonical.businessKnowledge;
+      // Bridge the canonical, signal-derived entity set onto the legacy
+      // BREContext.entities field so the renderer (which still reads
+      // breContext.entities) receives generic entities like `Product`
+      // instead of the industry-mapping default (`['User']`). No industry
+      // key is involved — these come from BusinessKnowledge primitive signals.
+      const bkEntities = (canonical.businessKnowledge as any).entities;
+      if (Array.isArray(bkEntities) && bkEntities.length > 0) {
+        breContext.entities = bkEntities.map((e: any) => (typeof e === 'string' ? e : e.name ?? String(e)));
+      }
     }
     const orchestratorResult = await orchestrator.execute(prompt, breContext, canonical ?? undefined);
 

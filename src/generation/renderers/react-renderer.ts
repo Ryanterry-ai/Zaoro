@@ -947,6 +947,31 @@ ${intensityEl}      </body>
     const name = acc.metric === 'scent' ? 'ScentIntensity' : 'ScrollIntensity';
     const label = acc.label;
     const accent = acc.accent;
+    const arc = (acc as any).transformArc as { from: string; to: string } | undefined;
+
+    // A scroll-transform narrative ("noise → silence") makes the whole page
+    // crossfade from the chaotic `from` state toward the calm `to` state as
+    // the user scrolls. Generic — any brand's arc works (chaos→calm, etc.).
+    const transformMarkup = arc
+      ? `
+  // Narrative crossfade: the experience resolves from "${arc.from}" to "${arc.to}"
+  // the deeper the user scrolls.
+  const chaosOpacity = useTransform(intensity, [0, 1], [0.55, 0]);
+  const calmOpacity = useTransform(intensity, [0, 1], [0, 1]);
+  const noiseBlur = useTransform(intensity, [0, 1], [6, 0]);`
+      : '';
+
+    const transformLayer = arc
+      ? `
+      {/* Ambient narrative layer — fades the chaotic state into the calm state */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{ opacity: chaosOpacity, filter: useTransform(intensity, [0, 1], ['blur(6px)', 'blur(0px)']) }}
+      >
+        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.08),transparent_60%)]" />
+      </motion.div>`
+      : '';
 
     const content = `'use client';
 
@@ -964,33 +989,35 @@ export default function ${name}() {
   const intensity = useSpring(scrollYProgress, { stiffness: 120, damping: 24 });
   const width = useTransform(intensity, [0, 1], [8, 100]);
   const glow = useTransform(intensity, [0, 1], [0.2, 1]);
-  const scale = useTransform(intensity, [0, 1], [0.9, 1.15]);
+  const scale = useTransform(intensity, [0, 1], [0.9, 1.15]);${transformMarkup}
 
   return (
-    <div
-      ref={ref}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-5 py-2.5 rounded-full bg-background/60 backdrop-blur-md border border-primary/20"
-      aria-hidden
-    >
-      <span className="text-[10px] tracking-[0.3em] uppercase text-primary/70">${label}</span>
-      <div className="relative w-36 h-1.5 rounded-full bg-border overflow-hidden">
-        <motion.div
-          className="absolute left-0 top-0 h-full rounded-full"
-          style={{
-            width,
-            background: 'linear-gradient(90deg, ${accent}40, ${accent})',
-            boxShadow: '0 0 16px ${accent}',
-            opacity: glow,
-          }}
-        />
-      </div>
-      <motion.span
-        className="text-[10px] tracking-[0.2em] uppercase text-foreground/50"
-        style={{ scale }}
+    <>
+${transformLayer}      <div
+        ref={ref}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 px-5 py-2.5 rounded-full bg-background/60 backdrop-blur-md border border-primary/20"
+        aria-hidden
       >
-        ${label}
-      </motion.span>
-    </div>
+        <span className="text-[10px] tracking-[0.3em] uppercase text-primary/70">${label}</span>
+        <div className="relative w-36 h-1.5 rounded-full bg-border overflow-hidden">
+          <motion.div
+            className="absolute left-0 top-0 h-full rounded-full"
+            style={{
+              width,
+              background: 'linear-gradient(90deg, ${accent}40, ${accent})',
+              boxShadow: '0 0 16px ${accent}',
+              opacity: glow,
+            }}
+          />
+        </div>
+        <motion.span
+          className="text-[10px] tracking-[0.2em] uppercase text-foreground/50"
+          style={{ scale }}
+        >
+          ${label}
+        </motion.span>
+      </div>
+    </>
   );
 }
 `;

@@ -354,6 +354,59 @@ export interface ExperienceEngineInput {
   personality?: string;
   /** Resolved capabilities (optional) — primary signal for experience derivation */
   capabilities?: string[];
+  /** Raw prompt/description text — used to detect a scroll-transform narrative
+   *  arc (e.g. "scroll transforms noise into silence"). Signal-based, not
+   *  industry-based. */
+  description?: string;
+}
+
+/**
+ * Detect a SCROLL-TRANSFORM narrative from the description text.
+ *
+ * This is fully generic: it looks for (a) a scroll anchor ("scroll", "as you
+ * scroll", "on scroll") and (b) a transformation arc — an antonym pair where
+ * the first state is chaotic/heavy and the second is calm/clear/silent. Any
+ * brand can express this (noise→silence, chaos→calm, clutter→clarity,
+ * tension→ease). No industry lookup is involved.
+ *
+ * Returns the theme word for the accumulation metric (derived from the
+ * "calm" end of the arc) and the raw arc pair for the renderer to animate.
+ */
+export interface MotionIntent {
+  scrollDriven: boolean;
+  transformArc: { from: string; to: string } | null;
+  /** Human theme word for the accumulating quality (e.g. "silence", "calm"). */
+  theme: string | null;
+}
+
+const SCROLL_ANCHORS = ['scroll', 'as you scroll', 'on scroll', 'while scrolling', 'every scroll', 'scrolling'];
+// chaos-end → calm-end antonym pairs (first = before, second = after)
+const TRANSFORM_PAIRS: Array<[RegExp, string, string]> = [
+  [/\bnoise\b.*\b(silence|silent|calm)\b|\b(silence|silent|calm)\b.*\bnoise\b/, 'noise', 'silence'],
+  [/\bchaos\b.*\b(calm|calm|clarity|peace|still)\b|\b(calm|clarity|peace|still)\b.*\bchaos\b/, 'chaos', 'calm'],
+  [/\bclutter\b.*\b(clarity|clear|calm)\b|\b(clarity|clear|calm)\b.*\bclutter\b/, 'clutter', 'clarity'],
+  [/\btension\b.*\b(ease|calm|relief|peace)\b|\b(ease|calm|relief|peace)\b.*\btension\b/, 'tension', 'ease'],
+  [/\bstatic\b.*\b(clarity|calm|flow)\b|\b(clarity|calm|flow)\b.*\bstatic\b/, 'static', 'flow'],
+  [/\bnoise\b.*\b(peace|quiet|still|serenity)\b|\b(peace|quiet|still|serenity)\b.*\bnoise\b/, 'noise', 'peace'],
+];
+
+export function deriveMotionIntent(description?: string): MotionIntent {
+  if (!description) return { scrollDriven: false, transformArc: null, theme: null };
+  const lower = description.toLowerCase();
+
+  const scrollDriven = SCROLL_ANCHORS.some((a) => lower.includes(a));
+
+  let transformArc: { from: string; to: string } | null = null;
+  let theme: string | null = null;
+  for (const [re, from, to] of TRANSFORM_PAIRS) {
+    if (re.test(lower)) {
+      transformArc = { from, to };
+      theme = to;
+      break;
+    }
+  }
+
+  return { scrollDriven, transformArc, theme };
 }
 
 /**
@@ -377,7 +430,15 @@ export function generateExperienceBlueprint(
     designDecision,
     personality,
     capabilities,
+    description,
   } = input;
+
+  // Detect a scroll-transform narrative arc from the description. Generic —
+  // any brand expressing "X → calm" on scroll triggers an accumulating,
+  // transformative motion experience. This is the signal that lets the
+  // renderer deliver the "unforgettable" scroll moment without per-industry
+  // templates.
+  const motionIntent = deriveMotionIntent(description);
 
   // 1. Derive the base profile from signals — capabilities take priority,
   //    then the optional industry label as a neutral default. No branching
@@ -562,20 +623,33 @@ export function generateExperienceBlueprint(
     easing: 'power2.out',
   };
 
-  // 10. Scroll-accumulation: make the user FEEL a quality (scent,
-  // tension, calm) grow the more they scroll — continuous, not one-shot.
-  // Triggered for cinematic/luxury experiences (derived from STYLE, not from
-  // an industry label). This removes the old `if industry == perfume` branch.
-  const wantsAccumulation = style === 'cinematic' || style === 'luxury';
+  // 10. Scroll-accumulation: make the user FEEL a quality grow the more they
+  // scroll — continuous, not one-shot. Triggered EITHER for cinematic/luxury
+  // experiences (derived from STYLE) OR when the description expresses a
+  // scroll-transform narrative arc (e.g. "noise → silence"). Both paths are
+  // signal/style-based, never industry-based — this removes the old
+  // `if industry == perfume` branch while generalising to ANY brand.
+  const wantsAccumulation = style === 'cinematic' || style === 'luxury' ||
+    (motionIntent.scrollDriven && motionIntent.transformArc !== null);
 
   const scrollAccumulation: ScrollAccumulationConfig | undefined = wantsAccumulation
     ? {
         enabled: true,
-        metric: style === 'luxury' ? 'scent' : 'atmosphere',
-        label: style === 'luxury' ? 'Scent' : 'Mood',
+        // A transform arc names its own accumulating quality (noise→silence →
+        // "silence"); otherwise fall back to style-derived atmosphere/scent.
+        metric: motionIntent.theme
+          ? motionIntent.theme
+          : style === 'luxury' ? 'scent' : 'atmosphere',
+        label: motionIntent.theme
+          ? motionIntent.theme.charAt(0).toUpperCase() + motionIntent.theme.slice(1)
+          : style === 'luxury' ? 'Scent' : 'Mood',
         accent: style === 'luxury' ? '#D4AF37' : '#C9A96E',
         placement: 'fixed',
         reverse: false,
+        // Carry the transform arc so the renderer can animate from→to.
+        ...(motionIntent.transformArc
+          ? { transformArc: motionIntent.transformArc as any }
+          : {}),
       }
     : undefined;
 

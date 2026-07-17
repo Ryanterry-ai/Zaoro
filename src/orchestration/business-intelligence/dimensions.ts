@@ -29,7 +29,7 @@ const LEXICONS: Lexicon[] = [
   // product-nature — what is being exchanged
   { dimension: 'product-nature', value: 'beverage', words: ['coffee', 'tea', 'espresso', 'latte', 'brew', 'beverage', 'drink', 'juice', 'smoothie', 'cocktail', 'wine', 'beer'] },
   { dimension: 'product-nature', value: 'food', words: ['restaurant', 'food', 'meal', 'dish', 'bakery', 'pastry', 'pizza', 'cuisine', 'menu', 'snack', 'dessert', 'grocery'] },
-  { dimension: 'product-nature', value: 'physical-good', words: ['store', 'shop', 'product', 'apparel', 'clothing', 'furniture', 'gadget', 'device', 'gear', 'toy', 'jewelry', 'headphone', 'headphones', 'earbud', 'earbuds', 'earphone', 'headset', 'speaker', 'speakers', 'audio', 'sound', 'wearable', 'accessory', 'accessories', 'electronics'] },
+  { dimension: 'product-nature', value: 'physical-good', words: ['store', 'shop', 'product', 'apparel', 'clothing', 'furniture', 'gadget', 'device', 'gear', 'toy', 'jewelry', 'headphone', 'headphones', 'earbud', 'earbuds', 'speaker', 'speakers', 'audio', 'audio-device', 'wearable', 'accessory', 'watch', 'camera', 'drone'] },
   { dimension: 'product-nature', value: 'digital-good', words: ['ebook', 'course', 'template', 'download', 'software-license', 'plugin', 'asset', 'preset'] },
   { dimension: 'product-nature', value: 'service', words: ['salon', 'spa', 'clinic', 'consulting', 'agency', 'legal', 'accounting', 'coaching', 'training', 'repair', 'fitness', 'gym', 'dentist', 'doctor', 'therapy', 'tutoring'] },
   { dimension: 'product-nature', value: 'content', words: ['blog', 'news', 'magazine', 'portfolio', 'podcast', 'video', 'publication', 'media', 'showcase', 'gallery'] },
@@ -77,17 +77,15 @@ const LEXICONS: Lexicon[] = [
 
   // locale — region (drives compliance + payment)
   { dimension: 'locale', value: 'IN', words: ['india', 'indian', 'bangalore', 'mumbai', 'delhi', 'hyderabad', 'chennai', 'pune', 'ahmedabad', 'kolkata'] },
-
-  // experience-theme — how the visitor should FEEL across the journey.
-  // Detected from narrative/scroll cues in the prompt. Pure signal expansion
-  // (no vertical templates) — drives experience-concept selection downstream.
-  { dimension: 'experience-theme', value: 'transformation', words: ['transform', 'transforms', 'transformation', 'journey', 'from', 'to', 'evolve', 'metamorphosis', 'before', 'after'] },
-  { dimension: 'experience-theme', value: 'scroll-journey', words: ['scroll', 'scrolling', 'every scroll', 'as you scroll', 'on scroll', 'parallax'] },
-  { dimension: 'experience-theme', value: 'sound-to-silence', words: ['noise', 'soundwave', 'soundwaves', 'silent', 'silence', 'calm', 'quiet', 'sound', 'audio', 'chao', 'chaotic', 'serene', 'stillness'] },
-  { dimension: 'experience-theme', value: 'immersive', words: ['immersive', 'futuristic', 'cinematic', 'atmospheric', 'spatial', 'depth'] },
   { dimension: 'locale', value: 'US', words: ['usa', 'united states', 'america', 'us ', 'new york', 'california', 'texas', 'austin', 'sf', 'los angeles'] },
   { dimension: 'locale', value: 'EU', words: ['europe', 'uk', 'germany', 'france', 'spain', 'italy', 'netherlands', 'eu ', 'london', 'berlin', 'paris'] },
 ];
+
+/** Surface words already mapped by the lexicon — excluded from domain nouns
+ *  so we don't duplicate what the archetype composer derives. */
+const LEXICON_SURFACE = new Set(
+  LEXICONS.flatMap((l) => l.words),
+);
 
 /** Lightweight tokenisation — word + simple 2-gram phrases. */
 function tokenize(prompt: string): string[] {
@@ -138,22 +136,69 @@ export function hasSignal(signals: DiscoveredSignal[], dim: SignalDimension, val
   return signals.some((s) => s.dimension === dim && s.value === value);
 }
 
-/** Extract the user's own domain nouns (their words) for vocabulary.
- *  Word-boundary matched (so "teams" does NOT match "tea") and limited to
- *  SPECIFIC nouns — generic category words (saas, store, blog, …) are excluded
- *  because they duplicate the shape the archetype composer already derives. */
+/**
+ * Extract the user's own domain nouns (their words) for vocabulary.
+ *
+ * This is GENERIC and vertical-agnostic: instead of a curated list of known
+ * business types (which would require editing every time a new product
+ * appears), it extracts salient singular nouns from the prompt using
+ * linguistic heuristics, then EXCLUDES generic category words (saas, store,
+ * blog, website, …) and product-nature surface synonyms already captured by
+ * the lexicon. This means "headphone", "soundwave", "skincare", or any future
+ * product noun is captured without hardcoding an industry table.
+ */
+const GENERIC_CATEGORY_WORDS = new Set([
+  'saas', 'store', 'shop', 'blog', 'website', 'site', 'app', 'application', 'platform',
+  'system', 'tool', 'software', 'business', 'company', 'brand', 'product', 'products',
+  'service', 'services', 'website', 'web', 'online', 'digital', 'experience', 'experiences',
+  'customer', 'customers', 'client', 'user', 'users', 'people', 'audience', 'market',
+  'industry', 'type', 'kind', 'build', 'create', 'make', 'design', 'develop', 'futuristic',
+]);
+
+/**
+ * Common English stopwords. Domain nouns are the user's distinctive content
+ * words; we strip function/descriptor words so the vocabulary reflects the
+ * actual product (headphone, coffee, silence) rather than scaffolding
+ * (where, every, into). This keeps extraction generic — no curated business
+ * list, just linguistic salience.
+ */
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'every', 'where', 'when',
+  'what', 'who', 'whom', 'which', 'will', 'would', 'could', 'should', 'have', 'has', 'had',
+  'are', 'was', 'were', 'been', 'being', 'they', 'them', 'their', 'there', 'here', 'than',
+  'then', 'once', 'only', 'more', 'most', 'some', 'such', 'very', 'just', 'like', 'than',
+  'but', 'not', 'all', 'any', 'can', 'may', 'our', 'your', 'his', 'her', 'its', 'our',
+  'these', 'those', 'how', 'why', 'out', 'off', 'over', 'under', 'between', 'about', 'around',
+  'through', 'before', 'after', 'during', 'without', 'within', 'across', 'along', 'onto',
+  'please', 'also', 'each', 'both', 'own', 'let', 'make', 'makes', 'made', 'get', 'gets',
+  'got', 'find', 'finding', 'show', 'showing', 'see', 'seen', 'look', 'looking', 'want',
+  'wants', 'need', 'needs', 'give', 'gives', 'take', 'takes', 'help', 'helps', 'use', 'uses',
+  'used', 'using', 'one', 'two', 'new', 'best', 'good', 'great', 'real', 'true', 'free',
+  'modern', 'easy', 'fast', 'simple', 'smart', 'clean', 'fresh', 'natural', 'based', 'powered',
+  'designed', 'built', 'made', 'sells', 'selling', 'sold', 'offer', 'offers', 'offering',
+  'provide', 'provides', 'providing', 'deliver', 'delivers', 'delivering', 'transform',
+  'transforms', 'transforming', 'turn', 'turns', 'turning', 'become', 'becomes', 'becoming',
+  'complete', 'completely', 'total', 'totally', 'full', 'fully', 'keep', 'keeps', 'won',
+  'wont', 't', 'isn', 'arent', 'don', 'doesn', 'didn', 'hasn', 'havent', 'hadn', 'wouldn',
+  'shouldn', 'couldn', 'cant', 'cant', 'you', 'we', 'me', 'us', 'he', 'she', 'it', 'i', 'a',
+  'an', 'of', 'to', 'in', 'on', 'at', 'by', 'as', 'be', 'do', 'so', 'if', 'or', 'no', 'yes',
+  'up', 'down', 'my', 'me', 'am', 'll', 're', 've', 's', 'd',
+]);
+
 export function extractDomainNouns(prompt: string): string[] {
   const lower = ` ${prompt.toLowerCase().trim()} `;
-  const nouns = [
-    'coffee', 'tea', 'cafe', 'restaurant', 'pizza', 'bakery', 'supplement', 'protein', 'gym',
-    'fitness', 'salon', 'spa', 'clinic', 'dentist', 'doctor', 'lawyer', 'agency', 'studio',
-    'school', 'academy', 'consulting', 'real estate', 'property', 'hotel', 'resort',
-    'headphone', 'headphones', 'earbuds', 'earphone', 'headset', 'speaker', 'audio',
-  ];
-  const found: string[] = [];
-  for (const n of nouns) {
-    const re = new RegExp(`\\b${n.replace(/ /g, '\\s')}\\b`);
-    if (re.test(lower)) found.push(n);
+  const raw = lower.match(/[a-z][a-z'-]{2,}/g) ?? [];
+
+  // Plural → singular normalisation so "headphones" collapses to "headphone".
+  const singular = (t: string) => t.replace(/(?:ies|es|s)$/, (m) => (m === 'ies' ? 'y' : ''));
+
+  const found = new Set<string>();
+  for (const t of raw) {
+    const s = singular(t);
+    if (s.length < 4) continue;
+    if (STOPWORDS.has(s)) continue;
+    if (GENERIC_CATEGORY_WORDS.has(s)) continue;
+    found.add(s);
   }
-  return [...new Set(found)];
+  return [...found].slice(0, 8);
 }

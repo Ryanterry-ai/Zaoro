@@ -621,6 +621,7 @@ export async function runBuildPipeline(
       designDNA,
       designDecision,
       personality: designDecision?.context?.personality,
+      description: context.description ?? (breResult.blueprint as any)?.description,
     });
 
     // Validate the blueprint
