@@ -1306,6 +1306,7 @@ Rules:
       platform: 'react',
       outputDir: path.join(workspace.rootPath, 'src'),
       workspaceDir: workspace.rootPath,
+      references: intent.references,
     }, llmConfig, (breContext as any).__industryScore, progress);
 
     const { breResult, executionBlueprint, applicationSpec, renderResult } = pipelineResult;

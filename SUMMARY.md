@@ -154,3 +154,11 @@
 - **Wiring:** unCanonicalBuild calls understandRequirements and stores the result on usinessKnowledge.requirementsUnderstanding (new optional field). design.md now has a "Requirements Understanding" section listing summary, explicit features, constraints, positioning signals, visual references, and open questions.
 - **Verified:** brief.md with "calm/luxury/booking" + "Must not use stock photos" ? understanding extracts constraint + 3 positioning signals + 2 visual references; design.md renders the section.
 - **Status:** typecheck clean; full suite GREEN 1057.
+
+## Attached screenshots become REAL project assets
+- When a user attaches screenshots/images, they are now copied into the build workspace public/images/reference/ so the renderer can reference them as **real, local assets** (cloner principle: real assets, not mockups).
+- **Wiring:** PipelineConfig.references new; unBuildPipeline threads eferences onto usinessKnowledge.references (so understanding + asset ingestion see them), copies each existing image into public/images/reference/, and records each as a DiscoveredAsset { kind:'brand', source:'user-attachment' } in evidence.assets (surfaced in design.md).
+- handleBuildIntent now passes intent.references into unBuildPipeline.
+- Degrades silently if no workspace / files missing; never blocks the build.
+- **Verified:** attached shot.png copied to <workspace>/public/images/reference/shot.png and recorded in evidence.
+- **Status:** typecheck clean; full suite GREEN 1057.

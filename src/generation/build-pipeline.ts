@@ -56,6 +56,7 @@ import type { AppFamilyResult } from '../bos/reasoning/application-family-classi
 // DesignLineage — provenance tracking
 import type { DesignLineage } from './renderers/renderer.js';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // Spec-first + worktree parallel pipeline
 import { writeComponentSpecManifest, loadComponentSpecManifest } from './component-spec-writer.js';
@@ -85,6 +86,9 @@ export interface PipelineConfig {
 
   /** Workspace root directory for spec/worktree artifacts */
   workspaceDir?: string;
+
+  /** Attached reference material (URLs, screenshots, documents) from the user */
+  references?: import('../orchestration/business-intelligence/types.js').ReferenceInputs;
 }
 
 export interface PipelineResult {
@@ -159,6 +163,7 @@ export async function runBuildPipeline(
     includeTests = false,
     outputDir = './workspace/src',
     workspaceDir,
+    references,
   } = config;
 
   log.info('Pipeline started', {
@@ -519,6 +524,54 @@ export async function runBuildPipeline(
   // to the renderer context and PipelineResult so downstream layers can consume
   // it without re-inferring business logic.
   const businessKnowledge = context.businessKnowledge;
+
+  // Thread any attached reference material (URLs/screenshots/docs) into the
+  // business knowledge so downstream understanding + asset ingestion see it.
+  if (references && businessKnowledge) {
+    businessKnowledge.references = {
+      referenceUrls: references.referenceUrls ?? businessKnowledge.references?.referenceUrls,
+      images: references.images ?? businessKnowledge.references?.images,
+      documents: references.documents ?? businessKnowledge.references?.documents,
+    };
+  }
+
+  // ── Reference screenshot/asset ingestion ──────────────────────────────────
+  // If the user attached screenshots/images, copy them into the workspace's
+  // public/images/reference dir so the renderer can use them as REAL assets
+  // (the cloner's "real assets, not mockup" principle). They are also recorded
+  // as evidence assets and surfaced in design.md. Runs only when a workspace is
+  // available and files exist; degrades silently otherwise.
+  try {
+    const attached = references?.images ?? businessKnowledge?.references?.images ?? [];
+    if (attached.length && (workspaceDir || outputDir)) {
+      const publicDir = workspaceDir
+        ? path.join(workspaceDir, 'public')
+        : path.join(outputDir, '..', 'public');
+      const refDir = path.join(publicDir, 'images', 'reference');
+      fs.mkdirSync(refDir, { recursive: true });
+      const usedAssets: import('../orchestration/knowledge-acquisition/types.js').DiscoveredAsset[] = [];
+      for (const img of attached) {
+        try {
+          if (!fs.existsSync(img)) continue;
+          const base = path.basename(img);
+          const safe = base.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const destRel = `images/reference/${safe}`;
+          fs.copyFileSync(img, path.join(publicDir, destRel));
+          usedAssets.push({ url: `/${destRel}`, kind: 'brand', source: 'user-attachment', confidence: 0.95 });
+        } catch (e) {
+          console.warn(`[assets] failed to ingest ${img}:`, (e as Error).message);
+        }
+      }
+      if (usedAssets.length) {
+        const ev = businessKnowledge?.evidence;
+        if (ev && (ev as any).assets) {
+          (ev as any).assets.value.push(...usedAssets);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[assets] reference ingestion failed (continuing without):', (e as Error).message);
+  }
 
   // Build design-lineage provenance — records which engine produced each design class
   const designLineage: DesignLineage = {
