@@ -404,6 +404,14 @@ export interface BusinessKnowledge {
    * competitor analysis). Optional — absent when acquisition is offline.
    */
   evidence?: import('../knowledge-acquisition/types.js').EvidenceCollection;
+
+  /**
+   * The original user prompt that produced this understanding. Carried so the
+   * Knowledge Acquisition layer can mine explicit reference URLs / brand terms
+   * from the user's own words. Never used for branching — signal extraction
+   * only.
+   */
+  originalPrompt?: string;
 }
 
 /** Input to the engine. Minimal today (prompt); extensible tomorrow. */

@@ -62,6 +62,7 @@ export function generateDesignBrief(input: DesignBriefInput): string {
   const animation = sr?.animation;
   const competitors = evidence?.competitors?.value ?? [];
   const trends = evidence?.market?.value?.trends ?? [];
+  const assets = evidence?.assets?.value ?? [];
 
   const components21st = (designDecision?.recommendations ?? [])
     .filter((r) => r.domain === 'component' && r.components)
@@ -172,6 +173,12 @@ export function generateDesignBrief(input: DesignBriefInput): string {
   if (trends.length) {
     lines.push(`**Market trends:**`);
     lines.push(bullet(trends));
+    lines.push('');
+  }
+
+  if (assets.length) {
+    lines.push(`**Real brand assets discovered:**`);
+    lines.push(...assets.slice(0, 8).map((a) => `  - [${a.kind}](${a.url}) — ${a.source}`));
     lines.push('');
   }
 

@@ -29,15 +29,17 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): { signal: Abo
 /** Extract likely reference URLs from the prompt + business signals. */
 function deriveCandidateUrls(bk: BusinessKnowledge): string[] {
   const urls: string[] = [];
-  const prompt = (bk as any).discovery?.summary ?? '';
-  // Any explicit URL in the prompt
+  // Explicit URL(s) the user named in their own prompt — mined from the raw
+  // prompt, never from a hardcoded list.
+  const prompt = bk.originalPrompt ?? '';
   const urlMatches = String(prompt).match(/https?:\/\/[^\s"'<>]+/gi) ?? [];
-  urls.push(...urlMatches.slice(0, 1));
+  urls.push(...urlMatches.slice(0, 2));
 
   const domainNouns = bk.vocabulary?.domainNouns ?? [];
   const businessType = (bk.discovery?.businessType ?? '').toLowerCase();
 
-  // Category-level competitor/reference domains (signal-derived, not hardcoded per business)
+  // Category-level reference domains (signal-derived hints from the user's own
+  // domain nouns — NOT business logic, NOT a vertical template).
   const categoryHints: Record<string, string[]> = {
     headphone: ['sony.com', 'bose.com', 'apple.com/airpods', 'sennheiser.com'],
     audio: ['sony.com', 'bose.com', 'sennheiser.com'],
@@ -58,10 +60,16 @@ function deriveCandidateUrls(bk: BusinessKnowledge): string[] {
   return [...new Set(urls)].slice(0, MAX_SOURCES);
 }
 
-function extractText(html: string): { title: string; h1: string; desc: string; text: string } {
+function extractText(html: string): {
+  title: string; h1: string; desc: string; text: string;
+  ogImage: string; logo: string; favicon: string;
+} {
   const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? '';
   const h1 = html.match(/<h1[^>]*>([^<]*)<\/h1>/i)?.[1]?.trim() ?? '';
   const desc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)?.[1]?.trim() ?? '';
+  const ogImage = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']*)["']/i)?.[1]?.trim() ?? '';
+  const logo = html.match(/<img[^>]+(?:class|alt|itemprop)=["'][^"']*logo[^"']*["'][^>]*src=["']([^"']+)["']/i)?.[1]?.trim() ?? '';
+  const favicon = html.match(/<link[^>]*rel=["'][^"']*icon["'][^>]*href=["']([^"']+)["']/i)?.[1]?.trim() ?? '';
   const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -69,7 +77,16 @@ function extractText(html: string): { title: string; h1: string; desc: string; t
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 2000);
-  return { title, h1, desc, text };
+  return { title, h1, desc, text, ogImage, logo, favicon };
+}
+
+/** Resolve a possibly-relative asset URL against the page origin. */
+function absolutize(asset: string, origin: string): string {
+  try {
+    return new URL(asset, origin).toString();
+  } catch {
+    return asset;
+  }
 }
 
 function domainOf(url: string): string {
@@ -106,6 +123,7 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
     const candidates = deriveCandidateUrls(businessKnowledge);
     const competitors: CompetitorEvidence[] = [];
     const trends: string[] = [];
+    const assets: import('./types.js').DiscoveredAsset[] = [];
     let probed = 0;
 
     for (const url of candidates) {
@@ -134,7 +152,7 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
             });
           }
         } else {
-          const { title, h1, desc, text } = extractText(html);
+          const { title, h1, desc, text, ogImage, logo, favicon } = extractText(html);
           const brand = domainOf(url).split('.')[0] ?? url;
           competitors.push({
             name: brand.charAt(0).toUpperCase() + brand.slice(1),
@@ -145,6 +163,12 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
             source: 'web-research',
             confidence: 0.7,
           });
+          // Collect REAL brand assets (mirrors the cloner's "real assets, not
+          // mockup" principle) so the build can reference actual logos/OG art.
+          const origin = (() => { try { return new URL(url).origin; } catch { return url; } })();
+          if (logo) assets.push({ url: absolutize(logo, origin), kind: 'logo', source: domainOf(url), confidence: 0.75 });
+          if (ogImage) assets.push({ url: absolutize(ogImage, origin), kind: 'og-image', source: domainOf(url), confidence: 0.7 });
+          if (favicon) assets.push({ url: absolutize(favicon, origin), kind: 'favicon', source: domainOf(url), confidence: 0.6 });
           // Derive a lightweight market trend signal from the page text
           const lower = (desc + ' ' + text).toLowerCase();
           if (lower.includes('noise')) trends.push('Active noise cancellation is a baseline expectation');
@@ -167,6 +191,7 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
       providerId: this.id,
       confidence: 0.7,
       competitors,
+      assets: assets.length ? assets : undefined,
       market: {
         targetAudience: businessKnowledge.customerPersonas?.map((p) => p.label).filter(Boolean) ?? [],
         trends,

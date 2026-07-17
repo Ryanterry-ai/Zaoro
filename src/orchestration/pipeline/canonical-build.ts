@@ -109,6 +109,10 @@ export async function runCanonicalBuild(opts: CanonicalBuildOptions): Promise<Ca
   const businessKnowledge: BusinessKnowledge =
     opts.businessKnowledge ?? understandBusiness(opts.prompt);
 
+  // Carry the raw prompt so the Knowledge Acquisition layer can mine explicit
+  // reference URLs / brand terms from the user's own words (signal extraction).
+  businessKnowledge.originalPrompt = opts.prompt;
+
   // Observe any industry label the BI engine attached (it is allowed as a
   // coarse inference label, but must never drive branching — flag if it does).
   const biIndustry = (businessKnowledge as any).discovery?.industry;

@@ -54,6 +54,7 @@ export interface KnowledgeSourceResult {
   industry?: Partial<IndustryEvidence>;
   users?: Partial<UserEvidence>;
   technical?: Partial<TechnicalEvidence>;
+  assets?: import('./types.js').DiscoveredAsset[];
 }
 
 // ─── Default Providers ────────────────────────────────────────────────────────
@@ -391,6 +392,16 @@ export class KnowledgeAcquisitionEngine implements IKnowledgeAcquisitionLayer {
       }
     }
 
+    // Merge discovered real assets (deduplicate by URL)
+    const assetMap = new Map<string, import('./types.js').DiscoveredAsset>();
+    for (const result of results) {
+      if (result.assets) {
+        for (const asset of result.assets) {
+          if (!assetMap.has(asset.url)) assetMap.set(asset.url, asset);
+        }
+      }
+    }
+
     // Merge market evidence (last writer wins for scalar fields, concat for arrays)
     const market: MarketEvidence = {
       targetAudience: [],
@@ -521,6 +532,10 @@ export class KnowledgeAcquisitionEngine implements IKnowledgeAcquisitionLayer {
       technical: {
         value: technical,
         provenance: prov(technical.confidence),
+      },
+      assets: {
+        value: [...assetMap.values()],
+        provenance: prov([...assetMap.values()].length ? 0.7 : 0),
       },
     };
   }

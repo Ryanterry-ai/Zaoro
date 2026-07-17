@@ -75,6 +75,25 @@ export interface EvidenceCollection {
 
   /** Technical research */
   technical: ProvenanceAware<TechnicalEvidence>;
+
+  // --------------------------------------------------------------------------
+  // DISCOVERED ASSETS (real brand assets from live web research)
+  // --------------------------------------------------------------------------
+
+  /** Real asset URLs (logos, OG images, favicons) discovered via web research */
+  assets: ProvenanceAware<DiscoveredAsset[]>;
+}
+
+/** A real brand/reference asset discovered during live web research. */
+export interface DiscoveredAsset {
+  /** Original (absolute) URL of the asset */
+  url: string;
+  /** What kind of asset this is */
+  kind: 'logo' | 'og-image' | 'favicon' | 'brand';
+  /** Source domain it was discovered on */
+  source: string;
+  /** Evidence confidence */
+  confidence: number;
 }
 
 // ============================================================================
