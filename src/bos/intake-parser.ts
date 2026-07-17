@@ -31,6 +31,10 @@ interface IndustryMapping {
   audience: 'b2c' | 'b2b' | 'internal' | 'mixed';
 }
 
+// Style/quality modifiers — should lose industry ties to concrete product
+// domains (so "luxury headphones" resolves to consumer-electronics, not luxury).
+const STYLE_INDUSTRIES = new Set<string>(['luxury']);
+
 const INDUSTRY_MAPPINGS: IndustryMapping[] = [
   // ─── Consumer / SMB ─────────────────────────────────────────────────────
 
@@ -159,9 +163,10 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
       higher_ed: ['university', 'college', 'degree', 'graduate', 'campus'],
       corporate: ['corporate training', 'employee training', 'upskilling', 'certification'],
     },
-    keywords: ['school', 'education', 'course', 'learn', 'teaching', 'tutor', 'university',
-      'college', 'training', 'workshop', 'academy', 'elearning', 'e-learning', 'student',
-      'instructor', 'curriculum', 'lesson', 'lecture', 'degree', 'certificate'],
+    keywords: ['school', 'education', 'course', 'learn', 'learning', 'teaching', 'courses',
+      'tutor', 'university', 'college', 'training', 'workshop', 'academy', 'elearning',
+      'e-learning', 'student', 'instructor', 'curriculum', 'lesson', 'lecture', 'degree',
+      'certificate'],
     businessModels: ['subscription', 'direct-sales'],
     capabilities: ['content', 'subscriptions', 'scheduling', 'analytics'],
     entities: ['Course', 'Student', 'Enrollment', 'Lesson'],
@@ -329,6 +334,27 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
     entities: ['Vehicle', 'Customer', 'ServiceOrder'],
     audience: 'b2c',
   },
+  {
+    industry: 'consumer-electronics',
+    subIndustries: {
+      audio: ['headphones', 'earbuds', 'earphones', 'headset', 'speaker', 'speakers',
+        'audio', 'sound', 'hi-fi', 'hifi', 'audiophile', 'noise cancelling',
+        'noise canceling', 'wireless audio', 'bluetooth audio', 'sound system'],
+      wearables: ['smartwatch', 'smart watch', 'fitness tracker', 'wearable', 'activity band'],
+      computers: ['laptop', 'computer', 'pc', 'desktop', 'tablet', 'monitor', 'notebook'],
+      gaming: ['console', 'gaming', 'gaming headset', 'controller', 'handheld'],
+      photography: ['camera', 'mirrorless', 'dslr', 'lens', 'action cam'],
+    },
+    keywords: ['headphones', 'earbuds', 'earphones', 'headset', 'speaker', 'speakers',
+      'audio', 'sound', 'audiophile', 'noise cancelling', 'noise canceling',
+      'wireless headphones', 'bluetooth headphones', 'bluetooth', 'electronics',
+      'gadget', 'device', 'tech', 'consumer electronics', 'smart device',
+      'sound system', 'home audio', 'portable speaker', 'earbuds', 'tws'],
+    businessModels: ['direct-sales'],
+    capabilities: ['commerce', 'payments', 'gallery', 'search', 'reviews'],
+    entities: ['Product', 'Review', 'Collection', 'Order'],
+    audience: 'b2c',
+  },
 
   // ─── Enterprise / B2B / Internal Tools ────────────────────────────────
 
@@ -483,10 +509,20 @@ export function detectIndustryWithScore(prompt: string): IndustryDetectionResult
   let bestMatch: IndustryMapping | undefined;
   let bestScore = 0;
 
+  // Word-boundary match for single-word keywords so short tokens don't false-
+  // positive on longer words ("land" must not match "landing", "app" not
+  // "happen", "car" not "career", "spa" not "spark"). Multi-word phrases are
+  // specific enough to keep substring matching.
+  const keywordMatches = (text: string, keyword: string): boolean => {
+    if (keyword.includes(' ')) return text.includes(keyword);
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
+  };
+
   for (const mapping of INDUSTRY_MAPPINGS) {
     let score = 0;
     for (const keyword of mapping.keywords) {
-      if (lower.includes(keyword)) {
+      if (keywordMatches(lower, keyword)) {
         score += keyword.split(' ').length * 2; // multi-word keywords score higher
       }
     }
@@ -499,7 +535,11 @@ export function detectIndustryWithScore(prompt: string): IndustryDetectionResult
     if (isB2B && mapping.industry === 'enterprise-software') {
       score = Math.ceil(score * 1.5);
     }
-    if (score > bestScore) {
+    // Strict-greater wins. On a tie, prefer a concrete product/domain industry
+    // over a style-modifier industry (e.g. "headphones" should beat "luxury").
+    const isStyle = STYLE_INDUSTRIES.has(mapping.industry);
+    const bestIsStyle = bestMatch ? STYLE_INDUSTRIES.has(bestMatch.industry) : false;
+    if (score > bestScore || (score === bestScore && bestIsStyle && !isStyle)) {
       bestScore = score;
       bestMatch = mapping;
     }
@@ -718,6 +758,7 @@ function generateAppName(prompt: string, industry: string, country?: string, sub
     { keywords: ['wholesale', 'b2b', 'bulk', 'distributor', 'reseller', 'procurement'], words: ['Supply', 'Trade', 'Source', 'Pro', 'Connect', 'Network'] },
     { keywords: ['perfume', 'fragrance', 'scent', 'parfum', 'eau de', 'olfactory', 'niche perfume', 'luxury perfume', 'bespoke scent'], words: ['Aetheria', 'Maison', 'Noir', 'Essence', 'Oud', 'Velvet', 'Aura', 'Lumière'] },
     { keywords: ['footwear', 'shoes', 'sneakers', 'boots', 'heels', 'sandals', 'sneaker', 'kicks', 'sole', 'insole', 'outsole', 'running shoes', 'athletic shoes', 'casual shoes', 'formal shoes', 'leather shoes'], words: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'] },
+    { keywords: ['headphones', 'earbuds', 'earphones', 'headset', 'speaker', 'speakers', 'audio', 'sound', 'audiophile', 'noise cancelling', 'noise canceling', 'bluetooth', 'wireless audio', 'home audio'], words: ['Aura', 'Soniq', 'Wave', 'Resonance', 'Acousti', 'Echo', 'Pulse', 'Lumen'] },
   ]
 
   // Industry-specific brand words (fallback when no niche matches)
@@ -750,6 +791,8 @@ function generateAppName(prompt: string, industry: string, country?: string, sub
     footwear: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'],
     shoes: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'],
     sneakers: ['Stride', 'Kicks', 'Sole', 'Apex', 'Velo', 'Pace', 'Urban', 'Velocity'],
+    'consumer-electronics': ['Aura', 'Soniq', 'Wave', 'Resonance', 'Pulse', 'Lumen', 'Acousti'],
+    audio: ['Aura', 'Soniq', 'Wave', 'Resonance', 'Acousti', 'Echo', 'Lumen'],
   }
 
   // Pick niche words from prompt text, or fall back to industry words
