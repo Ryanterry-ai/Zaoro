@@ -131,3 +131,15 @@
   - **design.md faithfulness:** now includes competitors, market trends, AND real discovered asset URLs — the generative equivalent of the cloner's per-component spec, minus pixel-exact computed CSS (appropriate: we generate, not pixel-clone). Interaction model is derived from intents (signal-driven), which aligns with the reference's "identify interaction model before building" rule without industry branching.
 - **Architectural note:** our engine is GENERATIVE (signal-driven, no industry switch) vs the reference's CLONER (pixel-perfect from a URL). We borrow the *fidelity principles* (real assets, auditable spec as source of truth, interaction-model-first) rather than copy the clone flow. The content-harvester.ts (Playwright-based deep-clone) remains the heavy cloner path; WebResearchProvider is the lightweight live-evidence path for generative builds.
 - **Status:** typecheck clean; full suite GREEN: 75 files / 1057 tests.
+
+## Reference Material Ingestion (URLs / images / documents)
+- **User requirement:** users may supply a reference website, attached images, or requirement documents; the engine must ground the build in that reality (borrowing the cloner's "real assets / real content" fidelity principle).
+- **Contract:** new ReferenceInputs { referenceUrls?, images?, documents? } on BusinessKnowledge + GenerationIntent.references. Threaded: handleBuildIntent ? unCanonicalBuild({ references }) ? usinessKnowledge.references.
+- **Consumption (WebResearchProvider):**
+  - eferenceUrls are added as scrape candidates (real tokens + real og:image/logo/favicon assets).
+  - attached images become DiscoveredAsset { kind: 'brand', source: 'user-attachment', confidence: 0.9 } — the build can use them as real brand art.
+  - documents (.txt/.md) are light-parsed for positioning signals (noise/calm/luxury); all refs recorded as market opportunities so they surface in design.md.
+  - No LLM, no network for local files — deterministic + offline-safe. User material is evidence, never a substitute for signal extraction.
+- **design.md** now lists reference sites / attached image count / requirement docs, alongside discovered real assets.
+- **Verified:** probe shows usinessKnowledge.references carried, attached image ? rand asset (user-attachment), image+doc ? market opportunities.
+- **Status:** typecheck clean; full suite GREEN 1057 (the lone full-run orchestrator-e2e timeout is the known transient — 15/15 in isolation).

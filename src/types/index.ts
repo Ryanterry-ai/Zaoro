@@ -113,6 +113,8 @@ export interface GenerationIntent {
   deployTarget?: 'vercel' | 'cloudflare' | 'docker' | 'netlify' | 'manual';
   /** For 'deploy' intent: environment variables */
   deployEnv?: Record<string, string>;
+  /** Reference material to ground the build: a reference site, attached images, or requirement docs */
+  references?: import('../orchestration/business-intelligence/types.js').ReferenceInputs;
 }
 
 export interface PageBuildResult {

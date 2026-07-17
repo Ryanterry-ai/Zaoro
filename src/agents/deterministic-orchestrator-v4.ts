@@ -282,7 +282,7 @@ export class DeterministicOrchestratorV4 {
     tracer.beginSpan({ layer: 'canonical-build', owner: 'CanonicalPipeline', inputs: ['prompt', 'bre-context'], dependencies: ['bre-v2'] });
     let canonical: CanonicalBuildReport | null = null;
     try {
-      canonical = await runCanonicalBuild({ prompt });
+      canonical = await runCanonicalBuild({ prompt, references: intent.references });
       const bk = canonical.businessKnowledge;
       // Bridge: use BusinessKnowledge as the authoritative business source
       // for the experience pipeline (replaces breContext.industry usage).

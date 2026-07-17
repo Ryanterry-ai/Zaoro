@@ -63,6 +63,7 @@ export function generateDesignBrief(input: DesignBriefInput): string {
   const competitors = evidence?.competitors?.value ?? [];
   const trends = evidence?.market?.value?.trends ?? [];
   const assets = evidence?.assets?.value ?? [];
+  const references = businessKnowledge?.references;
 
   const components21st = (designDecision?.recommendations ?? [])
     .filter((r) => r.domain === 'component' && r.components)
@@ -179,6 +180,20 @@ export function generateDesignBrief(input: DesignBriefInput): string {
   if (assets.length) {
     lines.push(`**Real brand assets discovered:**`);
     lines.push(...assets.slice(0, 8).map((a) => `  - [${a.kind}](${a.url}) — ${a.source}`));
+    lines.push('');
+  }
+
+  if (references && (references.referenceUrls?.length || references.images?.length || references.documents?.length)) {
+    lines.push(`**User-supplied reference material:**`);
+    if (references.referenceUrls?.length) {
+      lines.push(`- Reference sites: ${references.referenceUrls.map((u) => `\`${u}\``).join(', ')}`);
+    }
+    if (references.images?.length) {
+      lines.push(`- Attached images: ${references.images.length} (brand boards / screenshots / mood refs)`);
+    }
+    if (references.documents?.length) {
+      lines.push(`- Requirement docs: ${references.documents.map((d) => `\`${d}\``).join(', ')}`);
+    }
     lines.push('');
   }
 

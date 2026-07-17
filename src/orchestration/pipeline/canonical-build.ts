@@ -95,6 +95,8 @@ export interface CanonicalBuildOptions {
   rendererTarget?: CompiledExperience['rendererTarget'];
   /** Enable strict compliance (throw on high-severity violations). */
   strict?: boolean;
+  /** Reference material supplied by the user (URLs, images, documents). */
+  references?: import('../business-intelligence/types.js').ReferenceInputs;
 }
 
 /**
@@ -112,6 +114,10 @@ export async function runCanonicalBuild(opts: CanonicalBuildOptions): Promise<Ca
   // Carry the raw prompt so the Knowledge Acquisition layer can mine explicit
   // reference URLs / brand terms from the user's own words (signal extraction).
   businessKnowledge.originalPrompt = opts.prompt;
+
+  // Carry user-supplied reference material (URLs, images, documents) so the
+  // Knowledge Acquisition layer can learn real tokens/assets from it.
+  businessKnowledge.references = opts.references;
 
   // Observe any industry label the BI engine attached (it is allowed as a
   // coarse inference label, but must never drive branching — flag if it does).

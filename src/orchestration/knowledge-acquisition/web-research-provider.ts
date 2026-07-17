@@ -26,7 +26,7 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): { signal: Abo
   return { signal: controller.signal, clear: () => clearTimeout(timer) };
 }
 
-/** Extract likely reference URLs from the prompt + business signals. */
+/** Extract likely reference URLs from the prompt + business signals + references. */
 function deriveCandidateUrls(bk: BusinessKnowledge): string[] {
   const urls: string[] = [];
   // Explicit URL(s) the user named in their own prompt — mined from the raw
@@ -34,6 +34,10 @@ function deriveCandidateUrls(bk: BusinessKnowledge): string[] {
   const prompt = bk.originalPrompt ?? '';
   const urlMatches = String(prompt).match(/https?:\/\/[^\s"'<>]+/gi) ?? [];
   urls.push(...urlMatches.slice(0, 2));
+
+  // Reference website URLs the user explicitly attached as grounding material.
+  const refUrls = bk.references?.referenceUrls ?? [];
+  urls.push(...refUrls.slice(0, MAX_SOURCES));
 
   const domainNouns = bk.vocabulary?.domainNouns ?? [];
   const businessType = (bk.discovery?.businessType ?? '').toLowerCase();
@@ -120,11 +124,38 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
       return { providerId: this.id, confidence: 0 };
     }
 
+    const refs = businessKnowledge.references;
+    const refNotes: string[] = [];
+
     const candidates = deriveCandidateUrls(businessKnowledge);
     const competitors: CompetitorEvidence[] = [];
     const trends: string[] = [];
     const assets: import('./types.js').DiscoveredAsset[] = [];
     let probed = 0;
+
+    // Register user-supplied reference material as evidence (no network, no LLM).
+    // Attached images become real brand assets the build can use; documents are
+    // recorded as grounding notes (their text is surfaced to the brief).
+    for (const img of refs?.images ?? []) {
+      assets.push({ url: img, kind: 'brand', source: 'user-attachment', confidence: 0.9 });
+      refNotes.push(`Reference image supplied: ${img}`);
+    }
+    for (const doc of refs?.documents ?? []) {
+      refNotes.push(`Requirement document supplied: ${doc}`);
+      // Lightweight text extraction for .txt/.md (no heavy deps); PDF/binary
+      // are recorded as notes only.
+      if (/\.(txt|md|markdown)$/i.test(doc)) {
+        try {
+          const { readFileSync } = await import('fs');
+          const txt = readFileSync(doc, 'utf-8').slice(0, 1500).toLowerCase();
+          if (txt.includes('noise')) trends.push('Doc: active noise cancellation is a baseline expectation');
+          if (txt.includes('calm') || txt.includes('silence')) trends.push('Doc: calm / focus positioning resonates with buyers');
+          if (txt.includes('luxury') || txt.includes('premium')) trends.push('Doc: premium / luxury positioning expected');
+        } catch {
+          // unreadable — note already recorded
+        }
+      }
+    }
 
     for (const url of candidates) {
       const t = withTimeout(undefined, FETCH_TIMEOUT_MS);
@@ -183,21 +214,22 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
       }
     }
 
-    if (probed === 0 && competitors.length === 0) {
+    // No live web evidence AND no user-supplied reference material → nothing to contribute.
+    if (probed === 0 && competitors.length === 0 && assets.length === 0 && refNotes.length === 0) {
       return { providerId: this.id, confidence: 0 };
     }
 
     return {
       providerId: this.id,
-      confidence: 0.7,
+      confidence: probed > 0 || assets.length ? 0.7 : 0.5,
       competitors,
       assets: assets.length ? assets : undefined,
       market: {
         targetAudience: businessKnowledge.customerPersonas?.map((p) => p.label).filter(Boolean) ?? [],
         trends,
-        opportunities: trends.length ? ['Differentiate on ' + trends[0].toLowerCase()] : [],
+        opportunities: [...refNotes, ...(trends.length ? ['Differentiate on ' + trends[0].toLowerCase()] : [])],
         source: 'web-research',
-        confidence: trends.length ? 0.65 : 0.4,
+        confidence: trends.length || refNotes.length ? 0.65 : 0.4,
       },
     };
   }

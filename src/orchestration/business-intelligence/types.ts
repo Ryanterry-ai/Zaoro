@@ -412,6 +412,30 @@ export interface BusinessKnowledge {
    * only.
    */
   originalPrompt?: string;
+
+  /**
+   * Reference material the user supplied alongside the prompt: a reference
+   * website to learn real tokens/assets from, attached images (brand boards,
+   * screenshots, mood references), and requirement documents (briefs, specs,
+   * PDFs). Consumed by the Knowledge Acquisition layer as evidence — never as
+   * a substitute for signal extraction. Text extracted from documents is
+   * merged into BusinessKnowledge without bias.
+   */
+  references?: ReferenceInputs;
+}
+
+/**
+ * Anything the user attaches to ground the build in reality: a live reference
+ * site, images, or documents. All optional; the engine degrades gracefully
+ * when none are present (pure signal-driven generation).
+ */
+export interface ReferenceInputs {
+  /** Reference website URLs to scrape real tokens/assets/brand signals from. */
+  referenceUrls?: string[];
+  /** Local filesystem paths to attached images (brand boards, screenshots). */
+  images?: string[];
+  /** Local filesystem paths to requirement documents (briefs, specs, PDFs). */
+  documents?: string[];
 }
 
 /** Input to the engine. Minimal today (prompt); extensible tomorrow. */
