@@ -78,12 +78,17 @@ function allContent(files: Array<{ path: string; content: string }>): string {
   return files.map((f) => f.content).join('\n');
 }
 
-function hasInteractionPrimitive(content: string, primitive: string): boolean {
-  const variants = [
-    new RegExp(`\\b${primitive}\\b`, 'i'),
-    new RegExp(`<${primitive}[\\s/>]`, 'i'),
-  ];
-  return variants.some((re) => re.test(content));
+function hasInteractionPrimitive(files: { path: string; content: string }[], primitive: string): boolean {
+  // A primitive is only "realised" when it is actually DEFINED somewhere — a
+  // dangling import or JSX usage of a component whose file was never emitted is
+  // a broken reference, not a realised interaction. Require a real definition:
+  //   - a component/function/const declaration named after the primitive, OR
+  //   - a dedicated file whose name is the primitive (default-exported component).
+  const declRe = new RegExp(
+    `(function|const|class)\\s+${primitive}\\b|export\\s+default\\s+function\\s+${primitive}\\b`,
+  );
+  const fileRe = new RegExp(`(^|/)${primitive}\\.(tsx|jsx)$`);
+  return files.some((f) => declRe.test(f.content) || fileRe.test(f.path));
 }
 
 /**
@@ -147,7 +152,7 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
   let interactionOk = true;
   for (const i of requestedInteractions) {
     const primitive = interactionMap[i];
-    if (primitive && !hasInteractionPrimitive(content, primitive)) {
+    if (primitive && !hasInteractionPrimitive(files, primitive)) {
       interactionOk = false;
       gaps.push({
         category: 'interaction',

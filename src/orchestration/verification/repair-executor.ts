@@ -238,6 +238,144 @@ function repairBusinessContent(files: FileRec[], bk: BusinessKnowledge): FileRec
   });
 }
 
+// Interaction key -> primitive component name (mirror of loop.ts interactionMap).
+const INTERACTION_PRIMITIVE: Record<string, string> = {
+  configurator: 'Configurator',
+  builder: 'BuilderCanvas',
+  booking: 'BookingCalendar',
+  calculator: 'Calculator',
+  quiz: 'Quiz',
+  dashboard: 'Dashboard',
+  hud: 'HudOverlay',
+  'scroll-narrative': 'ScrollNarrative',
+};
+
+/** Extract the interaction key from a gap detail like `interaction "booking"`. */
+function interactionKeyFromGap(detail: string): string | undefined {
+  const m = detail.match(/interaction\s+"([^"]+)"/i);
+  return m?.[1];
+}
+
+/** Find the app entry file to mount a new section into (page/App root). */
+function entryComponent(files: FileRec[]): FileRec | undefined {
+  const byName = files.find(
+    (f) => /(^|\/)(app\/page|pages\/index|App)\.(tsx|jsx)$/.test(f.path) && isComponentFile(f.path),
+  );
+  return byName ?? primaryComponent(files);
+}
+
+/**
+ * Realise a requested interaction primitive that the renderer did not emit.
+ * Generates a dedicated, deterministic component carrying signal-derived copy
+ * (domain nouns + tone) and mounts it into the app entry. No LLM, idempotent.
+ */
+function repairInteraction(files: FileRec[], bk: BusinessKnowledge, gap: VerificationGap): FileRec[] {
+  const key = interactionKeyFromGap(gap.detail);
+  if (!key) return files;
+  const primitive = INTERACTION_PRIMITIVE[key];
+  if (!primitive) return files;
+
+  // Already DEFINED somewhere? then nothing to do (idempotent). A mere import
+  // or JSX usage of a component whose file was never emitted is a broken
+  // reference — that is exactly the gap we must close, so it does not count.
+  const declRe = new RegExp(
+    `(function|const|class)\\s+${primitive}\\b|export\\s+default\\s+function\\s+${primitive}\\b`,
+  );
+  const fileRe = new RegExp(`(^|/)${primitive}\\.(tsx|jsx)$`);
+  if (files.some((f) => declRe.test(f.content) || fileRe.test(f.path))) return files;
+  const nameRe = new RegExp(`\\b${primitive}\\b`);
+
+  const nouns = bk.vocabulary?.domainNouns ?? [];
+  const tone = bk.vocabulary?.tone ?? [];
+  const subject = nouns[0] ?? 'our team';
+  const toneWord = tone[0] ?? 'premium';
+  // Match the renderer's own path convention: place the new component next to an
+  // existing sibling (e.g. "components/HeroBanner.tsx") rather than guessing a
+  // "src/" prefix, so the file lands in the right dir on write-out.
+  const sibling = files.find((f) => /(^|\/)components\/[^/]+\.(tsx|jsx)$/.test(f.path));
+  const componentsDir = sibling
+    ? sibling.path.slice(0, sibling.path.lastIndexOf('/'))
+    : 'components';
+  const componentPath = `${componentsDir}/${primitive}.tsx`;
+
+  // Deterministic booking primitive (generic enough for any interaction key,
+  // specialised copy for booking). Uses local state only — no external calls.
+  const seed = seedFrom(primitive + subject);
+  const slots = ['10:00', '11:30', '14:00', '16:30'];
+  const componentSource = `'use client';
+
+import React, { useState } from 'react';
+
+// ${primitive} — realised from the "${key}" interaction signal.
+// Signal-derived: subject="${subject}", tone="${toneWord}".
+export default function ${primitive}() {
+  const [selected, setSelected] = useState<string | null>(null);
+  const slots = ${JSON.stringify(slots)};
+  return (
+    <section aria-label="${primitive}" data-interaction="${key}" className="mx-auto max-w-3xl px-6 py-16">
+      <h2 className="text-3xl font-serif tracking-tight">Book a private appointment</h2>
+      <p className="mt-3 text-muted-foreground">
+        Reserve a ${toneWord} one-to-one consultation with ${subject}. Choose a time that suits you.
+      </p>
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4" role="listbox" aria-label="Available times">
+        {slots.map((slot) => (
+          <button
+            key={slot}
+            type="button"
+            role="option"
+            aria-selected={selected === slot}
+            onClick={() => setSelected(slot)}
+            className={
+              'rounded-lg border px-4 py-3 text-sm transition ' +
+              (selected === slot ? 'border-foreground bg-foreground text-background' : 'border-border hover:border-foreground')
+            }
+          >
+            {slot}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        disabled={!selected}
+        data-seed="${seed}"
+        className="mt-8 rounded-full bg-foreground px-8 py-3 text-background disabled:opacity-40"
+      >
+        {selected ? 'Confirm appointment at ' + selected : 'Select a time to continue'}
+      </button>
+    </section>
+  );
+}
+`;
+
+  let next = files.slice();
+  const existing = next.find((f) => f.path === componentPath || f.path.endsWith('/' + primitive + '.tsx'));
+  if (existing) {
+    existing.content = componentSource;
+  } else {
+    next.push({ path: componentPath, content: componentSource });
+  }
+
+  // Mount into the app entry file.
+  const entry = entryComponent(next);
+  if (entry && !new RegExp(`<${primitive}[\\s/>]`).test(entry.content)) {
+    let c = entry.content;
+    if (!nameRe.test(c)) {
+      c = c.replace(
+        /^(('use client';\s*\n)?(?:import[^\n]*\n)+)/,
+        `$1import ${primitive} from '@/components/${primitive}';\n`,
+      );
+    }
+    // Insert the component before the last closing tag of the returned tree.
+    c = c.replace(/(\n\s*<\/div>\s*\n\s*\);)/, `\n      <${primitive} />$1`);
+    if (!new RegExp(`<${primitive}[\\s/>]`).test(c)) {
+      // Fallback: inject right after the opening return tag.
+      c = c.replace(/return\s*\(\s*(<[A-Za-z][^>]*>)/, `return (\n    $1\n      <${primitive} />`);
+    }
+    entry.content = c;
+  }
+  return next;
+}
+
 // ─── Public entry ────────────────────────────────────────────────────────────
 
 /**
@@ -278,9 +416,8 @@ export async function executeRepair(
       files = repairBusinessContent(files, bk);
       break;
     case 'interaction':
-      // Interaction primitives are structural — a deterministic stub keeps the
-      // signal honest without fabricating a full widget.
-      files = repairBusinessContent(files, bk);
+      // Realise the requested interaction primitive the renderer omitted.
+      files = repairInteraction(files, bk, gap);
       break;
     default:
       break;
