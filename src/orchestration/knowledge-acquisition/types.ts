@@ -89,11 +89,13 @@ export interface DiscoveredAsset {
   /** Original (absolute) URL of the asset */
   url: string;
   /** What kind of asset this is */
-  kind: 'logo' | 'og-image' | 'favicon' | 'brand';
+  kind: 'logo' | 'og-image' | 'favicon' | 'brand' | 'image' | 'video';
   /** Source domain it was discovered on */
   source: string;
   /** Evidence confidence */
   confidence: number;
+  /** Optional placement hint inferred from the source markup (hero/feature/…). */
+  purpose?: 'hero' | 'feature' | 'background' | 'product' | 'gallery';
 }
 
 // ============================================================================

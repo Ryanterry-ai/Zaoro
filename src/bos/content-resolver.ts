@@ -37,6 +37,7 @@ import {
   ScrapedContentProvider,
   AgentProvider,
   DomainDataProvider,
+  RequirementsProvider,
   type ContentBag,
   type ProviderContext,
 } from './content-providers/index.js';
@@ -314,6 +315,7 @@ function createProviderRegistry(): ContentProviderRegistry {
   registry.register(new PromptProvider());
   registry.register(new DesignDNAProvider());
   registry.register(new ScrapedContentProvider());
+  registry.register(new RequirementsProvider());
   registry.register(new AgentProvider());
   return registry;
 }

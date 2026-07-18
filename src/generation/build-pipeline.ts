@@ -25,6 +25,10 @@ import { FlutterRenderer } from './renderers/flutter-renderer.js';
 import { PATTERNS, DESIGN_PROFILES } from '../bos/knowledge/registry.js';
 import { stageLogger, debugLog } from '../core/debug-logger.js';
 import { SkillIntegrator, type DesignRecommendation } from './skill-integrator.js';
+import { selectSkillsForBuild, selectSuperpowersHooks, type SelectedSkill } from './skill-selector.js';
+import { generateVideos, type VideoGenerationRecord } from './video-generator.js';
+import { runVerificationLoop } from '../orchestration/verification/loop.js';
+import { executeRepair } from '../orchestration/verification/repair-executor.js';
 import { DesignIntelligenceEngine } from '../orchestration/design-intelligence/engine.js';
 import type { DesignDecision } from '../orchestration/design-intelligence/types.js';
 import { generateDesignBrief } from './design-brief.js';
@@ -143,6 +147,32 @@ export interface PipelineResult {
    *  business understanding (Layer 1). Passed through to the renderer context
    *  and surfaced here for downstream/lineage consumption. */
   businessKnowledge?: import('../orchestration/business-intelligence/types.js').BusinessKnowledge;
+
+  /** Signal-selected skills for this build (skill-selector). Records the
+   *  actual skills chosen from the user's intent and any installed on demand. */
+  selectedSkills?: SelectedSkill[];
+
+  /** Image → cinematic-video plan: which real reference images get turned into
+   *  motion footage by which image-to-video skill (Seedance 2.0 / Cinema World
+   *  Builder / Nano Banana Pro Director). Surfaced so the agent can execute it. */
+  videoPlan?: import('./skill-selector.js').VideoGenerationPlan;
+
+  /** Records from the cinematic image→video generation-step: per-clip prompt,
+   *  playable fallback, poster and status. The generation manifest is also
+   *  written to public/videos/generation-manifest.json in the output. */
+  videoGeneration?: VideoGenerationRecord[];
+
+  /** Superpowers meta-skills relevant at each pipeline stage (brainstorming,
+   *  writing-plans, executing-plans, systematic-debugging,
+   *  verification-before-completion, requesting-code-review). */
+  superpowersHooks?: string[];
+
+  /** Autonomous verification loop result — the final report after any
+   *  deterministic repairs were applied, plus how many repair iterations ran. */
+  verification?: {
+    report: import('../orchestration/verification/loop.js').VerificationReport;
+    iterations: number;
+  };
 }
 
 // ─── Pipeline Execution ──────────────────────────────────────────────────────
@@ -387,6 +417,11 @@ export async function runBuildPipeline(
   let skillRecommendations: DesignRecommendation | undefined;
   let designDecision: DesignDecision | undefined;
   let skillDiscoveryResult: import('../core/skill-discovery.js').DiscoveryResult | undefined;
+  let selectedSkills: SelectedSkill[] = [];
+  let videoPlan: import('./skill-selector.js').VideoGenerationPlan | undefined;
+  let videoGenFiles: Array<{ path: string; content: string; type: 'config' | 'asset' }> = [];
+  let videoGenRecords: VideoGenerationRecord[] = [];
+  let superpowersHooks: string[] = [];
 
   // Skill Discovery runs every build by default (Find-Skills / 21st.dev check),
   // so the pipeline always verifies which required skills are present. It is a
@@ -452,6 +487,66 @@ export async function runBuildPipeline(
     });
   } catch (e: unknown) {
     log.warn('Layer 2a: SkillIntegrator failed (continuing without)', { error: (e as Error).message });
+  }
+
+  // Signal-driven skill selection: choose the RIGHT skills for the user's
+  // intent (scroll/motion/3d/...) and install any that are missing. The
+  // animation library the renderer emits is derived from this selection
+  // (gsap for scroll-driven, framer-motion for component motion) — never
+  // hardcoded. We then reflect that choice back into the SkillIntegrator
+  // recommendation so every downstream stage agrees on one library.
+  try {
+    if (context.businessKnowledge?.intents) {
+      const sel = selectSkillsForBuild(context.businessKnowledge);
+      selectedSkills = sel.skills;
+      videoPlan = sel.videoPlan;
+      superpowersHooks = selectSuperpowersHooks(context.businessKnowledge);
+
+      // Cinematic image→video generation-step: compose invocable Seedance
+      // prompts for the real reference images and provision a real playable
+      // fallback + poster so the renderer's <video> is never broken. Mutates
+      // videoPlan.items with the fallback URL BEFORE render so the renderer
+      // reads it; the manifest is merged into the output after render.
+      try {
+        const vg = generateVideos(context.businessKnowledge, videoPlan);
+        if (vg && videoPlan) {
+          videoGenFiles = vg.files.map((f) => ({ path: f.path, content: f.content, type: f.type }));
+          videoGenRecords = vg.records;
+          const byOut = new Map(vg.records.map((r) => [r.outputPath, r.fallbackUrl]));
+          for (const it of videoPlan.items) {
+            const fb = byOut.get(it.outputPath);
+            if (fb) it.fallbackUrl = fb;
+          }
+          log.info('Layer 2a: video generation-step complete', {
+            clips: vg.records.length,
+            skill: videoPlan.skillId,
+          });
+          console.log(`[video-gen] ${vg.summary}`);
+        }
+      } catch (e: unknown) {
+        log.warn('Layer 2a: video generation-step failed (continuing without)', { error: (e as Error).message });
+      }
+      if (skillRecommendations) {
+        skillRecommendations = {
+          ...skillRecommendations,
+          animation: {
+            ...skillRecommendations.animation,
+            library: sel.animationLibrary,
+            scrollReveal: sel.scrollDriven || skillRecommendations.animation.scrollReveal,
+            reasoning: `${skillRecommendations.animation.reasoning} | skill-selector: ${sel.reasoning}`,
+          },
+        };
+      }
+      log.info('Layer 2a: SkillSelector complete', {
+        skills: sel.skills.map((s) => s.id),
+        library: sel.animationLibrary,
+        scrollDriven: sel.scrollDriven,
+        installedOnDemand: sel.installedOnDemand,
+      });
+      console.log(`[skill-selector] library=${sel.animationLibrary} skills=${sel.skills.map((s) => s.id).join(',')} hasRec=${!!skillRecommendations}`);
+    }
+  } catch (e: unknown) {
+    log.warn('Layer 2a: SkillSelector failed (continuing without)', { error: (e as Error).message });
   }
 
   try {
@@ -544,11 +639,18 @@ export async function runBuildPipeline(
   // Mirrors runCanonicalBuild so design.md's Requirements Understanding section
   // is populated on the pipeline path too.
   try {
+    // Only (re)compute when we actually have a prompt AND the canonical build
+    // didn't already populate it. Never clobber a good understanding with an
+    // empty one — the pipeline is often invoked without the raw prompt after
+    // runCanonicalBuild has already produced requirementsUnderstanding.
     if (businessKnowledge) {
-      businessKnowledge.requirementsUnderstanding = understandRequirements({
-        prompt: prompt ?? '',
-        referenceUrls: businessKnowledge.references?.referenceUrls,
-      });
+      const hasExisting = !!businessKnowledge.requirementsUnderstanding?.summary;
+      if (!hasExisting && (prompt ?? '').trim().length > 0) {
+        businessKnowledge.requirementsUnderstanding = understandRequirements({
+          prompt: prompt ?? '',
+          referenceUrls: businessKnowledge.references?.referenceUrls,
+        });
+      }
     }
   } catch (e) {
     console.warn('[requirements] understanding failed (continuing without):', (e as Error).message);
@@ -871,6 +973,8 @@ export async function runBuildPipeline(
           ...(context.solutionArchitecture ? { solutionArchitecture: context.solutionArchitecture } : {}),
           ...(experienceBlueprint ? { experienceBlueprint } : {}),
       ...(businessKnowledge ? { businessKnowledge } : {}),
+          ...(skillRecommendations ? { skillRecommendations } : {}),
+          ...(videoPlan ? { videoPlan } : {}),
           skipSingletons: gi > 0,
         });
         wtManager.markReady(groupName);
@@ -931,6 +1035,8 @@ export async function runBuildPipeline(
       ...(context.solutionArchitecture ? { solutionArchitecture: context.solutionArchitecture } : {}),
       ...(experienceBlueprint ? { experienceBlueprint } : {}),
       ...(businessKnowledge ? { businessKnowledge } : {}),
+      ...(skillRecommendations ? { skillRecommendations } : {}),
+      ...(videoPlan ? { videoPlan } : {}),
     });
   }
 
@@ -1023,6 +1129,8 @@ export async function runBuildPipeline(
       designDecision,
       designDNA,
       evidence: businessKnowledge?.evidence,
+      videoPlan,
+      superpowersHooks,
     });
     renderResult.files.push({
       path: 'design.md',
@@ -1032,6 +1140,55 @@ export async function runBuildPipeline(
     log.info('Layer 5: design.md brief emitted');
   } catch (e: unknown) {
     log.warn('Layer 5: design.md generation failed (continuing without)', { error: (e as Error).message });
+  }
+
+  // Merge the cinematic video generation-step artifacts (manifest + provisioned
+  // assets) into the output so the workspace records exactly which clips to
+  // generate and how. Placed before verification; these are public/ assets.
+  if (videoGenFiles.length) {
+    for (const vf of videoGenFiles) {
+      const fileType = vf.type === 'asset' ? 'data' : 'config';
+      const idx = renderResult.files.findIndex((f) => f.path === vf.path);
+      if (idx >= 0) renderResult.files[idx] = { ...renderResult.files[idx], content: vf.content };
+      else renderResult.files.push({ path: vf.path, content: vf.content, type: fileType });
+    }
+    log.info('Layer 5: video generation manifest emitted', { files: videoGenFiles.length });
+  }
+
+  // ─── Autonomous verification → repair loop (Phase 15) ─────────────────────
+  // Runs the signal-driven verifier over the final output and executes
+  // deterministic repairs for any blocking gap until the build passes or the
+  // iteration budget is exhausted. Repairs mutate the emitted files in place so
+  // the workspace on disk reflects the healed output. Never throws.
+  let verification: PipelineResult['verification'];
+  if (businessKnowledge) {
+    try {
+      const codeFiles = renderResult.files.filter((f) =>
+        /\.(tsx|jsx|ts|js)$/.test(f.path) && !/\.(test|spec)\./.test(f.path),
+      );
+      const { report, iterations, finalInput } = await runVerificationLoop(
+        { files: codeFiles.map((f) => ({ path: f.path, content: f.content })), businessKnowledge },
+        executeRepair,
+        10,
+      );
+      // Write repaired content back into renderResult.files (idempotent).
+      {
+        const byPath = new Map(finalInput.files.map((f) => [f.path, f.content]));
+        for (const f of renderResult.files) {
+          const patched = byPath.get(f.path);
+          if (patched != null && patched !== f.content) f.content = patched;
+        }
+      }
+      verification = { report, iterations };
+      log.info('Layer 6: verification loop complete', {
+        passed: report.passed,
+        score: Number(report.score.toFixed(2)),
+        gaps: report.gaps.length,
+        iterations,
+      });
+    } catch (e: unknown) {
+      log.warn('Layer 6: verification loop failed (continuing without)', { error: (e as Error).message });
+    }
   }
 
   // Flush debug logs to file
@@ -1056,6 +1213,11 @@ export async function runBuildPipeline(
     ...(agentSpecPath ? { agentSpecPath } : {}),
     ...(experienceBlueprint ? { experienceBlueprint } : {}),
     ...(businessKnowledge ? { businessKnowledge } : {}),
+    ...(selectedSkills.length ? { selectedSkills } : {}),
+    ...(videoPlan ? { videoPlan } : {}),
+    ...(videoGenRecords.length ? { videoGeneration: videoGenRecords } : {}),
+    ...(superpowersHooks.length ? { superpowersHooks } : {}),
+    ...(verification ? { verification } : {}),
   };
 }
 

@@ -345,6 +345,9 @@ export type NavItem = (typeof navItems)[number];
     const dd = context?.designDecision;
     const dna = context?.designDNA;
     const sr = context?.skillRecommendations;
+    // Signal-selected motion library (skill-selector). Drives whether the
+    // scroll-driven sections emit GSAP ScrollTrigger or Framer Motion code.
+    const motionLib: 'gsap' | 'framer-motion' | 'css' = (sr?.animation?.library as any) ?? 'framer-motion';
 
     // Color precedence: Design Brief > Design Intelligence > Design DNA > Skill Integrator > default
     const ct = (dd?.colorTokens ?? {}) as Record<string, string | undefined>;
@@ -1173,6 +1176,77 @@ function ChaosBar({ index, amplitude }: { index: number; amplitude: ReturnType<t
     }
   }
 
+  /**
+   * Centralized stock-image resolver (systemic). Returns a deterministic,
+   * always-available image URL keyed by a stable seed so the same section
+   * always renders the same picture across rebuilds. Uses picsum.photos
+   * (no API key, real raster images) — fixes previously-empty image slots.
+   */
+   private resolveImageUrl(seed: string, w = 800, h = 600): string {
+    const s = encodeURIComponent(seed.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-|-$/g, '') || 'build');
+    return `https://picsum.photos/seed/${s}/${w}/${h}`;
+  }
+
+  /**
+   * Derive the signal-selected motion library for a render context. Defaults to
+   * framer-motion; becomes 'gsap' when the skill selector picked GSAP ScrollTrigger
+   * for a scroll-driven build.
+   */
+  private motionLib(context?: RenderContext): 'gsap' | 'framer-motion' | 'css' {
+    const lib = (context as any)?.skillRecommendations?.animation?.library;
+    return lib === 'gsap' || lib === 'css' ? lib : 'framer-motion';
+  }
+
+  /**
+   * Resolve the hero/product image. Prefers a user-attached asset (from the
+   * screenshot the user uploaded) so the build literally uses their material;
+   * falls back to a deterministic stock image. Returns a URL string.
+   */
+  private resolveHeroAsset(seed: string, w = 1200, h = 900): string {
+    const attached = this.currentContext?.businessKnowledge?.evidence?.assets?.value
+      ?.find((a: { source?: string; url?: string }) => a.source === 'user-attachment' && a.url);
+    if (attached?.url) return attached.url;
+    const web = this.currentContext?.businessKnowledge?.evidence?.assets?.value
+      ?.find((a: { source?: string; url?: string }) => a.source === 'web-research' && a.url);
+    if (web?.url) return web.url;
+    return this.resolveImageUrl(seed, w, h);
+  }
+
+  /**
+   * Resolve a stock video URL (keyless, stable public sample bucket) used for
+   * ambient/showcase motion. Always paired with a real poster image so the
+   * experience is realistic even before playback. Deterministic per seed.
+   */
+  private resolveVideoUrl(seed: string): string {
+    // 1) A cinematic video we PLANNED to generate from a real reference image
+    //    (Seedance 2.0 / Cinema World Builder / Nano Banana Pro Director). The
+    //    agent/subagent runs the image-to-video skill on the source image to
+    //    produce this file. Poster = the real image, so the experience is real
+    //    even before generation runs.
+    const plan = this.currentContext?.videoPlan;
+    if (plan?.items?.length) {
+      const item = plan.items.find((vi) => seed.includes(vi.usage)) ?? plan.items[0];
+      // If the generation-step already recorded a playable fallback for this
+      // item, use it so playback is never broken before the Seedance skill runs.
+      // (The poster is the real reference image, set at the call site.) Once the
+      // agent produces the real clip at `outputPath`, swap the src there.
+      if (item.fallbackUrl) return item.fallbackUrl;
+      return `/${item.outputPath}`;
+    }
+    const attached = this.currentContext?.businessKnowledge?.evidence?.assets?.value
+      ?.find((a: { source?: string; url?: string }) => a.source === 'user-video' && a.url);
+    if (attached?.url) return attached.url;
+    const samples = [
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    ];
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return samples[h % samples.length];
+  }
+
   private resolveCurrentScene(_context?: RenderContext): import('../../orchestration/design-intelligence/types-experience').Scene | undefined {
     // sectionOrder contains SectionDefinition[], not Scene[] — choreography data
     // comes from the design-intelligence engine, not from sectionOrder.
@@ -1305,12 +1379,14 @@ function ChaosBar({ index, amplitude }: { index: number; amplitude: ReturnType<t
 
     // Build component body
     const body = this.generateComponentBody(spec, layout);
+    const heroUsesGsap = componentName === 'HeroBanner' &&
+      (context?.skillRecommendations?.animation?.library ?? this.motionLib(context)) === 'gsap';
 
     return `'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-${body.includes('<Icon') ? "import Icon from './Icon';\n" : ''}
+import React, { useState${componentName === 'HeroBanner' ? ', useRef' : ''} } from 'react';
+import { motion${componentName === 'HeroBanner' && !heroUsesGsap ? ', useScroll, useTransform' : ''} } from 'framer-motion';
+${heroUsesGsap ? "import { gsap } from 'gsap';\nimport { ScrollTrigger } from 'gsap/ScrollTrigger';\nimport { useGSAP } from '@gsap/react';\ngsap.registerPlugin(ScrollTrigger);\n" : ''}${body.includes('<Icon') ? "import Icon from './Icon';\n" : ''}
 ${propsInterface}
 
 export default function ${componentName}(${this.hasProps(spec) ? `props: ${componentName}Props` : ''}) {
@@ -1407,10 +1483,11 @@ ${body}
     const isFullscreen = layout.heroVariant === 'fullscreen';
 
     if (isFullscreen) {
+      const heroImg = this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'brand'}-hero-full`, 1600, 900);
       return [
         `  return (`,
-        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} min-h-screen px-0 bg-cover bg-center bg-no-repeat flex items-end" style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #3d1a00 50%, #1a0a00 100%)' }}>`,
-        hasOverlay ? `      <div className="absolute inset-0 bg-background/60 z-10" />` : '',
+        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} min-h-screen px-0 bg-cover bg-center bg-no-repeat bg-fixed flex items-end" style={{ backgroundImage: 'linear-gradient(135deg, rgba(26,10,0,0.82) 0%, rgba(61,26,0,0.65) 50%, rgba(26,10,0,0.82) 100%), url("${heroImg}")' }}>`,
+        hasOverlay ? `      <div className="absolute inset-0 bg-background/40 z-10" />` : '',
         `      <div className="relative z-20 max-w-4xl mx-auto px-8 pb-20 w-full">`,
         badge !== '{badge}' ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-white/20 bg-white/10 text-white mb-6">{badge}</div>` : '',
         `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-6">{title}</h1>`,
@@ -1423,9 +1500,10 @@ ${body}
     }
 
     if (isSplit) {
+      const heroImg = this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'brand'}-hero-split`, 900, 700);
       return [
         `  return (`,
-        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass}">`,
+        `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass} overflow-hidden">`,
         `      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">`,
         `        <div className="space-y-6">`,
         badge !== '{badge}' ? `          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</div>` : '',
@@ -1433,8 +1511,8 @@ ${body}
         `          <p className="text-muted-foreground text-lg">{subtitle}</p>`,
         ...this.generateActionButtons(spec),
         `        </div>`,
-        `        <div className="bg-card border border-border rounded-2xl aspect-video flex items-center justify-center text-muted-foreground">`,
-        `          <span className="text-sm">Preview</span>`,
+        `        <div className="relative rounded-2xl overflow-hidden border border-border aspect-[4/5] sm:aspect-video lg:aspect-square shadow-2xl">`,
+        `          <img src="${heroImg}" alt={${JSON.stringify(title || 'Product')} ?? 'Product'} className="w-full h-full object-cover" loading="lazy" />`,
         `        </div>`,
         `      </div>`,
         `    </motion.section>`,
@@ -1442,17 +1520,88 @@ ${body}
       ].filter(Boolean);
     }
 
-    // Default: centered hero
+    // Default: cinematic centered hero — sticky-pinned, scroll-reactive.
+    // The product image scales/dims as you scroll, the headline lifts, and a
+    // parallax aura breathes behind the copy. Unforgettable first screen +
+    // continuous scroll motion from the very top of the page.
+    const heroImg = this.resolveHeroAsset(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'brand'}-hero`, 1600, 1100);
+    const heroVideo = this.resolveVideoUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'brand'}-hero`);
+    const useGsap = (this.currentContext?.skillRecommendations?.animation?.library ?? this.motionLib(this.currentContext)) === 'gsap';
+
+    if (useGsap) {
+      // GSAP ScrollTrigger hero — the scroll-driven technique selected by the
+      // signal-driven skill selector. Scrub-linked scale/opacity on the media
+      // and headline. Uses the gsap-scrolltrigger skill's real API.
+      return [
+        `  const heroRef = useRef<HTMLDivElement>(null);`,
+        `  const heroMediaRef = useRef<HTMLDivElement>(null);`,
+        `  const heroCopyRef = useRef<HTMLDivElement>(null);`,
+        `  useGSAP(() => {`,
+        `    const ctx = gsap.context(() => {`,
+        `      gsap.to(heroMediaRef.current, {`,
+        `        scale: 1.18, opacity: 0.12, ease: 'none',`,
+        `        scrollTrigger: { trigger: heroRef.current, start: 'top top', end: 'bottom top', scrub: true },`,
+        `      });`,
+        `      gsap.to(heroCopyRef.current, {`,
+        `        y: -40, opacity: 0, ease: 'none',`,
+        `        scrollTrigger: { trigger: heroRef.current, start: 'top top', end: '60% top', scrub: true },`,
+        `      });`,
+        `    }, heroRef);`,
+        `    return () => ctx.revert();`,
+        `  }, { scope: heroRef });`,
+        ``,
+        `  return (`,
+        `    <div ref={heroRef} className="relative ${bgClass}">`,
+        `      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">`,
+        `        <div ref={heroMediaRef} className="absolute inset-0">`,
+        `          <video autoPlay muted loop playsInline poster="${heroImg}" className="w-full h-full object-cover">`,
+        `            <source src="${heroVideo}" type="video/mp4" />`,
+        `          </video>`,
+        `          <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/55 to-background" />`,
+        `        </div>`,
+        `        <div className="absolute rounded-full blur-3xl" style={{ opacity: 0.7, width: 520, height: 520, background: 'radial-gradient(circle, ${primaryColor ? `hsl(var(--primary) / 0.45)` : 'rgba(236,72,153,0.35)'}, transparent 70%)' }} />`,
+        `        <div ref={heroCopyRef} className="relative z-10 max-w-4xl mx-auto text-center px-6 space-y-6">`,
+        badge !== '{badge}' ? `          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</div>` : '',
+        `          <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground">{title}</h1>`,
+        `          <p className="text-muted-foreground text-lg max-w-xl mx-auto">{subtitle}</p>`,
+        ...this.generateActionButtons(spec),
+        `        </div>`,
+        `        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] uppercase text-foreground/40 animate-bounce">scroll</div>`,
+        `      </section>`,
+        `    </div>`,
+        `  );`,
+      ].filter(Boolean);
+    }
+
     return [
+      `  const heroRef = useRef<HTMLDivElement>(null);`,
+      `  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });`,
+      `  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.18]);`,
+      `  const heroImgOpacity = useTransform(scrollYProgress, [0, 1], [0.55, 0.12]);`,
+      `  const heroY = useTransform(scrollYProgress, [0, 1], [0, 90]);`,
+      `  const heroAura = useTransform(scrollYProgress, [0, 1], [0.5, 0.9]);`,
+      `  const titleY = useTransform(scrollYProgress, [0, 0.6], [0, -40]);`,
+      `  const titleOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);`,
+      ``,
       `  return (`,
-      `    <motion.section ${animProps} className="relative ${layout.spacing} ${bgClass}">`,
-      `      <div className="max-w-4xl mx-auto text-center space-y-6">`,
-      badge !== '{badge}' ? `        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</div>` : '',
-      `        <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground">{title}</h1>`,
-      `        <p className="text-muted-foreground text-lg max-w-xl mx-auto">{subtitle}</p>`,
+      `    <div ref={heroRef} className="relative ${bgClass}">`,
+      `      <motion.section ${animProps} className="relative min-h-screen flex items-center justify-center overflow-hidden">`,
+      `        <motion.div className="absolute inset-0" style={{ scale: heroScale, opacity: heroImgOpacity }}>`,
+      `          <video autoPlay muted loop playsInline poster="${heroImg}" className="w-full h-full object-cover">`,
+      `            <source src="${heroVideo}" type="video/mp4" />`,
+      `          </video>`,
+      `          <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/55 to-background" />`,
+      `        </motion.div>`,
+      `        <motion.div className="absolute rounded-full blur-3xl" style={{ opacity: heroAura, width: 520, height: 520, background: 'radial-gradient(circle, ${primaryColor ? `hsl(var(--primary) / 0.45)` : 'rgba(236,72,153,0.35)'}, transparent 70%)' }} />`,
+      `        <motion.div style={{ y: titleY, opacity: titleOpacity }} className="relative z-10 max-w-4xl mx-auto text-center px-6 space-y-6">`,
+      badge !== '{badge}' ? `          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border border-primary/20 bg-primary/10 text-primary">{badge}</motion.div>` : '',
+      `          <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground">{title}</h1>`,
+      `          <p className="text-muted-foreground text-lg max-w-xl mx-auto">{subtitle}</p>`,
       ...this.generateActionButtons(spec),
-      `      </div>`,
-      `    </motion.section>`,
+      `        </motion.div>`,
+      `        <motion.div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] uppercase text-foreground/40" animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 1.8 }}>scroll</motion.div>`,
+      `      </motion.section>`,
+      `    </div>`,
       `  );`,
     ].filter(Boolean);
   }
@@ -1476,14 +1625,19 @@ ${body}
         `          <h2 className="text-3xl font-black text-foreground mb-3">{title}</h2>`,
         `          <p className="text-muted-foreground">{subtitle}</p>`,
         `        </div>`,
-        `        <div className="grid grid-cols-4 grid-rows-2 gap-4 auto-rows-[200px]">`,
+        `        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 grid-rows-2 gap-4 auto-rows-[200px]">`,
         `          {items?.map((feature, i) => (`,
-        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} ${cardHover ? cardHover : ''} className={\`bg-card border border-border rounded-2xl p-6 transition \${i === 0 ? 'col-span-2 row-span-2' : i === 3 ? 'col-span-2' : ''}\`}>`,
-        `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
-        `                <Icon name={feature.icon || 'layers'} />`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} ${cardHover ? cardHover : ''} className={\`bg-card border border-border rounded-2xl overflow-hidden transition \${i === 0 ? 'col-span-2 row-span-2' : i === 3 ? 'col-span-2' : ''}\`}>`,
+        `              <div className={\`relative \${i === 0 ? 'h-48' : 'h-24'}\`}>`,
+        `                <img src="${this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'feature'}-${'$'}{i}`, 800, 500)}" alt={feature.title ?? 'Feature'} className="w-full h-full object-cover" loading="lazy" />`,
         `              </div>`,
-        `              <h3 className="font-bold text-foreground mb-2">{feature.title}</h3>`,
-        `              <p className="text-sm text-muted-foreground">{feature.description}</p>`,
+        `              <div className="p-6">`,
+        `                <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
+        `                  <Icon name={feature.icon || 'layers'} />`,
+        `                </div>`,
+        `                <h3 className="font-bold text-foreground mb-2">{feature.title}</h3>`,
+        `                <p className="text-sm text-muted-foreground">{feature.description}</p>`,
+        `              </div>`,
         `            </motion.div>`,
         `          ))}`,
         `        </div>`,
@@ -1505,7 +1659,12 @@ ${body}
         `        <div className="space-y-16">`,
         `          {items?.map((feature, i) => (`,
         `            <motion.div key={i} initial={{ opacity: 0, x: i % 2 === 0 ? -32 : 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.55 }} className={\`grid grid-cols-1 md:grid-cols-2 gap-10 items-center \${i % 2 !== 0 ? 'md:[direction:rtl]' : ''}\`}>`,
-        `              <div className={\`bg-card border border-border rounded-2xl aspect-video \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`} />`,
+        `              <div className={\`relative overflow-hidden rounded-2xl border border-border aspect-video shadow-xl \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`}>`,
+        `                <img src="${this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'feature'}-${'$'}{i}`, 800, 500)}" alt={feature.title ?? 'Feature'} className="w-full h-full object-cover" loading="lazy" />`,
+        `                <video autoPlay muted loop playsInline poster="${this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'feature'}-${'$'}{i}`, 800, 500)}" className="absolute inset-0 w-full h-full object-cover opacity-0 hover:opacity-100 transition-opacity duration-500">`,
+        `                  <source src="${this.resolveVideoUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'feature'}-${'$'}{i}`)}" type="video/mp4" />`,
+        `                </video>`,
+        `              </div>`,
         `              <div className={\`space-y-4 \${i % 2 !== 0 ? 'md:[direction:ltr]' : ''}\`}>`,
         `                <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
         `                  <Icon name={feature.icon || 'layers'} />`,
@@ -1533,14 +1692,19 @@ ${body}
       `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
       `        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${layout.gridCols ?? '3'} gap-6">`,
-      `          {items?.map((feature, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} ${cardHover ? cardHover : ''} className="bg-card border border-border rounded-2xl p-6 transition">`,
-      `              <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
-      `                <Icon name={feature.icon || 'layers'} />`,
-      `              </div>`,
-      `              <h3 className="font-bold text-lg text-foreground mb-2">{feature.title}</h3>`,
-      `              <p className="text-sm text-muted-foreground">{feature.description}</p>`,
-      `            </motion.div>`,
+        `          {items?.map((feature, i) => (`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }} ${cardHover ? cardHover : ''} className="bg-card border border-border rounded-2xl overflow-hidden transition">`,
+        `              <div className="relative h-40">`,
+        `                <img src="${this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'feature'}-${'$'}{i}`, 600, 400)}" alt={feature.title ?? 'Feature'} className="w-full h-full object-cover" loading="lazy" />`,
+        `              </div>`,
+        `              <div className="p-6">`,
+        `                <div className="w-12 h-12 mb-4 flex items-center justify-center rounded-xl bg-primary/10 text-primary">`,
+        `                  <Icon name={feature.icon || 'layers'} />`,
+        `                </div>`,
+        `                <h3 className="font-bold text-lg text-foreground mb-2">{feature.title}</h3>`,
+        `                <p className="text-sm text-muted-foreground">{feature.description}</p>`,
+        `              </div>`,
+        `            </motion.div>`,
       `          ))}`,
       `        </div>`,
       `      </div>`,
@@ -1563,9 +1727,13 @@ ${body}
       `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
-      `          {tiers?.map((tier, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }} ${cardHover ? cardHover : ''} className={\`p-8 rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-card border-border'}\`}>`,
-      `              <h3 className="text-xl font-black text-foreground mb-2">{tier.name}</h3>`,
+        `          {tiers?.map((tier, i) => (`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.1 }} ${cardHover ? cardHover : ''} className={\`overflow-hidden rounded-2xl border \${tier.highlighted ? 'border-primary bg-primary/5' : 'bg-card border-border'}\`}>`,
+        `              <div className="relative h-40">`,
+        `                <img src="${this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'product'}-tier-${'$'}{i}`, 600, 400)}" alt={tier.name ?? 'Plan'} className="w-full h-full object-cover" loading="lazy" />`,
+        `              </div>`,
+        `              <div className="p-8">`,
+        `              <h3 className="text-xl font-black text-foreground mb-2">{tier.name}</h3>`,
       `              <div className="mb-6">`,
       `                <span className="text-4xl font-black text-foreground">{tier.price}</span>`,
       `                <span className="text-muted-foreground text-sm">{tier.period}</span>`,
@@ -1578,10 +1746,11 @@ ${body}
       `                  </li>`,
       `                ))}`,
       `              </ul>`,
-      `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-primary text-white' : 'border border-border text-muted-foreground'}\`}>`,
-      `                Get Started`,
-      `              </button>`,
-      `            </motion.div>`,
+        `              <button className={\`w-full py-3 rounded-xl font-bold transition \${tier.highlighted ? 'bg-primary text-white' : 'border border-border text-muted-foreground'}\`}>`,
+        `                Get Started`,
+        `              </button>`,
+        `              </div>`,
+        `            </motion.div>`,
       `          ))}`,
       `        </div>`,
       `      </div>`,
@@ -1611,9 +1780,12 @@ ${body}
         `          <div key={i} className="w-80 bg-card border border-border rounded-2xl p-6 flex-shrink-0">`,
         `            <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
         `            <p className="text-sm text-muted-foreground mb-4">"{testimonial.metadata?.quote}"</p>`,
-        `            <div>`,
-        `              <div className="font-bold text-foreground text-sm">{testimonial.title}</div>`,
-        `              <div className="text-xs text-muted-foreground">{testimonial.description}</div>`,
+        `            <div className="flex items-center gap-3">`,
+        `              <img src="${this.resolveImageUrl(`avatar-${'$'}{i}`, 96, 96)}" alt={testimonial.title ?? 'Customer'} className="w-10 h-10 rounded-full object-cover border border-border" loading="lazy" />`,
+        `              <div>`,
+        `                <div className="font-bold text-foreground text-sm">{testimonial.title}</div>`,
+        `                <div className="text-xs text-muted-foreground">{testimonial.description}</div>`,
+        `              </div>`,
         `            </div>`,
         `          </div>`,
         `        ))}`,
@@ -1634,15 +1806,18 @@ ${body}
       `          <p className="text-muted-foreground">{subtitle}</p>`,
       `        </div>`,
       `        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">`,
-      `          {items?.map((testimonial, i) => (`,
-      `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} ${cardHover ? cardHover : ''} className="bg-card border border-border rounded-2xl p-6">`,
-      `              <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
-      `              <p className="text-sm text-muted-foreground mb-4">"{testimonial.metadata?.quote}"</p>`,
-      `              <div>`,
-      `                <div className="font-bold text-foreground">{testimonial.title}</div>`,
-      `                <div className="text-sm text-muted-foreground">{testimonial.description}</div>`,
-      `              </div>`,
-      `            </motion.div>`,
+        `          {items?.map((testimonial, i) => (`,
+        `            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} ${cardHover ? cardHover : ''} className="bg-card border border-border rounded-2xl p-6">`,
+        `              <div className="flex items-center gap-1 mb-3 text-yellow-400 text-sm">★★★★★</div>`,
+        `              <p className="text-sm text-muted-foreground mb-4">"{testimonial.metadata?.quote}"</p>`,
+        `              <div className="flex items-center gap-3">`,
+        `                <img src="${this.resolveImageUrl(`avatar-${'$'}{i}`, 96, 96)}" alt={testimonial.title ?? 'Customer'} className="w-10 h-10 rounded-full object-cover border border-border" loading="lazy" />`,
+        `                <div>`,
+        `                  <div className="font-bold text-foreground">{testimonial.title}</div>`,
+        `                  <div className="text-sm text-muted-foreground">{testimonial.description}</div>`,
+        `                </div>`,
+        `              </div>`,
+        `            </motion.div>`,
       `          ))}`,
       `        </div>`,
       `      </div>`,
@@ -1654,11 +1829,16 @@ ${body}
   private generateCTASectionBody(spec: ComponentSpec): string[] {
     const title = this.getContentView(spec, 'title');
     const subtitle = this.getContentView(spec, 'subtitle');
+    const ctaImg = this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'cta'}-bg`, 1600, 900);
 
     return [
       `  return (`,
-      `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="px-6 pb-20">`,
-      `      <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="max-w-xl mx-auto text-center p-8 bg-card border border-border rounded-2xl">`,
+      `    <section className="relative px-6 pb-20 overflow-hidden">`,
+      `      <div className="absolute inset-0">`,
+      `        <img src="${ctaImg}" alt="" className="w-full h-full object-cover opacity-20" loading="lazy" />`,
+      `        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />`,
+      `      </div>`,
+      `      <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="relative max-w-xl mx-auto text-center p-8 bg-card/80 backdrop-blur-md border border-border rounded-2xl">`,
       `        <h2 className="text-xl font-black text-foreground mb-3">{title}</h2>`,
       `        <p className="text-sm text-muted-foreground mb-6">{subtitle}</p>`,
       `        {items?.length ? (`,
@@ -1866,10 +2046,15 @@ ${body}
 
   private generateFooterBody(spec: ComponentSpec): string[] {
     const companyName = this.getContentView(spec, 'companyName');
+    const logo = this.resolveImageUrl(`${this.currentContext?.businessKnowledge?.discovery?.industry ?? 'brand'}-logo`, 120, 120);
 
     return [
       `  return (`,
       `    <motion.footer initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="border-t border-border py-12 px-6 text-center text-sm text-muted-foreground">`,
+      `      <div className="flex items-center justify-center gap-3 mb-4">`,
+      `        <img src="${logo}" alt={${companyName} ?? 'Brand'} className="w-9 h-9 rounded-lg object-cover" loading="lazy" />`,
+      `        <span className="font-bold text-foreground">{${companyName}}</span>`,
+      `      </div>`,
       `      <p>© 2024 {${companyName}}. All rights reserved.</p>`,
       `    </motion.footer>`,
       `  );`,

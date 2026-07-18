@@ -154,6 +154,12 @@ export interface RenderContext {
   /** Agent mode: only generate shell files (layout, CSS, tailwind, nav-data).
    *  Skip page TSX and component TSX — the agent generates those from the spec. */
   agentMode?: boolean;
+
+  /** Image → cinematic-video plan: real reference images turned into motion
+   *  footage by an image-to-video skill (Seedance 2.0 / Cinema World Builder /
+   *  Nano Banana Pro Director). The renderer references each item's outputPath
+   *  (poster = imageUrl). Empty/absent → falls back to stock video source. */
+  videoPlan?: import('../skill-selector.js').VideoGenerationPlan;
 }
 
 /**

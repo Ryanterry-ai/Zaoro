@@ -26,6 +26,10 @@ export interface DesignBriefInput {
   designDecision?: DesignDecision;
   designDNA?: DesignDNA;
   evidence?: EvidenceCollection;
+  /** Image → cinematic-video plan (signal-selected image-to-video skill). */
+  videoPlan?: import('./skill-selector.js').VideoGenerationPlan;
+  /** Superpowers meta-skills relevant at each pipeline stage. */
+  superpowersHooks?: string[];
 }
 
 function bullet(list: string[] | undefined, fallback: string[] = []): string {
@@ -55,6 +59,8 @@ export function generateDesignBrief(input: DesignBriefInput): string {
     designDecision,
     designDNA,
     evidence,
+    videoPlan,
+    superpowersHooks,
   } = input;
 
   const palette = sr?.colors;
@@ -224,6 +230,51 @@ export function generateDesignBrief(input: DesignBriefInput): string {
     if (req.openQuestions.length) {
       lines.push(`**Open questions:**`);
       lines.push(bullet(req.openQuestions));
+    }
+    lines.push('');
+  }
+
+  if (videoPlan?.items?.length) {
+    lines.push(`## 10. Cinematic Video Plan (real images → motion footage)`);
+    lines.push('');
+    lines.push(`Turn the REAL reference images collected during research into cinematic motion`);
+    lines.push(`footage using the signal-selected image-to-video skill. Do NOT use generic stock`);
+    lines.push(`video when a generated clip is available.`);
+    lines.push('');
+    lines.push(`**Skill:** ${videoPlan.skillName} (\`${videoPlan.skillId}\`)`);
+    if (videoPlan.localSkillPath) {
+      lines.push(`**Local skill dir:** \`${videoPlan.localSkillPath}\` — invoke this skill on each image below.`);
+    }
+    lines.push('');
+    lines.push(`**Generate (poster = source image → output path):**`);
+    for (const it of videoPlan.items) {
+      lines.push(`  - \`${it.imageUrl}\` → \`/public/${it.outputPath}\` (usage: ${it.usage})`);
+    }
+    lines.push('');
+    lines.push(`**Invocable manifest:** \`public/videos/generation-manifest.json\` — one entry per clip`);
+    lines.push(`with the exact Seedance-format prompt, poster (real image) and playable fallback.`);
+    lines.push(`The site plays the fallback with the real poster until you run the skill and drop the`);
+    lines.push(`generated clip at its output path — so playback is never broken. Once generated, the`);
+    lines.push(`hero / feature / background videos are the actual brand imagery in motion.`);
+    lines.push('');
+  }
+
+  if (superpowersHooks?.length) {
+    lines.push(`## 11. Superpowers Hooks (invoke at the right stage)`);
+    lines.push('');
+    lines.push(`These meta-skills are the engine's most powerful reasoning tools. They are NOT`);
+    lines.push(`renderer concerns — the agent invokes them at the matching pipeline stage:`);
+    lines.push('');
+    const stageMap: Record<string, string> = {
+      brainstorming: 'before any creative build — clarify intent & design direction',
+      'writing-plans': 'before a multi-step implementation begins',
+      'executing-plans': 'to run the plan with review checkpoints',
+      'systematic-debugging': 'inside the verify→repair loop on any failure',
+      'verification-before-completion': 'as the gate before marking the build done',
+      'requesting-code-review': 'after a major feature lands',
+    };
+    for (const h of superpowersHooks) {
+      lines.push(`  - **${h}** — ${stageMap[h] ?? 'invoke when relevant'}`);
     }
     lines.push('');
   }

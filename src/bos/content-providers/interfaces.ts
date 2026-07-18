@@ -152,6 +152,9 @@ export interface ProviderContext {
   skillRecommendations?: import('../../generation/skill-integrator.js').DesignRecommendation;
   /** Design decision from DesignIntelligenceEngine */
   designDecision?: import('../../orchestration/design-intelligence/types.js').DesignDecision;
+  /** Full BusinessKnowledge — carries the deep-read 5-question answers
+   *  (RequirementsUnderstanding) that make copy specific, not generic. */
+  businessKnowledge?: import('../../orchestration/business-intelligence/types.js').BusinessKnowledge;
 }
 
 // ─── Provider Registry ───────────────────────────────────────────────────────

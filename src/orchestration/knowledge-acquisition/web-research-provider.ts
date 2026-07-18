@@ -14,6 +14,7 @@
 import type { BusinessKnowledge } from '../business-intelligence/types.js';
 import type { KnowledgeSourceProvider, KnowledgeSourceResult } from './engine.js';
 import type { CompetitorEvidence } from './types.js';
+import { openClawFetchHtml, isOpenClawAvailable } from './openclaw-bridge.js';
 
 const FETCH_TIMEOUT_MS = 6000;
 const MAX_SOURCES = 4;
@@ -82,6 +83,65 @@ function extractText(html: string): {
     .trim()
     .slice(0, 2000);
   return { title, h1, desc, text, ogImage, logo, favicon };
+}
+
+type MediaPurpose = 'hero' | 'feature' | 'background' | 'product' | 'gallery';
+
+/** Infer a placement purpose from an <img>/<video> tag's attributes. */
+function inferPurpose(tag: string): MediaPurpose {
+  const t = tag.toLowerCase();
+  if (/hero|banner|masthead|jumbotron/.test(t)) return 'hero';
+  if (/product|item|card|shot/.test(t)) return 'product';
+  if (/bg|background|cover|hero-bg/.test(t)) return 'background';
+  if (/feature|benefit|section/.test(t)) return 'feature';
+  return 'gallery';
+}
+
+/** Skip tracking pixels, sprites, tiny icons, data URIs, and known junk. */
+function isJunkAsset(src: string): boolean {
+  if (!src || src.startsWith('data:')) return true;
+  if (/sprite|pixel|spacer|1x1|blank|tracking|analytics|beacon/.test(src.toLowerCase())) return true;
+  if (/\.(svg)(\?|$)/i.test(src) && /icon|logo/.test(src.toLowerCase())) return false;
+  return false;
+}
+
+/**
+ * Deep-extract REAL media (images + videos) from a page — like a website
+ * cloner. Pulls src / data-src / srcset for <img>, and <source>/<video> for
+ * video, with a placement purpose inferred from surrounding attributes.
+ */
+function extractMedia(html: string): {
+  images: Array<{ src: string; purpose: MediaPurpose }>;
+  videos: Array<{ src: string; purpose: MediaPurpose }>;
+} {
+  const images: Array<{ src: string; purpose: MediaPurpose }> = [];
+  const videos: Array<{ src: string; purpose: MediaPurpose }> = [];
+  const seen = new Set<string>();
+
+  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = m[0];
+    const src =
+      tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ??
+      tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1] ??
+      tag.match(/\bsrcset=["']([^"'\s,]+)/i)?.[1] ??
+      '';
+    if (!src || seen.has(src) || isJunkAsset(src)) continue;
+    seen.add(src);
+    images.push({ src, purpose: inferPurpose(tag) });
+    if (images.length >= 24) break;
+  }
+
+  for (const m of html.matchAll(/<(?:video|source)\b[^>]*>/gi)) {
+    const tag = m[0];
+    const src = tag.match(/\bsrc=["']([^"']+)["']/i)?.[1] ?? '';
+    if (!src || seen.has(src)) continue;
+    if (!/\.(mp4|webm|mov|m4v)(\?|$)/i.test(src)) continue;
+    seen.add(src);
+    videos.push({ src, purpose: inferPurpose(tag) });
+    if (videos.length >= 8) break;
+  }
+
+  return { images, videos };
 }
 
 /** Resolve a possibly-relative asset URL against the page origin. */
@@ -157,15 +217,27 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
       }
     }
 
+    const deepScrape = isOpenClawAvailable();
+    if (deepScrape) refNotes.push('Deep scraping enabled via OpenClaw Ultra Scraping (stealth, dynamic).');
+
     for (const url of candidates) {
       const t = withTimeout(undefined, FETCH_TIMEOUT_MS);
       try {
-        const res = await fetch(url, {
-          signal: t.signal,
-          headers: { 'user-agent': 'Mozilla/5.0 (compatible; BuildEngine/1.0)' },
-        });
-        if (!res.ok) continue;
-        const html = await res.text();
+        let html: string | undefined;
+        // Prefer OpenClaw for real content pages (bypasses bot protection,
+        // renders SPAs) so we get REAL imagery/video like a website cloner.
+        if (deepScrape && !isSearchPage(url)) {
+          const oc = openClawFetchHtml(url);
+          if (oc?.html) html = oc.html;
+        }
+        if (!html) {
+          const res = await fetch(url, {
+            signal: t.signal,
+            headers: { 'user-agent': 'Mozilla/5.0 (compatible; BuildEngine/1.0)' },
+          });
+          if (!res.ok) continue;
+          html = await res.text();
+        }
         probed++;
 
         if (isSearchPage(url)) {
@@ -200,6 +272,28 @@ export class WebResearchProvider implements KnowledgeSourceProvider {
           if (logo) assets.push({ url: absolutize(logo, origin), kind: 'logo', source: domainOf(url), confidence: 0.75 });
           if (ogImage) assets.push({ url: absolutize(ogImage, origin), kind: 'og-image', source: domainOf(url), confidence: 0.7 });
           if (favicon) assets.push({ url: absolutize(favicon, origin), kind: 'favicon', source: domainOf(url), confidence: 0.6 });
+          // Deep media extraction: REAL competitor images/videos (like a cloner).
+          // These become the source imagery for the build + the cinematic video
+          // plan (each hero/feature image can be turned into motion footage).
+          const { images: mediaImgs, videos: mediaVids } = extractMedia(html);
+          for (const im of mediaImgs) {
+            assets.push({
+              url: absolutize(im.src, origin),
+              kind: 'image',
+              source: domainOf(url),
+              confidence: 0.65,
+              purpose: im.purpose,
+            });
+          }
+          for (const v of mediaVids) {
+            assets.push({
+              url: absolutize(v.src, origin),
+              kind: 'video',
+              source: domainOf(url),
+              confidence: 0.6,
+              purpose: v.purpose,
+            });
+          }
           // Derive a lightweight market trend signal from the page text
           const lower = (desc + ' ' + text).toLowerCase();
           if (lower.includes('noise')) trends.push('Active noise cancellation is a baseline expectation');

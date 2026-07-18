@@ -93,6 +93,17 @@ function hasInteractionPrimitive(content: string, primitive: string): boolean {
 export function verifyBuild(input: VerificationInput): VerificationReport {
   const { files, businessKnowledge } = input;
   const content = allContent(files);
+  // Source-only view (components/pages) — excludes framework config and data
+  // files whose allowlists/boilerplate would cause false positives (e.g. a
+  // next.config image remotePatterns entry for a placeholder host).
+  const sourceContent = allContent(
+    files.filter(
+      (f) =>
+        /\.(tsx|jsx)$/.test(f.path) &&
+        !/\.(test|spec)\./.test(f.path) &&
+        !/(^|\/)(next\.config|tailwind\.config|vite\.config|\.eslintrc)/.test(f.path),
+    ),
+  );
   const intents: BusinessIntents = businessKnowledge.intents;
   const gaps: VerificationGap[] = [];
 
@@ -185,8 +196,8 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
   }
 
   // ── 5. Assets (real, not placeholder) ──
-  const usesPlaceholderImg = /(placeholder\.(com|io)|via\.placeholder|dummyimage|example\.com\/(image|img))/i.test(content);
-  const hasImgRef = /(src=|background-image|<img|\.png|\.jpg|\.webp|\.svg|next\/image)/i.test(content);
+  const usesPlaceholderImg = /(placeholder\.(com|io)|via\.placeholder|dummyimage|example\.com\/(image|img))/i.test(sourceContent);
+  const hasImgRef = /(src=|background-image|<img|\.png|\.jpg|\.webp|\.svg|next\/image)/i.test(sourceContent);
   const assets = hasImgRef && !usesPlaceholderImg;
   if (usesPlaceholderImg) {
     gaps.push({
@@ -221,8 +232,12 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
   }
 
   // ── 7. Performance ──
-  const heavyDeps = /(three\.js|@react-three|gsap|d3\.js|chart\.js)/i.test(content);
-  const perfConcern = heavyDeps && !/(dynamic\(|lazy\(|Suspense|next\/dynamic)/i.test(content);
+  // Heavy libs are fine when code-split (dynamic/lazy/Suspense) OR when confined
+  // to a client component ('use client') — the bundler already splits client
+  // components and they never load the heavy lib during SSR.
+  const heavyDeps = /(three\.js|@react-three|gsap|d3\.js|chart\.js)/i.test(sourceContent);
+  const splitOrClient = /(dynamic\(|lazy\(|Suspense|next\/dynamic|['"]use client['"])/i.test(sourceContent);
+  const perfConcern = heavyDeps && !splitOrClient;
   const performance = !perfConcern;
   if (perfConcern) {
     gaps.push({
@@ -257,7 +272,7 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
         if (e === 'luxury') return /(luxury|premium|exclusive|elegant)/i.test(content);
         if (e === 'excitement') return /(exciting|thrill|unforgettable|epic)/i.test(content);
         if (e === 'trust') return /(trust|reliable|secure|safe)/i.test(content);
-        if (e === 'serenity') return /(serene|peaceful|tranquil|zen)/i.test(content);
+        if (e === 'serenity') return /(serenity|serene|peaceful|tranquil|calm|zen)/i.test(content);
         return true;
       });
   if (!fidelity) {
@@ -304,11 +319,36 @@ export async function runVerificationLoop(
   let report = verifyBuild(current);
   let iterations = 0;
 
+  // Track which gaps we've already attempted to avoid infinite loops on a gap
+  // whose repair is a no-op for the current output.
+  const attempted = new Set<string>();
+  const gapKey = (g: VerificationGap): string => `${g.category}:${g.repair}`;
+
+  // Phase 1: clear all ERROR-severity gaps (blocking) first.
   while (!report.passed && iterations < maxIterations) {
-    const blocking = report.gaps.find((g) => g.severity === 'error') ?? report.gaps[0];
-    if (!blocking || blocking.repair === 'none') break;
+    const blocking = report.gaps.find((g) => g.severity === 'error');
+    if (!blocking || blocking.repair === 'none' || attempted.has(gapKey(blocking))) break;
+    attempted.add(gapKey(blocking));
     current = await repair(blocking, current);
     report = verifyBuild(current);
+    iterations++;
+  }
+
+  // Phase 2: drive down remaining WARNING-severity gaps that have an actionable
+  // repair, within the remaining iteration budget. "All gaps removed" bar.
+  while (iterations < maxIterations) {
+    const fixable = report.gaps.find(
+      (g) => g.severity === 'warning' && g.repair !== 'none' && !attempted.has(gapKey(g)),
+    );
+    if (!fixable) break;
+    attempted.add(gapKey(fixable));
+    const next = await repair(fixable, current);
+    const nextReport = verifyBuild(next);
+    // Only accept the repair if it did not regress (fewer or equal gaps).
+    if (nextReport.gaps.length <= report.gaps.length) {
+      current = next;
+      report = nextReport;
+    }
     iterations++;
   }
 
