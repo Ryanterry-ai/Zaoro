@@ -61,9 +61,10 @@ async function main() {
     {
       files: result.renderResult.files.map((f) => ({ path: f.path, content: f.content })),
       businessKnowledge: bk,
+      rawPrompt: PROMPT,
     },
     executeRepair,
-    4,
+    8,
   );
   console.log(`  iterations     : ${iterations}`);
   console.log(`  passed         : ${report.passed}`);

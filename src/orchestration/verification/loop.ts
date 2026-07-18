@@ -23,6 +23,7 @@
 // intents, NEVER an industry label.
 
 import type { BusinessKnowledge, BusinessIntents } from '../business-intelligence/types.js';
+import { analyzeContentFidelity } from './content-fidelity.js';
 
 export type GapCategory =
   | 'business-content'
@@ -33,7 +34,8 @@ export type GapCategory =
   | 'accessibility'
   | 'performance'
   | 'ssr'
-  | 'fidelity';
+  | 'fidelity'
+  | 'content-fidelity';
 
 export type RepairAction = 'regenerate' | 'acquire-evidence' | 'patch' | 'none';
 
@@ -63,6 +65,11 @@ export interface VerificationReport {
     performance: boolean;
     ssr: boolean;
     fidelity: boolean;
+    contentFidelity: boolean;
+  };
+  /** Per-dimension confidence scores (0..1), for production-readiness gating. */
+  dimensions?: {
+    contentFidelity: number;
   };
 }
 
@@ -70,6 +77,8 @@ export interface VerificationInput {
   /** Generated file contents keyed by path */
   files: Array<{ path: string; content: string }>;
   businessKnowledge: BusinessKnowledge;
+  /** The user's original request — ground truth for content fidelity checks. */
+  rawPrompt?: string;
 }
 
 // ─── Heuristic inspectors (all regex over generated source) ──────────────────
@@ -290,6 +299,19 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
     });
   }
 
+  // ── 10. Content fidelity (no cross-domain leakage / placeholders) ──
+  const cf = analyzeContentFidelity(files, businessKnowledge, input.rawPrompt ?? '');
+  const contentFidelity = cf.issues.filter((i) => i.severity === 'error').length === 0;
+  for (const issue of cf.issues) {
+    gaps.push({
+      category: 'content-fidelity',
+      severity: issue.severity,
+      detail: `${issue.kind}: ${issue.detail}`,
+      repair: 'regenerate',
+      target: 'content-intelligence',
+    });
+  }
+
   const signals = {
     businessContent,
     interaction: requestedInteractions.length === 0 ? true : interactionOk,
@@ -300,13 +322,14 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
     performance,
     ssr,
     fidelity,
+    contentFidelity,
   };
 
   const checks = Object.values(signals);
   const score = checks.filter(Boolean).length / checks.length;
   const passed = gaps.filter((g) => g.severity === 'error').length === 0;
 
-  return { passed, score, gaps, signals };
+  return { passed, score, gaps, signals, dimensions: { contentFidelity: cf.score } };
 }
 
 /**

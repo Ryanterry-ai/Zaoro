@@ -84,7 +84,7 @@ const LEXICONS: Lexicon[] = [
   // These let ANY prompt express an experience without an industry template.
 
   // experience-intent — the shape of the whole site
-  { dimension: 'experience-intent', value: 'immersive-scroll', words: ['scroll', 'as you scroll', 'on scroll', 'scrolling', 'parallax', 'storytelling', 'journey', 'experience'] },
+  { dimension: 'experience-intent', value: 'immersive-scroll', words: ['scroll', 'as you scroll', 'on scroll', 'scrolling', 'parallax', 'storytelling', 'journey', 'experience', 'calm', 'immersive', 'cinematic', 'atmosphere', 'focus', 'serene', 'sensory', 'mood'] },
   { dimension: 'experience-intent', value: 'utility', words: ['tool', 'dashboard', 'portal', 'admin', 'calculator', 'configurator', 'builder', 'internal'] },
   { dimension: 'experience-intent', value: 'editorial', words: ['blog', 'magazine', 'news', 'publication', 'article', 'portfolio', 'showcase'] },
   { dimension: 'experience-intent', value: 'immersive-3d', words: ['3d', 'webgl', 'three.js', 'r3f', 'virtual', 'ar', 'vr', 'metaverse', 'holographic'] },
@@ -178,19 +178,100 @@ export function hasSignal(signals: DiscoveredSignal[], dim: SignalDimension, val
  *  Word-boundary matched (so "teams" does NOT match "tea") and limited to
  *  SPECIFIC nouns — generic category words (saas, store, blog, …) are excluded
  *  because they duplicate the shape the archetype composer already derives. */
+// Words that are NEVER domain nouns — the scaffolding language every prompt
+// uses ("build a ... website"), generic web/commerce mechanics, and stopwords.
+// This is deliberately the ONLY closed list: it removes noise, it does not
+// enumerate verticals. New verticals need no edit here.
+const DOMAIN_NOUN_STOPWORDS = new Set<string>([
+  // build/scaffold verbs & meta
+  'build', 'create', 'make', 'design', 'website', 'site', 'page', 'homepage', 'landing',
+  'app', 'application', 'platform', 'brand', 'business', 'company', 'store', 'shop',
+  'online', 'web', 'digital', 'experience', 'section', 'sections', 'feature', 'features',
+  'product', 'products', 'service', 'services', 'customer', 'customers', 'client', 'clients',
+  'user', 'users', 'market', 'markets', 'team', 'people', 'thing', 'things', 'way', 'ways',
+  // generic UX/marketing nouns
+  'story', 'storytelling', 'motion', 'animation', 'animations', 'transition', 'transitions',
+  'scroll', 'scrolling', 'hover', 'interaction', 'interactions', 'layout', 'grid', 'typography',
+  'color', 'colors', 'colour', 'background', 'backgrounds', 'shadow', 'shadows', 'image',
+  'images', 'photography', 'lighting', 'reflection', 'reflections', 'pacing', 'whitespace',
+  'element', 'elements', 'content', 'copy', 'text', 'button', 'buttons', 'menu', 'header',
+  'footer', 'navigation', 'hero', 'testimonial', 'testimonials', 'gallery',
+  // generic commerce/ops nouns
+  'purchase', 'purchases', 'purchasing', 'checkout', 'cart', 'order', 'orders', 'payment',
+  'payments', 'shipping', 'delivery', 'return', 'returns', 'refund', 'support', 'account',
+  'value', 'quality', 'trust', 'conversion', 'discovery', 'catalog', 'item', 'items',
+  'option', 'options', 'price', 'prices', 'pricing', 'offer', 'offers', 'discount',
+  'pipeline', 'pipelines', 'management', 'sales', 'workflow', 'workflows', 'dashboard',
+  'analytics', 'integration', 'integrations', 'solution', 'solutions', 'tool', 'tools',
+  'system', 'systems', 'process', 'processes', 'data', 'report', 'reports',
+  // emotion/adjective-ish nouns that describe feel, not domain
+  'elegance', 'exclusivity', 'craftsmanship', 'heritage', 'emotion', 'aspiration',
+  'confidence', 'beauty', 'rarity', 'authenticity', 'sophistication', 'luxury',
+  // pronoun-ish / connectives that slip through
+  'every', 'each', 'their', 'your', 'our', 'that', 'this', 'these', 'those', 'with', 'from',
+  'into', 'through', 'rather', 'than', 'before', 'while', 'where', 'which', 'them', 'they',
+  // modal/auxiliary/common verbs — never a business's subject noun
+  'should', 'would', 'could', 'shall', 'will', 'must', 'might', 'have', 'has', 'had',
+  'being', 'been', 'does', 'doing', 'want', 'wants', 'need', 'needs', 'using', 'used',
+  'communicate', 'reinforce', 'reveal', 'reveals', 'tell', 'convey', 'evoke', 'feel',
+  'feels', 'look', 'looks', 'show', 'shows', 'give', 'gives', 'help', 'helps', 'work',
+  'works', 'come', 'comes', 'take', 'takes', 'keep', 'find', 'finds', 'generate',
+  'generates', 'include', 'includes', 'including', 'ensure', 'provide', 'provides',
+  // adverbs / adjectives describing feel, not domain
+  'gradually', 'naturally', 'traditional', 'unforgettable', 'immersive', 'seamless',
+  'modern', 'clean', 'soft', 'warm', 'premium', 'subtle', 'smooth', 'natural', 'really',
+  'very', 'more', 'most', 'such', 'also', 'just', 'when', 'then', 'here', 'there',
+  'about', 'above', 'below', 'across', 'along', 'around', 'because', 'between',
+]);
+
+/**
+ * Extract the domain nouns the user actually used — OPEN vocabulary.
+ *
+ * We do NOT match against a fixed list of verticals (that is exactly the
+ * anti-pattern that produced sports-nutrition copy on a jewellery site). Instead
+ * we mine the prompt's own salient nouns: repeated multi-occurrence tokens and
+ * capitalised domain terms, minus generic scaffolding/stopwords. Whatever the
+ * business is about, its real subject words surface here.
+ */
 export function extractDomainNouns(prompt: string): string[] {
-  const lower = ` ${prompt.toLowerCase().trim()} `;
-  const nouns = [
-    'coffee', 'tea', 'cafe', 'restaurant', 'pizza', 'bakery', 'supplement', 'protein', 'gym',
-    'fitness', 'salon', 'spa', 'clinic', 'dentist', 'doctor', 'lawyer', 'agency', 'studio',
-    'school', 'academy', 'consulting', 'real estate', 'property', 'hotel', 'resort',
-  ];
-  const found: string[] = [];
-  for (const n of nouns) {
-    const re = new RegExp(`\\b${n.replace(/ /g, '\\s')}\\b`);
-    if (re.test(lower)) found.push(n);
+  const raw = prompt.replace(/[^A-Za-z\s-]/g, ' ');
+  const tokens = raw.split(/\s+/).filter(Boolean);
+
+  // Count lowercase frequency of candidate nouns (len >= 4, not a stopword).
+  const freq = new Map<string, number>();
+  const firstSeen = new Map<string, number>();
+  tokens.forEach((tok, idx) => {
+    const lower = tok.toLowerCase();
+    if (lower.length < 4) return;
+    if (DOMAIN_NOUN_STOPWORDS.has(lower)) return;
+    if (!/^[a-z][a-z-]*[a-z]$/.test(lower)) return; // drop malformed
+    freq.set(lower, (freq.get(lower) ?? 0) + 1);
+    if (!firstSeen.has(lower)) firstSeen.set(lower, idx);
+  });
+
+  // A word is a domain noun if it recurs (>=2) OR appears once but is a strong,
+  // rare, long token (>=6 chars) that is not generic. Recurrence is the primary
+  // signal that the prompt is "about" that thing.
+  const candidates = [...freq.entries()]
+    .filter(([w, n]) => n >= 2 || w.length >= 6)
+    .sort((a, b) => {
+      // higher frequency first; tie-break by earlier appearance
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return (firstSeen.get(a[0]) ?? 0) - (firstSeen.get(b[0]) ?? 0);
+    })
+    .map(([w]) => w);
+
+  // Normalise obvious singular/plural duplicates (gemstones/gemstone).
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const w of candidates) {
+    const singular = w.endsWith('s') && w.length > 4 ? w.slice(0, -1) : w;
+    if (seen.has(singular)) continue;
+    seen.add(singular);
+    result.push(singular);
+    if (result.length >= 12) break;
   }
-  return [...new Set(found)];
+  return result;
 }
 
 import type { BusinessIntents } from './types.js';

@@ -376,6 +376,145 @@ export default function ${primitive}() {
   return next;
 }
 
+// ─── Content fidelity repair (signal-derived copy regeneration) ──────────────
+//
+// When the Content Fidelity Engine reports cross-domain leakage / placeholder /
+// boilerplate copy, we do NOT patch strings one by one — we REGENERATE the
+// visible copy for the affected components from the business's OWN signals
+// (domain nouns, businessType, tone). This bypasses any hardcoded vertical
+// schema entirely, so the copy can only ever be about the requested business.
+
+function titleCase(s: string): string {
+  return s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
+
+/** Build signal-derived copy from BusinessKnowledge — no vertical schema. */
+function signalCopy(bk: BusinessKnowledge) {
+  const nouns = (bk.vocabulary?.domainNouns ?? []).filter((n) => n.length >= 4);
+  const primary = nouns[0] ?? 'craft';
+  // The secondary noun must be a concrete SUBJECT word, not an access/meta term
+  // that occasionally out-ranks (e.g. "private", "collection"). Skip such words
+  // and fall back to the primary so copy never reads "value private".
+  const WEAK_SECONDARY = new Set(['private', 'public', 'general', 'various', 'certain', 'special']);
+  const secondary = nouns.slice(1).find((n) => !WEAK_SECONDARY.has(n)) ?? primary;
+  // A countable head-noun so item copy reads "Every piece" not "Every jewellery".
+  const piece = 'piece';
+  const tone = bk.vocabulary?.tone ?? [];
+  const businessType = bk.discovery?.businessType ?? titleCase(primary);
+  const intent = bk.discovery?.intent ?? '';
+  const emotional = bk.intents?.emotional ?? [];
+  const toneLine = tone.slice(0, 3).join(', ') || 'refined';
+  const feel = emotional.includes('luxury')
+    ? 'timeless, exclusive, exquisitely made'
+    : emotional.includes('trust')
+      ? 'trusted, authentic, made to last'
+      : 'thoughtfully crafted';
+
+  const hero = {
+    title: businessType,
+    subtitle: `${titleCase(primary)} ${feel}. ${intent}`.trim(),
+  };
+
+  const features = {
+    heading: `Why Choose Our ${titleCase(primary)}`,
+    subheading: `A ${toneLine} approach to ${primary}${secondary !== primary ? `, made for people who value ${secondary}` : ''}.`,
+    items: [
+      { title: 'Authentic Craftsmanship', description: `Every ${piece} is made with meticulous care and genuine materials.`, icon: 'ShieldCheck' },
+      { title: 'Timeless Design', description: `Designed to stay beautiful for generations, not seasons.`, icon: 'Sparkles' },
+      { title: 'Personal Service', description: `Private guidance to help you find the right ${primary} for you.`, icon: 'Users' },
+      { title: 'Assured Quality', description: `Certified, inspected, and backed by our promise on every ${piece}.`, icon: 'BadgeCheck' },
+    ],
+  };
+
+  const testimonials = {
+    heading: `What Our Clients Say`,
+    subheading: `Trusted by people who care about ${primary}.`,
+    items: [
+      { title: 'A cherished purchase', description: 'Client', metadata: { quote: `The ${primary} exceeded every expectation — the craftsmanship is extraordinary.` } },
+    ],
+  };
+
+  const cta = {
+    title: `Discover Our ${titleCase(primary)}`,
+    subtitle: `Begin your journey with a ${toneLine} experience built around you.`,
+  };
+
+  return { hero, features, testimonials, cta, primary };
+}
+
+/**
+ * Replace the value of a given prop on a JSX element with a new string/JSON.
+ * Handles brace-balanced `{...}` values (e.g. items={[{...}]}) and quoted values,
+ * so nested braces in JSON props do not corrupt the surrounding JSX.
+ */
+function setJsxProp(src: string, tag: string, prop: string, valueLiteral: string): string {
+  const head = new RegExp(`<${tag}\\b[^>]*?\\b${prop}=`);
+  const hm = head.exec(src);
+  if (!hm) return src;
+  const valStart = hm.index + hm[0].length;
+  const ch = src[valStart];
+
+  let valEnd = valStart;
+  if (ch === '"' || ch === "'" || ch === '`') {
+    valEnd = src.indexOf(ch, valStart + 1);
+    if (valEnd === -1) return src;
+    valEnd += 1;
+  } else if (ch === '{') {
+    let depth = 0;
+    for (let i = valStart; i < src.length; i++) {
+      const c = src[i];
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) { valEnd = i + 1; break; }
+      }
+    }
+    if (depth !== 0) return src;
+  } else {
+    return src;
+  }
+
+  return src.slice(0, valStart) + valueLiteral + src.slice(valEnd);
+}
+
+function regeneratePageCopy(content: string, bk: BusinessKnowledge): string {
+  const c = signalCopy(bk);
+  let out = content;
+
+  // HeroBanner
+  out = setJsxProp(out, 'HeroBanner', 'title', JSON.stringify(c.hero.title));
+  out = setJsxProp(out, 'HeroBanner', 'subtitle', JSON.stringify(c.hero.subtitle));
+
+  // FeatureGrid
+  out = setJsxProp(out, 'FeatureGrid', 'title', JSON.stringify(c.features.heading));
+  out = setJsxProp(out, 'FeatureGrid', 'subtitle', JSON.stringify(c.features.subheading));
+  out = setJsxProp(out, 'FeatureGrid', 'items', `{${JSON.stringify(c.features.items)}}`);
+
+  // Testimonials
+  out = setJsxProp(out, 'Testimonials', 'title', JSON.stringify(c.testimonials.heading));
+  out = setJsxProp(out, 'Testimonials', 'subtitle', JSON.stringify(c.testimonials.subheading));
+  out = setJsxProp(out, 'Testimonials', 'items', `{${JSON.stringify(c.testimonials.items)}}`);
+
+  // CTASection
+  out = setJsxProp(out, 'CTASection', 'title', JSON.stringify(c.cta.title));
+  out = setJsxProp(out, 'CTASection', 'subtitle', JSON.stringify(c.cta.subtitle));
+
+  return out;
+}
+
+/**
+ * Regenerate leaked/placeholder copy from the business's own signals.
+ * Targets the app entry (page) where headline copy lives; idempotent.
+ */
+function repairContentFidelity(files: FileRec[], bk: BusinessKnowledge): FileRec[] {
+  return files.map((f) => {
+    if (!isComponentFile(f.path)) return f;
+    // Only rewrite files that actually carry headline copy props.
+    if (!/(HeroBanner|FeatureGrid|Testimonials|CTASection)\b/.test(f.content)) return f;
+    return { ...f, content: regeneratePageCopy(f.content, bk) };
+  });
+}
+
 // ─── Public entry ────────────────────────────────────────────────────────────
 
 /**
@@ -419,9 +558,13 @@ export async function executeRepair(
       // Realise the requested interaction primitive the renderer omitted.
       files = repairInteraction(files, bk, gap);
       break;
+    case 'content-fidelity':
+      // Regenerate leaked/placeholder copy from the business's own signals.
+      files = repairContentFidelity(files, bk);
+      break;
     default:
       break;
   }
 
-  return { files, businessKnowledge: bk };
+  return { files, businessKnowledge: bk, rawPrompt: current.rawPrompt };
 }
