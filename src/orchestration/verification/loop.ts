@@ -375,7 +375,12 @@ export async function runVerificationLoop(
   // Track which gaps we've already attempted to avoid infinite loops on a gap
   // whose repair is a no-op for the current output.
   const attempted = new Set<string>();
-  const gapKey = (g: VerificationGap): string => `${g.category}:${g.repair}`;
+  // Key on the concrete gap identity, not just category:repair. A single
+  // category (e.g. "interaction") can carry several distinct, independently
+  // repairable gaps (missing BookingCalendar AND missing Calculator); keying on
+  // category alone would fix one and permanently skip the rest. The detail
+  // string uniquely identifies the specific missing primitive / target.
+  const gapKey = (g: VerificationGap): string => `${g.category}:${g.repair}:${g.detail}`;
 
   // Phase 1: clear all ERROR-severity gaps (blocking) first.
   while (!report.passed && iterations < maxIterations) {

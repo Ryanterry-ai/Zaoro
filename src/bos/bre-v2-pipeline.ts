@@ -66,10 +66,13 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     appName: ctx.appName,
   });
 
-  // Step 0: Web intelligence — scrape real business data if we have a name
+  // Step 0: Web intelligence — scrape real business data if we have a name.
+  // Skippable via BUILD_OFFLINE=1 for deterministic/offline runs (stress tests,
+  // CI) where live scraping adds latency and non-determinism without value.
   progress?.emit('research', 'started', 'Gathering business intelligence...');
   const t0 = Date.now();
-  if (ctx.appName && ctx.appName !== 'MyApp' && ctx.appName !== 'BrandName') {
+  const offline = process.env.BUILD_OFFLINE === '1' || process.env.BUILD_OFFLINE === 'true';
+  if (!offline && ctx.appName && ctx.appName !== 'MyApp' && ctx.appName !== 'BrandName') {
     const workspaceRoot = process.cwd();
     try {
       const scraper = new ContentScraper(workspaceRoot);

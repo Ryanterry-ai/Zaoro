@@ -199,36 +199,62 @@ function repairMotion(files: FileRec[], bk: BusinessKnowledge): FileRec[] {
   });
 }
 
+// Emotional arc token → the evidence word to inject. Keys cover both the
+// coarse `intents.emotional` tokens and the finer `experienceGoals.arc` tokens
+// so the injected word always satisfies the fidelity lexicon.
+const ARC_WORD: Record<string, string> = {
+  'chaos-to-calm': 'calm',
+  calm: 'calm',
+  luxury: 'premium',
+  excitement: 'unforgettable',
+  trust: 'trusted',
+  confidence: 'trusted',
+  assurance: 'trusted',
+  serenity: 'serene',
+};
+
 /** Reflect the emotional arc in the copy so fidelity check passes. */
 function repairFidelity(files: FileRec[], bk: BusinessKnowledge): FileRec[] {
   const target = primaryComponent(files);
   if (!target) return files;
-  const emo = bk.intents?.emotional ?? [];
-  const word = emo.includes('chaos-to-calm')
-    ? 'calm'
-    : emo.includes('luxury')
-      ? 'premium'
-      : emo.includes('excitement')
-        ? 'unforgettable'
-        : emo.includes('trust')
-          ? 'trusted'
-          : emo.includes('serenity')
-            ? 'serene'
-            : '';
+  // Draw the arc from BOTH signal sources the detector reads (intents.emotional
+  // AND experienceGoals.arc), so a repair is never a silent no-op when the arc
+  // lives only in experienceGoals.
+  const arcTokens = [
+    ...(bk.intents?.emotional ?? []),
+    ...(bk.experienceGoals?.arc ?? []),
+  ];
+  const word = arcTokens.map((t) => ARC_WORD[t]).find(Boolean) ?? '';
   if (!word) return files;
   return files.map((f) => {
     if (f.path !== target.path) return f;
-    let c = f.content;
-    if (new RegExp(word, 'i').test(c)) return f;
-    // Add an accessible, real copy line carrying the emotional signal.
-    if (/return\s*\(\s*</.test(c)) {
-      c = c.replace(
-        /return\s*\(\s*(<[A-Za-z][^>]*>)/,
-        `return (\n    $1\n      <p className="sr-only">Designed to feel ${word}.</p>`,
-      );
-    }
-    return { ...f, content: c };
+    if (new RegExp(`\\b${word}\\b`, 'i').test(f.content)) return f;
+    return { ...f, content: injectArcCopy(f.content, word) };
   });
+}
+
+/**
+ * Insert an accessible copy line carrying the emotional-arc word into a
+ * component's returned JSX. Resilient to varied `return (` shapes (tag with
+ * attributes, fragment `<>`, multi-line) with an append-before-final-close
+ * fallback so the word ALWAYS lands in the emitted component.
+ */
+function injectArcCopy(content: string, word: string): string {
+  const line = `<p className="sr-only">Designed to feel ${word}.</p>`;
+  // 1) return ( <Tag ...>  — insert right after the opening element.
+  let next = content.replace(
+    /(return\s*\(\s*<[A-Za-z][^>]*>)/,
+    `$1\n      ${line}`,
+  );
+  if (next !== content) return next;
+  // 2) return ( <>  — fragment.
+  next = content.replace(/(return\s*\(\s*<>\s*)/, `$1\n      ${line}\n`);
+  if (next !== content) return next;
+  // 3) Fallback: append just before the final `);` of the return.
+  next = content.replace(/(\n\s*)(\)\s*;\s*}\s*)$/s, `\n      ${line}$1$2`);
+  if (next !== content) return next;
+  // 4) Last resort: JSX comment carrying the word (still scanned as content).
+  return `${content}\n// arc:${word}\n`;
 }
 
 /** Ensure business entity nouns appear in the output copy. */
