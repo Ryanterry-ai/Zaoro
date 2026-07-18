@@ -31,9 +31,12 @@ const LEXICONS: Lexicon[] = [
   { dimension: 'product-nature', value: 'food', words: ['restaurant', 'food', 'meal', 'dish', 'bakery', 'pastry', 'pizza', 'cuisine', 'menu', 'snack', 'dessert', 'grocery'] },
   { dimension: 'product-nature', value: 'physical-good', words: ['store', 'shop', 'product', 'apparel', 'clothing', 'furniture', 'gadget', 'device', 'gear', 'toy', 'jewelry'] },
   { dimension: 'product-nature', value: 'digital-good', words: ['ebook', 'course', 'template', 'download', 'software-license', 'plugin', 'asset', 'preset'] },
-  { dimension: 'product-nature', value: 'service', words: ['salon', 'spa', 'clinic', 'consulting', 'agency', 'legal', 'accounting', 'coaching', 'training', 'repair', 'fitness', 'gym', 'dentist', 'doctor', 'therapy', 'tutoring'] },
-  { dimension: 'product-nature', value: 'content', words: ['blog', 'news', 'magazine', 'portfolio', 'podcast', 'video', 'publication', 'media', 'showcase', 'gallery'] },
-  { dimension: 'product-nature', value: 'software', words: ['saas', 'software', 'platform', 'tool', 'app', 'crm', 'erp', 'dashboard', 'internal-tool', 'automation'] },
+  { dimension: 'product-nature', value: 'service', words: ['salon', 'spa', 'clinic', 'consulting', 'consultation', 'consultancy', 'advisory', 'advisor', 'agency', 'firm', 'practice', 'legal', 'law', 'attorney', 'lawyer', 'accounting', 'coaching', 'training', 'repair', 'fitness', 'gym', 'dentist', 'doctor', 'therapy', 'tutoring', 'provider', 'installer', 'installation', 'contractor', 'logistics', 'courier', 'delivery-service', 'brokerage', 'broker', 'management', 'maintenance', 'cleaning', 'staffing', 'recruiting', 'insurance', 'wealth', 'concierge', 'hospitality', 'hotel', 'lodging', 'catering', 'landscaping', 'plumbing', 'electrician', 'moving', 'recycling', 'waste', 'disposal'] },
+  { dimension: 'product-nature', value: 'content', words: ['blog', 'news', 'magazine', 'podcast', 'publication', 'editorial', 'newsletter', 'documentary', 'zine', 'journalism'] },
+  { dimension: 'product-nature', value: 'software', words: ['saas', 'software', 'platform', 'tool', 'app', 'crm', 'erp', 'dashboard', 'internal-tool', 'automation', 'observability', 'analytics', 'api', 'integration', 'devops', 'infrastructure', 'monitoring', 'workflow', 'no-code', 'low-code'] },
+  { dimension: 'product-nature', value: 'media-stream', words: ['streaming', 'stream', 'film', 'films', 'movie', 'movies', 'series', 'episode', 'watchlist', 'video-on-demand', 'vod', 'channel', 'ott'] },
+  { dimension: 'product-nature', value: 'course', words: ['course', 'courses', 'bootcamp', 'curriculum', 'lesson', 'cohort', 'enrollment', 'e-learning', 'lms', 'workshop', 'class'] },
+  { dimension: 'product-nature', value: 'listing', words: ['listing', 'listings', 'property', 'properties', 'rental', 'rentals', 'classifieds', 'directory', 'inventory-listing'] },
 
   // channel — where it operates
   { dimension: 'channel', value: 'physical', words: ['cafe', 'restaurant', 'store', 'shop', 'salon', 'clinic', 'gym', 'studio', 'showroom', 'location', 'walk-in', 'branch'] },
@@ -152,12 +155,32 @@ export function extractSignals(prompt: string): DiscoveredSignal[] {
   const found: DiscoveredSignal[] = [];
 
   for (const lex of LEXICONS) {
-    const hit = lex.words.some((w) => tokens.includes(w) || tokens.includes(w.replace(/\s+/g, '')));
-    if (hit) {
+    // Weight = how many DISTINCT lexicon words the prompt hits. This lets
+    // downstream selection prefer the DOMINANT signal when several values in a
+    // dimension fire (e.g. a "SaaS product platform dashboard" hits software 4×
+    // but physical-good only 1× via "product"). Still vertical-agnostic.
+    const matched = new Set<string>();
+    for (const w of lex.words) {
+      // Stem the lexicon word the SAME way prompt tokens are stemmed, so
+      // "installer"→"install", "provider"→"provid" etc. still match. Multi-word
+      // phrases are stemmed per-word then compared against 2-gram tokens (which
+      // are themselves whole-string stemmed) and their concatenation.
+      const parts = w.split(/\s+/).map(normalizeToken);
+      const stemmedPhrase = parts.join(' ');
+      const stemmedConcat = parts.join('');
+      if (
+        tokens.includes(stemmedPhrase) ||
+        tokens.includes(stemmedConcat) ||
+        tokens.includes(normalizeToken(w.replace(/\s+/g, '')))
+      ) {
+        matched.add(w);
+      }
+    }
+    if (matched.size > 0) {
       found.push({
         dimension: lex.dimension,
         value: lex.value,
-        weight: 1,
+        weight: matched.size,
         source: 'prompt' as KnowledgeSourceType,
       });
     }
@@ -172,6 +195,13 @@ export function signalValues(signals: DiscoveredSignal[], dim: SignalDimension):
 
 export function hasSignal(signals: DiscoveredSignal[], dim: SignalDimension, value: string): boolean {
   return signals.some((s) => s.dimension === dim && s.value === value);
+}
+
+/** Summed weight (match strength) for a specific dimension+value. 0 if absent. */
+export function signalWeight(signals: DiscoveredSignal[], dim: SignalDimension, value: string): number {
+  return signals
+    .filter((s) => s.dimension === dim && s.value === value)
+    .reduce((sum, s) => sum + (s.weight ?? 1), 0);
 }
 
 /** Extract the user's own domain nouns (their words) for vocabulary.
