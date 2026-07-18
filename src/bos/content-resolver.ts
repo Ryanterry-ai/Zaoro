@@ -509,43 +509,28 @@ function generateAboutDescription(ctx: ContentResolverContext): string {
     return `A ${tone} ${noun} business — ${bk.discovery.intent}. Specializing in ${productTerm} with ${bk.revenue.model} model.`;
   }
 
-  // Legacy fallback: keyword-based (deprecated path)
+  // No BusinessKnowledge available: emit a NEUTRAL, signal-derived description.
+  // Deliberately vertical-agnostic — it never hardcodes per-industry copy
+  // (the old supplement/coffee/restaurant/fitness branches were removed as a
+  // direct violation of the "no hardcoded verticals" rule). Copy is composed
+  // from the business-model signals and the generic classification slug only.
   const industry = ctx.blueprint.industry;
-  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
+  const models = ctx.blueprint.businessModels ?? [];
+  const modelLabel = models[0]?.replace(/-/g, ' ') ?? 'service';
 
-  if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition')) {
-    if (desc.includes('wholesale') || desc.includes('b2b') || desc.includes('distributor') || desc.includes('bulk')) {
-      return 'A trusted B2B wholesale distributor of premium supplements, serving gyms and retailers nationwide';
-    }
-    return ctx.blueprint.country === 'IN'
-      ? 'India\'s trusted destination for genuine supplements from top international and Indian brands'
-      : 'Your trusted destination for genuine supplements from top brands';
+  if (models.includes('donation') || models.includes('community')) {
+    return `A mission-driven organization built to make a difference — powered by ${modelLabel}.`;
   }
-  if (desc.includes('coffee') || desc.includes('espresso') || desc.includes('brew') || desc.includes('cafe')) {
-    return 'A neighborhood coffee house committed to ethically sourced beans, expert roasting, and a warm community atmosphere';
+  if (models.includes('service-booking')) {
+    return `A ${industry} business that makes booking and managing ${modelLabel} effortless.`;
   }
-  if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('food')) {
-    return 'A passion for great food, fresh ingredients, and unforgettable dining experiences';
+  if (models.includes('marketplace') || models.includes('wholesale')) {
+    return `A ${industry} marketplace connecting supply and demand through ${modelLabel}.`;
   }
-  if (desc.includes('fitness') || desc.includes('gym') || desc.includes('yoga')) {
-    return 'Empowering your fitness journey with expert coaching and state-of-the-art facilities';
+  if (models.includes('subscription') || models.includes('membership')) {
+    return `A ${industry} business delivering ongoing value through ${modelLabel}.`;
   }
-  if (desc.includes('store') || desc.includes('shop') || industry === 'ecommerce') {
-    return 'Curating quality products with a seamless shopping experience from browse to delivery';
-  }
-  if (desc.includes('portfolio') || desc.includes('agency')) {
-    return 'Crafting creative solutions that push boundaries and deliver measurable results';
-  }
-  if (desc.includes('property') || desc.includes('real estate')) {
-    return 'Connecting people with their dream properties through expertise and trust';
-  }
-  if (desc.includes('course') || desc.includes('learn') || industry === 'education') {
-    return 'Making quality education accessible and engaging for learners everywhere';
-  }
-  if (industry === 'healthcare' || desc.includes('health') || desc.includes('dental')) {
-    return 'Delivering compassionate, modern healthcare with a patient-first approach';
-  }
-  return `Built with a vision to deliver the best ${industry} experience`;
+  return `A ${industry} business delivering a focused, dependable ${modelLabel} experience.`;
 }
 
 function resolveFeatureGrid(

@@ -459,4 +459,47 @@ export const CANONICAL_CAPABILITIES: Capability[] = [
     rendererSupport: ['state', 'charts'],
     primitivePackTags: ['interaction', 'hud'],
   }),
+
+  // ── Public Sector & Mission (taxonomy-gap coverage) ───────────────────────
+  // These fill orthogonal capability gaps that the original registry missed:
+  // government permit/license workflows and nonprofit donation/volunteer flows.
+  // They are NOT vertical features — they are reusable interaction patterns any
+  // civic or mission-driven build signals via prompt keywords.
+
+  cap({
+    id: 'govt.permit-application',
+    displayName: 'Permit / License Application',
+    aliases: ['permit', 'license-application', 'permit-application', 'civic-request', 'government-form', 'permit-portal'],
+    dependencies: ['auth', 'notifications.email'],
+    requiredComponents: ['PermitForm', 'ApplicationTracker', 'DocumentUpload', 'StatusBadge'],
+    requiredExperience: ['interactive-state', 'form-flow'],
+    rendererSupport: ['state', 'form'],
+    requiredEntities: ['PermitApplication', 'Applicant'],
+    requiredWorkflows: ['permit-submission', 'review-and-approval'],
+    primitivePackTags: ['govt', 'permit', 'civic'],
+  }),
+  cap({
+    id: 'nonprofit.donation',
+    displayName: 'Donation Processing',
+    aliases: ['donation', 'donate', 'donor', 'contribution', 'give', 'fundraising'],
+    dependencies: ['payments', 'auth'],
+    requiredComponents: ['DonationForm', 'AmountSelector', 'RecurringToggle', 'ImpactMeter'],
+    requiredExperience: ['interactive-state', 'emotional-arc'],
+    rendererSupport: ['state', 'form'],
+    requiredEntities: ['Donor', 'Campaign', 'Donation'],
+    requiredWorkflows: ['donation-flow', 'receipt-and-thanks'],
+    primitivePackTags: ['nonprofit', 'donation'],
+  }),
+  cap({
+    id: 'nonprofit.volunteer',
+    displayName: 'Volunteer Signup',
+    aliases: ['volunteer', 'volunteer-signup', 'sign-up-to-help', 'join-the-cause'],
+    dependencies: ['auth', 'notifications.email'],
+    requiredComponents: ['VolunteerForm', 'ShiftPicker', 'ImpactStory'],
+    requiredExperience: ['interactive-state'],
+    rendererSupport: ['state', 'form'],
+    requiredEntities: ['Volunteer', 'VolunteerShift'],
+    requiredWorkflows: ['volunteer-onboarding'],
+    primitivePackTags: ['nonprofit', 'volunteer'],
+  }),
 ];

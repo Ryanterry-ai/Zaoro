@@ -445,17 +445,56 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
 
 // ─── Business Model Keywords ─────────────────────────────────────────────────
 
+/**
+ * Canonical business-model keyword map.
+ *
+ * These are ORTHOGONAL monetization mechanics — independent of vertical and
+ * audience. Keys align with the `BUSINESS_MODELS` registry in
+ * `src/bos/knowledge/registry.ts`. Detection is keyword-driven and additive: a
+ * single prompt may surface several models (e.g. a SaaS with a freemium tier
+ * AND usage-based overages), so `detectBusinessModels` returns every match.
+ *
+ * 35 canonical models are represented below.
+ */
 const BUSINESS_MODEL_KEYWORDS: Record<string, string[]> = {
-  subscription: ['subscription', 'subscribe', 'monthly', 'annual', 'plan', 'tier', 'recurring', 'membership', 'saas', 'software as a service'],
+  subscription: ['subscription', 'subscribe', 'monthly', 'annual', 'plan', 'tier', 'recurring', 'saas', 'software as a service'],
   'direct-sales': ['sell', 'shop', 'store', 'buy', 'purchase', 'product', 'cart', 'checkout', 'ecommerce', 'order online'],
   marketplace: ['marketplace', 'multi-seller', 'connect buyers', 'connect sellers', 'multi-vendor'],
-  'service-booking': ['book', 'appointment', 'schedule', 'consultation', 'session', 'reserve', 'slot'],
+  'service-booking': ['book', 'appointment', 'schedule a', 'consultation', 'session', 'reserve', 'slot', 'reservation'],
   membership: ['membership', 'member', 'join', 'club', 'access', 'exclusive', 'vip'],
-  donation: ['donate', 'donation', 'fundraise', 'campaign', 'support', 'crowdfund'],
-  advertising: ['advertising', 'ads', 'sponsor', 'promote', 'banner', 'monetize'],
+  donation: ['donate', 'donation', 'fundraise', 'campaign', 'support', 'crowdfund', 'nonprofit', 'charity'],
+  advertising: ['advertising', 'ads', 'sponsor', 'promote', 'banner', 'monetize', 'ad space'],
   wholesale: ['wholesale', 'b2b', 'bulk', 'distributor', 'reseller', 'supply chain', 'supplier',
     'purchase order', 'volume pricing', 'dealer', 'dealer network', 'procurement',
-    'enterprise contract', 'license', 'site license'],
+    'enterprise contract', 'site license'],
+  freemium: ['freemium', 'free tier', 'free plan', 'free version', 'free account'],
+  'usage-based': ['usage-based', 'pay-as-you-go', 'metered', 'per-use', 'consumption-based', 'by usage'],
+  'pay-per-use': ['pay-per-use', 'per-seat', 'per-event', 'per-item', 'per-user pricing'],
+  'free-trial': ['free trial', 'trial', 'try free', '14-day', '30-day trial'],
+  'franchise': ['franchise', 'franchising', 'licensee', 'own a branch', 'franchisee'],
+  licensing: ['licensing', 'license', 'royalty', 'ip', 'rights', 'intellectual property'],
+  'transaction-fee': ['transaction fee', 'per-transaction', 'processing fee', 'flat fee per sale'],
+  saas: ['saas', 'software platform', 'dashboard preview', 'software as a service'],
+  'lead-gen': ['lead', 'lead-gen', 'inquiry', 'quote request', 'contact us', 'get a quote'],
+  affiliate: ['affiliate', 'referral link', 'partner program', 'referral commission'],
+  'onsite': ['on-demand', 'instant', 'same-day', 'request a courier', 'request now'],
+  enterprise: ['enterprise', 'annual agreement', 'custom quote', 'large account', 'contract'],
+  d2c: ['d2c', 'direct to consumer', 'direct-to-consumer', 'subscription box', 'own brand'],
+  b2c: ['b2c', 'consumer', 'retail store', 'shop for'],
+  b2b: ['b2b', 'business to business', 'oem', 'sell to businesses'],
+  agency: ['agency', 'retainer', 'studio', 'creative agency', 'marketing agency'],
+  consulting: ['consulting', 'advisory', 'consultation', 'expert'],
+  'marketplace-saas': ['two-sided marketplace', 'marketplace platform', 'platform and marketplace'],
+  'govt-permit': ['permit', 'license application', 'civic', 'government service', 'public sector'],
+  crowdfunding: ['crowdfunding', 'backers', 'pledge', 'funding campaign'],
+  'data-monetization': ['data', 'insights', 'reports', 'analytics access', 'data product'],
+  'freemium-trial': ['freemium trial', 'free plan and trial', 'free tier with trial'],
+  hybrid: ['hybrid model', 'multi-model', 'combined model', 'mixed monetization'],
+  'agent-builder': ['agent', 'builder', 'no-code platform', 'deploy agents', 'agent platform'],
+  community: ['community', 'creator', 'patron', 'tips', 'creator economy'],
+  'event-ticketing': ['event', 'ticket', 'ticketing', 'rsvp', 'conference', 'webinar'],
+  'placement-fee': ['listing fee', 'featured listing', 'placement', 'promote listing', 'promote your'],
+  'subscription-box': ['subscription box', 'monthly box', 'curated box', 'box subscription'],
 };
 
 // ─── Capability Keywords ─────────────────────────────────────────────────────

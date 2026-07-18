@@ -275,8 +275,13 @@ describe('Knowledge Pack Resolver', () => {
   });
 
   it('detects subscription business model', () => {
-    const result = resolveKnowledgePack('Build a monthly subscription box site');
+    const result = resolveKnowledgePack('Build a monthly subscription site');
     expect(result.classification.businessModel.primary).toBe('subscription');
+  });
+
+  it('detects subscription-box business model', () => {
+    const result = resolveKnowledgePack('Build a monthly subscription box site');
+    expect(result.classification.businessModel.primary).toBe('subscription-box');
   });
 
   it('detects startup maturity', () => {

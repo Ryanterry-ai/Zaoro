@@ -221,32 +221,95 @@ function detectGenericIndustry(lower: string): {
 
 // ─── Business Model Detection ───────────────────────────────────────────────
 
+/**
+ * Detect the PRIMARY business model from prompt keywords.
+ *
+ * Returns a canonical `bm.<id>`-style primary slug that aligns with the
+ * `BUSINESS_MODELS` registry in `src/bos/knowledge/registry.ts`. Detection is
+ * keyword-driven and intentionally broad; the canonical registry is the source
+ * of truth for model metadata, influences, and compatibility. This is a
+ * first-class orthogonal dimension — independent of vertical and audience.
+ */
 function detectBusinessModel(prompt: string): {
   primary: string;
   confidence: number;
 } {
   const lower = prompt.toLowerCase();
 
+  if (lower.includes('subscription box') || lower.includes('monthly box') || lower.includes('curated box')) {
+    return { primary: 'subscription-box', confidence: 0.85 };
+  }
   if (lower.includes('subscription') || lower.includes('monthly plan') || lower.includes('membership')) {
     return { primary: 'subscription', confidence: 0.8 };
   }
-  if (lower.includes('marketplace') || lower.includes('multi-vendor') || lower.includes('platform')) {
-    return { primary: 'marketplace', confidence: 0.7 };
+  if (lower.includes('marketplace') || lower.includes('multi-vendor') || lower.includes('two-sided')) {
+    return { primary: 'marketplace', confidence: 0.75 };
   }
-  if (lower.includes('booking') || lower.includes('appointment') || lower.includes('reservation')) {
+  if (lower.includes('booking') || lower.includes('appointment') || lower.includes('reservation') || lower.includes('schedule a viewing')) {
     return { primary: 'service-booking', confidence: 0.8 };
   }
-  if (lower.includes('donation') || lower.includes('charity') || lower.includes('nonprofit')) {
-    return { primary: 'donation', confidence: 0.8 };
+  if (lower.includes('donation') || lower.includes('charity') || lower.includes('nonprofit') || lower.includes('contribute')) {
+    return { primary: 'donation', confidence: 0.85 };
   }
   if (lower.includes('freemium') || lower.includes('free tier') || lower.includes('free plan')) {
-    return { primary: 'freemium', confidence: 0.7 };
+    return { primary: 'freemium', confidence: 0.75 };
   }
-  if (lower.includes('wholesale') || lower.includes('bulk') || lower.includes('distributor')) {
-    return { primary: 'wholesale', confidence: 0.7 };
+  if (lower.includes('free trial') || lower.includes('14-day') || lower.includes('try free')) {
+    return { primary: 'free-trial', confidence: 0.8 };
+  }
+  if (lower.includes('wholesale') || lower.includes('bulk') || lower.includes('distributor') || lower.includes('reseller')) {
+    return { primary: 'wholesale', confidence: 0.75 };
+  }
+  if (lower.includes('on-demand') || lower.includes('instant') || lower.includes('same-day') || lower.includes('request a courier')) {
+    return { primary: 'onsite', confidence: 0.8 };
+  }
+  if (lower.includes('usage-based') || lower.includes('pay-as-you-go') || lower.includes('metered') || lower.includes('per-use')) {
+    return { primary: 'usage-based', confidence: 0.8 };
+  }
+  if (lower.includes('permit') || lower.includes('license application') || lower.includes('civic') || lower.includes('government')) {
+    return { primary: 'govt-permit', confidence: 0.8 };
+  }
+  if (lower.includes('crowdfunding') || lower.includes('backers') || lower.includes('pledge')) {
+    return { primary: 'crowdfunding', confidence: 0.8 };
+  }
+  if (lower.includes('affiliate') || lower.includes('referral link') || lower.includes('partner program')) {
+    return { primary: 'affiliate', confidence: 0.75 };
+  }
+  if (lower.includes('franchise') || lower.includes('own a branch') || lower.includes('licensing the brand')) {
+    return { primary: 'franchise', confidence: 0.8 };
+  }
+  if (lower.includes('event') || lower.includes('ticket') || lower.includes('conference') || lower.includes('rsvp')) {
+    return { primary: 'event-ticketing', confidence: 0.8 };
+  }
+  if (lower.includes('agent') && (lower.includes('builder') || lower.includes('platform') || lower.includes('deploy'))) {
+    return { primary: 'agent-builder', confidence: 0.8 };
+  }
+  if (lower.includes('saas') || lower.includes('software platform') || lower.includes('dashboard preview')) {
+    return { primary: 'saas', confidence: 0.8 };
+  }
+  if (lower.includes('d2c') || lower.includes('direct to consumer') || lower.includes('direct-to-consumer')) {
+    return { primary: 'd2c', confidence: 0.8 };
+  }
+  if (lower.includes('b2b') || lower.includes('business to business') || lower.includes('enterprise clients')) {
+    return { primary: 'b2b', confidence: 0.8 };
+  }
+  if (lower.includes('agency') || lower.includes('retainer') || lower.includes('studio')) {
+    return { primary: 'agency', confidence: 0.8 };
+  }
+  if (lower.includes('consulting') || lower.includes('advisory') || lower.includes('consultation')) {
+    return { primary: 'consulting', confidence: 0.8 };
+  }
+  if (lower.includes('advertising') || lower.includes('ad space') || lower.includes('sponsored')) {
+    return { primary: 'advertising', confidence: 0.8 };
+  }
+  if (lower.includes('lead') || lower.includes('quote request') || lower.includes('inquiry')) {
+    return { primary: 'lead-gen', confidence: 0.7 };
+  }
+  if (lower.includes('listing fee') || lower.includes('featured listing') || lower.includes('placement')) {
+    return { primary: 'placement-fee', confidence: 0.75 };
   }
 
-  // Default: direct-sales
+  // Default: direct-sales (one-time purchase, direct to buyer)
   return { primary: 'direct-sales', confidence: 0.5 };
 }
 
