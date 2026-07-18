@@ -12,5 +12,4 @@ export { PromptProvider } from './prompt-provider.js';
 export { DesignDNAProvider } from './design-dna-provider.js';
 export { ScrapedContentProvider } from './scraped-content-provider.js';
 export { AgentProvider } from './agent-provider.js';
-export { DomainDataProvider } from './domain-data-provider.js';
 export { RequirementsProvider } from './requirements-provider.js';

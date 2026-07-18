@@ -12,8 +12,6 @@
 
 import type { ContentProvider, ContentBag, ProviderContext } from './interfaces.js';
 import type { BusinessResearch } from '../types.js';
-import { getDomainData } from '../../generation/domain-data.js';
-import { getIndustryCopy } from '../industry-copy-schema.js';
 
 export class PromptProvider implements ContentProvider {
   readonly name = 'prompt';
@@ -28,24 +26,23 @@ export class PromptProvider implements ContentProvider {
     const name = ctx.blueprint.name ?? 'Business';
     const research = ctx.businessResearch;
 
-    // Use domain data as fallback for richer content
-    const domainData = getDomainData(research?.industry ?? 'ecommerce', research?.subIndustry);
-
-    const copy = getIndustryCopy(ctx.blueprint.industry ?? 'restaurant');
+    // Vertical-agnostic section copy derived from the business itself
+    // (its vocabulary / business type), never from a hardcoded industry pool.
+    const copy = this.deriveCopy(ctx);
 
     return {
       hero: {
         title: name,
-        subtitle: this.generateSubtitle(desc, name, research, domainData),
+        subtitle: this.generateSubtitle(desc, name, research),
       },
       features: {
         title: copy.featuresHeading,
         subtitle: copy.featuresSubheading,
-        items: this.generateFeatures(desc, research, domainData),
+        items: this.generateFeatures(desc, research),
       },
       about: {
         title: `About ${name}`,
-        description: this.generateAbout(desc, name, research, domainData),
+        description: this.generateAbout(desc, name, research),
       },
       cta: {
         title: copy.ctaHeading,
@@ -56,16 +53,29 @@ export class PromptProvider implements ContentProvider {
     };
   }
 
+  /** Derive neutral section headings from the blueprint vocabulary/type. */
+  private deriveCopy(ctx: ProviderContext): {
+    featuresHeading: string; featuresSubheading: string;
+    ctaHeading: string; ctaTrustLine: string;
+    ctaPrimaryButton: string; heroSecondaryButton: string;
+  } {
+    const name = ctx.blueprint.name ?? 'us';
+    const productTerm = ctx.blueprint.vocabulary?.['product'] ?? 'offerings';
+    return {
+      featuresHeading: 'What we offer',
+      featuresSubheading: `Everything ${name} delivers, built around your needs`,
+      ctaHeading: `Ready to get started with ${name}?`,
+      ctaTrustLine: 'No commitment required — explore at your own pace',
+      ctaPrimaryButton: 'Get Started',
+      heroSecondaryButton: `View ${productTerm}`,
+    };
+  }
+
   /**
    * Generate hero subtitle from BusinessResearch.userPersonas.
    * Falls back to domain data for richer content.
    */
-  private generateSubtitle(desc: string, name: string, research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): string {
-    // Use domain data subtitle if available (e.g., supplement-specific)
-    if (domainData?.hero?.subtitle) {
-      return domainData.hero.subtitle;
-    }
-
+  private generateSubtitle(desc: string, name: string, research?: BusinessResearch): string {
     if (research?.userPersonas && research.userPersonas.length > 0) {
       const personas = research.userPersonas.slice(0, 3).join(', ');
       // Use a clean description — never echo raw prompt text
@@ -78,16 +88,7 @@ export class PromptProvider implements ContentProvider {
   /**
    * Generate features from BusinessResearch.customerFlow or domain data.
    */
-  private generateFeatures(desc: string, research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): Array<{ title: string; description: string; icon: string }> {
-    // Use domain data features if available (e.g., supplement-specific)
-    if (domainData?.features && domainData.features.length > 0) {
-      return domainData.features.slice(0, 6).map(f => ({
-        title: f.title,
-        description: f.description,
-        icon: f.iconKeyword ?? f.icon,
-      }));
-    }
-
+  private generateFeatures(desc: string, research?: BusinessResearch): Array<{ title: string; description: string; icon: string }> {
     const features: Array<{ title: string; description: string; icon: string }> = [];
 
     if (research?.customerFlow && research.customerFlow.length > 0) {
@@ -133,12 +134,7 @@ export class PromptProvider implements ContentProvider {
   /**
    * Generate about text from BusinessResearch or domain data.
    */
-  private generateAbout(desc: string, name: string, research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): string {
-    // Use domain data about if available
-    if (domainData?.hero?.subtitle) {
-      return `${name} — ${domainData.hero.subtitle}`;
-    }
-
+  private generateAbout(desc: string, name: string, research?: BusinessResearch): string {
     if (research) {
       const personas = research.userPersonas?.slice(0, 2).join(' and ') || 'your users';
       const revenueDesc = research.revenueFlow?.[0]?.replace(/-/g, ' ') || 'direct sales';
@@ -147,15 +143,7 @@ export class PromptProvider implements ContentProvider {
     return `${name} — purpose-built for how your team actually works`;
   }
 
-  /**
-   * Generate CTA subtitle from BusinessResearch.revenueFlow or domain data.
-   */
-  private generateCTASubtitle(research?: BusinessResearch, domainData?: ReturnType<typeof getDomainData>): string {
-    // Use domain data CTA if available
-    if (domainData?.cta?.subtitle) {
-      return domainData.cta.subtitle;
-    }
-
+  private generateCTASubtitle(research?: BusinessResearch): string {
     if (research?.revenueFlow?.includes('subscription')) return 'Start your subscription today';
     if (research?.revenueFlow?.includes('membership')) return 'Join our community';
     if (research?.revenueFlow?.includes('service-booking')) return 'Book your first session';
@@ -166,7 +154,7 @@ export class PromptProvider implements ContentProvider {
   /**
    * Generate CTA actions from BusinessResearch.revenueFlow.
    */
-  private generateCTAActions(research?: BusinessResearch, copy?: ReturnType<typeof getIndustryCopy>): Array<{ label: string; action: string; style: 'link' | 'primary' | 'secondary' | 'ghost' }> {
+  private generateCTAActions(research?: BusinessResearch, copy?: ReturnType<typeof PromptProvider.prototype.deriveCopy>): Array<{ label: string; action: string; style: 'link' | 'primary' | 'secondary' | 'ghost' }> {
     const revenueFlow = research?.revenueFlow?.[0] || 'direct-sales';
     const ctaLabel = copy?.ctaPrimaryButton ?? 'Get Started';
     const secondaryLabel = copy?.heroSecondaryButton ?? 'Learn More';

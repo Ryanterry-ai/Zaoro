@@ -36,7 +36,6 @@ import {
   DesignDNAProvider,
   ScrapedContentProvider,
   AgentProvider,
-  DomainDataProvider,
   RequirementsProvider,
   type ContentBag,
   type ProviderContext,
@@ -310,7 +309,6 @@ export function resolveContent(
 /** Create and register all content providers */
 function createProviderRegistry(): ContentProviderRegistry {
   const registry = new ContentProviderRegistry();
-  registry.register(new DomainDataProvider());
   registry.register(new BOSKnowledgeProvider());
   registry.register(new PromptProvider());
   registry.register(new DesignDNAProvider());

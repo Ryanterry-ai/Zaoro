@@ -13,7 +13,6 @@
 
 import type { ContentProvider, ContentBag, ProviderContext } from './interfaces.js';
 import type { BusinessResearch } from '../types.js';
-import { getIndustryCopy } from '../industry-copy-schema.js';
 
 export class AgentProvider implements ContentProvider {
   readonly name = 'agent';
@@ -26,9 +25,9 @@ export class AgentProvider implements ContentProvider {
   provide(ctx: ProviderContext): ContentBag {
     const { blueprint, vocabulary, subCategory, revenueIntelligence, businessResearch, scrapedContent } = ctx;
 
-    // Use industry copy trust badges instead of raw businessType (avoids prompt leaking)
-    const industryCopy = getIndustryCopy(blueprint.industry ?? 'restaurant');
-    const badge = industryCopy.heroTrustBadges?.[0] ?? blueprint.industry;
+    // Vertical-agnostic badge: prefer a scraped trust signal, else the
+    // business's own name/type — never a hardcoded industry pool.
+    const badge = vocabulary?.['appName'] ?? blueprint.name ?? blueprint.industry ?? 'Business';
 
     // Only generate testimonials if scraped content doesn't have them
     const hasScrapedTestimonials = scrapedContent?.testimonials && scrapedContent.testimonials.length > 0;
@@ -40,11 +39,11 @@ export class AgentProvider implements ContentProvider {
     return {
       hero: {
         badge,
-        // Do NOT set title here — let ScrapedContentProvider or DomainDataProvider provide it
+        // Do NOT set title here — let ScrapedContentProvider provide it
       },
       features: {
-        title: getIndustryCopy(blueprint.industry ?? 'restaurant').featuresHeading,
-        subtitle: getIndustryCopy(blueprint.industry ?? 'restaurant').featuresSubheading,
+        title: 'What we offer',
+        subtitle: `Everything ${blueprint.name ?? 'we'} deliver, built around your needs`,
       },
       about: {
         title: `About ${blueprint.name ?? blueprint.industry}`,
@@ -128,8 +127,7 @@ export class AgentProvider implements ContentProvider {
    */
   private generateCTATitle(blueprint: ProviderContext['blueprint'], research?: BusinessResearch): string {
     const name = blueprint.name ?? 'us';
-    const copy = getIndustryCopy(blueprint.industry ?? 'restaurant');
-    return copy.ctaHeading;
+    return `Ready to get started with ${name}?`;
   }
 
   /**
@@ -179,10 +177,10 @@ export class AgentProvider implements ContentProvider {
         { label: 'See Features', action: '#features', style: 'ghost' },
       ];
     }
-    const copy = getIndustryCopy(blueprint.industry ?? 'restaurant');
+    const productTerm = blueprint.vocabulary?.['product'] ?? 'offerings';
     return [
-      { label: copy.ctaPrimaryButton, action: '/register', style: 'primary' },
-      { label: copy.heroSecondaryButton, action: '/about', style: 'ghost' },
+      { label: 'Get Started', action: '/register', style: 'primary' },
+      { label: `View ${productTerm}`, action: '/about', style: 'ghost' },
     ];
   }
 
