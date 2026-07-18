@@ -565,7 +565,7 @@ function resolveFeatureGrid(
       title: { value: features.title ?? copy.featuresHeading, type: 'text' },
       subtitle: { value: features.subtitle ?? copy.featuresSubheading, type: 'text' },
     },
-    items: features.items ?? resolveFeatures(ctx),
+    items: features.items ?? (ctx.businessKnowledge ? getIndustryFeatures(ctx) : resolveFeatures(ctx)),
     layout: { alignment: 'center', maxWidth: '7xl' },
   };
 }
@@ -2036,47 +2036,14 @@ function resolveGenericComponent(
 // ─── Business Content Resolvers ──────────────────────────────────────────────
 
 function resolveFeatures(ctx: ContentResolverContext): ItemSpec[] {
+  // Vertical-agnostic path: when BusinessKnowledge is present, features are
+  // derived from customer-facing workflows and entities (see getIndustryFeatures).
+  // This branch only runs for legacy/BK-absent callers.
+  if (ctx.businessKnowledge) {
+    return getIndustryFeatures(ctx);
+  }
+
   const items: ItemSpec[] = [];
-  const desc = ctx.blueprint.description?.toLowerCase() ?? '';
-  const industry = ctx.blueprint.industry;
-  const country = ctx.blueprint.country;
-
-  // Supplement-specific features — highest priority
-  if (desc.includes('supplement') || desc.includes('protein') || desc.includes('nutrition') || industry === 'ecommerce-supplement') {
-    const paymentText = country === 'IN' ? 'UPI, Razorpay, cards, and COD — pay your way' : 'Secure checkout with multiple payment options';
-    return [
-      { title: 'Multi-Brand Catalog', description: 'Browse 500+ supplements from MuscleBlaze, Nutrabay, MyProtein, and more', icon: 'Grid' },
-      { title: 'Authentic Products', description: '100% genuine supplements with FSSAI certification and lab reports', icon: 'ShieldCheck' },
-      { title: 'Fast Delivery', description: country === 'IN' ? 'Free shipping across India with express delivery in metro cities' : 'Free shipping with express delivery available', icon: 'Truck' },
-      { title: 'Expert Guidance', description: 'Personalized supplement recommendations based on your fitness goals', icon: 'Compass' },
-      { title: 'Easy Returns', description: 'Hassle-free returns within 7 days for unopened products', icon: 'RotateCcw' },
-      { title: 'Secure Payments', description: paymentText, icon: 'CreditCard' },
-    ];
-  }
-
-  // Restaurant-specific features
-  if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('food') || industry === 'restaurant') {
-    return [
-      { title: 'Online Ordering', description: 'Order ahead for pickup or delivery in minutes', icon: 'ShoppingBag' },
-      { title: 'Table Reservations', description: 'Book your table in real-time, no waiting', icon: 'Calendar' },
-      { title: 'Dynamic Menu', description: 'Seasonal specials and daily rotating dishes', icon: 'BookOpen' },
-      { title: 'Loyalty Rewards', description: 'Earn points on every order, redeem for free meals', icon: 'Award' },
-      { title: 'Fresh Ingredients', description: 'Locally sourced, seasonal produce from trusted farms', icon: 'Leaf' },
-      { title: 'Gift Cards', description: 'Share the experience with friends and family', icon: 'CreditCard' },
-    ];
-  }
-
-  // Fitness-specific features
-  if (desc.includes('fitness') || desc.includes('gym') || desc.includes('yoga') || industry === 'fitness') {
-    return [
-      { title: 'Class Booking', description: 'Reserve your spot in yoga, HIIT, spinning, and more', icon: 'Calendar' },
-      { title: 'Personal Training', description: 'One-on-one sessions with certified trainers', icon: 'Users' },
-      { title: 'Workout Tracking', description: 'Log exercises, track progress, celebrate milestones', icon: 'Activity' },
-      { title: 'Nutrition Plans', description: 'Custom meal plans tailored to your fitness goals', icon: 'Heart' },
-      { title: 'Member Community', description: 'Connect with fellow members and share your journey', icon: 'Users' },
-      { title: 'Flexible Memberships', description: 'Plans that fit your schedule and budget', icon: 'CreditCard' },
-    ];
-  }
 
   // Entity-based features
   for (const entity of ctx.blueprint.entities.slice(0, 4)) {

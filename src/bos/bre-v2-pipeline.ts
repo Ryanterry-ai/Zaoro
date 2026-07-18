@@ -257,5 +257,6 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     ...(ctx.businessResearch ? { businessResearch: ctx.businessResearch } : {}),
     ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
     ...(ctx.scrapedContent ? { scrapedContent: ctx.scrapedContent } : {}),
+    ...(ctx.businessKnowledge ? { businessKnowledge: ctx.businessKnowledge } : {}),
   };
 }

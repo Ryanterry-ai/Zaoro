@@ -128,7 +128,7 @@ describe('E2E: Supplement Store for Indian Customers', () => {
     }
   });
 
-  it('resolved content has supplement-specific features', () => {
+  it('resolved content has signal-derived, domain-grounded features', () => {
     const executionBlueprint = buildExecutionBlueprint(breResult.blueprint);
 
     const matchedPattern = breResult.selectedPattern
@@ -145,6 +145,7 @@ describe('E2E: Supplement Store for Indian Customers', () => {
       ...(matchedDesignProfile ? { designProfile: matchedDesignProfile } : {}),
       ...(breResult.revenueIntelligence ? { revenueIntelligence: breResult.revenueIntelligence } : {}),
       ...(breResult.businessResearch ? { businessResearch: breResult.businessResearch } : {}),
+      ...(breResult.businessKnowledge ? { businessKnowledge: breResult.businessKnowledge } : {}),
     });
 
     console.log('=== APP SPEC ===');
@@ -179,7 +180,18 @@ describe('E2E: Supplement Store for Indian Customers', () => {
     expect(featureItems.length).toBeGreaterThan(0);
 
     const allFeatureText = featureItems.map(i => `${i.title} ${i.description}`).join(' ').toLowerCase();
-    expect(allFeatureText).toMatch(/fssai|supplement|protein|muscleblaze|nutrabay|genuine|certification/);
+
+    // Features must be signal-derived from the store's real domain — its
+    // entities and customer-facing workflows — NOT hardcoded brand names or
+    // internal analytics widgets. We assert the copy is grounded in the
+    // blueprint's own vocabulary and free of the admin-metric leak.
+    const entityNames = breResult.blueprint.entities.map(e => e.name.toLowerCase());
+    const grounded = entityNames.some(name => name.length > 2 && allFeatureText.includes(name))
+      || /product|order|cart|checkout|catalog|browse|shop|purchase|delivery/.test(allFeatureText);
+    expect(grounded).toBe(true);
+
+    // The dashboard-widget leak must never resurface as marketing copy.
+    expect(allFeatureText).not.toMatch(/revenue trend|engagement overview|retention health|recent activity/);
 
     console.log(`Feature count: ${featureItems.length}`);
     for (const f of featureItems) {
