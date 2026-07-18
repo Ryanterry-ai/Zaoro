@@ -20,6 +20,7 @@ import type { BREContext } from './reasoning/rules-engine';
 import type { BusinessIntelligenceProfile } from './schemas/knowledge/business-intelligence.schema';
 import type { BusinessResearch, ScrapedContent } from './types';
 import { understandBusiness } from '../orchestration/business-intelligence/engine.js';
+import { deriveRevenueIntelligence } from '../orchestration/business-intelligence/revenue-intelligence.js';
 
 interface IndustryMapping {
   industry: string;
@@ -1300,22 +1301,6 @@ export async function buildBREContext(prompt: string): Promise<BREContext> {
   // how customers interact, how the business operates.
   result.businessResearch = buildBusinessResearch(prompt, industry, subIndustry, country);
 
-  // Load revenue intelligence from BOS entry if available
-  try {
-    const { BOSRegistry } = require('./registry.js');
-    const lookupResult = BOSRegistry.lookup({
-      industry: result.industry,
-      subIndustry: result.subIndustry,
-      businessModels: result.businessModels,
-      capabilities: result.capabilities,
-    });
-    if (lookupResult?.entry?.revenueIntelligence) {
-      result.revenueIntelligence = lookupResult.entry.revenueIntelligence;
-    }
-  } catch {
-    // BOS registry not available, skip revenue intelligence
-  }
-
   // Attach raw industry score as a hidden signal for the confidence gate.
   // We use the description field to pass it through without changing BREContext schema.
   // The confidence gate reads it via the exported detectIndustryWithScore function.
@@ -1331,6 +1316,20 @@ export async function buildBREContext(prompt: string): Promise<BREContext> {
     result.businessKnowledge = understandBusiness(prompt);
   } catch (biErr) {
     console.warn('[BI Engine] failed (continuing without):', (biErr as Error).message);
+  }
+
+  // Derive revenue intelligence from signal-driven BusinessKnowledge — the
+  // vertical-agnostic replacement for the old hardcoded BOS entry lookup. This
+  // guarantees EVERY business (not just 7 verticals or scraped sites) gets a
+  // revenue model, KPIs, funnel, churn signals and dashboard widgets. The
+  // scraper path (bre-v2-pipeline) may still overwrite this later with live
+  // evidence when a real reference site is available.
+  if (!result.revenueIntelligence && result.businessKnowledge) {
+    try {
+      result.revenueIntelligence = deriveRevenueIntelligence(result.businessKnowledge);
+    } catch (riErr) {
+      console.warn('[Revenue Intelligence] derivation failed (continuing without):', (riErr as Error).message);
+    }
   }
 
   return result;

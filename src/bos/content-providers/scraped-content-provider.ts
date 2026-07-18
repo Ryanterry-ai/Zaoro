@@ -37,21 +37,18 @@ export class ScrapedContentProvider implements ContentProvider {
       };
     }
 
-    // Features from product specs
+    // Customer-facing marketing features come ONLY from real product specs
+    // scraped off the live site. Internal analytics dashboard widgets
+    // ("Revenue Trend", "Engagement Overview") are admin-facing metrics and
+    // must never leak into homepage feature copy. When no product specs exist,
+    // leave `features` unset so the content-resolver derives them from the
+    // business's capabilities/entities instead.
     if (scraped?.productSpecs && scraped.productSpecs.length > 0) {
       result.features = {
         items: scraped.productSpecs.slice(0, 6).map((spec, i) => ({
           title: spec,
           description: `${spec} — core capability`,
           icon: (['zap', 'database', 'shield', 'lock', 'trending-up', 'code'] as const)[i] ?? 'zap',
-        })),
-      };
-    } else if (bi?.dashboardWidgets && bi.dashboardWidgets.length > 0) {
-      result.features = {
-        items: bi.dashboardWidgets.slice(0, 6).map(w => ({
-          title: w.name,
-          description: w.description,
-          icon: w.type === 'chart' ? 'bar-chart' : w.type === 'stat-card' ? 'activity' : 'zap',
         })),
       };
     }

@@ -240,7 +240,7 @@ export interface TaxonomyRegistry {
  * - Compliance (intake-parser.ts)
  * - Experience profiles (experience-profiles.ts)
  * - Templates (templates/*.ts)
- * - BOS entries (bos/entries/*.ts)
+ * - Revenue intelligence (orchestration/business-intelligence/revenue-intelligence.ts, signal-derived)
  * - Reference URLs (reference-scraper.ts)
  */
 export interface KnowledgePack {
