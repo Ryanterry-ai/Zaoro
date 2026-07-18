@@ -24,6 +24,7 @@
 
 import type { BusinessKnowledge, BusinessIntents } from '../business-intelligence/types.js';
 import { analyzeContentFidelity } from './content-fidelity.js';
+import { analyzeExperienceFidelity } from './experience-fidelity.js';
 
 export type GapCategory =
   | 'business-content'
@@ -35,7 +36,8 @@ export type GapCategory =
   | 'performance'
   | 'ssr'
   | 'fidelity'
-  | 'content-fidelity';
+  | 'content-fidelity'
+  | 'experience-fidelity';
 
 export type RepairAction = 'regenerate' | 'acquire-evidence' | 'patch' | 'none';
 
@@ -66,10 +68,12 @@ export interface VerificationReport {
     ssr: boolean;
     fidelity: boolean;
     contentFidelity: boolean;
+    experienceFidelity: boolean;
   };
   /** Per-dimension confidence scores (0..1), for production-readiness gating. */
   dimensions?: {
     contentFidelity: number;
+    experienceFidelity: number;
   };
 }
 
@@ -312,6 +316,20 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
     });
   }
 
+  // ── 11. Experience fidelity (motion / visual / conversion / emotional arc) ──
+  // The experience must FEEL and BEHAVE as requested, not merely read correctly.
+  const xf = analyzeExperienceFidelity(files, businessKnowledge);
+  const experienceFidelity = xf.issues.filter((i) => i.severity === 'error').length === 0;
+  for (const issue of xf.issues) {
+    gaps.push({
+      category: 'experience-fidelity',
+      severity: issue.severity,
+      detail: `${issue.kind}: ${issue.detail}`,
+      repair: 'regenerate',
+      target: 'experience-intelligence',
+    });
+  }
+
   const signals = {
     businessContent,
     interaction: requestedInteractions.length === 0 ? true : interactionOk,
@@ -323,13 +341,20 @@ export function verifyBuild(input: VerificationInput): VerificationReport {
     ssr,
     fidelity,
     contentFidelity,
+    experienceFidelity,
   };
 
   const checks = Object.values(signals);
   const score = checks.filter(Boolean).length / checks.length;
   const passed = gaps.filter((g) => g.severity === 'error').length === 0;
 
-  return { passed, score, gaps, signals, dimensions: { contentFidelity: cf.score } };
+  return {
+    passed,
+    score,
+    gaps,
+    signals,
+    dimensions: { contentFidelity: cf.score, experienceFidelity: xf.score },
+  };
 }
 
 /**

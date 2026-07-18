@@ -70,6 +70,10 @@ async function main() {
   console.log(`  passed         : ${report.passed}`);
   console.log(`  score          : ${report.score.toFixed(2)}`);
   console.log(`  gaps           : ${report.gaps.length}`);
+  if (report.dimensions) {
+    console.log(`  contentFidelity: ${report.dimensions.contentFidelity.toFixed(2)}`);
+    console.log(`  experienceFid. : ${report.dimensions.experienceFidelity.toFixed(2)}`);
+  }
   for (const g of report.gaps) {
     console.log(`    - [${g.severity}] ${g.category}: ${g.detail}`);
   }
