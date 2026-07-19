@@ -414,6 +414,31 @@ const PRODUCT_TEMPLATES: Record<string, {
     dataModels: ['Doctor', 'Service', 'Appointment', 'Testimonial', 'Insurance'],
     defaultHeroLayout: 'left',
   },
+  // ── Audio / Consumer Electronics (taxonomy-gap coverage) ─────────────────
+  // These are reusable composition blueprints keyed by product signal, NOT
+  // vertical logic. A headphone / audio-brand site needs product-showcase,
+  // spec, lifestyle and a scroll-driven story — not SaaS dashboard sections.
+  'headphone': {
+    sections: ['navbar', 'hero', 'sound-story', 'product-showcase', 'specs', 'lifestyle', 'testimonials', 'purchase', 'footer'],
+    features: ['360° product viewer', 'Spec comparison', 'Sound profile selector', 'Noise-cancellation demo', 'Quick add to cart', 'Review grid'],
+    animations: ['Parallax hero', 'Scroll reveal', 'Scale-in on focus', 'Text reveal', 'Fade-up', 'Stagger cards'],
+    dataModels: ['Product', 'Review', 'Variant', 'Spec'],
+    defaultHeroLayout: 'full-width',
+  },
+  'audio-brand': {
+    sections: ['navbar', 'hero', 'sound-story', 'product-showcase', 'lifestyle', 'specs', 'testimonials', 'purchase', 'footer'],
+    features: ['Product showcase', 'Immersive sound story', 'Lineup grid', 'Spec sheets', 'Artist/use-case stories', 'Store locator'],
+    animations: ['Scroll-driven narrative', 'Scroll reveal', 'Scale-in', 'Marquee', 'Text reveal', 'Fade-up'],
+    dataModels: ['Product', 'Review', 'Variant', 'Story'],
+    defaultHeroLayout: 'full-width',
+  },
+  'consumer-electronics': {
+    sections: ['navbar', 'hero', 'product-showcase', 'features', 'specs', 'testimonials', 'purchase', 'footer'],
+    features: ['Product grid', 'Feature highlights', 'Spec comparison', 'Quick view', 'Cart', 'Review grid'],
+    animations: ['Product grid stagger', 'Card hover lift', 'Scroll reveal', 'Scale-in', 'Fade-up'],
+    dataModels: ['Product', 'Variant', 'Spec', 'Review'],
+    defaultHeroLayout: 'centered',
+  },
 };
 
 // ─── Section Layout Library ────────────────────────────────────────────────
@@ -942,6 +967,8 @@ export class SkillIntegrator {
   }
 
   private paletteKeyFromIntents(intents: BusinessIntents, quality: string[]): PaletteKey {
+    // Audio / consumer electronics → dark, neon-on-near-black tech palette.
+    if (intents.product?.includes('audio') || intents.product?.includes('consumer-electronics') || intents.product?.includes('headphone')) return 'saas-dark';
     if (intents.emotional.includes('luxury') || quality.includes('luxury')) return 'ecommerce-luxury';
     if (intents.emotional.includes('chaos-to-calm') || intents.emotional.includes('serenity') || intents.motion.includes('calm')) return 'creative-agency';
     if (intents.emotional.includes('excitement') || intents.motion.includes('energetic')) return 'gaming';
@@ -952,6 +979,7 @@ export class SkillIntegrator {
   }
 
   private fontKeyFromIntents(intents: BusinessIntents, quality: string[]): FontKey {
+    if (intents.product?.includes('audio') || intents.product?.includes('consumer-electronics') || intents.product?.includes('headphone')) return 'tech';
     if (intents.emotional.includes('luxury') || quality.includes('luxury')) return 'luxury';
     if (intents.experience.includes('editorial')) return 'editorial';
     if (intents.motion.includes('cinematic') || intents.emotional.includes('excitement')) return 'tech';
@@ -962,6 +990,10 @@ export class SkillIntegrator {
     // Map signal intents onto EXISTING PRODUCT_TEMPLATES keys (the skills'
     // curated section/animation sets). No new vertical code is added — these
     // are reusable composition blueprints, not industry logic.
+    // Audio / consumer electronics MUST be checked first: a futuristic headphone
+    // site also fires cinematic/immersive-scroll signals that would otherwise
+    // resolve to luxury-watch/agency and lose the product-showcase template.
+    if (intents.product?.includes('headphone') || intents.product?.includes('audio') || intents.product?.includes('consumer-electronics')) return 'headphone';
     if (intents.interaction.includes('dashboard') || intents.interaction.includes('hud')) return 'saas-dashboard';
     if (intents.interaction.includes('configurator') || intents.interaction.includes('builder')) return 'ecommerce';
     if (intents.emotional.includes('luxury') || intents.motion.includes('cinematic')) return 'luxury-watch';
@@ -1117,6 +1149,10 @@ export class SkillIntegrator {
       luxury: 'ecommerce-luxury',
       fashion: 'ecommerce-luxury',
       jewelry: 'ecommerce-luxury',
+      'headphone': 'saas-dark',
+      'audio': 'saas-dark',
+      'audio-brand': 'saas-dark',
+      'consumer-electronics': 'saas-dark',
       b2b: 'b2b-service',
       fintech: 'fintech-crypto',
       crypto: 'fintech-crypto',
@@ -1162,6 +1198,10 @@ export class SkillIntegrator {
       tech: 'tech',
       saas: 'tech',
       startup: 'tech',
+      'headphone': 'tech',
+      'audio': 'tech',
+      'audio-brand': 'tech',
+      'consumer-electronics': 'tech',
       editorial: 'editorial',
       blog: 'editorial',
       magazine: 'editorial',

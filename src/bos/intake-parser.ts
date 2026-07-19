@@ -715,6 +715,36 @@ function detectCountry(prompt: string): string | undefined {
   return undefined;
 }
 
+// ─── Design mood detection (vertical-agnostic aesthetic signal) ──────────────
+
+const MOOD_KEYWORDS: Record<string, string> = {
+  futuristic: 'futuristic',
+  cinematic: 'cinematic',
+  immersive: 'immersive',
+  calming: 'calming',
+  calm: 'calm',
+  calmly: 'calm',
+  serene: 'calm',
+  peaceful: 'calm',
+  minimal: 'minimal',
+  minimalist: 'minimal',
+  bold: 'bold',
+  playful: 'playful',
+  dark: 'dark',
+  light: 'light',
+  luxury: 'luxury',
+  luxurious: 'luxury',
+  premium: 'luxury',
+};
+
+function detectDesignMood(prompt: string): string | undefined {
+  const lower = prompt.toLowerCase();
+  for (const [kw, mood] of Object.entries(MOOD_KEYWORDS)) {
+    if (lower.includes(kw)) return mood;
+  }
+  return undefined;
+}
+
 // ─── App name extraction ─────────────────────────────────────────────────────
 
 function extractAppName(prompt: string): string | undefined {
@@ -1340,6 +1370,10 @@ export async function buildBREContext(prompt: string): Promise<BREContext> {
   // how customers interact, how the business operates.
   result.businessResearch = buildBusinessResearch(prompt, industry, subIndustry, country);
 
+  // Extract explicit design mood from prompt adjectives (vertical-agnostic).
+  const designMood = detectDesignMood(prompt);
+  if (designMood) result.designMood = designMood;
+
   // Attach raw industry score as a hidden signal for the confidence gate.
   // We use the description field to pass it through without changing BREContext schema.
   // The confidence gate reads it via the exported detectIndustryWithScore function.
@@ -1355,6 +1389,32 @@ export async function buildBREContext(prompt: string): Promise<BREContext> {
     result.businessKnowledge = understandBusiness(prompt);
   } catch (biErr) {
     console.warn('[BI Engine] failed (continuing without):', (biErr as Error).message);
+  }
+
+  // Fold the explicit design mood into BusinessKnowledge intents so the
+  // signal-driven design path honors creative direction (futuristic →
+  // cinematic motion + dark palette; calming → calm motion + muted palette).
+  if (result.businessKnowledge && designMood) {
+    const bk = result.businessKnowledge;
+    const moodToMotion: Record<string, string> = {
+      futuristic: 'cinematic',
+      cinematic: 'cinematic',
+      immersive: 'scroll-driven',
+      calming: 'calm',
+      calm: 'calm',
+      bold: 'energetic',
+      playful: 'energetic',
+      minimal: 'calm',
+      dark: 'cinematic',
+      luxury: 'cinematic',
+    };
+    const motion = moodToMotion[designMood];
+    if (motion && !bk.intents.motion.includes(motion)) {
+      bk.intents.motion = [...bk.intents.motion, motion];
+    }
+    if (!bk.intents.emotional.includes(designMood) && ['luxury', 'calm', 'serenity', 'excitement', 'trust'].includes(designMood)) {
+      bk.intents.emotional = [designMood, ...bk.intents.emotional];
+    }
   }
 
   // Derive revenue intelligence from signal-driven BusinessKnowledge — the

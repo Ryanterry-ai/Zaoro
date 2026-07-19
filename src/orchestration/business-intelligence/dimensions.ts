@@ -37,6 +37,8 @@ const LEXICONS: Lexicon[] = [
   { dimension: 'product-nature', value: 'media-stream', words: ['streaming', 'stream', 'film', 'films', 'movie', 'movies', 'series', 'episode', 'watchlist', 'video-on-demand', 'vod', 'channel', 'ott'] },
   { dimension: 'product-nature', value: 'course', words: ['course', 'courses', 'bootcamp', 'curriculum', 'lesson', 'cohort', 'enrollment', 'e-learning', 'lms', 'workshop', 'class'] },
   { dimension: 'product-nature', value: 'listing', words: ['listing', 'listings', 'property', 'properties', 'rental', 'rentals', 'classifieds', 'directory', 'inventory-listing'] },
+  { dimension: 'product-nature', value: 'audio', words: ['headphone', 'headphones', 'earbud', 'earbuds', 'speaker', 'speakers', 'audio', 'sound', 'sound-system', 'earphone', 'hi-fi', 'hifi', 'headset', 'soundbar'] },
+  { dimension: 'product-nature', value: 'consumer-electronics', words: ['electronics', 'gadget', 'device', 'smart-home', 'wearable', 'camera', 'drone', 'console', 'tablet', 'laptop'] },
 
   // channel — where it operates
   { dimension: 'channel', value: 'physical', words: ['cafe', 'restaurant', 'store', 'shop', 'salon', 'clinic', 'gym', 'studio', 'showroom', 'location', 'walk-in', 'branch'] },
@@ -319,6 +321,9 @@ export function extractIntents(signals: DiscoveredSignal[]): BusinessIntents {
   const conversion = dim('conversion-intent');
   const emotional = dim('emotional-intent');
   const content = dim('content-intent');
+  const product = dim('product-nature').filter(
+    (v) => v === 'audio' || v === 'consumer-electronics',
+  );
 
   return {
     experience: experience.length ? experience : ['editorial'],
@@ -327,5 +332,6 @@ export function extractIntents(signals: DiscoveredSignal[]): BusinessIntents {
     conversion: conversion.length ? conversion : (dim('monetization').includes('one-time') || dim('monetization').includes('wholesale') ? ['checkout'] : ['lead-form']),
     emotional: emotional.length ? emotional : ['trust'],
     content: content.length ? content : ['storytelling'],
+    product: product.length ? product : undefined,
   };
 }

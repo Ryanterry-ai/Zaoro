@@ -38,6 +38,13 @@ export interface BREContext {
   designBrief?: import('../../agents/orchestrator/subagents/design-agent.js').DesignBrief;
   /** Solution architecture decision from SAP — single authority for technology selection. */
   solutionArchitecture?: import('../types-solution-architecture.js').SolutionArchitectureDecision;
+  /**
+   * Explicit design mood extracted from prompt adjectives (futuristic, calming,
+   * cinematic, immersive, minimal, bold, …). Vertical-agnostic aesthetic signal
+   * that feeds BusinessKnowledge intents (emotional/motion) so the design DNA
+   * and renderer honor creative direction even when other signals are silent.
+   */
+  designMood?: string;
 }
 
 export interface Rule {

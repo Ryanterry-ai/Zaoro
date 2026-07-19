@@ -135,6 +135,8 @@ export interface BusinessIntents {
   emotional: string[];
   /** Content posture, e.g. "storytelling" | "minimal" | "educational" | "bold" */
   content: string[];
+  /** Product signal tokens (orthogonal, e.g. "audio" | "consumer-electronics"), used to pick product-showcase templates */
+  product?: string[];
 }
 
 // ─── People: personas, roles ────────────────────────────────────────────────
