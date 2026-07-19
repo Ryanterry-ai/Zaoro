@@ -1384,8 +1384,8 @@ function ChaosBar({ index, amplitude }: { index: number; amplitude: ReturnType<t
 
     return `'use client';
 
-import React, { useState${componentName === 'HeroBanner' ? ', useRef' : ''} } from 'react';
-import { motion${componentName === 'HeroBanner' && !heroUsesGsap ? ', useScroll, useTransform' : ''} } from 'framer-motion';
+ import React, { useState, useRef } from 'react';
+ import { motion${componentName === 'HeroBanner' && !heroUsesGsap ? ', useScroll, useTransform, useSpring, useMotionValueEvent' : (componentName === 'Sound-story' || componentName === 'SoundStory' ? ', useScroll, useTransform, useSpring, useMotionValueEvent' : '')} } from 'framer-motion';
 ${heroUsesGsap ? "import { gsap } from 'gsap';\nimport { ScrollTrigger } from 'gsap/ScrollTrigger';\nimport { useGSAP } from '@gsap/react';\ngsap.registerPlugin(ScrollTrigger);\n" : ''}${body.includes('<Icon') ? "import Icon from './Icon';\n" : ''}
 ${propsInterface}
 
@@ -1465,6 +1465,8 @@ ${body}
       case 'Footer':          lines.push(...this.generateFooterBody(spec)); break;
       case 'CalendarWidget':  lines.push(...this.generateCalendarWidgetBody(spec)); break;
       case 'BookingCalendar': lines.push(...this.generateBookingCalendarBody(spec)); break;
+      case 'SoundStory':
+      case 'Sound-story':      lines.push(...this.generateSoundStoryBody(spec)); break;
       default:                lines.push(...this.generateGenericBody(spec)); break;
     }
 
@@ -1875,8 +1877,117 @@ ${body}
       `          ))}`,
       `        </motion.div>`,
       `      </div>`,
-      `    </motion.section>`,
+        `    </motion.section>`,
       `  );`,
+    ];
+  }
+
+  /**
+   * Sound-story section — a self-contained immersive scroll component.
+   * Signal-driven: emitted for the 'sound-story'/'SoundStory' template section.
+   * A field of chaotic soundwaves collapses into a single calm point as the
+   * user scrolls (noise transforms into silence / focus). The calm label and
+   * accent colours are derived from UNIVERSAL intents — no industry branching.
+   */
+  private generateSoundStoryBody(spec: ComponentSpec): string[] {
+    const intents = this.currentContext?.businessKnowledge?.intents;
+    const isCalm = intents
+      ? intents.emotional.includes('serenity') || intents.motion.includes('calm')
+      : true;
+    const calmLabel = isCalm ? 'silence' : 'focus';
+    const accentA = isCalm ? '8,145,178' : '236,72,153'; // cyan : pink
+    const accentB = isCalm ? '236,72,153' : '8,145,178';
+
+    return [
+      `  const ref = useRef<HTMLDivElement>(null);`,
+      `  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });`,
+      `  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 26 });`,
+      ``,
+      `  const waveAmplitude = useTransform(progress, [0, 1], [60, 2]);`,
+      `  const waveOpacity = useTransform(progress, [0, 1], [1, 0.12]);`,
+      `  const calmScale = useTransform(progress, [0.6, 1], [0.6, 1.4]);`,
+      `  const calmOpacity = useTransform(progress, [0.55, 1], [0, 1]);`,
+      `  const bgLight = useTransform(progress, [0, 1], [0.02, 0.06]);`,
+      `  const noiseTextOpacity = useTransform(progress, [0, 0.4], [1, 0]);`,
+      ``,
+      `  const beats = [`,
+      `    { title: 'The world is loud.', body: 'A wall of overlapping signals. This is before.' },`,
+      `    { title: 'Then, a threshold.', body: 'The room is read, and the noise begins to fold back on itself.' },`,
+      `    { title: 'The static thins.', body: 'A roar becomes a whisper, then a tide pulling out to sea.' },`,
+      `    { title: 'Complete ${calmLabel}.', body: 'Nothing left but the low hum of your own pulse.' },`,
+      `  ];`,
+      `  const [active, setActive] = React.useState(0);`,
+      `  useMotionValueEvent(progress, 'change', (v) => {`,
+      `    setActive(Math.min(beats.length - 1, Math.floor(v * beats.length)));`,
+      `  });`,
+      ``,
+      `  return (`,
+      `    <section ref={ref} className="relative h-[420vh] bg-black" aria-label="Noise transforms into ${calmLabel}">`,
+      `      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">`,
+      `        <motion.div`,
+      `          className="absolute inset-0"`,
+      `          style={{ background: useTransform(bgLight, (l: number) => \`radial-gradient(circle at 50% 50%, rgba(${accentA},\${l}) 0%, #000 70%)\`) }}`,
+      `        />`,
+      `        <div className="absolute inset-0 flex items-center justify-center gap-[3px]" style={{ opacity: waveOpacity as any }}>`,
+      `          {Array.from({ length: 64 }).map((_, i) => (`,
+      `            <ChaosBar key={i} index={i} amplitude={waveAmplitude} accentA="${accentA}" accentB="${accentB}" />`,
+      `          ))}`,
+      `        </div>`,
+      `        <motion.div`,
+      `          className="absolute rounded-full"`,
+      `          style={{`,
+      `            scale: calmScale,`,
+      `            opacity: calmOpacity,`,
+      `            width: 220,`,
+      `            height: 220,`,
+      `            background: \`radial-gradient(circle, rgba(${accentB},0.35), transparent 70%)\`,`,
+      `            boxShadow: \`0 0 120px 40px rgba(${accentB},0.25)\`,`,
+      `          }}`,
+      `        />`,
+      `        <div className="relative z-10 max-w-2xl px-6 text-center">`,
+      `          {beats.map((beat, i) => (`,
+      `            <motion.div`,
+      `              key={beat.title}`,
+      `              className="absolute inset-x-6"`,
+      `              initial={false}`,
+      `              animate={{ opacity: i === active ? 1 : 0, y: i === active ? 0 : 12 }}`,
+      `              transition={{ duration: 0.5 }}`,
+      `            >`,
+      `              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4">{beat.title}</h2>`,
+      `              <p className="text-lg text-white/70 max-w-xl mx-auto">{beat.body}</p>`,
+      `            </motion.div>`,
+      `          ))}`,
+      `        </div>`,
+      `        <motion.div`,
+      `          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] uppercase text-white/40"`,
+      `          animate={{ y: [0, 8, 0] }}`,
+      `          transition={{ repeat: Infinity, duration: 1.8 }}`,
+      `          style={{ opacity: noiseTextOpacity }}`,
+      `        >`,
+      `          scroll to ${calmLabel}`,
+      `        </motion.div>`,
+      `      </div>`,
+      `    </section>`,
+      `  );`,
+      `}`,
+      ``,
+      `function ChaosBar({ index, amplitude, accentA, accentB }: { index: number; amplitude: ReturnType<typeof useTransform<number, number>>; accentA: string; accentB: string }) {`,
+      `  const phase = index * 0.5;`,
+      `  const delay = (index % 8) * 0.08;`,
+      `  return (`,
+      `    <motion.span`,
+      `      className="w-[3px] rounded-full"`,
+      `      style={{`,
+      `        background: \`linear-gradient(180deg, rgba(\${accentA},0.9), rgba(\${accentB},0.9))\`,`,
+      `        height: 4,`,
+      `        scaleY: useTransform(amplitude, (a: number) => a / 2),`,
+      `        y: useTransform(amplitude, (a: number) => Math.sin(index + phase) * (a / 32)),`,
+      `      }}`,
+      `      animate={{ opacity: [0.4, 1, 0.4] }}`,
+      `      transition={{ repeat: Infinity, duration: 0.6, delay }}`,
+      `    />`,
+      `  );`,
+      `}`,
     ];
   }
 
