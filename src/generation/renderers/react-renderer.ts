@@ -2361,6 +2361,13 @@ ${body}
       lines.push(`        </div>`);
     }
 
+    // Default fallback: render a subtle placeholder when no content sections exist
+    if (!hasItems && !hasFields && !hasColumns && !hasStats && !hasTiers) {
+      lines.push(`        <div className="mt-8 p-8 rounded-2xl border border-dashed border-border text-center text-muted-foreground text-sm">`);
+      lines.push(`          Content coming soon`);
+      lines.push(`        </div>`);
+    }
+
     lines.push(`      </motion.div>`);
     lines.push(`    </motion.section>`);
     lines.push(`  );`);
