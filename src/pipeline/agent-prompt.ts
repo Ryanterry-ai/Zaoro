@@ -249,5 +249,42 @@ function buildTaskMd(spec: AgentSpec, breResult: BREv2Result): string {
   sections.push('- Apply design tokens from the design system (colors, fonts, spacing)');
   sections.push('');
 
+  // ─── Self-generating instruction ───────────────────────────────────────
+  // The agent (Claude Desktop / opencode / Codex) executing this pipeline IS
+  // the LLM. This spec is the interface. When IS_AGENT_MODE is true the
+  // pipeline wrote this file and is polling for the component files below.
+  // Tell the agent, in the same session, to generate them now — no API key,
+  // no HTTP call to any LLM provider.
+  sections.push('## ⚡ Action Required');
+  sections.push('');
+  sections.push('You are Claude / opencode / Codex running inside this repository.');
+  sections.push('The build pipeline has written this spec and is waiting for you to generate the component files.');
+  sections.push('');
+  sections.push('**Generate each component now:**');
+  sections.push('');
+  for (const page of spec.pages) {
+    for (const comp of page.components) {
+      const outputPath = `src/app${page.path}/${comp.type}.tsx`;
+      sections.push(`1. Write \`${outputPath}\` — a production-ready React component for ${comp.type}`);
+      if (comp.content) {
+        const sample = Object.entries(comp.content).slice(0, 2)
+          .map(([k, v]) => `${k}: "${String((v as any)?.value ?? v)}"`).join(', ');
+        if (sample) sections.push(`   Content: ${sample}`);
+      }
+    }
+  }
+  sections.push('');
+  sections.push('**Rules for generated components:**');
+  sections.push(`- Business: ${spec.appName} (${spec.industry})`);
+  const primaryColor = (spec.designTokens as any)?.colors?.primary ?? '#6366f1';
+  sections.push(`- Primary color: ${primaryColor}`);
+  sections.push('- Use Framer Motion for all animations');
+  sections.push('- Use real business content — never placeholder text');
+  sections.push('- Export as default function');
+  sections.push('- Start every file with: `"use client";`');
+  sections.push('');
+  sections.push('The build pipeline is polling for these files. Write them now.');
+  sections.push('');
+
   return sections.join('\n');
 }
