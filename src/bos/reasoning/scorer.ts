@@ -36,10 +36,11 @@ export class Scorer {
       const breakdown: Record<string, number> = {};
       let total = 0;
 
+      const industry = (ctx.industry ?? '').toLowerCase();
       const industryMatch = profile.brandPersonality.some(p =>
-        (ctx.industry ?? '').toLowerCase().includes(p) ||
+        industry.includes(p) ||
         (ctx.subIndustry && ctx.subIndustry.toLowerCase().includes(p)) ||
-        p.includes((ctx.industry ?? '').toLowerCase()),
+        p.includes(industry),
       );
       breakdown.industryFit = industryMatch ? 30 : 10;
       total += breakdown.industryFit;

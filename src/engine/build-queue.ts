@@ -228,7 +228,7 @@ const payload = JSON.parse(fs.readFileSync(path.join(process.cwd(), ${JSON.strin
 const { DeterministicOrchestratorV4 } = await import('./src/agents/deterministic-orchestrator-v4.js');
 const { buildBREContext } = await import('./src/bos/intake-parser.js');
 const orch = new DeterministicOrchestratorV4(wsDir);
-const detectedIndustry = buildBREContext(payload.prompt || '').industry || 'general';
+const detectedIndustry = (await buildBREContext(payload.prompt || '')).industry || 'general';
 try {
   writeProgress('init', 'started', 'Build started — analyzing prompt');
   writeProgress('init', 'info', 'Loading orchestrator and dependencies...');
