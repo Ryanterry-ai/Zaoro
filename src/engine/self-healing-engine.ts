@@ -326,6 +326,17 @@ export class SelfHealingEngine {
     for (const [file, errors] of fileGroups) {
       if (batchCount >= this.maxErrorsPerBatch) break;
 
+      // Only self-heal application source files (components/pages/libs). Skip
+      // infra files (prisma/seed.ts, config, generated clients) — patching
+      // them with component-shaped AST mutations just produces noise.
+      const normalized = file.replace(/\\/g, '/');
+      const isAppSource = /^src\/(app|components|lib|features|pages)\//.test(normalized)
+        && /\.(tsx?|jsx?)$/.test(normalized);
+      if (!isAppSource) {
+        console.log(`[self-heal] Skipping non-component file: ${file}`);
+        continue;
+      }
+
       // Read full file content
       const filePath = path.join(workspacePath, file);
       let fileContent = '';

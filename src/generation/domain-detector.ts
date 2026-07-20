@@ -135,10 +135,13 @@ export function detectDomain(
  * This function is kept for backward compatibility only.
  * It will be removed in a future version.
  */
-export function detectDomainFromPrompt(prompt: string): DomainContext {
-  console.warn('[domain-detector] detectDomainFromPrompt is deprecated. Use detectDomain(businessKnowledge, prompt) instead.');
-
-  // Create a minimal BusinessKnowledge for backward compatibility
+/**
+ * Construct a minimal BusinessKnowledge for backward-compatible detection when
+ * no full BRE v2 knowledge is available. Industry is intentionally 'general' —
+ * real industry routing must come from a resolved BRE v2 pattern, not from this
+ * keyword heuristic.
+ */
+export function buildMinimalBusinessKnowledge(prompt: string): BusinessKnowledge {
   const minimalBK: BusinessKnowledge = {
     version: '1.0.0',
     sources: [],
@@ -173,5 +176,13 @@ export function detectDomainFromPrompt(prompt: string): DomainContext {
     intents: { experience: ['editorial'], interaction: [], motion: ['balanced'], conversion: ['lead-form'], emotional: ['trust'], content: ['storytelling'] },
   };
 
-  return detectDomain(minimalBK, prompt);
+  return minimalBK;
+}
+
+/**
+ * @deprecated Use detectDomain(businessKnowledge, prompt) instead.
+ * Thin backward-compat shim — delegates to detectDomain with a minimal BK.
+ */
+export function detectDomainFromPrompt(prompt: string): DomainContext {
+  return detectDomain(buildMinimalBusinessKnowledge(prompt), prompt);
 }

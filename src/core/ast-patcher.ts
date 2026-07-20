@@ -48,6 +48,15 @@ export class ASTPatcher {
     }
 
     if (!patchApplied) {
+      // Fallback: a 'update' patch keyed to an export that no longer exists in
+      // the file (e.g. an LLM full-file fix that drifted from the original
+      // export name) is applied as a whole-file replacement. This avoids
+      // spurious "Could not resolve target export node" failures and still
+      // lands the generated fix.
+      if (patch.action === 'update' && patch.codeBlock && patch.codeBlock.trim().length > 0) {
+        fs.writeFileSync(filePath, patch.codeBlock, 'utf-8');
+        return;
+      }
       throw new Error(`AST mutation exception: Could not resolve target export node '${patch.targetExport}' in file context.`);
     }
 

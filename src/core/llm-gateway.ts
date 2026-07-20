@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 import { ASTPatch, LLMContext, LLMConfig, LLMProvider } from '../types/index.js';
 import { ArchitectAgent, ArchitectDecision } from '../generation/architect.js';
 import { createDomainSynthesis, synthesizeDomainSection, DomainSynthesisContext } from '../generation/domain-synthesizer.js';
@@ -86,7 +87,7 @@ export class LLMGateway {
       process.env.BUILD_ENGINE_MODEL = this.model;
 
       const adapterPath = path.resolve(process.cwd(), 'skills', '_adapter', 'index.js');
-      const adapter = await import(adapterPath);
+      const adapter = await import(pathToFileURL(adapterPath).href);
       const result = await adapter.callModel({
         taskType,
         prompt: userPrompt,

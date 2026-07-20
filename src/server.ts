@@ -1259,11 +1259,9 @@ try {
     let headersSent = false;
     try {
       const archiverModule = await import('archiver');
-      const ZipArchive = archiverModule.ZipArchive || archiverModule.Archiver;
+      const zip = (archiverModule as any)('zip', { zlib: { level: 6 } });
 
-      const archive = new ZipArchive({ zlib: { level: 6 } });
-
-      archive.on('error', (err: any) => {
+      zip.on('error', (err: any) => {
         console.error('[download] Archive error:', err.message);
         if (!headersSent) {
           headersSent = true;
@@ -1272,7 +1270,7 @@ try {
         }
       });
 
-      archive.on('end', () => {
+      zip.on('end', () => {
         console.log(`[download] Archive finalized for ${id}`);
       });
 
@@ -1282,23 +1280,23 @@ try {
         'Access-Control-Allow-Origin': '*',
       });
       headersSent = true;
-      archive.pipe(res);
+      zip.pipe(res);
 
       const srcDir = path.join(wsDir, 'src');
-      if (fs.existsSync(srcDir)) archive.directory(srcDir, 'src');
+      if (fs.existsSync(srcDir)) zip.directory(srcDir, 'src');
 
       const publicDir = path.join(wsDir, 'public');
-      if (fs.existsSync(publicDir)) archive.directory(publicDir, 'public');
+      if (fs.existsSync(publicDir)) zip.directory(publicDir, 'public');
 
       const prismaDir = path.join(wsDir, 'prisma');
-      if (fs.existsSync(prismaDir)) archive.directory(prismaDir, 'prisma');
+      if (fs.existsSync(prismaDir)) zip.directory(prismaDir, 'prisma');
 
       for (const f of ['package.json', 'tsconfig.json', 'next.config.mjs', 'tailwind.config.ts', 'postcss.config.mjs', '.env']) {
         const fp = path.join(wsDir, f);
-        if (fs.existsSync(fp)) archive.file(fp, { name: f });
+        if (fs.existsSync(fp)) zip.file(fp, { name: f });
       }
 
-      await archive.finalize();
+      await zip.finalize();
     } catch (e: any) {
       console.error('[download] Failed:', e.message);
       if (!headersSent) {

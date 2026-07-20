@@ -61,8 +61,15 @@ export function evaluateGeneratedContent(
     }
   }
 
+  // Hard gate: domain relevance is a blocker, not just one weighted check.
+  // A build that matches <30% of prompt terms is a template, not a real site,
+  // and must not pass even if other checks score well.
+  const relevance = checks.find(c => c.name === 'Domain Relevance');
+  const relevanceRatio = relevance ? relevance.score / 20 : 1;
+  const passed = percentage >= 60 && relevanceRatio >= 0.3;
+
   return {
-    passed: percentage >= 60,
+    passed,
     score: percentage,
     checks,
     suggestions,

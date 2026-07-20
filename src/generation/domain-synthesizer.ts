@@ -1,5 +1,5 @@
 import { ArchitectDecision } from './architect.js';
-import { DomainContext, detectDomain, detectDomainFromPrompt } from './domain-detector.js';
+import { DomainContext, detectDomain, buildMinimalBusinessKnowledge } from './domain-detector.js';
 import { DomainMockData, getDomainData, getSectionData } from './domain-data.js';
 import { resolveDomainImages, ResolvedImages, SVG_ICONS, resolveIconSvg, resolveDashboardMockup } from './image-resolver.js';
 import { WebResearcher, WebResearchData } from './web-researcher.js';
@@ -73,7 +73,7 @@ export async function createDomainSynthesisAsync(
     console.log(`[domain-synth] Using resolved pattern: ${resolvedPattern.name} → industry=${patternIndustry}`);
   } else {
     // Fallback: independent domain detection (legacy path)
-    domain = detectDomainFromPrompt(prompt);
+    domain = detectDomain(buildMinimalBusinessKnowledge(prompt), prompt);
     data = getDomainData(domain.industry, domain.subIndustry);
     console.log(`[domain-synth] Detected: ${domain.industry}/${domain.subIndustry || 'general'} mood=${domain.mood}`);
   }
@@ -106,7 +106,10 @@ export async function createDomainSynthesisAsync(
 }
 
 export function createDomainSynthesis(prompt: string, decision: ArchitectDecision, designDNA?: DesignDNA): DomainSynthesisContext {
-  const domain = detectDomainFromPrompt(prompt);
+  // Use detectDomain with a minimal BK rather than the deprecated
+  // detectDomainFromPrompt — real industry routing still requires a resolved
+  // BRE v2 pattern (createDomainSynthesisAsync), which the LLM path supplies.
+  const domain = detectDomain(buildMinimalBusinessKnowledge(prompt), prompt);
   const data = getDomainData(domain.industry, domain.subIndustry);
   const images = resolveDomainImages(
     domain.imageKeywords.length > 0 ? domain.imageKeywords : data.imageKeywords,
