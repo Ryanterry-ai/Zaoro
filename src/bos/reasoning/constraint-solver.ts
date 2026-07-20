@@ -79,7 +79,7 @@ export function createDefaultConstraints(): Constraint[] {
       description: 'Any e-commerce app must have a payment gateway',
       check: (ctx, decisions) => {
         const industry = (ctx.industry ?? '').toLowerCase();
-        const isEcommerce = industry.includes('commerce') || (ctx.businessModels ?? []).includes('direct-sales');
+        const isEcommerce = industry.includes('commerce') || ctx.businessModels.includes('direct-sales');
         if (!isEcommerce) return { satisfied: true, violations: [], suggestions: [] };
 
         const hasPayment = decisions.some(d => d.action.type === 'add_integration');

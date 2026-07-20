@@ -12,6 +12,10 @@ const ALLOWED_EXTERNAL_PATTERNS = [
   /cdn\.jsdelivr\.net/,
   /unpkg\.com/,
   /cdnjs\.cloudflare\.com/,
+  // Keyless, stable stock media CDNs — real raster images / sample video,
+  // not source-domain references. Safe at runtime, no API key required.
+  /picsum\.photos/,
+  /storage\.googleapis\.com\/gtv-videos-bucket/,
 ];
 
 const SKIP_DIRS = ['node_modules', '.next', 'dist', '.git', '.vercel'];

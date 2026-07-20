@@ -47,10 +47,6 @@ export interface XREInput {
   maxPlans?: number;
   /** Renderer target. */
   rendererTarget?: CompiledExperience['rendererTarget'];
-  /** Experience themes detected from prompt narrative/scroll cues
-   *  (e.g. transformation, scroll-journey, sound-to-silence). Boosts matching
-   *  candidate concepts during scoring — primitive-based, no vertical lookup. */
-  experienceThemes?: string[];
 }
 
 // ─── Scoring Dimensions ─────────────────────────────────────────────
@@ -79,10 +75,9 @@ const XRE_WEIGHTS = {
   conversionPotential: 0.15,
   accessibility: 0.10,
   performanceBudget: 0.10,
-  novelty: 0.05,
-  themeFit: 0.10,
+  novelty: 0.10,
   brandConsistency: 0.15,
-  implementationCost: 0.05,
+  implementationCost: 0.10,
 };
 
 // ─── Dimension Scoring Functions ───────────────────────────────────
@@ -234,36 +229,6 @@ function scoreNovelty(
 }
 
 /**
- * Theme fit: how well a concept matches the experience themes detected from
- * the prompt (transformation, scroll-journey, sound-to-silence, immersive).
- * Pure primitive/audience-hint overlap — no vertical lookup. When no themes
- * are present this returns a neutral 0.5 so it never penalises generic briefs.
- */
-function scoreThemeFit(
-  concept: ExperienceConcept,
-  experienceThemes: string[] | undefined,
-): XREScoreDimension {
-  if (!experienceThemes || experienceThemes.length === 0) {
-    return {
-      name: 'themeFit',
-      score: 0.5,
-      weight: XRE_WEIGHTS.themeFit,
-      reasoning: 'No experience themes detected — neutral',
-    };
-  }
-  const themes = new Set(experienceThemes);
-  const hints = new Set([...concept.audienceAlignment, ...concept.impliedPrimitives]);
-  const overlap = [...themes].filter(t => hints.has(t)).length / themes.size;
-  const score = 0.5 + 0.5 * overlap; // 0.5 neutral → 1.0 full match
-  return {
-    name: 'themeFit',
-    score: Math.round(score * 100) / 100,
-    weight: XRE_WEIGHTS.themeFit,
-    reasoning: `Theme overlap ${overlap}/${themes.size} (matched: ${[...themes].filter(t => hints.has(t)).join(', ') || 'none'})`,
-  };
-}
-
-/**
  * Brand consistency: how well the concept aligns with the primitive set's
  * overall character.  Uses primitive consistency scoring.
  */
@@ -341,7 +306,6 @@ export function reasonExperience(input: XREInput): {
       scoreAccessibility(concept),
       scorePerformanceBudget(concept, input.primitiveSet),
       scoreNovelty(concept, input.primitiveSet),
-      scoreThemeFit(concept, input.experienceThemes),
       scoreBrandConsistency(concept, input.primitiveSet),
       scoreImplementationCost(concept),
     ];
@@ -349,21 +313,11 @@ export function reasonExperience(input: XREInput): {
     const overall = dimensions.reduce((s, d) => s + d.score * d.weight, 0);
     const coherent = isCoherent(consistency).coherent;
 
-    // Theme-decisiveness: when a concept fully embodies every detected
-    // experience theme (themeFit === 1.0), it was purpose-built for exactly
-    // this prompt's expressed intent. Give it a decisive bonus so a generic,
-    // lower-cost concept cannot win over the semantically-correct one. This is
-    // theme-driven, never industry-driven.
-    const themeDim = dimensions.find(d => d.name === 'themeFit');
-    const fullThemeMatch = themeDim && input.experienceThemes && input.experienceThemes.length > 0 && themeDim.score >= 1.0;
-    const bonus = fullThemeMatch ? 0.18 : 0;
-    const overallScore = Math.round((overall + bonus) * 100);
-
     const plan: XREPlanScore = {
       conceptId: concept.id,
       conceptName: concept.name,
       dimensions,
-      overallScore,
+      overallScore: Math.round(overall * 100),
       coherent,
     };
 
@@ -434,14 +388,6 @@ export function compileExperience(
 
   const coherence = scoreConsistency(input.primitiveSet).overall;
 
-  // Scroll-driven: a transformation/scroll-journey concept or theme means the
-  // renderer must emit scroll-linked animation rather than static reveals.
-  const scrollThemes = new Set(input.experienceThemes ?? []);
-  const isScrollDriven = concept.style === 'cinematic' || concept.pageLayout === 'single-scroll' ||
-    scrollThemes.has('scroll-journey') || scrollThemes.has('transformation') ||
-    concept.impliedPrimitives.includes('scroll-journey') || concept.impliedPrimitives.includes('transformation');
-  const scrollTriggers = isScrollDriven ? buildScrollTriggers(concept) : undefined;
-
   const rejected = candidates
     .filter(c => c.id !== selectedPlan.conceptId)
     .map(c => ({ id: c.id, reason: 'Lower overall XRE score' }));
@@ -455,8 +401,6 @@ export function compileExperience(
     coherence,
     rendererTarget: input.rendererTarget ?? 'react',
     motionLanguage,
-    scrollDriven: isScrollDriven || undefined,
-    scrollTriggers,
     cameraLanguage,
     typographyPersonality,
     reasoning: selectedPlan.dimensions.map(d => `${d.name}: ${d.score} (${d.reasoning})`),
@@ -470,33 +414,6 @@ export function compileExperience(
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
-
-/**
- * Build scroll-linked animation specs for a scroll-driven concept. Universal
- * mapping from section roles to scroll ranges — the renderer translates these
- * into scroll listeners. For a transformation concept (e.g. soundwave →
- * silence) the arcs move from turbulence (high motion) to stillness.
- */
-function buildScrollTriggers(concept: ExperienceConcept): CompiledExperience['scrollTriggers'] {
-  const transformation = concept.impliedPrimitives.includes('transformation') ||
-    concept.impliedPrimitives.includes('sound-to-silence');
-  if (transformation) {
-    return [
-      { selector: '.hero', property: 'opacity', scrollRange: [0, 0.2], outputRange: [0, 1], easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-      { selector: '.hero .soundwave', property: 'scale', scrollRange: [0, 0.35], outputRange: [1, 2.4], easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-      { selector: '.chaos', property: 'blur', scrollRange: [0.1, 0.4], outputRange: [0, 8], easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-      { selector: '.transformation', property: 'opacity', scrollRange: [0.35, 0.65], outputRange: [0, 1], easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-      { selector: '.calm', property: 'opacity', scrollRange: [0.6, 0.9], outputRange: [0, 1], easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-      { selector: '.calm .soundwave', property: 'scale', scrollRange: [0.6, 1], outputRange: [2.4, 0.2], easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-      { selector: '.cta', property: 'scale', scrollRange: [0.85, 1], outputRange: [0.96, 1], easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-    ];
-  }
-  return [
-    { selector: '.hero', property: 'translateY', scrollRange: [0, 0.3], outputRange: [80, 0], easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-    { selector: '.section', property: 'opacity', scrollRange: [0.2, 0.9], outputRange: [0, 1], easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-    { selector: '.cta', property: 'scale', scrollRange: [0.85, 1], outputRange: [0.96, 1], easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-  ];
-}
 
 function roleToContentIntent(role: UniversalSectionRole): string {
   switch (role) {

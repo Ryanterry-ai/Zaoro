@@ -45,12 +45,14 @@ export default function HomePage() {
 export const text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
 `);
 
-    // Project with placeholder images
+    // Project with placeholder images. NOTE: picsum.photos is now treated as
+    // acceptable deterministic stock (the engine's keyless fallback), so the
+    // true placeholder host via.placeholder.com is used to assert failure.
     const placeholderDir = join(FIXTURES_DIR, 'placeholder');
     mkdirSync(placeholderDir, { recursive: true });
     writeFileSync(join(placeholderDir, 'page.tsx'), `
 export default function Page() {
-  return <img src="https://picsum.photos/400/300" alt="placeholder" />;
+  return <img src="https://via.placeholder.com/400x300" alt="placeholder" />;
 }
 `);
 

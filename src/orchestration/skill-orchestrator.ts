@@ -130,6 +130,19 @@ const KNOWN_SKILLS: SkillManifest[] = [
   { id: 'code-reviewer', name: 'Code Reviewer', description: 'Automated code review', source: 'built-in', installs: 50000, installed: true, capabilities: ['review', 'quality', 'refactoring'], dependencies: [], categories: ['quality'] },
   { id: 'test-master', name: 'Test Master', description: 'Test generation and strategy', source: 'built-in', installs: 55000, installed: true, capabilities: ['testing', 'e2e-testing', 'unit-testing'], dependencies: [], categories: ['testing'] },
   { id: 'playwright-expert', name: 'Playwright Expert', description: 'E2E browser testing', source: 'built-in', installs: 45000, installed: true, capabilities: ['e2e-testing', 'browser', 'automation'], dependencies: [], categories: ['testing'] },
+
+  // Image → Cinematic Video (turn collected images into motion footage).
+  // These are present locally under the higgsfield-seedance2 / arcads skill
+  // dirs; mark installed:true so the engine selects + records them (the agent
+  // invokes the matching local skill sub-dir to generate the video).
+  { id: 'seedance-cinematic', name: 'Seedance 2.0 Cinematic', description: 'Turn images into cinematic video (Higgsfield/Seedance 2.0)', source: 'built-in', installs: 90000, installed: true, capabilities: ['video', 'image-to-video', 'cinematic', 'motion', 'cinematic-video'], dependencies: [], categories: ['video', 'animation'] },
+  { id: 'seedance-product-360', name: 'Seedance Product 360', description: 'Product image to 360 cinematic video (Seedance 2.0)', source: 'built-in', installs: 70000, installed: true, capabilities: ['video', 'image-to-video', 'product', 'cinematic', 'cinematic-video'], dependencies: [], categories: ['video', 'ecommerce'] },
+  { id: 'seedance-ecommerce-ad', name: 'Seedance Ecommerce Ad', description: 'Product image to cinematic ecommerce ad video (Seedance 2.0)', source: 'built-in', installs: 65000, installed: true, capabilities: ['video', 'image-to-video', 'ecommerce', 'cinematic', 'cinematic-video'], dependencies: [], categories: ['video', 'ecommerce'] },
+  { id: 'seedance-brand-story', name: 'Seedance Brand Story', description: 'Image to cinematic brand-story video (Seedance 2.0)', source: 'built-in', installs: 60000, installed: true, capabilities: ['video', 'image-to-video', 'brand', 'cinematic', 'cinematic-video'], dependencies: [], categories: ['video', 'brand'] },
+  { id: 'cinema-world-builder', name: 'Cinema World Builder', description: 'Turn still images into cinematic world/atmosphere video', source: 'built-in', installs: 55000, installed: true, capabilities: ['video', 'image-to-video', 'cinematic', 'world', 'cinematic-video'], dependencies: [], categories: ['video', 'animation'] },
+  { id: 'nano-banana-pro-director', name: 'Nano Banana Pro Director', description: 'Director-grade image-to-cinematic-video prompts (Nano Banana Pro)', source: 'built-in', installs: 80000, installed: true, capabilities: ['video', 'image-to-video', 'cinematic', 'director', 'cinematic-video'], dependencies: [], categories: ['video', 'animation'] },
+
+  { id: 'framer-motion', name: 'Motion (Framer Motion)', description: 'Production-ready React component animation, gestures, layout, exit transitions', source: 'built-in', installs: 250000, installed: true, capabilities: ['motion', 'animation', 'component-animation', 'transition', 'gesture'], dependencies: ['react'], categories: ['animation', 'react'] },
 ];
 
 // ─── Skill Discovery ────────────────────────────────────────────────────────

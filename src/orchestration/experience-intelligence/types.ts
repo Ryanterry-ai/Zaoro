@@ -332,14 +332,6 @@ export interface ScrollAccumulationConfig {
 
   /** Reverse direction: false = more scroll = more intensity (default) */
   reverse: boolean;
-
-  /**
-   * Optional scroll-transform narrative arc (e.g. { from: 'noise', to: 'silence' }).
-   * When present, the accumulating quality is the `to` state and the renderer
-   * animates the page from the chaotic `from` state toward the calm `to` state
-   * as the user scrolls. Signal-derived, never industry-specific.
-   */
-  transformArc?: { from: string; to: string };
 }
 
 export interface ScrollLinkedAnimation {
