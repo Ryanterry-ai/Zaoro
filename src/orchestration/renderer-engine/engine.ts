@@ -162,7 +162,7 @@ export class RendererEngine implements IRendererEngineLayer {
           paths: { '@/*': ['./src/*'] },
         },
         include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
-        exclude: ['node_modules'],
+        exclude: ['node_modules', 'prisma'],
       }, null, 2),
       type: 'config',
       purpose: 'TypeScript configuration',

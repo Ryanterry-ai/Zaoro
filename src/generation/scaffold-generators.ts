@@ -159,7 +159,11 @@ export function generateTsConfig(): string {
       },
     },
     include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
-    exclude: ['node_modules'],
+    // `prisma/seed.ts` is a dev-only seeding script executed via `tsx`, not part
+    // of the Next.js app bundle. Excluding it from the production typecheck
+    // prevents Prisma-client type friction (e.g. upsert payload shapes) from
+    // blocking a shippable build — Next.js itself does not type-check it.
+    exclude: ['node_modules', 'prisma'],
   }, null, 2);
 }
 

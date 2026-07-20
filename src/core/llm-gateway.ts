@@ -115,8 +115,15 @@ export class LLMGateway {
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
     if (!this.apiKey || this.apiKey.trim() === '') {
-      console.log(`[gateway] No API key. Using domain synthesis only.`);
-      return this.synthesizeFallback(decision, context);
+      // No API key configured. The canonical build relies entirely on the
+      // deterministic renderer for pages/components — it must NOT be clobbered
+      // by placeholder stub pages. Returning no patches here prevents the
+      // self-healing/repair path from overwriting valid generated files (e.g.
+      // layout.tsx, page.tsx) with broken `function Contact()` stubs when an
+      // LLM is unavailable. Real renderer errors fail the build loudly instead
+      // of being silently corrupted.
+      console.log(`[gateway] No API key. Skipping patch synthesis (deterministic renderer is source of truth).`);
+      return [];
     }
 
     const systemPrompt = this.buildSystemPrompt(architecturePrompt, undefined, this.research);
@@ -186,8 +193,8 @@ export class LLMGateway {
       }
     }
 
-    console.log(`[gateway] All LLM providers failed. Using domain synthesis fallback.`);
-    return this.synthesizeFallback(decision, context);
+    console.log(`[gateway] All LLM providers failed. Skipping patch synthesis to avoid corrupting valid generated files.`);
+    return [];
   }
 
   /**

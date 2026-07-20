@@ -469,11 +469,19 @@ try {
       for (const fp of tempFiles) {
         try {
           if (fp.endsWith('.ts') && fs.existsSync(fp)) {
+            // Keep a debug copy for post-mortem, but NEVER delete the live .ts
+            // while the child (or its tsx ESM loader) may still be reading it.
+            // Premature deletion causes ERR_MODULE_NOT_FOUND and aborts the build.
             const debugCopy = fp.replace('.ts', '.debug.ts');
             fs.copyFileSync(fp, debugCopy);
           }
         } catch {}
-        try { fs.unlinkSync(fp); } catch { /* already gone — fine */ }
+        // Only delete non-.ts temp files (config/prompt JSON). The .ts build
+        // script is purged later by startCleanup() once the job is no longer
+        // running, eliminating the delete-race with tsx's async resolution.
+        if (!fp.endsWith('.ts')) {
+          try { fs.unlinkSync(fp); } catch { /* already gone — fine */ }
+        }
       }
     };
 

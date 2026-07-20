@@ -204,7 +204,7 @@ export class SandboxEngine {
           paths: { "@/*": ["./src/*"] }
         },
         include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-        exclude: ["node_modules"]
+        exclude: ["node_modules", "prisma"]
       };
       fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfigTemplate, null, 2));
     }

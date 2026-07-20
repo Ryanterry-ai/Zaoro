@@ -171,8 +171,18 @@ export default function MenuCategory({ name, description, items, renderItem }: M
 
 import { Package, Truck, CheckCircle, Clock } from 'lucide-react';
 
+interface OrderStatusStep {
+  title: string;
+  description?: string;
+  icon?: string;
+  metadata?: { status?: string };
+}
+
 interface OrderStatusProps {
-  status: 'pending' | 'confirmed' | 'preparing' | 'on-the-way' | 'delivered';
+  status?: 'pending' | 'confirmed' | 'preparing' | 'on-the-way' | 'delivered';
+  title?: string;
+  subtitle?: string;
+  items?: OrderStatusStep[];
 }
 
 const STATUS_STEPS = [
@@ -183,8 +193,40 @@ const STATUS_STEPS = [
   { key: 'delivered', label: 'Delivered', icon: CheckCircle }
 ];
 
-export default function OrderStatus({ status }: OrderStatusProps) {
-  const currentIndex = STATUS_STEPS.findIndex(s => s.key === status);
+const ICON_MAP: Record<string, any> = { Clock, Package, Truck, CheckCircle };
+
+export default function OrderStatus({ status, title, subtitle, items }: OrderStatusProps) {
+  if (items && items.length > 0) {
+    return (
+      <div className="w-full">
+        {title ? <h3 className="text-lg font-semibold">{title}</h3> : null}
+        {subtitle ? <p className="text-sm text-muted-foreground mb-4">{subtitle}</p> : null}
+        <div className="flex flex-col gap-4">
+          {items.map((step, i) => {
+            const Icon = step.icon ? (ICON_MAP[step.icon] || CheckCircle) : CheckCircle;
+            const stepStatus = step.metadata?.status || (i === 0 ? 'complete' : 'pending');
+            return (
+              <div key={step.title} className="flex items-start gap-3">
+                <div className={\`w-9 h-9 rounded-full flex items-center justify-center \${
+                  stepStatus === 'complete' ? 'bg-amber-600 text-white'
+                    : stepStatus === 'active' ? 'bg-amber-600/20 text-amber-600 ring-2 ring-amber-600'
+                    : 'bg-neutral-200 text-muted-foreground'
+                }\`}>
+                  <Icon size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{step.title}</p>
+                  {step.description ? <p className="text-xs text-muted-foreground">{step.description}</p> : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const currentIndex = status ? STATUS_STEPS.findIndex(s => s.key === status) : 0;
 
   return (
     <div className="flex items-center justify-between">

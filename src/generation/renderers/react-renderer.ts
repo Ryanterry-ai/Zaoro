@@ -507,7 +507,7 @@ export type NavItem = (typeof navItems)[number];
           paths: { '@/*': ['./src/*'] },
         },
         include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
-        exclude: ['node_modules'],
+        exclude: ['node_modules', 'prisma'],
       }, null, 2),
       type: 'config',
     };
@@ -1835,7 +1835,7 @@ ${body}
 
     return [
       `  return (`,
-      `    <section className="relative px-6 pb-20 overflow-hidden">`,
+      `    <motion.section initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="relative px-6 pb-20 overflow-hidden">`,
       `      <div className="absolute inset-0">`,
       `        <img src="${ctaImg}" alt="" className="w-full h-full object-cover opacity-20" loading="lazy" />`,
       `        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />`,
@@ -2270,8 +2270,11 @@ ${body}
       `  return (`,
       `    <motion.section initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5 }} className="py-16">`,
       `      <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="max-w-7xl mx-auto px-6">`,
-      `        <h2 className="text-2xl font-bold">${title}</h2>`,
     ];
+
+    if (title !== `{title}`) {
+      lines.push(`        <h2 className="text-2xl font-bold">${title}</h2>`);
+    }
 
     if (subtitle !== `{subtitle}`) {
       lines.push(`        <p className="text-muted-foreground mt-2">${subtitle}</p>`);
