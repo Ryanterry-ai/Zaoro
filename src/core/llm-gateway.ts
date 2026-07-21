@@ -114,6 +114,15 @@ export class LLMGateway {
     const decision = this.architect.designArchitecture(context.prompt);
     const architecturePrompt = this.architect.buildArchitecturePrompt(decision);
 
+    // Offline mode: never attempt network LLM calls. The deterministic renderer
+    // is the source of truth for pages/components; returning no patches prevents
+    // the self-healing/repair path from hanging on (or corrupting output with)
+    // failed LLM calls. Real renderer errors still fail the build loudly.
+    if (process.env.BUILD_OFFLINE === '1' || process.env.BUILD_OFFLINE === 'true') {
+      console.log(`[gateway] BUILD_OFFLINE set. Skipping patch synthesis (deterministic renderer is source of truth).`);
+      return [];
+    }
+
     if (!this.apiKey || this.apiKey.trim() === '') {
       // No API key configured. The canonical build relies entirely on the
       // deterministic renderer for pages/components — it must NOT be clobbered

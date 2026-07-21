@@ -9,6 +9,7 @@
  * consistency, completeness, and non-generic language before rendering.
  */
 
+
 import type { ApplicationBlueprint, EntityPlan } from './schemas/blueprint/application-blueprint.schema.js';
 import type {
   ExecutionBlueprint,
@@ -554,20 +555,24 @@ function resolveFeatureGrid(
 }
 
 function resolveProductGrid(
-  _slot: ComponentSlot,
-  _page: PageExecutionPlan,
+  slot: ComponentSlot,
+  page: PageExecutionPlan,
   ctx: ContentResolverContext,
   contentBag?: ContentBag,
 ): ComponentSpec {
-  const entity = findEntity(ctx.blueprint, 'product') ?? ctx.blueprint.entities[0];
+  // Resolve the entity from the slot name, then the page path/name (e.g.
+  // '/menu' -> 'MenuItem'), then fall back to the first blueprint entity.
+  let entity: EntityPlan | undefined = resolveEntityForSlot(slot, page, ctx.blueprint);
+  if (!entity) entity = toEntityPlan(ctx.blueprint.entities[0]);
+  const entityName = entity?.name ?? 'Product';
   const products = contentBag?.products?.items ?? [];
-  
+
   return {
     type: 'ProductGrid',
     content: {
-      title: { value: vocab('All Products', ctx), type: 'text' },
+      title: { value: vocab(entityName === 'MenuItem' ? 'Our Menu' : 'All Products', ctx), type: 'text' },
       subtitle: { value: vocab('Browse our collection', ctx), type: 'text' },
-      entity: { value: entity?.name ?? 'Product', type: 'text' },
+      entity: { value: entityName, type: 'text' },
     },
     items: products.map(p => ({
       name: p.name,
@@ -580,7 +585,7 @@ function resolveProductGrid(
       details: p.details,
       image: p.image,
     })),
-    columns: entity?.fields.map(f => ({
+    columns: entity?.fields?.map(f => ({
       key: f.name,
       label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
       type: 'text' as const,
@@ -862,11 +867,15 @@ function resolveContactForm(
 
 function resolveDataTable(
   slot: ComponentSlot,
-  _page: PageExecutionPlan,
+  page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
-  const entity = findEntity(ctx.blueprint, slot.slot);
+  // Resolve the entity from the slot name first, then fall back to the page
+  // path/name (e.g. '/orders' -> 'Order'). This avoids the generic 'Record'
+  // default when the slot name itself doesn't contain the entity slug.
+  let entity = resolveEntityForSlot(slot, page, ctx.blueprint);
   const entityName = entity?.name ?? 'Record';
+
   const columns = entity?.fields?.map(f => ({
     key: f.name,
     label: f.name.charAt(0).toUpperCase() + f.name.slice(1),
@@ -874,9 +883,10 @@ function resolveDataTable(
     sortable: true,
     filterable: f.indexed,
   }));
+  // Default columns must match the shape of the generated items (title/status/created).
   const fallbackColumns = columns ?? [
     { key: 'id', label: 'ID', type: 'text' as const, sortable: true, filterable: false },
-    { key: 'name', label: 'Name', type: 'text' as const, sortable: true, filterable: true },
+    { key: 'title', label: entityName, type: 'text' as const, sortable: true, filterable: true },
     { key: 'status', label: 'Status', type: 'text' as const, sortable: true, filterable: true },
     { key: 'created', label: 'Created', type: 'text' as const, sortable: true, filterable: false },
   ];
@@ -1290,10 +1300,10 @@ function resolveActivityFeed(
 
 function resolveDataGrid(
   slot: ComponentSlot,
-  _page: PageExecutionPlan,
+  page: PageExecutionPlan,
   ctx: ContentResolverContext,
 ): ComponentSpec {
-  const entity = findEntity(ctx.blueprint, slot.slot);
+  let entity = resolveEntityForSlot(slot, page, ctx.blueprint);
   const entityName = entity?.name ?? 'Item';
   const columns = entity?.fields?.map(f => ({
     key: f.name,
@@ -1305,7 +1315,7 @@ function resolveDataGrid(
   // Provide fallback columns when entity isn't found
   const fallbackColumns = columns ?? [
     { key: 'id', label: 'ID', type: 'text' as const, sortable: true, filterable: false },
-    { key: 'name', label: 'Name', type: 'text' as const, sortable: true, filterable: true },
+    { key: 'title', label: entityName, type: 'text' as const, sortable: true, filterable: true },
     { key: 'status', label: 'Status', type: 'text' as const, sortable: true, filterable: true },
     { key: 'created', label: 'Created', type: 'text' as const, sortable: true, filterable: false },
   ];
@@ -2141,9 +2151,67 @@ function resolvePricingTiers(ctx: ContentResolverContext): TierSpec[] {
 
 function findEntity(blueprint: ApplicationBlueprint, sectionName: string): EntityPlan | undefined {
   const normalized = sectionName.toLowerCase();
-  for (const entity of blueprint.entities) {
-    if (normalized.includes(entity.slug.toLowerCase()) || normalized.includes(entity.name.toLowerCase())) {
-      return entity;
+  // Entities may be stored as full EntityPlan objects OR plain strings at runtime.
+  const entities = blueprint.entities as Array<EntityPlan | string>;
+  for (const entity of entities) {
+    const slug = typeof entity === 'string' ? entity.toLowerCase() : entity.slug.toLowerCase();
+    const name = typeof entity === 'string' ? entity : (entity as EntityPlan).name;
+    if (normalized.includes(slug) || normalized.includes(name.toLowerCase())) {
+      // Normalize string entities to an EntityPlan-shaped object so downstream
+      // consumers (columns/fields resolution) don't crash on undefined fields.
+      if (typeof entity === 'string') {
+        return { id: entity, name: entity, slug: entity.toLowerCase(), fields: [], relationships: [], uiSections: [], workflows: [], permissions: [] } as EntityPlan;
+      }
+      return entity as EntityPlan;
+    }
+  }
+  return undefined;
+}
+
+// Normalize a raw blueprint entity (object OR plain string) to an EntityPlan,
+// or undefined when absent. Blueprint JSON stores entities as plain strings.
+function toEntityPlan(entity: EntityPlan | string | undefined): EntityPlan | undefined {
+  if (!entity) return undefined;
+  if (typeof entity === 'string') {
+    return { id: entity, name: entity, slug: entity.toLowerCase(), fields: [], relationships: [], uiSections: [], workflows: [], permissions: [] } as EntityPlan;
+  }
+  return entity;
+}
+
+// Common page-path -> entity-slug synonyms. Used when a page path (e.g.
+// '/staff') does not literally contain an entity slug ('user').
+const PAGE_ENTITY_SYNONYMS: Record<string, string[]> = {
+  staff: ['user', 'employee', 'member'],
+  team: ['user', 'employee', 'member'],
+  employee: ['user', 'employee'],
+  member: ['user', 'member'],
+  customer: ['user', 'customer'],
+  order: ['order'],
+  reservation: ['reservation', 'booking'],
+  booking: ['reservation', 'booking'],
+  menu: ['menuitem', 'menu', 'dish', 'product'],
+  dish: ['menuitem', 'dish'],
+  product: ['product', 'item'],
+  catalog: ['product', 'item'],
+  inventory: ['product', 'item'],
+};
+
+// Resolve the most appropriate entity for a component slot, trying the slot
+// name, then the page path/name, then a synonym map, then the first entity.
+function resolveEntityForSlot(
+  slot: ComponentSlot,
+  page: PageExecutionPlan,
+  blueprint: ApplicationBlueprint,
+): EntityPlan | undefined {
+  let entity = findEntity(blueprint, slot.slot);
+  if (entity) return entity;
+  const pageKey = `${page.path || ''} ${page.name || ''}`.toLowerCase().replace(/\//g, ' ').replace(/-/g, ' ');
+  entity = findEntity(blueprint, pageKey);
+  if (entity) return entity;
+  for (const [key, aliases] of Object.entries(PAGE_ENTITY_SYNONYMS)) {
+    if (pageKey.includes(key)) {
+      const found = findEntity(blueprint, aliases.join(' '));
+      if (found) return found;
     }
   }
   return undefined;
