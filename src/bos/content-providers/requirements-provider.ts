@@ -52,7 +52,14 @@ function humanizeSummary(raw: string): string {
 /** Best available business name. */
 function businessName(bk: BusinessKnowledge, fallback: string): string {
   const bt = bk.discovery?.businessType?.trim();
-  if (bt && bt.length > 1) return titleCase(bt);
+  if (bt && bt.length > 1) {
+    // Filter out generic platform/system/tool terms that the discovery engine
+    // incorrectly emits instead of the actual business name (e.g. "studio
+    // Course Platform" for a yoga studio). These don't describe the business.
+    const lower = bt.toLowerCase();
+    const genericPatterns = /\b(platform|system|tool|software|app|website|site|solution|service|course platform|studio course)\b/i;
+    if (!genericPatterns.test(lower)) return titleCase(bt);
+  }
   return fallback;
 }
 

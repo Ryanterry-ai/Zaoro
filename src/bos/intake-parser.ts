@@ -699,7 +699,7 @@ function detectCountry(prompt: string): string | undefined {
     [/\b(uk|united kingdom|britain|england)\b/, 'GB'],
     [/\b(germany|deutschland|de)\b/, 'DE'],
     [/\b(france|fr)\b/, 'FR'],
-    [/\b(india|indian|in)\b/, 'IN'],
+    [/\b(india|indian|mumbai|delhi|bangalore|bengaluru|chennai|kolkata|hyderabad|pune|ahmedabad|jaipur|lucknow|in)\b/, 'IN'],
     [/\b(canada|ca)\b/, 'CA'],
     [/\b(australia|au)\b/, 'AU'],
     [/\b(eu|europe|european)\b/, 'EU'],

@@ -98,11 +98,14 @@ export class ScrapedContentProvider implements ContentProvider {
         })),
       };
     } else if (bi?.revenueModels && bi.revenueModels.length > 0) {
+      const country = ctx.blueprint?.country;
+      const currency = country === 'IN' ? '\u20B9' : '$';
+      const isIN = country === 'IN';
       result.pricing = {
         tiers: bi.revenueModels.slice(0, 3).map((rm, i) => ({
           name: rm.name,
-          price: i === 2 ? 'Custom' : `$${(i + 1) * 29}`,
-          period: i === 2 ? '' : '/month',
+          price: i === 2 ? 'Custom' : isIN ? `${currency}${(i + 1) * 499}` : `${currency}${(i + 1) * 29}`,
+          period: i === 2 ? '' : isIN ? '/mo' : '/month',
           features: [rm.description, 'Core features', 'Email support'],
           highlighted: i === 1,
         })),
