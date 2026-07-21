@@ -1172,11 +1172,18 @@ export async function runBuildPipeline(
         10,
       );
       // Write repaired content back into renderResult.files (idempotent).
+      // Also add any NEW files created by the repair (e.g. interaction primitives)
+      // that don't exist in the original render result.
       {
         const byPath = new Map(finalInput.files.map((f) => [f.path, f.content]));
         for (const f of renderResult.files) {
           const patched = byPath.get(f.path);
           if (patched != null && patched !== f.content) f.content = patched;
+        }
+        for (const f of finalInput.files) {
+          if (!renderResult.files.some((rf) => rf.path === f.path)) {
+            renderResult.files.push({ path: f.path, content: f.content, type: 'component' });
+          }
         }
       }
       verification = { report, iterations };
