@@ -775,6 +775,14 @@ function extractAppName(prompt: string): string | undefined {
     'build', 'create', 'make', 'design', 'develop', 'set', 'get', 'start',
     'need', 'want', 'looking', 'trying', 'help', 'give', 'show', 'find',
     'wanting', 'looking', 'trying', 'thinking', 'planning', 'working',
+    // CTA verbs and shopping actions — never brand names
+    'shop', 'now', 'buy', 'order', 'purchase', 'try', 'subscribe',
+    'shop now', 'buy now', 'order now', 'get started', 'sign up', 'register',
+    'book', 'reserve', 'join', 'download', 'explore', 'discover', 'browse',
+    'view', 'see', 'check', 'learn', 'read', 'watch', 'listen',
+    // Generic product descriptors
+    'premium', 'quality', 'best', 'top', 'leading', 'popular', 'trending',
+    'affordable', 'cheap', 'expensive', 'luxury', 'budget', 'value',
   ]);
 
   for (const pat of patterns) {

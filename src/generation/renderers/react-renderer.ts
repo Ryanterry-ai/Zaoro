@@ -25,6 +25,7 @@ import type { PageLayout, SectionLayout } from '../skill-integrator.js';
 import { stageLogger } from '../../core/debug-logger.js';
 import { compileMotion, createRevealBlueprint } from '../../motion/compiler.js';
 import { ECOMMERCE_TEMPLATES } from './templates/ecommerce.js';
+import { CONSUMER_ELECTRONICS_TEMPLATES } from './templates/consumer-electronics.js';
 import { SAAS_TEMPLATES } from './templates/saas.js';
 import { RESTAURANT_TEMPLATES } from './templates/restaurant.js';
 import { CONTENT_TEMPLATES } from './templates/content.js';
@@ -361,22 +362,88 @@ export type NavItem = (typeof navItems)[number];
     // They must be the highest priority for background/foreground/card/muted/border to ensure
     // the correct dark/light mode is applied. Other sources (Brief, Decision, DNA) only fill gaps
     // for primary/secondary/accent where theme tokens may not have values.
-    const primary = pick(themeColors.primary, bc?.primary, ct.primary, dc?.primary, sc?.primary) ?? '#6366f1';
+    let primary = pick(themeColors.primary, bc?.primary, ct.primary, dc?.primary, sc?.primary) ?? '#6366f1';
     const secondary = pick(themeColors.secondary, bc?.secondary, ct.secondary, dc?.secondary, sc?.secondary) ?? primary;
-    const accent = pick(themeColors.accent, bc?.accent, ct.accent, dc?.accent, sc?.accent) ?? primary;
-    const background = pick(themeColors.background, bc?.background, ct.background, dc?.background, sc?.background) ?? '#0a0a0b';
-    const foreground = pick(themeColors.foreground, bc?.foreground, ct.text, dc?.foreground, sc?.foreground) ?? '#fafafa';
-    const card = pick(themeColors.card, bc?.card, dc?.card, sc?.card) ?? '#18181b';
-    const cardForeground = pick(themeColors.cardForeground, dc?.cardForeground, sc?.cardForeground) ?? foreground;
-    const muted = pick(themeColors.muted, bc?.muted, dc?.muted, sc?.muted) ?? card;
-    const mutedForeground = pick(themeColors.mutedForeground, dc?.mutedForeground, ct.textMuted, sc?.mutedForeground) ?? '#a1a1aa';
-    const border = pick(themeColors.border, bc?.border, dc?.border, ct.border, sc?.border) ?? '#27272a';
-    const input = pick(themeColors.input, dc?.input, ct.border, sc?.input) ?? border;
-    const ring = pick(themeColors.ring, ct.ring, dc?.ring, sc?.ring) ?? primary;
+    let accent = pick(themeColors.accent, bc?.accent, ct.accent, dc?.accent, sc?.accent) ?? primary;
+    let background = pick(themeColors.background, bc?.background, ct.background, dc?.background, sc?.background) ?? '#0a0a0b';
+    let foreground = pick(themeColors.foreground, bc?.foreground, ct.text, dc?.foreground, sc?.foreground) ?? '#fafafa';
+    let card = pick(themeColors.card, bc?.card, dc?.card, sc?.card) ?? '#18181b';
+    let cardForeground = pick(themeColors.cardForeground, dc?.cardForeground, sc?.cardForeground) ?? foreground;
+    let muted = pick(themeColors.muted, bc?.muted, dc?.muted, sc?.muted) ?? card;
+    let mutedForeground = pick(themeColors.mutedForeground, dc?.mutedForeground, ct.textMuted, sc?.mutedForeground) ?? '#a1a1aa';
+    let border = pick(themeColors.border, bc?.border, dc?.border, ct.border, sc?.border) ?? '#27272a';
+    let input = pick(themeColors.input, dc?.input, ct.border, sc?.input) ?? border;
+    let ring = pick(themeColors.ring, ct.ring, dc?.ring, sc?.ring) ?? primary;
+    let primaryForeground = '#ffffff';
     const destructive = pick(themeColors.destructive, bc?.destructive, ct.error, dc?.destructive, sc?.destructive) ?? '#ef4444';
     const success = pick(themeColors.success, bc?.success, ct.success, dc?.success, sc?.success) ?? '#22c55e';
     const warning = pick(themeColors.warning, bc?.warning, ct.warning, dc?.warning, sc?.warning) ?? '#f59e0b';
     const info = pick(themeColors.info, ct.info, dc?.info, sc?.info) ?? '#3b82f6';
+
+    // ── Aesthetic signal overrides ─────────────────────────────────────────
+    // Parse the prompt description for explicit aesthetic requests (dark theme,
+    // electric blue, neon, etc.) and override resolved colors. This ensures
+    // user-requested aesthetics are never drowned out by industry defaults.
+    const desc = (context?.businessKnowledge?.discovery?.intent ?? '').toLowerCase()
+      + ' ' + (context?.businessKnowledge?.discovery?.businessType ?? '').toLowerCase()
+      + ' ' + (context?.theme?.description as string ?? '').toLowerCase();
+    const wantsDark = /\b(dark|noir|black|midnight|shadow|dim|moody|gloomy|obsidian)\b/.test(desc);
+    const wantsElectric = /\b(electric|neon|vibrant|glow|cyber|sci-?fi|futuristic|luminous|radiant)\b/.test(desc);
+    const wantsLight = /\b(light|bright|airy|clean|minimal|white|pastel|soft)\b/.test(desc);
+
+    // Extract specific color mentions: "electric blue", "neon green", "royal purple", etc.
+    const colorMentions = desc.match(/\b(electric|neon|royal|deep|vivid|bright)?\s*(blue|green|purple|red|orange|cyan|teal|indigo|violet|pink|gold|amber)\b/gi) ?? [];
+    const wantsElectricBlue = colorMentions.some(m => /electric|blue/i.test(m));
+    const wantsNeonGreen = colorMentions.some(m => /neon|green/i.test(m));
+    const wantsElectricPurple = colorMentions.some(m => /electric|purple|violet/i.test(m));
+
+    if (wantsDark && !wantsLight) {
+      // Force dark theme — override background, foreground, card, border
+      const darkBg = '#0a0a0b';
+      const darkFg = '#fafafa';
+      const darkCard = '#18181b';
+      const darkBorder = '#27272a';
+      // Only override if upstream didn't explicitly set a dark palette
+      if (background !== darkBg) {
+        // If upstream set a light background (#fff, #f8fafc, #ffffff, etc.), override
+        const isLightBg = /^#(fff|f[0-9a-f]{5}|fafafa|ffffff)/i.test(background);
+        if (isLightBg) {
+          Object.assign({ background, foreground, card, cardForeground, border }, {});
+          background = darkBg;
+          foreground = darkFg;
+          card = darkCard;
+          cardForeground = darkFg;
+          muted = '#27272a';
+          mutedForeground = '#a1a1aa';
+          border = darkBorder;
+          input = darkBorder;
+        }
+      }
+    }
+
+    if (wantsElectric || wantsElectricBlue || wantsElectricPurple) {
+      // Override primary with electric/neon variant
+      if (wantsElectricBlue) {
+        primary = '#00d4ff';
+        primaryForeground = '#000000';
+        ring = '#00d4ff';
+      } else if (wantsElectricPurple) {
+        primary = '#a855f7';
+        primaryForeground = '#000000';
+        ring = '#a855f7';
+      } else if (wantsNeonGreen) {
+        primary = '#00ff88';
+        primaryForeground = '#000000';
+        ring = '#00ff88';
+      } else {
+        // Generic electric — use cyan
+        primary = '#00d4ff';
+        primaryForeground = '#000000';
+        ring = '#00d4ff';
+      }
+      // Electric accent — complementary neon
+      accent = wantsElectricBlue ? '#ff6b00' : wantsElectricPurple ? '#00ff88' : '#ff00ff';
+    }
 
     // Typography precedence: theme tokens (industry-specific) > Design Brief > Design Intelligence > Design DNA > system
     const tt = (dd?.typographyTokens?.fontFamily ?? {}) as Record<string, string | undefined>;
@@ -430,6 +497,9 @@ export type NavItem = (typeof navItems)[number];
     if (industry === 'restaurant' || subIndustry.includes('restaurant') || subIndustry.includes('cafe') || subIndustry.includes('coffee')) {
       return RESTAURANT_TEMPLATES;
     }
+    if (industry === 'consumer-electronics' || subIndustry.includes('audio') || subIndustry.includes('headphone') || subIndustry.includes('speaker') || subIndustry.includes('electronics')) {
+      return CONSUMER_ELECTRONICS_TEMPLATES;
+    }
 
     // Fall back to project category
     switch (sa.projectCategory) {
@@ -457,6 +527,7 @@ export type NavItem = (typeof navItems)[number];
     const templateMap: Record<string, string> = {
       'ProductGrid': 'ProductCard',
       'ProductCard': 'ProductCard',
+      'ProductShowcase': 'ProductShowcase',
       'CartDrawer': 'CartDrawer',
       'CheckoutModal': 'CheckoutModal',
       'ProductFilter': 'ProductFilter',
@@ -1467,6 +1538,7 @@ ${body}
       case 'BookingCalendar': lines.push(...this.generateBookingCalendarBody(spec)); break;
       case 'SoundStory':
       case 'Sound-story':      lines.push(...this.generateSoundStoryBody(spec)); break;
+      case 'ProductShowcase':  lines.push(...this.generateProductShowcaseBody(spec)); break;
       default:                lines.push(...this.generateGenericBody(spec)); break;
     }
 
@@ -1988,6 +2060,40 @@ ${body}
       `    />`,
       `  );`,
       `}`,
+    ];
+  }
+
+  private generateProductShowcaseBody(spec: ComponentSpec): string[] {
+    const title = this.getContentView(spec, 'title');
+    const subtitle = this.getContentView(spec, 'subtitle');
+
+    return [
+      `  return (`,
+      `    <section className="py-20 px-6">`,
+      `      <div className="max-w-6xl mx-auto">`,
+      `        <div className="text-center mb-16">`,
+      `          <h2 className="text-4xl md:text-5xl font-black text-foreground mb-4">{title}</h2>`,
+      `          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>`,
+      `        </div>`,
+      `        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">`,
+      `          {items?.map((product, i) => (`,
+      `            <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }} className="group bg-card border border-border rounded-3xl overflow-hidden hover:border-primary/50 transition-all duration-300">`,
+      `              <div className="relative h-56 bg-gradient-to-br from-muted/50 to-muted/20 overflow-hidden">`,
+      `                <img src={product.image || product.metadata?.image || '${this.resolveImageUrl(`product-${'{'}i${'}'}`, 600, 400)}'} alt={product.title ?? 'Product'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />`,
+      `                {product.metadata?.badge && <span className="absolute top-4 left-4 px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full">{product.metadata.badge}</span>}`,
+      `              </div>`,
+      `              <div className="p-6">`,
+      `                {product.description && <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">{product.description}</p>}`,
+      `                <h3 className="text-xl font-black text-foreground mb-2">{product.title}</h3>`,
+      `                {product.metadata?.price && <div className="text-2xl font-black text-foreground mt-2">{product.metadata.price}</div>}`,
+      `                <button className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 transition">Add to Cart</button>`,
+      `              </div>`,
+      `            </motion.div>`,
+      `          ))}`,
+      `        </div>`,
+      `      </div>`,
+      `    </section>`,
+      `  );`,
     ];
   }
 

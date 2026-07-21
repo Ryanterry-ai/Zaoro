@@ -641,6 +641,6 @@ export const ECOMMERCE_ELECTRONICS: Pattern = {
   integrations: [{ type: 'payment', name: 'Stripe', config: {}, required: true }, { type: 'email', name: 'Resend', config: {}, required: false }, { type: 'analytics', name: 'PostHog', config: {}, required: false }],
   design: { restrictions: ['product-images-required', 'specs-visible'] },
   generationRules: [],
-  compatibleIndustries: ['electronics', 'tech', 'gadgets', 'computers', 'phones', 'audio', 'gaming', 'smart-home', 'appliances'],
+  compatibleIndustries: ['consumer-electronics', 'electronics', 'tech', 'gadgets', 'computers', 'phones', 'audio', 'gaming', 'smart-home', 'appliances'],
   compatibleBusinessModels: ['direct-sales', 'marketplace', 'wholesale'],
 };
