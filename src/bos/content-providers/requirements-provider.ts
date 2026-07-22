@@ -57,8 +57,12 @@ function businessName(bk: BusinessKnowledge, fallback: string): string {
     // incorrectly emits instead of the actual business name (e.g. "studio
     // Course Platform" for a yoga studio). These don't describe the business.
     const lower = bt.toLowerCase();
-    const genericPatterns = /\b(platform|system|tool|software|app|website|site|solution|service|course platform|studio course)\b/i;
+    const genericPatterns = /\b(platform|system|tool|software|app|website|site|solution|service|course platform|studio course|retail store|online store|online shop|specialty|specialty\s+\w+\s+retail)\b/i;
     if (!genericPatterns.test(lower)) return titleCase(bt);
+    // If businessType is generic, try to extract a short brand-like token
+    // (e.g. "Specialty Aura Retail Store" → "Aura")
+    const brandMatch = bt.match(/\b([A-Z][a-z]{2,15})\b/);
+    if (brandMatch && brandMatch[1].length > 2) return brandMatch[1];
   }
   return fallback;
 }
@@ -100,7 +104,7 @@ export class RequirementsProvider implements ContentProvider {
 
   provide(ctx: ProviderContext): ContentBag {
     const bk = ctx.businessKnowledge!;
-    const name = businessName(bk, ctx.blueprint.name ?? 'Us');
+    const name = ctx.appName || businessName(bk, ctx.blueprint.name ?? 'Us');
     const what = whatPhrase(bk);
     const who = whoPhrase(bk);
     const feel = feelPhrase(bk);
@@ -109,10 +113,12 @@ export class RequirementsProvider implements ContentProvider {
     const bag: ContentBag = {};
 
     // ── Hero ────────────────────────────────────────────────────────────────
-    // Title = the intent line if it reads like a headline, else the name.
+    // Title = the intent line if it reads like a headline, else the brand name.
     const humanSummary = req?.summary ? humanizeSummary(req.summary) : '';
     const heroTitle =
-      humanSummary && humanSummary.length < 70 ? humanSummary.replace(/\.$/, '') : name;
+      humanSummary && humanSummary.length < 70 && !ctx.appName
+        ? humanSummary.replace(/\.$/, '')
+        : name;
     const subtitleParts: string[] = [];
     if (what) subtitleParts.push(titleCase(what.charAt(0)) + what.slice(1));
     if (who) subtitleParts.push(`Made for ${who.toLowerCase()}`);

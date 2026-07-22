@@ -138,6 +138,8 @@ export interface ProviderContext {
   vocabulary: Record<string, string>;
   /** Sub-category detected from description (e.g., 'coffee', 'wholesale') */
   subCategory?: string;
+  /** Brand name extracted from prompt (e.g. 'Aura', 'MumbaiEdge') */
+  appName?: string;
   /** BI profile from scraped business intelligence */
   revenueIntelligence?: import('../schemas/knowledge/business-intelligence.schema.js').BusinessIntelligenceProfile;
   /** Raw scraped content from web intelligence */

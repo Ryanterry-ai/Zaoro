@@ -33,6 +33,7 @@ const SECTION_REGISTRY: Record<string, string> = {
   'features': 'FeatureGrid',
   'featured-products': 'ProductGrid',
   'product-grid': 'ProductGrid',
+  'product-showcase': 'ProductShowcase',
   'product-gallery': 'ProductGallery',
   'product-info': 'ProductInfo',
   'categories': 'CategoryGrid',

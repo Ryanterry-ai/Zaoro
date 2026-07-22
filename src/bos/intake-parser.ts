@@ -348,6 +348,7 @@ const INDUSTRY_MAPPINGS: IndustryMapping[] = [
     },
     keywords: ['headphones', 'earbuds', 'earphones', 'headset', 'speaker', 'speakers',
       'audio', 'sound', 'audiophile', 'noise cancelling', 'noise canceling',
+      'noise-cancelling', 'noise-cancelling',
       'wireless headphones', 'bluetooth headphones', 'bluetooth', 'electronics',
       'gadget', 'device', 'tech', 'consumer electronics', 'smart device',
       'sound system', 'home audio', 'portable speaker', 'earbuds', 'tws'],
@@ -575,6 +576,14 @@ export function detectIndustryWithScore(prompt: string): IndustryDetectionResult
     if (isB2B && mapping.industry === 'enterprise-software') {
       score = Math.ceil(score * 1.5);
     }
+    // Boost consumer-electronics when multiple audio/product signals present,
+    // so it beats generic ecommerce on ties.
+    if (mapping.industry === 'consumer-electronics' && score >= 2) {
+      const audioSignals = ['headphones', 'earbuds', 'speaker', 'audio', 'sound',
+        'noise cancelling', 'noise canceling', 'noise-cancelling'];
+      const signalCount = audioSignals.filter(kw => keywordMatches(lower, kw)).length;
+      if (signalCount >= 2) score += signalCount;
+    }
     // Strict-greater wins. On a tie, prefer a concrete product/domain industry
     // over a style-modifier industry (e.g. "headphones" should beat "luxury").
     const isStyle = STYLE_INDUSTRIES.has(mapping.industry);
@@ -749,6 +758,8 @@ function detectDesignMood(prompt: string): string | undefined {
 
 function extractAppName(prompt: string): string | undefined {
   const patterns = [
+    // Product model lists: "Aura Pro, Aura Studio, Aura Lite"
+    /([A-Z][A-Za-z0-9]{2,15})\s+(?:Pro|Studio|Lite|Max|Plus|Mini|SE|Air|One|Go|X|S)\b/,
     // "called X" / "named X" — stop before common joiners (with, for, that, and, the)
     /(?:called|named)\s+["']?([A-Z][A-Za-z0-9&'.-]{1,30})["']?(?:\s+(?:with|for|that|and|the)\b|\s*[,.]|\s*$)/,
     // Quoted names: "Build 'MediTrack'"

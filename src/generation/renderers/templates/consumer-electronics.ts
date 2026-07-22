@@ -24,21 +24,23 @@ interface Product {
   tagline?: string;
   price: string;
   originalPrice?: string;
-  image: string;
+  image?: string;
   badge?: string;
+  description?: string;
   specs?: ProductSpec[];
   features?: string[];
   rating?: number;
   reviewCount?: number;
+  [key: string]: unknown;
 }
 
 interface ProductShowcaseProps {
   title?: string;
   subtitle?: string;
-  products?: Product[];
+  items?: Product[];
 }
 
-export default function ProductShowcase({ title, subtitle, products }: ProductShowcaseProps) {
+export default function ProductShowcase({ title, subtitle, items: products }: ProductShowcaseProps) {
   return (
     <section className="py-20 px-6">
       <div className="max-w-6xl mx-auto">
@@ -116,6 +118,175 @@ export default function ProductShowcase({ title, subtitle, products }: ProductSh
             </motion.div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+`,
+  /**
+   * SoundwaveHero — immersive scroll narrative with SVG path morph.
+   * The wave morphs from chaotic noise to a flat line as user scrolls.
+   * Uses Framer Motion useTransform on SVG d attribute.
+   */
+  SoundwaveHero: () => `'use client';
+
+import React, { useRef, useMemo } from 'react';
+import { motion, useScroll, useSpring, useTransform, useMotionValueEvent } from 'framer-motion';
+
+interface SoundwaveHeroProps {
+  title?: string;
+  subtitle?: string;
+  beats?: Array<{ title: string; body: string }>;
+  accentColor?: string;
+}
+
+function generateWavePath(width: number, height: number, chaos: number, offset: number): string {
+  const mid = height / 2;
+  const segments = 64;
+  const segWidth = width / segments;
+  let d = \`M 0 \${mid}\`;
+  for (let i = 0; i <= segments; i++) {
+    const x = i * segWidth;
+    const noise = Math.sin(i * 0.8 + offset) * chaos * 0.6
+      + Math.sin(i * 1.3 + offset * 1.7) * chaos * 0.3
+      + Math.sin(i * 2.1 + offset * 0.5) * chaos * 0.1;
+    const y = mid + noise;
+    d += \` L \${x.toFixed(1)} \${y.toFixed(1)}\`;
+  }
+  return d;
+}
+
+export default function SoundwaveHero({ title, subtitle, beats: inputBeats, accentColor = '#00d4ff' }: SoundwaveHeroProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+  const progress = useSpring(scrollYProgress, { stiffness: 80, damping: 30 });
+
+  const width = 1200;
+  const height = 200;
+  const maxChaos = 80;
+
+  const chaos = useTransform(progress, [0, 0.7], [maxChaos, 0]);
+  const waveOpacity = useTransform(progress, [0, 0.8], [1, 0.08]);
+  const glowOpacity = useTransform(progress, [0, 0.5, 1], [0.4, 0.2, 0]);
+  const calmScale = useTransform(progress, [0.5, 1], [0.5, 1.5]);
+  const calmOpacity = useTransform(progress, [0.5, 1], [0, 0.6]);
+  const bgColor = useTransform(progress, [0, 1], [0.02, 0.06]);
+  const scrollHintOpacity = useTransform(progress, [0, 0.15], [1, 0]);
+
+  const beats = inputBeats?.length
+    ? inputBeats
+    : [
+        { title: 'The world is loud.', body: 'A wall of overlapping signals. This is before.' },
+        { title: 'Then, a threshold.', body: 'Adaptive cancellation reads the room and begins to fold the noise back on itself.' },
+        { title: 'The static thins.', body: 'What was a roar becomes a whisper, then a tide pulling out to sea.' },
+        { title: 'Complete silence.', body: 'Nothing left but the low hum of your own pulse.' },
+      ];
+
+  const [active, setActive] = React.useState(0);
+  useMotionValueEvent(progress, 'change', (v) => {
+    setActive(Math.min(beats.length - 1, Math.floor(v * beats.length)));
+  });
+
+  const [currentChaos, setCurrentChaos] = React.useState(maxChaos);
+  useMotionValueEvent(chaos, 'change', (v) => setCurrentChaos(v));
+
+  const wavePath = useMemo(
+    () => generateWavePath(width, height, currentChaos, 0),
+    [currentChaos],
+  );
+
+  return (
+    <section ref={ref} className="relative h-[400vh] bg-black" aria-label="Soundwave transforms to silence">
+      <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
+        {/* Radial glow background */}
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background: useTransform(bgColor, (l: number) =>
+              \`radial-gradient(circle at 50% 50%, rgba(0,212,255,\${l}) 0%, #000 70%)\`
+            ),
+          }}
+        />
+
+        {/* SVG Soundwave */}
+        <svg
+          viewBox={\`0 0 \${width} \${height}\`}
+          className="absolute w-full max-w-5xl px-8"
+          style={{ opacity: waveOpacity as any }}
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={accentColor} stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#ff6b00" stopOpacity="0.7" />
+              <stop offset="100%" stopColor={accentColor} stopOpacity="0.9" />
+            </linearGradient>
+            <filter id="wave-glow">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <path
+            d={wavePath}
+            fill="none"
+            stroke="url(#wave-gradient)"
+            strokeWidth="3"
+            filter="url(#wave-glow)"
+            strokeLinecap="round"
+          />
+          {/* Mirror path for symmetry */}
+          <path
+            d={wavePath}
+            fill="none"
+            stroke="url(#wave-gradient)"
+            strokeWidth="2"
+            opacity="0.4"
+            transform={\`scale(1,-1) translate(0,-\${height})\`}
+            strokeLinecap="round"
+          />
+        </svg>
+
+        {/* Calm circle — appears as wave flattens */}
+        <motion.div
+          className="absolute rounded-full"
+          style={{
+            scale: calmScale,
+            opacity: calmOpacity,
+            width: 200,
+            height: 200,
+            background: \`radial-gradient(circle, rgba(0,212,255,0.3), transparent 70%)\`,
+            boxShadow: \`0 0 100px 30px rgba(0,212,255,0.2)\`,
+          }}
+        />
+
+        {/* Text beats */}
+        <div className="relative z-10 max-w-2xl px-6 text-center">
+          {beats.map((beat, i) => (
+            <motion.div
+              key={beat.title}
+              className="absolute inset-x-6"
+              initial={false}
+              animate={{ opacity: i === active ? 1 : 0, y: i === active ? 0 : 16 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4">{beat.title}</h2>
+              <p className="text-lg text-white/70 max-w-xl mx-auto">{beat.body}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Scroll hint */}
+        <motion.div
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-[10px] tracking-[0.3em] uppercase text-white/40"
+          animate={{ y: [0, 8, 0] }}
+          transition={{ repeat: Infinity, duration: 1.8 }}
+          style={{ opacity: scrollHintOpacity }}
+        >
+          scroll to experience
+        </motion.div>
       </div>
     </section>
   );

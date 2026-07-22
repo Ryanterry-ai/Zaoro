@@ -266,6 +266,7 @@ export function resolveContent(
     blueprint: ctx.blueprint,
     vocabulary: ctx.vocabulary,
     ...(subCategory != null ? { subCategory } : {}),
+    ...(execBlueprint.appName ? { appName: execBlueprint.appName } : {}),
     ...(ctx.revenueIntelligence != null ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
     ...(ctx.scrapedContent != null ? { scrapedContent: ctx.scrapedContent } : {}),
     ...(ctx.businessResearch != null ? { businessResearch: ctx.businessResearch } : {}),
@@ -326,9 +327,20 @@ function resolvePageSpec(
   ctx: ContentResolverContext,
   contentBag: ContentBag,
 ): PageSpec {
-  const components = page.slots.map(slot =>
+  let components = page.slots.map(slot =>
     resolveComponentSpec(slot, page, ctx, contentBag),
   );
+
+  // Consumer-electronics: ensure ProductShowcase appears on home page
+  const industry = (ctx.blueprint.industry ?? '').toLowerCase();
+  const isHome = page.path === '/' || page.type === 'home';
+  if (isHome && (industry.includes('consumer-electronics') || industry.includes('electronics') || industry.includes('audio'))) {
+    const hasProductShowcase = components.some(c => c.type === 'ProductShowcase');
+    if (!hasProductShowcase) {
+      const showcaseSlot: ComponentSlot = { slot: 'product-showcase', component: 'ProductShowcase', order: 1 };
+      components.splice(1, 0, resolveComponentSpec(showcaseSlot, page, ctx, contentBag));
+    }
+  }
 
   return {
     pageId: page.pageId,
@@ -388,6 +400,7 @@ const COMPONENT_RESOLVERS: Record<string, ComponentResolver> = {
   PaymentForm: resolvePaymentForm,
   PaymentMethod: resolvePaymentMethod,
   FeatureComparison: resolveFeatureComparison,
+  ProductShowcase: resolveProductShowcase,
 
   // ─── Dashboard ───────────────────────────────────────────────────────
   StatsCards: resolveStatsCards,
@@ -593,6 +606,42 @@ function resolveProductGrid(
       filterable: f.indexed,
     })),
     layout: { alignment: 'left', maxWidth: '7xl' },
+  };
+}
+
+function resolveProductShowcase(
+  _slot: ComponentSlot,
+  _page: PageExecutionPlan,
+  ctx: ContentResolverContext,
+  contentBag: ContentBag,
+): ComponentSpec {
+  const appName = ctx.blueprint.name ?? 'Our Products';
+  const products = contentBag.products?.items ?? [];
+  const entity = ctx.blueprint.entities[0];
+  const entityName = entity?.name ?? 'Product';
+
+  return {
+    type: 'ProductShowcase',
+    content: {
+      title: { value: `Discover ${appName}`, type: 'text' },
+      subtitle: { value: `Premium ${entityName.toLowerCase()}s crafted for you`, type: 'text' },
+    },
+    items: products.length ? products.map(p => ({
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      tag: p.tag,
+      rating: p.rating,
+      reviews: p.reviews,
+      emoji: p.emoji,
+      details: p.details,
+      image: p.image,
+    })) : ctx.blueprint.entities.slice(0, 3).map(e => ({
+      name: e.name,
+      description: e.fields?.map(f => f.name).join(', ') ?? '',
+      price: '',
+    })),
+    layout: { alignment: 'center', maxWidth: '7xl' },
   };
 }
 
@@ -2194,6 +2243,10 @@ const PAGE_ENTITY_SYNONYMS: Record<string, string[]> = {
   product: ['product', 'item'],
   catalog: ['product', 'item'],
   inventory: ['product', 'item'],
+  schedule: ['class', 'session', 'booking', 'reservation'],
+  trainer: ['trainer', 'instructor', 'coach', 'user'],
+  instructor: ['trainer', 'instructor', 'coach', 'user'],
+  coach: ['trainer', 'instructor', 'coach', 'user'],
 };
 
 // Resolve the most appropriate entity for a component slot, trying the slot

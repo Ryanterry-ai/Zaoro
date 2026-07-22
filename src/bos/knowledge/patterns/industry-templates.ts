@@ -628,7 +628,7 @@ export const ECOMMERCE_ELECTRONICS: Pattern = {
   description: 'Electronics store with specs comparison, reviews, and tech support',
   navigation: { items: [{ label: 'Home', href: '/' }, { label: 'Shop', href: '/shop' }, { label: 'Deals', href: '/deals' }, { label: 'Support', href: '/support' }, { label: 'Cart', href: '/cart' }], style: 'horizontal', sticky: true, logo: true },
   pages: [
-    { path: '/', name: 'Home', type: 'home', sections: ['hero', 'featured-products', 'deals', 'brands', 'cta'] },
+    { path: '/', name: 'Home', type: 'home', sections: ['hero', 'product-showcase', 'deals', 'brands', 'cta'] },
     { path: '/shop', name: 'Shop', type: 'listing', sections: ['product-grid', 'filters', 'comparison'] },
     { path: '/product/:id', name: 'Product Detail', type: 'detail', sections: ['product-gallery', 'specs', 'reviews', 'related-products', 'warranty'] },
     { path: '/deals', name: 'Deals', type: 'listing', sections: ['deal-grid', 'countdown', 'flash-sale'] },
