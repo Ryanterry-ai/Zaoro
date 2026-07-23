@@ -261,15 +261,13 @@ function deriveTheme(aestheticSignals: string[], emotionalIntent: string[]): The
 }
 
 function deriveSections(primitives: BusinessPrimitives): SectionDef[] {
-  const { transactionType, contentShape, aestheticSignals, valueObject } = primitives;
+  const { transactionType, contentShape, aestheticSignals } = primitives;
   const sections: SectionDef[] = [];
 
   // Hero section always comes first
-  // Use SoundwaveHero only for consumer-electronics (headphones/audio), not just dark theme
-  const useSoundwaveHero = valueObject === 'headphone' || valueObject === 'audio';
   sections.push({
     id: 'hero',
-    component: useSoundwaveHero ? 'SoundwaveHero' : 'Hero',
+    component: aestheticSignals.includes('dark-theme') ? 'SoundwaveHero' : 'Hero',
     props: {},
   });
 

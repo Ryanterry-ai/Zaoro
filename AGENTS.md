@@ -17,5 +17,28 @@ A dual-mode system: clone an existing website (extractive) or generate a new one
 - Input has a business description, no URL → generative pipeline
 - Input has both → hybrid: clone pipeline for design/structure inspiration only, generative pipeline for actual business logic and all content (never copy a competitor's real text/prices verbatim)
 
+## Build.Anything — Agent Instructions
+
+### Trigger
+When the user runs `/build-anything "prompt"` or
+`npx tsx src/app/build-anything-cli.ts "prompt"`:
+
+### Your Role
+You are the LLM in this pipeline. The engine runs deterministically
+and produces a spec. You read the spec and write the code.
+No API calls. No fetches. You write files directly.
+
+### Steps
+1. Run: `npx tsx src/app/build-anything-cli.ts "<user prompt>"`
+2. Read `.build-anything/projects/<slug>/agent-task.md`
+3. Execute the ## ⚡ Action Required section — write every TSX file listed
+4. Files land in `.build-anything/projects/<slug>/src/components/`
+5. Pipeline polls for them automatically — no manual trigger needed
+
+### Environment
+- `IS_AGENT_MODE` auto-detects to `true` when no API key is set
+- `BUILD_OFFLINE=1` skips all LLM calls in the deterministic stages
+- You are the only LLM in this loop
+
 ## After editing this file
 Run `bash scripts/sync-agent-rules.sh` to propagate to all platform-specific instruction files (CLAUDE.md, GEMINI.md, etc.) — this file is the only one a human edits directly.

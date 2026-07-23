@@ -67,6 +67,7 @@ const AESTHETIC_SIGNAL_PATTERNS: PrimitiveSignal[] = [
   { pattern: /\b(gradient|mesh|iridescent|holographic)\b/gi, weight: 2, mapsTo: { aestheticSignals: ['gradient-mesh'] } },
   { pattern: /\b(serif|editorial|magazine|typographic)\b/gi, weight: 2, mapsTo: { aestheticSignals: ['editorial-typography'] } },
   { pattern: /\b(motion|animate|scroll|parallax|transition)\b/gi, weight: 2, mapsTo: { aestheticSignals: ['scroll-motion'] } },
+  { pattern: /\b(futuristic|cyber|tech|next-gen|cutting-edge|immersive)\b/gi, weight: 2, mapsTo: { aestheticSignals: ['animated-visual'] } },
 ];
 
 const EMOTIONAL_INTENT_PATTERNS: PrimitiveSignal[] = [
