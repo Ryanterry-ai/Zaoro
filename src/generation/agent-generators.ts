@@ -9,6 +9,11 @@
  */
 
 import type { Industry } from '../orchestration/types.js';
+import { extractPrimitives } from './primitive-extractor.js';
+import { deriveFromPrimitives } from './primitive-reasoner.js';
+import { analyzePromptFromPrimitives, generatePagesFromPrimitives } from './primitive-prompt-bridge.js';
+import { generateDesignTokensFromPrimitives } from './primitive-domain-bridge.js';
+import { adaptPrimitiveOutput } from './primitive-adapter.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -645,6 +650,164 @@ function generateSaaSPages(slug: string, projectName: string, biz: BusinessConte
 // ─── Main Generator ───────────────────────────────────────────────────────────
 
 export function generateFromPrompt(prompt: string): GeneratedArtifacts {
+  // Check if primitive reasoning is enabled
+  const usePrimitives = process.env.PRIMITIVE_REASONING === '1';
+
+  if (usePrimitives) {
+    return generateFromPromptWithPrimitives(prompt);
+  }
+
+  return generateFromPromptLegacy(prompt);
+}
+
+function generateFromPromptWithPrimitives(prompt: string): GeneratedArtifacts {
+  // Step 1: Extract primitives
+  const primitives = extractPrimitives(prompt);
+
+  // Step 2: Derive spec from primitives
+  const derivedSpec = deriveFromPrimitives(primitives);
+
+  // Step 3: Use primitive-based analysis
+  const { projectName, slug, industry, description, url } = analyzePromptFromPrimitives(primitives, derivedSpec, prompt);
+
+  // Step 4: Extract business content
+  const biz = extractBusinessContent(prompt);
+  biz.name = projectName;
+
+  // Step 5: Generate pages from primitives
+  const pages = generatePagesFromPrimitives(primitives, derivedSpec, biz);
+
+  // Step 6: Generate design tokens from primitives
+  const designTokens = generateDesignTokensFromPrimitives(primitives, derivedSpec);
+
+  // Step 7: Use adapter to translate primitive output to renderer format
+  const { components } = adaptPrimitiveOutput(pages, primitives, derivedSpec);
+
+  // Step 8: Generate database schema from entities
+  const databaseSchema = {
+    tables: [
+      {
+        name: 'users',
+        columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          { name: 'email', type: 'string', unique: true },
+          { name: 'name', type: 'string' },
+          { name: 'password', type: 'string' },
+          { name: 'role', type: 'enum' },
+          { name: 'createdAt', type: 'datetime' },
+          { name: 'updatedAt', type: 'datetime' },
+        ],
+        indexes: [{ columns: ['email'], unique: true }],
+      },
+      ...derivedSpec.entities.map(entity => ({
+        name: entity.slug + 's',
+        columns: [
+          { name: 'id', type: 'uuid', primaryKey: true },
+          ...Object.entries(entity.fields).map(([name, type]) => ({
+            name,
+            type: type === 'datetime' ? 'datetime' : type === 'number' ? 'decimal' : type === 'text' ? 'text' : 'string',
+          })),
+          { name: 'createdAt', type: 'datetime' },
+        ],
+        indexes: [],
+      })),
+    ],
+    enums: [],
+  };
+
+  // Step 9: Generate API design from pages
+  const apiDesign = {
+    endpoints: pages.flatMap(p => [
+      {
+        method: 'GET',
+        path: `/api${p.path === '/' ? '' : p.path}`,
+        description: `Get ${p.name}`,
+        response: `${p.name} data`,
+      },
+      {
+        method: 'POST',
+        path: `/api${p.path === '/' ? '' : p.path}`,
+        description: `Create ${p.name}`,
+        response: `${p.name} created`,
+      },
+    ]),
+    authentication: {
+      type: 'JWT',
+      header: 'Authorization',
+      expiry: '24h',
+    },
+  };
+
+  return {
+    manifest: {
+      name: projectName,
+      displayName: projectName,
+      slug,
+      description: biz.description || description,
+      industry,
+      category: industry,
+      complexity: 'moderate',
+      goals: ['Build a modern, responsive application'],
+      targetUsers: ['End users'],
+      url: url ?? null,
+      scope: {
+        pages: pages.map(p => p.name),
+        features: ['Responsive design', 'Modern UI', 'Fast performance'],
+      },
+    },
+    requirements: {
+      functional: pages.map(p => `${p.name} page - ${p.description}`),
+      nonFunctional: ['Responsive design', 'Fast load times', 'Accessible'],
+      features: components.map(c => c.name),
+    },
+    research: {
+      industry,
+      competitors: ['Competitor A', 'Competitor B'],
+      keyFeatures: components.map(c => c.name),
+      techRecommendations: ['Next.js', 'Tailwind CSS', 'PostgreSQL'],
+    },
+    architecture: {
+      pattern: 'MVC',
+      layers: ['Presentation', 'Business Logic', 'Data Access'],
+      techStack: {
+        frontend: 'Next.js 14',
+        backend: 'Next.js API Routes',
+        database: 'PostgreSQL with Prisma',
+        styling: 'Tailwind CSS',
+        auth: 'NextAuth.js',
+      },
+    },
+    databaseSchema,
+    apiDesign,
+    frontendDesign: {
+      pages,
+      components,
+      designTokens,
+      navigation: {
+        type: pages.length > 5 ? 'sidebar' : 'top',
+        items: pages.filter(p => !p.path.includes('[')).map(p => ({
+          label: p.name,
+          path: p.path,
+          icon: getPageIcon(p.name),
+        })),
+      },
+    },
+    integration: {
+      environmentVariables: [
+        { name: 'DATABASE_URL', description: 'PostgreSQL connection string', required: true },
+        { name: 'NEXTAUTH_SECRET', description: 'NextAuth.js secret', required: true },
+        { name: 'NEXTAUTH_URL', description: 'Application URL', required: true },
+      ],
+    },
+    deployment: {
+      hosting: { platform: 'vercel', region: 'global' },
+      cicd: { provider: 'github-actions', stages: ['lint', 'test', 'build', 'deploy'] },
+      monitoring: { errorTracking: 'sentry', analytics: 'posthog' },
+    },
+  };
+}
+
+function generateFromPromptLegacy(prompt: string): GeneratedArtifacts {
   const { projectName, slug, industry, description, url } = analyzePrompt(prompt);
   const biz = extractBusinessContent(prompt);
   // Use the extracted business name, not the slug

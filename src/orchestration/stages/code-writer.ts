@@ -121,8 +121,6 @@ export class CodeWriterStage extends BaseStage {
     const techStack = ctx.getArtifact<TechStack>('architecture.tech-stack');
     const skillDesign = ctx.getArtifact<unknown>('skill.design');
 
-    ctx.log.info(`Code Writer: ${pages.length} pages, ${components.length} components, ${endpoints.length} endpoints`);
-
     // ─── 2. Determine project root ─────────────────────────────────────────
 
     const rawName = manifest.name;
@@ -142,7 +140,9 @@ export class CodeWriterStage extends BaseStage {
     // ─── 3. Build ApplicationSpec from orchestrator artifacts ──────────────
 
     const appName = (typeof manifest.name === 'string' ? manifest.name : projectName) || projectName;
-    const industry = (manifest as unknown as Record<string, unknown>)['industry'] as string ?? 'general';
+    const industry = (manifest as unknown as Record<string, unknown>)['domain'] as string
+      ?? (manifest as unknown as Record<string, unknown>)['industry'] as string
+      ?? 'general';
 
     // Map orchestrator PageDef[] to ApplicationSpec PageSpec[]
     // Pages may have components as string[] (PageDef) or sections[].components (agent-generators)
@@ -209,7 +209,24 @@ export class CodeWriterStage extends BaseStage {
         colors: tokens.colors ?? {},
         typography: tokens.typography ?? {},
         spacing: tokens.spacing ?? {},
+        description: (manifest as unknown as Record<string, unknown>)['description'] as string ?? '',
       },
+      businessKnowledge: {
+        discovery: {
+          intent: (manifest as unknown as Record<string, unknown>)['description'] as string ?? '',
+          businessType: industry,
+          industry: industry,
+          domain: industry,
+          signals: [],
+        },
+      } as any,
+      designBrief: {
+        industry: industry,
+        subIndustry: '',
+      } as any,
+      solutionArchitecture: {
+        projectCategory: 'web-site',
+      } as any,
       includeComments: false,
       includeTests: false,
       outputDir: path.join(projectRoot, 'src'),
@@ -315,7 +332,17 @@ export class CodeWriterStage extends BaseStage {
    * This bridges the orchestrator's flat data model to the renderer's rich spec.
    */
   private componentDefToSpec(comp: ComponentDef, industry?: string, appName?: string): ComponentSpec {
-    const type = this.mapComponentType(comp.type ?? 'text');
+    // Use comp.name as the component type if it's provided, otherwise use comp.type
+    // This ensures SoundwaveHero, ProductShowcase, etc. are used correctly
+    const componentName = comp.name ?? '';
+    const componentType = comp.type ?? 'text';
+    // If componentName is a known renderer component type, use it directly
+    // Otherwise, map the componentType
+    const knownTypes = ['HeroBanner', 'SoundwaveHero', 'ProductShowcase', 'FeatureGrid', 'PricingTable',
+      'Testimonials', 'CTASection', 'AboutSection', 'TeamSection', 'ContactForm', 'GlobalFooter',
+      'StatsSection', 'GallerySection', 'CarouselSection', 'MapSection', 'CalendarSection',
+      'DetailsSection', 'CardSection', 'TextSection', 'Navbar', 'MissionSection'];
+    const type = knownTypes.includes(componentName) ? componentName : this.mapComponentType(componentType);
     const content: Record<string, { value: string; type: 'text' }> = {};
 
     // Map props/content to ComponentSpec content fields

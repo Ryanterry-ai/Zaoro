@@ -36,6 +36,8 @@ import { stageLogger } from '../core/debug-logger.js';
 import { ContentScraper } from '../generation/content-scraper.js';
 import { mergeScrapedIntoResearch } from './intake-parser.js';
 import type { ProgressEmitter } from '../core/progress-emitter.js';
+import { extractPrimitives } from '../generation/primitive-extractor.js';
+import { deriveFromPrimitives } from '../generation/primitive-reasoner.js';
 
 const log = stageLogger('bre');
 
@@ -50,6 +52,10 @@ export interface BREv2Result {
   revenueIntelligence?: BusinessIntelligenceProfile;
   /** Raw scraped content — preserves testimonials, about text, product specs, team members */
   scrapedContent?: import('./types.js').ScrapedContent;
+  /** Primitive reasoning output — when PRIMITIVE_REASONING=1 */
+  primitives?: import('../generation/primitive-extractor.js').BusinessPrimitives;
+  derivedSpec?: import('../generation/primitive-reasoner.js').DerivedSpec;
+  primitiveReasoning?: boolean;
 }
 
 /**
@@ -102,6 +108,39 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
   const appFamilyResult = classify(ctx.description ?? ctx.appName ?? '', ctx);
   ctx.appFamilyResult = appFamilyResult;
   console.log(`[bre-v2] App family: ${appFamilyResult.family}/${appFamilyResult.appType} (confidence=${appFamilyResult.confidence.toFixed(2)})`);
+
+  // Step 0c: Primitive Reasoning Engine — domain-agnostic business primitives
+  // When PRIMITIVE_REASONING=1, extract primitives and derive spec alongside
+  // existing industry-based reasoning. Logs both outputs for comparison.
+  const primitiveReasoningEnabled = process.env.PRIMITIVE_REASONING === '1' || process.env.PRIMITIVE_REASONING === 'true';
+  if (primitiveReasoningEnabled && ctx.description) {
+    const t0c = Date.now();
+    try {
+      const primitives = extractPrimitives(ctx.description);
+      const derivedSpec = deriveFromPrimitives(primitives);
+      ctx.primitives = primitives;
+      ctx.derivedSpec = derivedSpec;
+      ctx.primitiveReasoning = true;
+      console.log(`[bre-v2] Primitive reasoning enabled:`);
+      console.log(`  valueObject: ${primitives.valueObject}`);
+      console.log(`  transactionType: ${primitives.transactionType}`);
+      console.log(`  contentShape: [${primitives.contentShape.join(', ')}]`);
+      console.log(`  aestheticSignals: [${primitives.aestheticSignals.join(', ')}]`);
+      console.log(`  emotionalIntent: [${primitives.emotionalIntent.join(', ')}]`);
+      console.log(`  derived brandName: ${derivedSpec.brandName}`);
+      console.log(`  derived entities: [${derivedSpec.entities.map(e => e.slug).join(', ')}]`);
+      console.log(`  derived sections: [${derivedSpec.sections.map(s => s.id).join(', ')}]`);
+      log.info('Primitive reasoning complete', {
+        valueObject: primitives.valueObject,
+        transactionType: primitives.transactionType,
+        brandName: derivedSpec.brandName,
+        duration: Date.now() - t0c,
+      });
+    } catch (err: any) {
+      log.warn('Primitive reasoning failed, continuing without', err.message);
+      console.log(`[bre-v2] Primitive reasoning failed: ${err.message}`);
+    }
+  }
 
   const rulesEngine = new RulesEngine();
   const constraintSolver = new ConstraintSolver();
@@ -258,5 +297,8 @@ export async function runBREV2Pipeline(ctx: BREContext, llmConfig?: LLMConfig, i
     ...(ctx.revenueIntelligence ? { revenueIntelligence: ctx.revenueIntelligence } : {}),
     ...(ctx.scrapedContent ? { scrapedContent: ctx.scrapedContent } : {}),
     ...(ctx.businessKnowledge ? { businessKnowledge: ctx.businessKnowledge } : {}),
+    ...(ctx.primitives ? { primitives: ctx.primitives } : {}),
+    ...(ctx.derivedSpec ? { derivedSpec: ctx.derivedSpec } : {}),
+    ...(ctx.primitiveReasoning ? { primitiveReasoning: ctx.primitiveReasoning } : {}),
   };
 }

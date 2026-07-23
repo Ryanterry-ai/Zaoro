@@ -1,6 +1,8 @@
 import type { BusinessIntelligenceProfile } from '../schemas/knowledge/business-intelligence.schema.js';
 import type { AppFamilyResult } from './application-family-classifier.js';
 import type { ScrapedContent, BusinessResearch } from '../types.js';
+import type { BusinessPrimitives } from '../../generation/primitive-extractor.js';
+import type { DerivedSpec } from '../../generation/primitive-reasoner.js';
 
 export interface BREContext {
   industry: string;
@@ -45,6 +47,16 @@ export interface BREContext {
    * and renderer honor creative direction even when other signals are silent.
    */
   designMood?: string;
+  /**
+   * Primitive Reasoning Engine — domain-agnostic business primitives extracted
+   * from the prompt. When PRIMITIVE_REASONING=1, these are populated and used
+   * as first-class fields alongside existing industry-based reasoning.
+   */
+  primitives?: BusinessPrimitives;
+  /** Derived spec from primitives — brand name, entities, theme, sections, copy */
+  derivedSpec?: DerivedSpec;
+  /** Whether primitive reasoning was used for this build */
+  primitiveReasoning?: boolean;
 }
 
 export interface Rule {

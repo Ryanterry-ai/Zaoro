@@ -1481,8 +1481,16 @@ ${body}
       lines.push(`  ${key}?: string;`);
     }
 
-    // Items prop
+    // Always add subtitle if not already in content (body references it unconditionally)
+    if (!spec.content?.subtitle) {
+      lines.push(`  subtitle?: string;`);
+    }
+
+    // Items prop — always add if body references it
     if ((spec.items?.length ?? 0) > 0 || (spec.columns?.length ?? 0) > 0) {
+      lines.push(`  items?: Array<{ title?: string; description?: string; icon?: string; metadata?: Record<string, string>; [key: string]: unknown }>;`);
+    } else if (['FeatureGrid', 'CarouselSection', 'FAQ', 'Testimonials'].includes(spec.type)) {
+      // These component types always use items in their body
       lines.push(`  items?: Array<{ title?: string; description?: string; icon?: string; metadata?: Record<string, string>; [key: string]: unknown }>;`);
     }
 
@@ -2574,7 +2582,16 @@ ${body}
     for (const key of Object.keys(spec.content ?? {})) {
       names.push(key);
     }
-    if ((spec.items?.length ?? 0) > 0 || (spec.columns?.length ?? 0) > 0) names.push('items');
+    // Always add subtitle if not in content (body references it unconditionally)
+    if (!spec.content?.subtitle) {
+      names.push('subtitle');
+    }
+    // Items — always add if body references it
+    if ((spec.items?.length ?? 0) > 0 || (spec.columns?.length ?? 0) > 0) {
+      names.push('items');
+    } else if (['FeatureGrid', 'CarouselSection', 'FAQ', 'Testimonials'].includes(spec.type)) {
+      names.push('items');
+    }
     if ((spec.tiers?.length ?? 0) > 0) names.push('tiers');
     if ((spec.stats?.length ?? 0) > 0) names.push('stats');
     if ((spec.columns?.length ?? 0) > 0) names.push('columns');
@@ -2586,10 +2603,6 @@ ${body}
   private getContentView(spec: ComponentSpec, key: string): string {
     const content = spec.content?.[key] as { value?: string } | undefined;
     const val = content?.value ?? `{${key}}`;
-    if (key === 'subtitle' && spec.type === 'HeroBanner') {
-      console.log(`[react-renderer] HeroBanner subtitle content:`, JSON.stringify(spec.content?.subtitle)?.substring(0, 120));
-      console.log(`[react-renderer] HeroBanner subtitle value:`, val?.substring(0, 120));
-    }
     return val;
   }
 

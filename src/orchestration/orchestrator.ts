@@ -641,10 +641,13 @@ export class Orchestrator extends EventEmitter {
 
     // Create manifest from artifacts
     const manifest: ProjectManifest = {
-      id: `agent-${Date.now()}`,
+      id: `project-${Date.now()}`,
       name: (artifacts.manifest as Record<string, unknown>)?.name as string ?? 'project',
       description: (artifacts.manifest as Record<string, unknown>)?.description as string ?? '',
       userInput: (artifacts.manifest as Record<string, unknown>)?.description as string ?? '',
+      domain: (artifacts.manifest as Record<string, unknown>)?.industry as string
+        ?? (artifacts.manifest as Record<string, unknown>)?.domain as string
+        ?? undefined,
       createdAt: new Date().toISOString(),
       version: 1,
     };
@@ -700,30 +703,34 @@ export class Orchestrator extends EventEmitter {
       this.artifacts.store('skill.design', designRec, ArtifactType.Json, 'skill-integrator');
       
       // Override design tokens with skill-informed palette and typography
-      const existingTokens = this.artifacts.read('frontend.design-tokens') as Record<string, unknown> | undefined;
-      const skillTokens = {
-        colors: {
-          primary: designRec.colors.primary,
-          secondary: designRec.colors.secondary,
-          accent: designRec.colors.accent,
-          background: designRec.colors.background,
-          foreground: designRec.colors.foreground,
-          muted: existingTokens?.colors && typeof existingTokens.colors === 'object' ? (existingTokens.colors as Record<string, unknown>).muted : '#71717a',
-          card: existingTokens?.colors && typeof existingTokens.colors === 'object' ? (existingTokens.colors as Record<string, unknown>).card : '#ffffff',
-          border: existingTokens?.colors && typeof existingTokens.colors === 'object' ? (existingTokens.colors as Record<string, unknown>).border : '#e4e4e7',
-        },
-        typography: {
-          fontFamily: designRec.typography.bodyFont,
-          headingFont: designRec.typography.headingFont,
-          bodyFont: designRec.typography.bodyFont,
-          scale: designRec.typography.scale,
-        },
-        spacing: existingTokens?.spacing ?? {},
-        borderRadius: existingTokens?.borderRadius ?? '0.5rem',
-        style: designRec.layout.heroLayout,
-        industry,
-      };
-      this.artifacts.store('frontend.design-tokens', skillTokens, ArtifactType.Json, 'skill-integrator');
+      // SKIP when primitive reasoning is enabled — tokens already have correct values
+      const usePrimitives = process.env.PRIMITIVE_REASONING === '1';
+      if (!usePrimitives) {
+        const existingTokens = this.artifacts.read('frontend.design-tokens') as Record<string, unknown> | undefined;
+        const skillTokens = {
+          colors: {
+            primary: designRec.colors.primary,
+            secondary: designRec.colors.secondary,
+            accent: designRec.colors.accent,
+            background: designRec.colors.background,
+            foreground: designRec.colors.foreground,
+            muted: existingTokens?.colors && typeof existingTokens.colors === 'object' ? (existingTokens.colors as Record<string, unknown>).muted : '#71717a',
+            card: existingTokens?.colors && typeof existingTokens.colors === 'object' ? (existingTokens.colors as Record<string, unknown>).card : '#ffffff',
+            border: existingTokens?.colors && typeof existingTokens.colors === 'object' ? (existingTokens.colors as Record<string, unknown>).border : '#e4e4e7',
+          },
+          typography: {
+            fontFamily: designRec.typography.bodyFont,
+            headingFont: designRec.typography.headingFont,
+            bodyFont: designRec.typography.bodyFont,
+            scale: designRec.typography.scale,
+          },
+          spacing: existingTokens?.spacing ?? {},
+          borderRadius: existingTokens?.borderRadius ?? '0.5rem',
+          style: designRec.layout.heroLayout,
+          industry,
+        };
+        this.artifacts.store('frontend.design-tokens', skillTokens, ArtifactType.Json, 'skill-integrator');
+      }
     } catch (e) {
       // Skill integration is best-effort; fall back to raw agent-generator tokens
       console.warn('SkillIntegrator failed, using fallback tokens:', (e as Error).message);

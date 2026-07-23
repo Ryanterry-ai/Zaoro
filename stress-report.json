@@ -1,0 +1,572 @@
+{
+  "generatedAt": "2026-07-19T18:51:49.748Z",
+  "summary": {
+    "total": 18,
+    "passed": 18,
+    "failed": 0,
+    "crashed": 0
+  },
+  "results": [
+    {
+      "id": "agriculture-organic-farm",
+      "sector": "Agriculture",
+      "model": "D2C",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 2,
+      "files": 79,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "farm Business",
+      "domainNouns": [
+        "farm",
+        "organic",
+        "family",
+        "seasonal",
+        "vegetable",
+        "directly"
+      ],
+      "conversion": [
+        "checkout"
+      ],
+      "interaction": [
+        "configurator",
+        "builder"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 39805
+    },
+    {
+      "id": "foodbev-cloud-kitchen",
+      "sector": "Food & Beverage",
+      "model": "Ecommerce",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 0,
+      "files": 75,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "kitchen Restaurant",
+      "domainNouns": [
+        "kitchen",
+        "selling",
+        "healthy",
+        "ordering",
+        "browsable",
+        "nutrition"
+      ],
+      "conversion": [
+        "checkout"
+      ],
+      "interaction": [],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 41934
+    },
+    {
+      "id": "manufacturing-cnc",
+      "sector": "Manufacturing",
+      "model": "B2B",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 1,
+      "files": 60,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "precision B2B Platform",
+      "domainNouns": [
+        "precision",
+        "machining",
+        "manufacturer",
+        "serve",
+        "aerospace",
+        "capabilitie"
+      ],
+      "conversion": [
+        "lead-form"
+      ],
+      "interaction": [
+        "builder"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 41401
+    },
+    {
+      "id": "tech-devops-saas",
+      "sector": "Technology",
+      "model": "SaaS",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 1,
+      "files": 82,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "devop SaaS",
+      "domainNouns": [
+        "devop",
+        "observability",
+        "tiered",
+        "preview",
+        "free-trial",
+        "signup"
+      ],
+      "conversion": [
+        "lead-form",
+        "subscribe"
+      ],
+      "interaction": [
+        "dashboard"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 41137
+    },
+    {
+      "id": "healthcare-telemedicine",
+      "sector": "Healthcare",
+      "model": "Services",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 1,
+      "files": 67,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "telemedicine Clinic",
+      "domainNouns": [
+        "telemedicine",
+        "clinic",
+        "patient",
+        "consultation",
+        "doctor",
+        "specialtie"
+      ],
+      "conversion": [
+        "lead-form",
+        "book"
+      ],
+      "interaction": [
+        "builder",
+        "booking"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 41671
+    },
+    {
+      "id": "finance-wealth",
+      "sector": "Finance",
+      "model": "Services",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 2,
+      "files": 66,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "wealth Booking Service",
+      "domainNouns": [
+        "advisory",
+        "wealth",
+        "build",
+        "high-net-worth",
+        "explain",
+        "portfolio"
+      ],
+      "conversion": [
+        "lead-form",
+        "book"
+      ],
+      "interaction": [
+        "builder",
+        "booking"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 44116
+    },
+    {
+      "id": "education-bootcamp",
+      "sector": "Education",
+      "model": "Subscription",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 3,
+      "files": 73,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "coding Course Platform",
+      "domainNouns": [
+        "coding",
+        "bootcamp",
+        "course",
+        "curriculum",
+        "breakdown",
+        "instructor"
+      ],
+      "conversion": [
+        "checkout",
+        "book"
+      ],
+      "interaction": [
+        "builder",
+        "booking",
+        "dashboard"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 43264
+    },
+    {
+      "id": "proservices-law",
+      "sector": "Professional Services",
+      "model": "Agency",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 0,
+      "files": 58,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "practice Service Business",
+      "domainNouns": [
+        "practice",
+        "boutique",
+        "corporate",
+        "attorney",
+        "profile",
+        "result"
+      ],
+      "conversion": [
+        "lead-form"
+      ],
+      "interaction": [],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 42209
+    },
+    {
+      "id": "realestate-brokerage",
+      "sector": "Real Estate",
+      "model": "Marketplace",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 3,
+      "files": 52,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "estate Listings Marketplace",
+      "domainNouns": [
+        "estate",
+        "brokerage",
+        "searchable",
+        "property",
+        "listing",
+        "filter"
+      ],
+      "conversion": [
+        "book"
+      ],
+      "interaction": [
+        "builder",
+        "booking",
+        "calculator"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 42716
+    },
+    {
+      "id": "transport-lastmile",
+      "sector": "Transportation",
+      "model": "On-demand",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 2,
+      "files": 61,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "last-mile Booking Service",
+      "domainNouns": [
+        "last-mile",
+        "logistic",
+        "on-demand",
+        "booking",
+        "courier",
+        "tracking"
+      ],
+      "conversion": [
+        "subscribe",
+        "book"
+      ],
+      "interaction": [
+        "booking",
+        "calculator"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 43424
+    },
+    {
+      "id": "hospitality-boutique-hotel",
+      "sector": "Hospitality & Tourism",
+      "model": "B2C",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 1,
+      "files": 68,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "gallerie Booking Service",
+      "domainNouns": [
+        "boutique",
+        "gallerie",
+        "real-time",
+        "availability",
+        "reservation",
+        "booking"
+      ],
+      "conversion": [
+        "lead-form",
+        "book"
+      ],
+      "interaction": [
+        "builder",
+        "booking"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 46299
+    },
+    {
+      "id": "media-streaming",
+      "sector": "Media & Entertainment",
+      "model": "Subscription",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 0,
+      "files": 65,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "Streaming Service",
+      "domainNouns": [
+        "streaming",
+        "independent",
+        "browsable",
+        "detail",
+        "trailer",
+        "subscription"
+      ],
+      "conversion": [
+        "subscribe"
+      ],
+      "interaction": [],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 43752
+    },
+    {
+      "id": "sports-crossfit",
+      "sector": "Sports & Fitness",
+      "model": "Membership",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 3,
+      "files": 68,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "crossfit Booking Service",
+      "domainNouns": [
+        "crossfit",
+        "schedule",
+        "booking",
+        "membership",
+        "profile",
+        "signup"
+      ],
+      "conversion": [
+        "subscribe",
+        "book"
+      ],
+      "interaction": [
+        "builder",
+        "booking",
+        "dashboard"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 45102
+    },
+    {
+      "id": "energy-solar",
+      "sector": "Energy",
+      "model": "B2C",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 2,
+      "files": 69,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "installer Booking Service",
+      "domainNouns": [
+        "residential",
+        "installer",
+        "saving",
+        "calculator",
+        "installation",
+        "financing"
+      ],
+      "conversion": [
+        "lead-form",
+        "book"
+      ],
+      "interaction": [
+        "booking",
+        "calculator"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 44773
+    },
+    {
+      "id": "environment-recycling",
+      "sector": "Environment",
+      "model": "B2B",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 2,
+      "files": 64,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "recycling Service Business",
+      "domainNouns": [
+        "commercial",
+        "recycling",
+        "businesse",
+        "pickup",
+        "scheduling",
+        "sustainability"
+      ],
+      "conversion": [
+        "lead-form"
+      ],
+      "interaction": [
+        "builder",
+        "dashboard"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 47947
+    },
+    {
+      "id": "space-launch",
+      "sector": "Space",
+      "model": "Enterprise",
+      "ok": true,
+      "passed": true,
+      "score": 0.909,
+      "iterations": 2,
+      "files": 31,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "launch Booking Service",
+      "domainNouns": [
+        "launch",
+        "small-satellite",
+        "provider",
+        "rideshare",
+        "enterprise",
+        "mission"
+      ],
+      "conversion": [
+        "lead-form",
+        "book"
+      ],
+      "interaction": [
+        "booking"
+      ],
+      "errorGaps": [],
+      "warnGaps": [
+        "assets: No image / media references found"
+      ],
+      "ms": 37373
+    },
+    {
+      "id": "nonprofit-conservation",
+      "sector": "Nonprofit",
+      "model": "Donation",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 2,
+      "files": 68,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "wildlife Media Publication",
+      "domainNouns": [
+        "wildlife",
+        "conservation",
+        "nonprofit",
+        "mission",
+        "impact",
+        "metric"
+      ],
+      "conversion": [
+        "subscribe",
+        "donate"
+      ],
+      "interaction": [
+        "builder",
+        "dashboard"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 43267
+    },
+    {
+      "id": "emerging-ai-agents",
+      "sector": "Emerging",
+      "model": "Usage-based",
+      "ok": true,
+      "passed": true,
+      "score": 1,
+      "iterations": 1,
+      "files": 60,
+      "contentFidelity": 1,
+      "experienceFidelity": 1,
+      "businessType": "agent Online Store",
+      "domainNouns": [
+        "agent",
+        "businesse",
+        "deploy",
+        "autonomou",
+        "usage-based",
+        "interactive"
+      ],
+      "conversion": [
+        "lead-form",
+        "subscribe"
+      ],
+      "interaction": [
+        "builder"
+      ],
+      "errorGaps": [],
+      "warnGaps": [],
+      "ms": 47775
+    }
+  ]
+}
