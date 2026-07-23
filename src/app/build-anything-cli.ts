@@ -17,6 +17,7 @@ import { generateAgentSpec, writeAgentSpec } from '../pipeline/agent-prompt.js';
 import { IS_AGENT_MODE } from '../pipeline/agent-mode.js';
 import { extractPrimitives } from '../generation/primitive-extractor.js';
 import { deriveFromPrimitives } from '../generation/primitive-reasoner.js';
+import { resolveComponents, getIndustryVocabulary } from '../generation/component-registry.js';
 import type { BusinessPrimitives } from '../generation/primitive-extractor.js';
 import type { DerivedSpec } from '../generation/primitive-reasoner.js';
 import * as fs from 'fs';
@@ -212,34 +213,55 @@ function enhanceTaskMd(
   }
   sections.push('');
 
-  // Hero Component Decision — signal-driven, not catalog
-  sections.push('## Hero Component Decision');
-  const usesSoundwave = primitives.aestheticSignals.includes('soundwave')
-    || primitives.aestheticSignals.includes('immersive-scroll')
-    || primitives.aestheticSignals.includes('animated-visual')
-    || primitives.aestheticSignals.includes('scroll-motion')
-    || primitives.aestheticSignals.includes('electric-blue');
-
-  if (usesSoundwave) {
-    sections.push('Use: **SoundwaveHero**');
-    sections.push('Reason: aestheticSignals includes animated/immersive element — generate an SVG');
-    sections.push('path that morphs from peaks to a flat line on scroll using');
-    sections.push('Framer Motion useTransform on pathD or strokeDashoffset.');
-    sections.push('');
-    sections.push('```tsx');
-    sections.push("import { useRef } from 'react';");
-    sections.push("import { motion, useScroll, useTransform } from 'framer-motion';");
-    sections.push('');
-    sections.push('// SVG morph: peaks → flat line');
-    sections.push('const mid = height / 2;');
-    sections.push('const chaos = useTransform(scrollYProgress, [0, 1], [40, 0]);');
-    sections.push('const pathD = useTransform(chaos.get(), (c) => generateWavePath(width, height, c, 0));');
-    sections.push('```');
-  } else {
-    sections.push('Use: **HeroBanner**');
-    sections.push('Reason: no animated visual signals — standard hero with title, subtitle, CTA.');
+  // Industry Vocabulary — what to say and what NOT to say
+  const vocab = getIndustryVocabulary(primitives.valueObject);
+  sections.push('## Industry Vocabulary');
+  sections.push('');
+  sections.push('**USE these terms** (industry-specific, real, concrete):');
+  for (const term of vocab.use) {
+    sections.push('- ' + term);
   }
   sections.push('');
+  sections.push('**NEVER use these terms** (generic filler):');
+  for (const term of vocab.avoid) {
+    sections.push('- ' + term);
+  }
+  sections.push('');
+  sections.push('**Example CTAs** (use these patterns, customize for the business):');
+  for (const cta of vocab.ctas) {
+    sections.push('- ' + cta);
+  }
+  sections.push('');
+  sections.push('**Example features** (real capabilities, not abstract categories):');
+  for (const feature of vocab.features) {
+    sections.push('- ' + feature);
+  }
+  sections.push('');
+  sections.push('**Customer roles** (who buys from this business):');
+  for (const role of vocab.roles) {
+    sections.push('- ' + role);
+  }
+  sections.push('');
+
+  // Components to Generate — from ComponentRegistry
+  sections.push('## Components to Generate');
+  sections.push('');
+  sections.push('The following components are required for this website. Generate each one.');
+  sections.push('');
+
+  const components = resolveComponents(primitives);
+  for (const comp of components) {
+    sections.push('### ' + comp.name);
+    sections.push('**Category:** ' + comp.category);
+    sections.push('**Reason:** ' + comp.reason);
+    if (comp.contentHints.length > 0) {
+      sections.push('**Content hints:**');
+      for (const hint of comp.contentHints) {
+        sections.push('- ' + hint);
+      }
+    }
+    sections.push('');
+  }
 
   // Component Prop Contracts
   sections.push('## Component Prop Contracts (match these exactly)');
@@ -248,36 +270,103 @@ function enhanceTaskMd(
   sections.push('Do not use props without declaring them. Do not omit required props.');
   sections.push('');
 
-  const allComponents = appSpec.pages.flatMap((p: any) => p.components ?? []);
-  const seen = new Set<string>();
-  for (const comp of allComponents) {
-    if (seen.has(comp.type)) continue;
-    seen.add(comp.type);
-
-    sections.push('### ' + comp.type);
+  for (const comp of components) {
+    sections.push('### ' + comp.name);
     sections.push('```typescript');
-    sections.push('interface ' + comp.type + 'Props {');
+    sections.push('interface ' + comp.name + 'Props {');
 
-    // Derive props from content
-    if (comp.content) {
-      for (const [key, val] of Object.entries(comp.content)) {
-        if (typeof val === 'string') {
-          sections.push('  ' + key + '?: string;');
-        } else if (typeof val === 'object' && val !== null) {
-          sections.push('  ' + key + '?: ' + JSON.stringify(val).substring(0, 100) + ';');
-        }
+    // Generate props from the component definition
+    for (const [key, val] of Object.entries(comp.props)) {
+      if (typeof val === 'string') {
+        sections.push('  ' + key + '?: string;');
       }
     }
 
-    // Add common props
-    if (!comp.content?.['items'] && comp.items) {
-      sections.push('  items?: Array<{ title: string; description: string }>;');
-    }
-    if (comp.type.includes('Hero') || comp.type.includes('Banner')) {
+    // Add common props based on category
+    if (comp.category === 'hero') {
+      sections.push('  title?: string;');
+      sections.push('  subtitle?: string;');
       sections.push('  cta?: string;');
     }
-    if (comp.type.includes('Grid') || comp.type.includes('Showcase')) {
+    if (comp.category === 'showcase') {
+      sections.push('  items?: Array<{ name: string; price: string; description: string; image?: string; specs?: Array<{ label: string; value: string }> }>;');
       sections.push('  columns?: number;');
+    }
+    if (comp.category === 'conversion') {
+      sections.push('  variant?: string;');
+    }
+    if (comp.name.includes('Booking') || comp.name.includes('Appointment')) {
+      sections.push('  services?: Array<{ name: string; duration: string; price: string }>;');
+      sections.push('  staff?: Array<{ name: string; role: string; image?: string }>;');
+    }
+    if (comp.name.includes('Service') && comp.name.includes('Menu')) {
+      sections.push('  services?: Array<{ name: string; description: string; price: string; duration?: string }>;');
+    }
+    if (comp.name.includes('Pricing')) {
+      sections.push('  tiers?: Array<{ name: string; price: string; features: string[]; highlighted?: boolean }>;');
+    }
+    if (comp.name.includes('Testimonial') || comp.name.includes('Review')) {
+      sections.push('  testimonials?: Array<{ quote: string; author: string; role?: string; rating?: number; image?: string }>;');
+    }
+    if (comp.name.includes('Team')) {
+      sections.push('  members?: Array<{ name: string; role: string; bio?: string; image?: string }>;');
+    }
+    if (comp.name.includes('Gallery') || comp.name.includes('Portfolio')) {
+      sections.push('  images?: Array<{ src: string; alt: string; caption?: string }>;');
+      sections.push('  columns?: number;');
+    }
+    if (comp.name.includes('Menu') && !comp.name.includes('Service')) {
+      sections.push('  categories?: Array<{ name: string; items: Array<{ name: string; description: string; price: string; image?: string }> }>;');
+    }
+    if (comp.name.includes('Property') || comp.name.includes('Listing')) {
+      sections.push('  properties?: Array<{ title: string; price: string; address: string; beds?: number; baths?: number; sqft?: number; image?: string }>;');
+    }
+    if (comp.name.includes('Location') || comp.name.includes('Map')) {
+      sections.push('  address?: string;');
+      sections.push('  phone?: string;');
+      sections.push('  hours?: string;');
+    }
+    if (comp.name.includes('FAQ')) {
+      sections.push('  faqs?: Array<{ question: string; answer: string }>;');
+    }
+    if (comp.name.includes('Process') || comp.name.includes('Step')) {
+      sections.push('  steps?: Array<{ title: string; description: string; icon?: string }>;');
+    }
+    if (comp.name.includes('Stats') || comp.name.includes('Number')) {
+      sections.push('  stats?: Array<{ value: string; label: string }>;');
+    }
+    if (comp.name.includes('Feature')) {
+      sections.push('  features?: Array<{ title: string; description: string; icon?: string }>;');
+      sections.push('  columns?: number;');
+    }
+    if (comp.name.includes('Contact') || comp.name.includes('Form')) {
+      sections.push('  fields?: Array<{ name: string; type: string; label: string; required?: boolean }>;');
+    }
+    if (comp.name.includes('Newsletter') || comp.name.includes('Signup')) {
+      sections.push('  headline?: string;');
+      sections.push('  subtext?: string;');
+    }
+    if (comp.name.includes('Before') || comp.name.includes('After')) {
+      sections.push('  comparisons?: Array<{ before: string; after: string; label: string }>;');
+    }
+    if (comp.name.includes('Client') || comp.name.includes('Logo')) {
+      sections.push('  clients?: Array<{ name: string; logo?: string; url?: string }>;');
+    }
+    if (comp.name.includes('Video')) {
+      sections.push('  videoUrl?: string;');
+      sections.push('  caption?: string;');
+    }
+    if (comp.name.includes('Membership') || comp.name.includes('Tier')) {
+      sections.push('  tiers?: Array<{ name: string; price: string; period: string; features: string[]; highlighted?: boolean }>;');
+    }
+    if (comp.name.includes('Blog') || comp.name.includes('Article')) {
+      sections.push('  posts?: Array<{ title: string; excerpt: string; date: string; image?: string; url?: string }>;');
+    }
+    if (comp.name.includes('Vendor')) {
+      sections.push('  vendors?: Array<{ name: string; specialty: string; rating?: number; image?: string }>;');
+    }
+    if (comp.name.includes('Dashboard')) {
+      sections.push('  metrics?: Array<{ label: string; value: string; change?: string }>;');
     }
 
     sections.push('}');
@@ -285,25 +374,7 @@ function enhanceTaskMd(
     sections.push('');
   }
 
-  // Sections to Generate (in order)
-  sections.push('## Sections to Generate (in order)');
-  sections.push('');
-  sections.push('Generate ALL of these — do not skip any:');
-
-  for (const page of appSpec.pages) {
-    for (const comp of page.components ?? []) {
-      const reason = deriveSectionReason(comp.type, primitives);
-      sections.push('- **' + comp.type + '** — ' + reason);
-    }
-  }
-
-  sections.push('');
-  sections.push('If a section type has no matching component in your palette,');
-  sections.push('generate a FeatureGrid with content appropriate to that section.');
-  sections.push('Never drop a section silently.');
-
   // ⚡ Action Required
-  sections.push('');
   sections.push('## ⚡ Action Required');
   sections.push('');
   sections.push('Write EVERY component file listed above to disk NOW.');
@@ -314,35 +385,13 @@ function enhanceTaskMd(
   sections.push('4. Use lucide-react for icons');
   sections.push('5. Use Tailwind CSS — no inline styles');
   sections.push('6. Export as `export default function ComponentName()`');
+  sections.push('7. Use REAL business content from the Industry Vocabulary — NO generic filler');
   sections.push('');
   sections.push('Output paths:');
-  for (const page of appSpec.pages) {
-    for (const comp of page.components ?? []) {
-      const fileName = comp.type.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '.tsx';
-      sections.push('- `src/components/' + fileName + '`');
-    }
+  for (const comp of components) {
+    const fileName = comp.name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '.tsx';
+    sections.push('- `src/components/' + fileName + '`');
   }
 
   return sections.join('\n');
-}
-
-function deriveSectionReason(componentType: string, primitives: BusinessPrimitives): string {
-  const reasons: Record<string, string> = {
-    'SoundwaveHero': 'aestheticSignals includes animated/immersive element',
-    'HeroBanner': 'standard hero for landing page',
-    'ProductShowcase': 'transactionType is product-purchase, contentShape includes multiple-products',
-    'ProductGrid': 'transactionType is product-purchase',
-    'FeatureGrid': 'standard features section',
-    'SpecsTable': 'contentShape includes specs-table',
-    'PricingTable': 'transactionType is subscription',
-    'GallerySection': 'contentShape includes visual-content',
-    'TestimonialCarousel': 'emotionalIntent includes trust/social-proof',
-    'ContactForm': 'transactionType is lead-capture',
-    'CTASection': 'standard conversion element',
-    'GlobalFooter': 'standard footer',
-    'ScheduleGrid': 'transactionType is service-booking',
-    'BookingForm': 'transactionType is service-booking',
-  };
-
-  return reasons[componentType] ?? 'contentShape includes relevant signals for ' + primitives.valueObject;
 }
